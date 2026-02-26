@@ -98,6 +98,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "port": 4204
+          },
           "configurations": {
             "production": {
               "buildTarget": "lfx-changelog:build:production"

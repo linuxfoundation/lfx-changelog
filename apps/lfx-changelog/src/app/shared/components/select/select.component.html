@@ -22,7 +22,7 @@
 
     <!-- Dropdown -->
     @if (isOpen()) {
-      <div class="border-border bg-surface animate-in absolute z-50 mt-1 w-full overflow-hidden rounded-lg border shadow-lg shadow-black/8" role="listbox">
+      <div class="border-border bg-surface animate-dropdown-in absolute z-50 mt-1 w-full overflow-hidden rounded-lg border shadow-lg shadow-black/8" role="listbox">
         <div class="max-h-60 overflow-y-auto py-1">
           @for (opt of options(); track opt.value; let i = $index) {
             <button

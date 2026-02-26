@@ -1,6 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
+import { User as PrismaUser } from '@prisma/client';
 
 import { UserService } from '../services/user.service';
+
+function mapUser(prismaUser: PrismaUser & { userRoleAssignments?: any[] }) {
+  const { userRoleAssignments, ...rest } = prismaUser;
+  return { ...rest, roles: userRoleAssignments || [] };
+}
 
 export class UserController {
   private readonly userService = new UserService();
@@ -8,7 +14,7 @@ export class UserController {
   public async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const dbUser = (req as any).dbUser;
-      res.json({ success: true, data: dbUser });
+      res.json({ success: true, data: mapUser(dbUser) });
     } catch (error) {
       next(error);
     }
@@ -17,7 +23,7 @@ export class UserController {
   public async list(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const users = await this.userService.findAll();
-      res.json({ success: true, data: users });
+      res.json({ success: true, data: users.map(mapUser) });
     } catch (error) {
       next(error);
     }

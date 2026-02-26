@@ -1,6 +1,6 @@
 <div class="bg-canvas flex min-h-screen">
   <!-- Sidebar -->
-  <aside class="border-border bg-surface border-r transition-all duration-200" [class]="sidebarCollapsed() ? 'w-16' : 'w-64'">
+  <aside class="border-border bg-surface sticky top-0 flex h-screen shrink-0 flex-col border-r transition-all duration-200" [class]="sidebarCollapsed() ? 'w-16' : 'w-64'">
     <div class="border-border flex h-16 items-center justify-between border-b px-4">
       @if (!sidebarCollapsed()) {
         <a routerLink="/" class="flex items-center gap-2">
@@ -16,7 +16,7 @@
       </button>
     </div>
 
-    <nav class="flex flex-col gap-1 p-3">
+    <nav class="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
       <a
         routerLink="/admin"
         routerLinkActive="bg-brand-50 text-brand-700 font-medium"
@@ -58,6 +58,34 @@
         }
       </a>
     </nav>
+
+    <!-- User menu (sidebar footer) -->
+    @if (authUser(); as user) {
+      <div class="border-border border-t p-3">
+        <button
+          #userMenuButton
+          (click)="toggleUserMenu()"
+          class="hover:bg-surface-alt flex w-full items-center justify-center gap-3 rounded-lg text-left transition-colors"
+          [class.p-2]="!sidebarCollapsed()">
+          @if (user.picture) {
+            <img [src]="user.picture" [alt]="user.name" class="h-8 w-8 shrink-0 rounded-full" referrerpolicy="no-referrer" />
+          } @else {
+            <div class="bg-brand-100 text-brand-700 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-medium">
+              {{ userInitial() }}
+            </div>
+          }
+          @if (!sidebarCollapsed()) {
+            <div class="min-w-0 flex-1">
+              <div class="text-text-primary truncate text-sm font-medium">{{ user.name }}</div>
+              <div class="text-text-muted truncate text-xs">{{ user.email }}</div>
+            </div>
+            <i
+              class="fa-solid fa-chevron-up text-text-muted text-xs transition-transform duration-200"
+              [class.rotate-180]="!userMenuOpen()"></i>
+          }
+        </button>
+      </div>
+    }
   </aside>
 
   <!-- Main content -->
@@ -71,17 +99,36 @@
           class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg p-2 transition-colors"
           [attr.aria-label]="isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
           @if (isDark()) {
-            <i class="fa-duotone fa-sun-bright text-base"></i>
+            <i class="fa-duotone fa-sun-bright animate-spin-in text-base"></i>
           } @else {
-            <i class="fa-duotone fa-moon text-base"></i>
+            <i class="fa-duotone fa-moon animate-spin-in text-base"></i>
           }
         </button>
-        <a routerLink="/" class="text-text-secondary hover:text-brand-600 text-sm transition-colors">View Public Site</a>
       </div>
     </header>
 
-    <main class="bg-canvas flex-1 p-6">
+    <main class="bg-canvas flex-1 overflow-y-auto p-6">
       <router-outlet />
     </main>
   </div>
 </div>
+
+<!-- User menu popup (outside flex layout to avoid affecting width) -->
+@if (userMenuOpen() && authUser()) {
+  <div #userMenuArea class="border-border bg-surface fixed z-50 rounded-lg border shadow-lg mb-5" [class]="sidebarCollapsed() ? 'w-48' : 'w-[232px]'" [style.bottom.px]="userMenuBottom()" [style.left.px]="userMenuLeft()">
+    <div class="p-1.5">
+      <a
+        routerLink="/"
+        class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors">
+        <i class="fa-duotone fa-arrow-up-right-from-square w-4 text-center text-xs"></i>
+        <span>View Public Site</span>
+      </a>
+      <a
+        href="/logout"
+        class="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50">
+        <i class="fa-duotone fa-arrow-right-from-bracket w-4 text-center text-xs"></i>
+        <span>Logout</span>
+      </a>
+    </div>
+  </div>
+}

@@ -6742,6 +6742,7 @@ __metadata:
     express: "npm:^5.1.0"
     express-openid-connect: "npm:^2.17.0"
     marked: "npm:^17.0.0"
+    ngx-cookie-service-ssr: "npm:^21.1.0"
     pg: "npm:^8.19.0"
     pino: "npm:^9.6.0"
     pino-http: "npm:^10.4.0"
@@ -7381,6 +7382,19 @@ __metadata:
   version: 0.6.4
   resolution: "negotiator@npm:0.6.4"
   checksum: 10c0/3e677139c7fb7628a6f36335bf11a885a62c21d5390204590a1a214a5631fcbe5ea74ef6a610b60afe84b4d975cbe0566a23f20ee17c77c73e74b80032108dea
+  languageName: node
+  linkType: hard
+
+"ngx-cookie-service-ssr@npm:^21.1.0":
+  version: 21.1.0
+  resolution: "ngx-cookie-service-ssr@npm:21.1.0"
+  dependencies:
+    tslib: "npm:^2.8.1"
+  peerDependencies:
+    "@angular/common": ^21.0.0
+    "@angular/core": ^21.0.0
+    "@angular/ssr": ^21.0.0
+  checksum: 10c0/a45123857e8c49b0a98d03487ca419678b0eeb9497018c56d5d360012891eb5dbb63cbf52aa4e171db6fe118f0b2d3742a6a11936946417594371287ab0f131a
   languageName: node
   linkType: hard
 

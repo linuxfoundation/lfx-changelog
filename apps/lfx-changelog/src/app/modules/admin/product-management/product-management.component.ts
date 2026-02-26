@@ -8,12 +8,11 @@ import { InputComponent } from '@components/input/input.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import type { Product } from '@lfx-changelog/shared';
 import { ProductService } from '@services/product/product.service';
-import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
 import { BehaviorSubject, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-product-management',
-  imports: [ReactiveFormsModule, ButtonComponent, CardComponent, DialogComponent, InputComponent, TextareaComponent, DateFormatPipe],
+  imports: [ReactiveFormsModule, ButtonComponent, CardComponent, DialogComponent, InputComponent, TextareaComponent],
   templateUrl: './product-management.component.html',
   styleUrl: './product-management.component.css',
 })

@@ -1,5 +1,5 @@
 <div class="space-y-6">
-  <div class="flex items-center justify-between">
+  <div class="animate-slide-in-left flex items-center justify-between">
     <div>
       <h1 class="font-display text-text-primary text-2xl font-bold">Changelogs</h1>
       <p class="text-text-secondary mt-1">Manage changelog entries across all products.</p>
@@ -13,13 +13,13 @@
   </div>
 
   <!-- Filters -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <div class="animate-fade-in-up relative z-10 grid grid-cols-1 gap-4 sm:grid-cols-2 [animation-delay:100ms]">
     <lfx-select label="Product" [options]="productOptions()" [formControl]="productFilterControl" placeholder="All Products" />
     <lfx-select label="Status" [options]="statusOptions" [formControl]="statusFilterControl" placeholder="All Statuses" />
   </div>
 
   <!-- Table -->
-  <lfx-card padding="none">
+  <lfx-card padding="none" class="animate-rise-in block [animation-delay:200ms]">
     <div class="overflow-x-auto">
       <table class="w-full">
         <thead>
@@ -32,8 +32,8 @@
           </tr>
         </thead>
         <tbody class="divide-border divide-y">
-          @for (entry of filteredEntries(); track entry.id) {
-            <tr class="hover:bg-surface-alt transition-colors">
+          @for (entry of filteredEntries(); track entry.id; let i = $index) {
+            <tr class="table-row-enter hover:bg-surface-alt transition-colors" [style.animation-delay.ms]="300 + i * 50">
               <td class="px-5 py-3">
                 <a [routerLink]="['/admin/changelogs', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
                   {{ entry.title }}

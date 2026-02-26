@@ -23,16 +23,30 @@
           class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg p-2 transition-colors"
           [attr.aria-label]="isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
           @if (isDark()) {
-            <i class="fa-duotone fa-sun-bright text-base"></i>
+            <i class="fa-duotone fa-sun-bright animate-spin-in text-base"></i>
           } @else {
-            <i class="fa-duotone fa-moon text-base"></i>
+            <i class="fa-duotone fa-moon animate-spin-in text-base"></i>
           }
         </button>
-        <a
-          routerLink="/admin"
-          class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
-          Admin
-        </a>
+        @if (authenticated() && dbUser()) {
+          <a
+            routerLink="/admin"
+            class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+            Admin
+          </a>
+        } @else if (authenticated()) {
+          <a
+            href="/logout"
+            class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+            Logout
+          </a>
+        } @else {
+          <a
+            href="/login"
+            class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+            Login
+          </a>
+        }
       </div>
     </div>
   </header>

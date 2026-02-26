@@ -63,12 +63,7 @@ const products = [
 ];
 
 const users = [
-  { auth0Id: 'auth0|superadmin001', email: 'admin@linuxfoundation.org', name: 'Sarah Chen', avatarUrl: 'https://i.pravatar.cc/150?u=sarah-chen' },
-  { auth0Id: 'auth0|prodadmin001', email: 'james.wilson@linuxfoundation.org', name: 'James Wilson', avatarUrl: 'https://i.pravatar.cc/150?u=james-wilson' },
-  { auth0Id: 'auth0|editor001', email: 'maria.garcia@linuxfoundation.org', name: 'Maria Garcia', avatarUrl: 'https://i.pravatar.cc/150?u=maria-garcia' },
-  { auth0Id: 'auth0|prodadmin002', email: 'alex.kumar@linuxfoundation.org', name: 'Alex Kumar', avatarUrl: 'https://i.pravatar.cc/150?u=alex-kumar' },
-  { auth0Id: 'auth0|editor002', email: 'emily.zhang@linuxfoundation.org', name: 'Emily Zhang', avatarUrl: 'https://i.pravatar.cc/150?u=emily-zhang' },
-  { auth0Id: 'auth0|editor003', email: 'david.okafor@linuxfoundation.org', name: 'David Okafor', avatarUrl: 'https://i.pravatar.cc/150?u=david-okafor' },
+  { auth0Id: 'auth0|asitha', email: 'adesilva@linuxfoundation.org', name: 'Asitha de Silva', avatarUrl: null },
 ];
 
 async function main() {
@@ -85,35 +80,9 @@ async function main() {
   const createdUsers = await Promise.all(users.map((u) => prisma.user.upsert({ where: { auth0Id: u.auth0Id }, update: u, create: u })));
   console.info(`Created ${createdUsers.length} users`);
 
-  // Build index→user lookup
-  const [sarahChen, jamesWilson, mariaGarcia, alexKumar, emilyZhang, davidOkafor] = createdUsers;
-
-  // Assign roles — matching mock data exactly
-  // Sarah Chen = super_admin (global)
-  await prisma.userRoleAssignment.create({ data: { userId: sarahChen!.id, role: 'super_admin' } }).catch(() => {});
-
-  // James Wilson = product_admin for EasyCLA and Insights
-  for (const slug of ['easycla', 'insights']) {
-    await prisma.userRoleAssignment.create({ data: { userId: jamesWilson!.id, productId: productBySlug[slug]!.id, role: 'product_admin' } }).catch(() => {});
-  }
-
-  // Maria Garcia = editor for Security and Mentorship
-  for (const slug of ['security', 'mentorship']) {
-    await prisma.userRoleAssignment.create({ data: { userId: mariaGarcia!.id, productId: productBySlug[slug]!.id, role: 'editor' } }).catch(() => {});
-  }
-
-  // Alex Kumar = product_admin for Crowdfunding
-  await prisma.userRoleAssignment
-    .create({ data: { userId: alexKumar!.id, productId: productBySlug['crowdfunding']!.id, role: 'product_admin' } })
-    .catch(() => {});
-
-  // Emily Zhang = editor for PCC and Org Dashboard
-  for (const slug of ['project-control-center', 'organization-dashboard']) {
-    await prisma.userRoleAssignment.create({ data: { userId: emilyZhang!.id, productId: productBySlug[slug]!.id, role: 'editor' } }).catch(() => {});
-  }
-
-  // David Okafor = editor for Insights
-  await prisma.userRoleAssignment.create({ data: { userId: davidOkafor!.id, productId: productBySlug['insights']!.id, role: 'editor' } }).catch(() => {});
+  // Assign super_admin role
+  const [asitha] = createdUsers;
+  await prisma.userRoleAssignment.create({ data: { userId: asitha!.id, role: 'super_admin' } }).catch(() => {});
 
   console.info('Assigned roles');
 
@@ -121,7 +90,7 @@ async function main() {
   const entries = [
     {
       productSlug: 'easycla',
-      authorIndex: 1,
+      authorIndex: 0,
       title: 'GitHub App permission model update',
       description:
         'Updated the GitHub App integration to use fine-grained permissions. This reduces the scope of access required and improves security for organizations using EasyCLA.\n\n- Removed legacy OAuth scope requirements\n- Added support for repository-level permissions\n- Improved error messages for permission issues',
@@ -132,7 +101,7 @@ async function main() {
     },
     {
       productSlug: 'easycla',
-      authorIndex: 1,
+      authorIndex: 0,
       title: 'Fix CLA signature verification for forked repositories',
       description:
         'Resolved an issue where CLA signature verification failed for pull requests originating from forked repositories. The check now correctly traces the commit author back to the original CLA signee.',
@@ -143,7 +112,7 @@ async function main() {
     },
     {
       productSlug: 'insights',
-      authorIndex: 5,
+      authorIndex: 0,
       title: 'New contributor growth dashboard',
       description:
         'Introducing a brand-new contributor growth dashboard that provides visibility into how your community is expanding over time.\n\n**Key features:**\n- Monthly active contributor trends\n- New vs returning contributor breakdown\n- Geographic distribution heatmap\n- Organization affiliation tracking',
@@ -154,7 +123,7 @@ async function main() {
     },
     {
       productSlug: 'insights',
-      authorIndex: 1,
+      authorIndex: 0,
       title: 'Deprecate legacy CSV export endpoint',
       description:
         'The `/api/v1/export/csv` endpoint has been deprecated and will be removed in v4.0. Please migrate to the new `/api/v2/reports/export` endpoint which supports CSV, JSON, and PDF formats.\n\n**Migration guide:** See our documentation at docs.linuxfoundation.org/insights/migration.',
@@ -165,7 +134,7 @@ async function main() {
     },
     {
       productSlug: 'insights',
-      authorIndex: 5,
+      authorIndex: 0,
       title: 'Performance improvements for large project analytics',
       description:
         'Optimized data aggregation queries for projects with over 10,000 contributors. Dashboard load times reduced by approximately 60% for large-scale projects.',
@@ -176,7 +145,7 @@ async function main() {
     },
     {
       productSlug: 'mentorship',
-      authorIndex: 2,
+      authorIndex: 0,
       title: 'Application review workflow redesign',
       description:
         'Completely redesigned the mentorship application review workflow for program administrators.\n\n- Bulk accept/reject actions\n- Inline applicant profile previews\n- Customizable evaluation criteria\n- Email notification templates',
@@ -187,7 +156,7 @@ async function main() {
     },
     {
       productSlug: 'mentorship',
-      authorIndex: 2,
+      authorIndex: 0,
       title: 'Fix timezone display in program schedules',
       description:
         "Fixed an issue where program start and end dates were displayed in UTC instead of the user's local timezone. All date displays now respect the browser timezone setting.",
@@ -198,7 +167,7 @@ async function main() {
     },
     {
       productSlug: 'security',
-      authorIndex: 2,
+      authorIndex: 0,
       title: 'SPDX 3.0 SBOM support',
       description:
         'Added support for SPDX 3.0 Software Bill of Materials (SBOM) format. Projects can now generate and import SBOMs in the latest SPDX standard.\n\n- SPDX 3.0 generation and parsing\n- Backward compatibility with SPDX 2.3\n- Improved license expression handling',
@@ -220,7 +189,7 @@ async function main() {
     },
     {
       productSlug: 'crowdfunding',
-      authorIndex: 3,
+      authorIndex: 0,
       title: 'Stripe Connect onboarding flow update',
       description:
         'Updated the Stripe Connect onboarding flow to comply with new KYC requirements. Fund recipients may need to re-verify their identity through the updated flow.',
@@ -231,7 +200,7 @@ async function main() {
     },
     {
       productSlug: 'crowdfunding',
-      authorIndex: 3,
+      authorIndex: 0,
       title: 'Fix duplicate donation receipts',
       description:
         'Resolved a race condition that caused some donors to receive duplicate email receipts when making contributions. Added idempotency keys to the payment processing pipeline.',
@@ -242,7 +211,7 @@ async function main() {
     },
     {
       productSlug: 'project-control-center',
-      authorIndex: 4,
+      authorIndex: 0,
       title: 'Meeting minutes auto-generation with AI',
       description:
         'Project Control Center now supports AI-powered meeting minutes generation. After a recorded meeting, PCC will automatically generate a structured summary with action items.\n\n**Note:** This feature requires enabling the AI add-on in project settings.',
@@ -253,7 +222,7 @@ async function main() {
     },
     {
       productSlug: 'project-control-center',
-      authorIndex: 4,
+      authorIndex: 0,
       title: 'Committee role assignment bug fix',
       description:
         'Fixed an issue where removing a user from a committee did not revoke their associated permissions. Committee role changes now propagate correctly across all linked services.',
@@ -264,7 +233,7 @@ async function main() {
     },
     {
       productSlug: 'organization-dashboard',
-      authorIndex: 4,
+      authorIndex: 0,
       title: 'New member activity feed',
       description:
         'Added a real-time activity feed to the Organization Dashboard showing recent contributions, CLA signatures, and membership changes across all affiliated projects.',
@@ -286,7 +255,7 @@ async function main() {
     },
     {
       productSlug: 'easycla',
-      authorIndex: 1,
+      authorIndex: 0,
       title: 'GitLab integration support',
       description:
         'EasyCLA now supports GitLab as a source code platform in addition to GitHub and Gerrit. Organizations can configure CLA checks for GitLab merge requests.\n\n- GitLab webhook integration\n- Merge request status checks\n- GitLab group-level configuration',
@@ -308,7 +277,7 @@ async function main() {
     },
     {
       productSlug: 'insights',
-      authorIndex: 5,
+      authorIndex: 0,
       title: 'Add DORA metrics dashboard',
       description:
         'New DORA (DevOps Research and Assessment) metrics dashboard providing visibility into deployment frequency, lead time for changes, change failure rate, and time to restore service.',

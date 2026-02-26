@@ -7,4 +7,5 @@ import { Component, input } from '@angular/core';
 })
 export class TimelineItemComponent {
   public readonly date = input<string>('');
+  public readonly index = input(0);
 }

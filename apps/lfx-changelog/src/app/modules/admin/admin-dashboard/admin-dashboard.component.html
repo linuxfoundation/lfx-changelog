@@ -1,6 +1,6 @@
 <div class="space-y-8">
   <!-- Hero header -->
-  <div class="animate-in flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+  <div class="dashboard-header flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <p class="text-text-muted text-sm font-medium tracking-wide uppercase">Changelog Admin</p>
       <h1 class="font-display text-text-primary mt-1 text-3xl font-extrabold">Dashboard</h1>
@@ -25,8 +25,8 @@
   <!-- Stat cards -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <div
-      class="animate-in animate-in-1 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
-      <div class="from-accent-cyan to-accent-blue absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
+      class="dashboard-card dashboard-card-1 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
+      <div class="card-accent-bar from-accent-cyan to-accent-blue absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
       <div class="p-5">
         <div class="flex items-center justify-between">
           <div
@@ -40,8 +40,8 @@
     </div>
 
     <div
-      class="animate-in animate-in-2 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
-      <div class="from-new-feature to-new-feature/50 absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
+      class="dashboard-card dashboard-card-2 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
+      <div class="card-accent-bar from-new-feature to-new-feature/50 absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
       <div class="p-5">
         <div class="flex items-center justify-between">
           <div
@@ -55,8 +55,8 @@
     </div>
 
     <div
-      class="animate-in animate-in-3 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
-      <div class="from-draft to-draft/50 absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
+      class="dashboard-card dashboard-card-3 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
+      <div class="card-accent-bar from-draft to-draft/50 absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
       <div class="p-5">
         <div class="flex items-center justify-between">
           <div
@@ -70,8 +70,8 @@
     </div>
 
     <div
-      class="animate-in animate-in-4 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
-      <div class="from-accent-indigo to-accent-violet absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
+      class="dashboard-card dashboard-card-4 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
+      <div class="card-accent-bar from-accent-indigo to-accent-violet absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
       <div class="p-5">
         <div class="flex items-center justify-between">
           <div
@@ -87,7 +87,7 @@
 
   <div class="grid grid-cols-1 gap-6 xl:grid-cols-5">
     <!-- Recent activity (wider) -->
-    <div class="animate-in animate-in-5 xl:col-span-3">
+    <div class="dashboard-panel dashboard-panel-1 xl:col-span-3">
       <div class="mb-3 flex items-center justify-between">
         <h2 class="font-display text-text-primary text-base font-semibold">Recent Activity</h2>
         <a routerLink="/admin/changelogs" class="text-brand-600 hover:text-brand-700 text-xs font-medium transition-colors">
@@ -101,7 +101,8 @@
           }
           <a
             [routerLink]="['/admin/changelogs', entry.id, 'edit']"
-            class="gradient-accent-bar group hover:bg-surface-alt flex items-center gap-4 px-5 py-4 pl-7 transition-colors">
+            class="gradient-accent-bar group hover:bg-surface-alt flex items-center gap-4 px-5 py-4 pl-7 transition-colors"
+            [class]="'activity-row activity-row-' + i">
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
                 <p class="text-text-primary group-hover:text-brand-600 truncate text-sm font-medium transition-colors">{{ entry.title }}</p>
@@ -121,14 +122,14 @@
     </div>
 
     <!-- Latest releases from linked repos -->
-    <div class="animate-in animate-in-6 xl:col-span-2">
+    <div class="dashboard-panel dashboard-panel-2 xl:col-span-2">
       <div class="mb-3 flex items-center justify-between">
         <h2 class="font-display text-text-primary text-base font-semibold">Latest Releases</h2>
         <span class="text-text-muted text-xs">Linked repos</span>
       </div>
       <div class="border-border bg-surface overflow-hidden rounded-xl border shadow-sm">
-        <!-- Release item -->
-        <div class="px-4 py-3.5">
+        <!-- Release items -->
+        <div class="release-row release-row-0 px-4 py-3.5">
           <div class="flex items-center gap-2">
             <i class="fa-brands fa-github text-text-muted text-sm"></i>
             <span class="text-text-primary truncate text-sm font-medium">v2.6.0</span>
@@ -145,7 +146,7 @@
 
         <div class="border-border border-t"></div>
 
-        <div class="px-4 py-3.5">
+        <div class="release-row release-row-1 px-4 py-3.5">
           <div class="flex items-center gap-2">
             <i class="fa-brands fa-github text-text-muted text-sm"></i>
             <span class="text-text-primary truncate text-sm font-medium">v4.3.0-rc.1</span>
@@ -162,7 +163,7 @@
 
         <div class="border-border border-t"></div>
 
-        <div class="px-4 py-3.5">
+        <div class="release-row release-row-2 px-4 py-3.5">
           <div class="flex items-center gap-2">
             <i class="fa-brands fa-github text-text-muted text-sm"></i>
             <span class="text-text-primary truncate text-sm font-medium">v3.2.0</span>
@@ -179,7 +180,7 @@
 
         <div class="border-border border-t"></div>
 
-        <div class="px-4 py-3.5">
+        <div class="release-row release-row-3 px-4 py-3.5">
           <div class="flex items-center gap-2">
             <i class="fa-brands fa-github text-text-muted text-sm"></i>
             <span class="text-text-primary truncate text-sm font-medium">v5.0.1</span>
@@ -195,7 +196,7 @@
 
         <div class="border-border border-t"></div>
 
-        <div class="px-4 py-3.5">
+        <div class="release-row release-row-4 px-4 py-3.5">
           <div class="flex items-center gap-2">
             <i class="fa-brands fa-github text-text-muted text-sm"></i>
             <span class="text-text-primary truncate text-sm font-medium">v1.8.1</span>

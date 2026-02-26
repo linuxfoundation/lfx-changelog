@@ -1,3 +1,103 @@
 :host {
   display: block;
 }
+
+/* ── Dashboard entrance orchestration ──
+   Keyframes are global Tailwind tokens (animate-*).
+   Only stagger delays are component-scoped here.
+*/
+
+/* Header — immediate */
+.dashboard-header {
+  animation: slide-in-left 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stat cards — cascade with 70ms stagger after header */
+.dashboard-card {
+  animation: scale-in-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dashboard-card-1 {
+  animation-delay: 0.15s;
+}
+.dashboard-card-2 {
+  animation-delay: 0.22s;
+}
+.dashboard-card-3 {
+  animation-delay: 0.29s;
+}
+.dashboard-card-4 {
+  animation-delay: 0.36s;
+}
+
+/* Accent bars shimmer after their card appears */
+.card-accent-bar {
+  animation: shimmer-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dashboard-card-1 .card-accent-bar {
+  animation-delay: 0.35s;
+}
+.dashboard-card-2 .card-accent-bar {
+  animation-delay: 0.42s;
+}
+.dashboard-card-3 .card-accent-bar {
+  animation-delay: 0.49s;
+}
+.dashboard-card-4 .card-accent-bar {
+  animation-delay: 0.56s;
+}
+
+/* Bottom panels — arrive after cards settle */
+.dashboard-panel {
+  animation: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dashboard-panel-1 {
+  animation-delay: 0.45s;
+}
+.dashboard-panel-2 {
+  animation-delay: 0.55s;
+}
+
+/* Activity rows slide in from left */
+.activity-row {
+  animation: slide-in-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.activity-row-0 {
+  animation-delay: 0.6s;
+}
+.activity-row-1 {
+  animation-delay: 0.68s;
+}
+.activity-row-2 {
+  animation-delay: 0.76s;
+}
+.activity-row-3 {
+  animation-delay: 0.84s;
+}
+.activity-row-4 {
+  animation-delay: 0.92s;
+}
+
+/* Release rows slide in from right */
+.release-row {
+  animation: slide-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.release-row-0 {
+  animation-delay: 0.7s;
+}
+.release-row-1 {
+  animation-delay: 0.78s;
+}
+.release-row-2 {
+  animation-delay: 0.86s;
+}
+.release-row-3 {
+  animation-delay: 0.94s;
+}
+.release-row-4 {
+  animation-delay: 1.02s;
+}

@@ -1,5 +1,5 @@
 <div class="space-y-6">
-  <div class="flex items-center justify-between">
+  <div class="animate-slide-in-left flex items-center justify-between">
     <div>
       <h1 class="font-display text-text-primary text-2xl font-bold">Products</h1>
       <p class="text-text-secondary mt-1">Manage LFX products for changelog categorization.</p>
@@ -10,7 +10,7 @@
     </lfx-button>
   </div>
 
-  <lfx-card padding="none">
+  <lfx-card padding="none" class="animate-rise-in block [animation-delay:150ms]">
     <div class="overflow-x-auto">
       <table class="w-full">
         <thead>
@@ -18,13 +18,12 @@
             <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Name</th>
             <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Slug</th>
             <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Description</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Created</th>
             <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-border divide-y">
-          @for (product of products(); track product.id) {
-            <tr class="hover:bg-surface-alt transition-colors">
+          @for (product of products(); track product.id; let i = $index) {
+            <tr class="table-row-enter hover:bg-surface-alt transition-colors" [style.animation-delay.ms]="250 + i * 50">
               <td class="px-5 py-3">
                 <div class="flex items-center gap-2.5">
                   <i [class]="product.faIcon" class="text-brand-600"></i>
@@ -33,7 +32,6 @@
               </td>
               <td class="text-text-secondary px-5 py-3 font-mono text-sm">{{ product.slug }}</td>
               <td class="text-text-secondary max-w-xs truncate px-5 py-3 text-sm">{{ product.description }}</td>
-              <td class="text-text-muted px-5 py-3 text-sm">{{ product.createdAt | dateFormat }}</td>
               <td class="px-5 py-3">
                 <lfx-button variant="ghost" size="sm" (clicked)="openEdit(product)">Edit</lfx-button>
               </td>

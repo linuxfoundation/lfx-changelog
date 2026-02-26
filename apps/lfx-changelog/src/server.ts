@@ -4,6 +4,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import { auth } from 'express-openid-connect';
 import pinoHttp from 'pino-http';
 
+import type { AuthContext } from '@lfx-changelog/shared';
 import { authMiddleware } from './server/middleware/auth.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import changelogRouter from './server/routes/changelog.route';
@@ -12,6 +13,7 @@ import publicChangelogRouter from './server/routes/public-changelog.route';
 import publicProductRouter from './server/routes/public-product.route';
 import userRouter from './server/routes/user.route';
 import { serverLogger } from './server/server-logger';
+import { UserService } from './server/services/user.service';
 
 if (process.env['NODE_ENV'] !== 'production') {
   dotenv.config();
@@ -21,6 +23,7 @@ const browserDistFolder = import.meta.dirname + '/../browser';
 
 const angularApp = new AngularNodeAppEngine();
 const app = express();
+const userService = new UserService();
 
 // 1. Compression
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -68,14 +71,19 @@ app.use(
   auth({
     authRequired: false,
     auth0Logout: true,
-    secret: process.env['AUTH0_SECRET'] || 'a-long-random-secret-for-dev',
-    baseURL: process.env['BASE_URL'] || 'http://localhost:4200',
+    baseURL: process.env['BASE_URL'] || 'http://localhost:4204',
     clientID: process.env['AUTH0_CLIENT_ID'] || '',
-    clientSecret: process.env['AUTH0_CLIENT_SECRET'] || '',
     issuerBaseURL: process.env['AUTH0_ISSUER_BASE_URL'] || '',
+    secret: process.env['AUTH0_SECRET'] || 'a-long-random-secret-for-dev',
+    idTokenSigningAlg: 'HS256',
+    authorizationParams: {
+      response_type: 'code',
+      audience: process.env['AUTH0_AUDIENCE'] || '',
+      scope: 'openid email profile api offline_access',
+    },
+    clientSecret: process.env['AUTH0_CLIENT_SECRET'] || '',
     routes: {
       login: false,
-      callback: '/callback',
     },
   })
 );
@@ -85,6 +93,11 @@ app.get('/login', (req: Request, res: Response) => {
   const returnTo = (req.query['returnTo'] as string) || '/';
   const safeReturnTo = returnTo.startsWith('/') ? returnTo : '/';
   (res as any).oidc.login({ returnTo: safeReturnTo });
+});
+
+// 7b. Custom logout route
+app.get('/logout', (_req: Request, res: Response) => {
+  (res as any).oidc.logout({ returnTo: '/' });
 });
 
 // 8. Public API routes (no auth required)
@@ -104,9 +117,50 @@ app.use('/api', apiErrorHandler);
 app.use('/public/api', apiErrorHandler);
 
 // 12. Angular SSR catch-all
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use(async (req: Request, res: Response, next: NextFunction) => {
+  const authContext: AuthContext = {
+    authenticated: false,
+    user: null,
+    dbUser: null,
+  };
+
+  if (req.oidc?.isAuthenticated()) {
+    authContext.authenticated = true;
+    const oidcUser = req.oidc.user;
+    if (oidcUser) {
+      authContext.user = {
+        sub: oidcUser['sub'],
+        email: oidcUser['email'],
+        name: oidcUser['name'] || oidcUser['email'],
+        picture: oidcUser['picture'] || '',
+      };
+      try {
+        const prismaUser = await userService.findByAuth0Id(authContext.user.sub);
+        if (prismaUser) {
+          authContext.dbUser = {
+            id: prismaUser.id,
+            auth0Id: prismaUser.auth0Id,
+            email: prismaUser.email,
+            name: prismaUser.name,
+            avatarUrl: prismaUser.avatarUrl || '',
+            createdAt: prismaUser.createdAt.toISOString(),
+            updatedAt: prismaUser.updatedAt.toISOString(),
+            roles: ((prismaUser as any).userRoleAssignments || []).map((r: any) => ({
+              id: r.id,
+              userId: r.userId,
+              productId: r.productId,
+              role: r.role,
+            })),
+          };
+        }
+      } catch {
+        serverLogger.warn('Failed to look up user during SSR, continuing without dbUser');
+      }
+    }
+  }
+
   angularApp
-    .handle(req)
+    .handle(req, { auth: authContext })
     .then((response) => {
       if (response) {
         return writeResponseToNodeResponse(response, res);

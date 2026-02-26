@@ -4,7 +4,7 @@
   </div>
 
   @if (isOpen()) {
-    <div class="border-border bg-surface absolute right-0 z-40 mt-1 min-w-[160px] rounded-lg border py-1 shadow-lg">
+    <div class="animate-dropdown-in border-border bg-surface absolute right-0 z-40 mt-1 min-w-[160px] rounded-lg border py-1 shadow-lg">
       @for (item of items(); track item.label) {
         <button
           (click)="selectItem(item)"
