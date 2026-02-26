@@ -17,9 +17,89 @@
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <!-- Form -->
     <div class="animate-slide-in-left relative z-10 space-y-5 [animation-delay:150ms]">
-      <lfx-input label="Title" placeholder="Enter entry title..." [formControl]="titleControl" />
-
+      <!-- Product selector (first — determines AI generation availability) -->
       <lfx-select label="Product" [options]="productOptions()" [formControl]="productIdControl" placeholder="Select product..." />
+
+      <!-- AI Generation Panel (visible when product has GitHub repos) -->
+      @if (hasGitHubRepos() && !isEditing()) {
+        <div class="border-brand-200 bg-brand-50/50 dark:border-brand-800 dark:bg-brand-950/30 rounded-lg border p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-duotone fa-wand-magic-sparkles text-brand-500 text-sm"></i>
+              <span class="text-text-primary text-sm font-medium">AI-Powered Generation</span>
+            </div>
+            <lfx-button variant="secondary" size="sm" (clicked)="toggleAiPanel()">
+              @if (showAiPanel()) {
+                <i class="fa-solid fa-chevron-up text-xs"></i>
+                Hide Options
+              } @else {
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+                Generate from Releases
+              }
+            </lfx-button>
+          </div>
+
+          @if (showAiPanel()) {
+            <div class="mt-4 space-y-4">
+              <p class="text-text-secondary text-xs">
+                Generate changelog content from the GitHub releases linked to this product. The AI will analyze release notes and create a formatted summary.
+              </p>
+
+              <lfx-select label="Releases to include (per repo)" [options]="releaseCountOptions" [formControl]="releaseCountControl" />
+
+              <lfx-textarea
+                label="Additional context (optional)"
+                [formControl]="additionalContextControl"
+                placeholder="e.g., Focus on security fixes, ignore internal refactors..."
+                [rows]="3" />
+
+              <div class="flex items-center gap-2">
+                <lfx-button variant="primary" size="sm" [loading]="isGenerating()" [disabled]="isGenerating()" (clicked)="generateChangelog()">
+                  <i class="fa-duotone fa-sparkles text-xs"></i>
+                  Generate Changelog
+                </lfx-button>
+                @if (isGenerating()) {
+                  <lfx-button variant="ghost" size="sm" (clicked)="cancelGeneration()">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                    Cancel
+                  </lfx-button>
+                }
+              </div>
+
+              <!-- Generation status -->
+              @if (isGenerating() && generationStatus()) {
+                <div class="text-brand-600 dark:text-brand-400 flex items-center gap-2 text-xs">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  {{ generationStatus() }}
+                </div>
+              }
+
+              <!-- Generation error -->
+              @if (generationError()) {
+                <div
+                  class="flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+                  <span>
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                    {{ generationError() }}
+                  </span>
+                  <lfx-button variant="ghost" size="sm" (clicked)="dismissError()">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                  </lfx-button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (loadingRepos()) {
+        <div class="text-text-muted flex items-center gap-2 text-xs">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          Checking for linked repositories...
+        </div>
+      }
+
+      <lfx-input label="Title" placeholder="Enter entry title..." [formControl]="titleControl" />
 
       <lfx-input label="Version" placeholder="e.g., 2.5.0" [formControl]="versionControl" />
 

@@ -87,6 +87,18 @@ jobs:
                 {
                   "name": "DB_PASSWORD",
                   "valueFrom": "arn:aws:secretsmanager:us-east-2:${{ secrets.AWS_ACCOUNT_ID }}:secret:/cloudops/managed-secrets/database/pcc-db/changelog"
+                },
+                {
+                  "name": "LITELLM_API_KEY",
+                  "valueFrom": "arn:aws:secretsmanager:us-east-2:${{ secrets.AWS_ACCOUNT_ID }}:secret:/cloudops/managed-secrets/cloud/pcc-changelog/litellm_api_key"
+                },
+                {
+                  "name": "GITHUB_APP_ID",
+                  "valueFrom": "arn:aws:secretsmanager:us-east-2:${{ secrets.AWS_ACCOUNT_ID }}:secret:/cloudops/managed-secrets/cloud/github/pcc-changelog/app_id"
+                },
+                {
+                  "name": "GITHUB_PRIVATE_KEY",
+                  "valueFrom": "arn:aws:secretsmanager:us-east-2:${{ secrets.AWS_ACCOUNT_ID }}:secret:/cloudops/managed-secrets/cloud/github/pcc-changelog/app_private_key"
                 }
               ],
               "environment": [
@@ -98,7 +110,8 @@ jobs:
                 { "name": "DB_HOST", "value": "dev-changelog-database.cs2y6rcs4jow.us-east-2.rds.amazonaws.com" },
                 { "name": "DB_PORT", "value": "5432" },
                 { "name": "DB_NAME", "value": "lfx_changelog" },
-                { "name": "DB_USER", "value": "changelog" }
+                { "name": "DB_USER", "value": "changelog" },
+                { "name": "AI_API_URL", "value": "https://litellm.dev.v2.cluster.linuxfound.info/chat/completions" }
               ],
               "essential": true,
               "logConfiguration": {

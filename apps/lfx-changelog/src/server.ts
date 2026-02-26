@@ -11,6 +11,7 @@ import { authMiddleware } from './server/middleware/auth.middleware';
 import { noCacheMiddleware } from './server/middleware/cache.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import { requestIdMiddleware } from './server/middleware/request-id.middleware';
+import aiRouter from './server/routes/ai.route';
 import changelogRouter from './server/routes/changelog.route';
 import githubRouter from './server/routes/github.route';
 import productRouter from './server/routes/product.route';
@@ -165,6 +166,7 @@ app.use('/api', noCacheMiddleware);
 app.use('/api', authMiddleware);
 
 // 16. Protected API routes
+app.use('/api/ai', aiRouter);
 app.use('/api/products', productRouter);
 app.use('/api/changelogs', changelogRouter);
 app.use('/api/users', userRouter);

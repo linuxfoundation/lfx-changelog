@@ -6,12 +6,12 @@ import { serverLogger } from '../server-logger';
 const GITHUB_API_BASE = 'https://api.github.com';
 
 export class GitHubService {
-  private readonly appId: string;
-  private readonly privateKey: string;
+  private get appId(): string {
+    return process.env['GITHUB_APP_ID'] || '';
+  }
 
-  public constructor() {
-    this.appId = process.env['GITHUB_APP_ID'] || '';
-    this.privateKey = (process.env['GITHUB_PRIVATE_KEY'] || '').replace(/\\n/g, '\n');
+  private get privateKey(): string {
+    return (process.env['GITHUB_PRIVATE_KEY'] || '').replace(/\\n/g, '\n');
   }
 
   public generateAppJWT(): string {
@@ -151,11 +151,40 @@ export class GitHubService {
     return commits.map((commit) => ({ ...commit, repoFullName }));
   }
 
-  public async getRepositoryReleases(installationId: number, owner: string, repo: string, repoFullName: string): Promise<GitHubRelease[]> {
+  public async getCompareCommits(
+    installationId: number,
+    owner: string,
+    repo: string,
+    baseTag: string,
+    headTag: string,
+    repoFullName: string
+  ): Promise<GitHubCommit[]> {
     this.validateInstallationId(installationId);
     const token = await this.getInstallationToken(installationId);
 
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/releases?per_page=20`, {
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/compare/${encodeURIComponent(baseTag)}...${encodeURIComponent(headTag)}`, {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      serverLogger.error({ status: response.status, body }, 'Failed to get compare commits');
+      return [];
+    }
+
+    const data = (await response.json()) as { commits: GitHubCommit[] };
+    return (data.commits || []).map((commit) => ({ ...commit, repoFullName }));
+  }
+
+  public async getRepositoryReleases(installationId: number, owner: string, repo: string, repoFullName: string, perPage = 20): Promise<GitHubRelease[]> {
+    this.validateInstallationId(installationId);
+    const token = await this.getInstallationToken(installationId);
+
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/releases?per_page=${perPage}`, {
       headers: {
         Authorization: `token ${token}`,
         Accept: 'application/vnd.github+json',

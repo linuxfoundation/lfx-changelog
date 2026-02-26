@@ -1,3 +1,4 @@
+export { AiServiceError } from './ai.error';
 export { AuthenticationError } from './authentication.error';
 export { AuthorizationError } from './authorization.error';
 export { BaseApiError } from './base-api.error';

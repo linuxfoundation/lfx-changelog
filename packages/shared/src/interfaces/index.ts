@@ -1,3 +1,20 @@
+export type {
+  AiChangelogMetadata,
+  AiProductSummary,
+  AiSummaryResponse,
+  ChangelogGenerationState,
+  ChangelogSSEEvent,
+  ChangelogSSEEventType,
+  GenerateChangelogRequest,
+  OpenAIChatChoice,
+  OpenAIChatMessage,
+  OpenAIChatRequest,
+  OpenAIChatResponse,
+  OpenAIChatRole,
+  OpenAIJsonSchemaFormat,
+  OpenAIStreamChunk,
+  OpenAIStreamDeltaChoice,
+} from './ai.interface.js';
 export type { ApiResponse, PaginatedResponse } from './api-response.interface.js';
 export type { AuthContext, AuthUser } from './auth.interface.js';
 export type { ChangelogEntry, ChangelogEntryWithRelations } from './changelog-entry.interface.js';
