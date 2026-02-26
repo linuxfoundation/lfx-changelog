@@ -71,7 +71,9 @@ export class ProductRepositoryController {
         })
       );
 
-      const allReleases = results.flatMap((r) => r.releases).sort((a, b) => new Date(b.published_at || '').getTime() - new Date(a.published_at || '').getTime());
+      const allReleases = results
+        .flatMap((r) => r.releases)
+        .sort((a, b) => new Date(b.published_at || '').getTime() - new Date(a.published_at || '').getTime());
       const allPulls = results.flatMap((r) => r.pulls).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       const allCommits = results.flatMap((r) => r.commits).sort((a, b) => new Date(b.commit.author.date).getTime() - new Date(a.commit.author.date).getTime());
 

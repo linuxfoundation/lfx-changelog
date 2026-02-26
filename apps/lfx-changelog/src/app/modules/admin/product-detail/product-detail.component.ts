@@ -44,7 +44,7 @@ export class ProductDetailComponent {
     this.route.queryParamMap
       .pipe(
         first(),
-        filter((params) => params.has('tab')),
+        filter((params) => params.has('tab'))
       )
       .subscribe((params) => {
         const tab = params.get('tab');

@@ -81,8 +81,6 @@ export class ProductManagementComponent {
   }
 
   protected deleteProduct(product: Product): void {
-    this.productService
-      .delete(product.id)
-      .subscribe(() => this.refresh$.next());
+    this.productService.delete(product.id).subscribe(() => this.refresh$.next());
   }
 }

@@ -1,6 +1,8 @@
 <div class="bg-canvas flex min-h-screen">
   <!-- Sidebar -->
-  <aside class="border-border bg-surface sticky top-0 flex h-screen shrink-0 flex-col border-r transition-all duration-200" [class]="sidebarCollapsed() ? 'w-16' : 'w-64'">
+  <aside
+    class="border-border bg-surface sticky top-0 flex h-screen shrink-0 flex-col border-r transition-all duration-200"
+    [class]="sidebarCollapsed() ? 'w-16' : 'w-64'">
     <div class="border-border flex h-16 items-center justify-between border-b px-4">
       @if (!sidebarCollapsed()) {
         <a routerLink="/" class="flex items-center gap-2">
@@ -79,9 +81,7 @@
               <div class="text-text-primary truncate text-sm font-medium">{{ user.name }}</div>
               <div class="text-text-muted truncate text-xs">{{ user.email }}</div>
             </div>
-            <i
-              class="fa-solid fa-chevron-up text-text-muted text-xs transition-transform duration-200"
-              [class.rotate-180]="!userMenuOpen()"></i>
+            <i class="fa-solid fa-chevron-up text-text-muted text-xs transition-transform duration-200" [class.rotate-180]="!userMenuOpen()"></i>
           }
         </button>
       </div>
@@ -115,7 +115,12 @@
 
 <!-- User menu popup (outside flex layout to avoid affecting width) -->
 @if (userMenuOpen() && authUser()) {
-  <div #userMenuArea class="border-border bg-surface fixed z-50 rounded-lg border shadow-lg mb-5" [class]="sidebarCollapsed() ? 'w-48' : 'w-[232px]'" [style.bottom.px]="userMenuBottom()" [style.left.px]="userMenuLeft()">
+  <div
+    #userMenuArea
+    class="border-border bg-surface fixed z-50 mb-5 rounded-lg border shadow-lg"
+    [class]="sidebarCollapsed() ? 'w-48' : 'w-[232px]'"
+    [style.bottom.px]="userMenuBottom()"
+    [style.left.px]="userMenuLeft()">
     <div class="p-1.5">
       <a
         routerLink="/"
@@ -123,9 +128,7 @@
         <i class="fa-duotone fa-arrow-up-right-from-square w-4 text-center text-xs"></i>
         <span>View Public Site</span>
       </a>
-      <a
-        href="/logout"
-        class="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50">
+      <a href="/logout" class="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50">
         <i class="fa-duotone fa-arrow-right-from-bracket w-4 text-center text-xs"></i>
         <span>Logout</span>
       </a>

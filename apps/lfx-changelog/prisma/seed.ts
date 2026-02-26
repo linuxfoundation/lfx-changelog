@@ -62,9 +62,7 @@ const products = [
   },
 ];
 
-const users = [
-  { auth0Id: 'auth0|asitha', email: 'adesilva@linuxfoundation.org', name: 'Asitha de Silva', avatarUrl: null },
-];
+const users = [{ auth0Id: 'auth0|asitha', email: 'adesilva@linuxfoundation.org', name: 'Asitha de Silva', avatarUrl: null }];
 
 async function main() {
   console.info('Seeding database...');

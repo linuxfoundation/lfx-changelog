@@ -8,7 +8,16 @@ export type {
   UpdateChangelogEntryRequest,
   UpdateProductRequest,
 } from './dto.interface.js';
-export type { GitHubCommit, GitHubInstallation, GitHubPullRequest, GitHubRelease, GitHubRepository, LinkRepositoryRequest, ProductActivity, ProductRepository } from './github.interface.js';
+export type {
+  GitHubCommit,
+  GitHubInstallation,
+  GitHubPullRequest,
+  GitHubRelease,
+  GitHubRepository,
+  LinkRepositoryRequest,
+  ProductActivity,
+  ProductRepository,
+} from './github.interface.js';
 export type { Product } from './product.interface.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.interface.js';
 export type { User, UserRoleAssignment } from './user.interface.js';

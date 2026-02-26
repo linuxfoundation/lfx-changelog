@@ -27,8 +27,7 @@
           [class.border-brand-600]="activityTab() === 'releases'"
           [class.text-brand-600]="activityTab() === 'releases'"
           [class.border-transparent]="activityTab() !== 'releases'"
-          (click)="activityTab.set('releases')"
-        >
+          (click)="activityTab.set('releases')">
           <i class="fa-duotone fa-tags mr-1.5 text-xs"></i>
           Releases
         </button>
@@ -37,8 +36,7 @@
           [class.border-brand-600]="activityTab() === 'commits'"
           [class.text-brand-600]="activityTab() === 'commits'"
           [class.border-transparent]="activityTab() !== 'commits'"
-          (click)="activityTab.set('commits')"
-        >
+          (click)="activityTab.set('commits')">
           <i class="fa-duotone fa-code-commit mr-1.5 text-xs"></i>
           Commits
         </button>
@@ -47,8 +45,7 @@
           [class.border-brand-600]="activityTab() === 'pulls'"
           [class.text-brand-600]="activityTab() === 'pulls'"
           [class.border-transparent]="activityTab() !== 'pulls'"
-          (click)="activityTab.set('pulls')"
-        >
+          (click)="activityTab.set('pulls')">
           <i class="fa-duotone fa-code-pull-request mr-1.5 text-xs"></i>
           Open PRs ({{ pullRequests().length }})
         </button>
@@ -69,14 +66,22 @@
                   <img [src]="release.author.avatar_url" [alt]="release.author.login" class="mt-0.5 h-7 w-7 rounded-full" />
                   <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
-                      <a [href]="release.html_url" target="_blank" rel="noopener noreferrer" class="text-text-primary hover:text-brand-600 text-sm font-medium hover:underline">
+                      <a
+                        [href]="release.html_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-text-primary hover:text-brand-600 text-sm font-medium hover:underline">
                         {{ release.name || release.tag_name }}
                       </a>
-                      <span class="bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-medium">
+                      <span
+                        class="bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-medium">
                         {{ release.tag_name }}
                       </span>
                       @if (release.prerelease) {
-                        <span class="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">Pre-release</span>
+                        <span
+                          class="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                          >Pre-release</span
+                        >
                       }
                       @if (release.draft) {
                         <span class="bg-surface-alt text-text-muted shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">Draft</span>
@@ -94,7 +99,9 @@
               }
             </div>
             @if (releases().length > 5) {
-              <button class="text-brand-600 cursor-pointer hover:text-brand-700 mt-3 w-full text-center text-xs font-medium" (click)="releasesExpanded.set(!releasesExpanded())">
+              <button
+                class="text-brand-600 hover:text-brand-700 mt-3 w-full cursor-pointer text-center text-xs font-medium"
+                (click)="releasesExpanded.set(!releasesExpanded())">
                 @if (releasesExpanded()) {
                   <i class="fa-solid fa-chevron-up mr-1"></i> Show less
                 } @else {
@@ -119,14 +126,21 @@
                   <img [src]="pr.user.avatar_url" [alt]="pr.user.login" class="mt-0.5 h-7 w-7 rounded-full" />
                   <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
-                      <a [href]="pr.html_url" target="_blank" rel="noopener noreferrer" class="text-text-primary hover:text-brand-600 text-sm font-medium hover:underline">
+                      <a
+                        [href]="pr.html_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-text-primary hover:text-brand-600 text-sm font-medium hover:underline">
                         {{ pr.title }}
                       </a>
                       @if (pr.draft) {
                         <span class="bg-surface-alt text-text-muted shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">Draft</span>
                       }
                       @for (label of pr.labels; track label.name) {
-                        <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium" [style.background-color]="'#' + label.color + '20'" [style.color]="'#' + label.color">
+                        <span
+                          class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                          [style.background-color]="'#' + label.color + '20'"
+                          [style.color]="'#' + label.color">
                           {{ label.name }}
                         </span>
                       }
@@ -140,7 +154,9 @@
               }
             </div>
             @if (pullRequests().length > 5) {
-              <button class="text-brand-600 cursor-pointer hover:text-brand-700 mt-3 w-full text-center text-xs font-medium" (click)="pullsExpanded.set(!pullsExpanded())">
+              <button
+                class="text-brand-600 hover:text-brand-700 mt-3 w-full cursor-pointer text-center text-xs font-medium"
+                (click)="pullsExpanded.set(!pullsExpanded())">
                 @if (pullsExpanded()) {
                   <i class="fa-solid fa-chevron-up mr-1"></i> Show less
                 } @else {
@@ -171,10 +187,18 @@
                   }
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
-                      <a [href]="commit.html_url" target="_blank" rel="noopener noreferrer" class="text-text-primary hover:text-brand-600 truncate text-sm font-medium hover:underline">
+                      <a
+                        [href]="commit.html_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-text-primary hover:text-brand-600 truncate text-sm font-medium hover:underline">
                         {{ commit.commit.message | firstLine }}
                       </a>
-                      <a [href]="commit.html_url" target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:text-brand-700 shrink-0 font-mono text-xs hover:underline">
+                      <a
+                        [href]="commit.html_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-brand-600 hover:text-brand-700 shrink-0 font-mono text-xs hover:underline">
                         {{ commit.sha | slice: 0 : 7 }}
                       </a>
                     </div>
@@ -187,7 +211,9 @@
               }
             </div>
             @if (commits().length > 5) {
-              <button class="text-brand-600 cursor-pointer hover:text-brand-700 mt-3 w-full text-center text-xs font-medium" (click)="commitsExpanded.set(!commitsExpanded())">
+              <button
+                class="text-brand-600 hover:text-brand-700 mt-3 w-full cursor-pointer text-center text-xs font-medium"
+                (click)="commitsExpanded.set(!commitsExpanded())">
                 @if (commitsExpanded()) {
                   <i class="fa-solid fa-chevron-up mr-1"></i> Show less
                 } @else {

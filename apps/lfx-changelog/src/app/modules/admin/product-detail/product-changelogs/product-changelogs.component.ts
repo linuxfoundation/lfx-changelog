@@ -38,11 +38,11 @@ export class ProductChangelogsComponent implements OnInit {
           this.changelogService.getAll({ productId: this.productId(), limit: 5 }).pipe(
             map((res) => ({ data: res.data, loading: false })),
             catchError(() => of({ data: [] as ChangelogEntryWithRelations[], loading: false })),
-            startWith({ data: [] as ChangelogEntryWithRelations[], loading: true }),
-          ),
-        ),
+            startWith({ data: [] as ChangelogEntryWithRelations[], loading: true })
+          )
+        )
       ),
-      { initialValue: { data: [], loading: false } },
+      { initialValue: { data: [], loading: false } }
     );
   }
 }

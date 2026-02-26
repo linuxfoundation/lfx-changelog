@@ -13,7 +13,7 @@
   </div>
 
   <!-- Filters -->
-  <div class="animate-fade-in-up relative z-10 grid grid-cols-1 gap-4 sm:grid-cols-2 [animation-delay:100ms]">
+  <div class="animate-fade-in-up relative z-10 grid grid-cols-1 gap-4 [animation-delay:100ms] sm:grid-cols-2">
     <lfx-select label="Product" [options]="productOptions()" [formControl]="productFilterControl" placeholder="All Products" />
     <lfx-select label="Status" [options]="statusOptions" [formControl]="statusFilterControl" placeholder="All Statuses" />
   </div>

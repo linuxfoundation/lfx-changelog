@@ -1,6 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { ApiResponse, CreateProductRequest, LinkRepositoryRequest, Product, ProductActivity, ProductRepository, UpdateProductRequest } from '@lfx-changelog/shared';
+import type {
+  ApiResponse,
+  CreateProductRequest,
+  LinkRepositoryRequest,
+  Product,
+  ProductActivity,
+  ProductRepository,
+  UpdateProductRequest,
+} from '@lfx-changelog/shared';
 import { map, take, type Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })

@@ -2,7 +2,7 @@ STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
 
 yarn format
 
-echo "$STAGED_FILES" | xargs -d '\n' git add
+echo "$STAGED_FILES" | tr '\n' '\0' | xargs -0 git add
 
 yarn lint
 yarn build

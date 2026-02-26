@@ -3,6 +3,7 @@ import { Router } from 'express';
 
 import { ProductRepositoryController } from '../controllers/product-repository.controller';
 import { ProductController } from '../controllers/product.controller';
+import { cacheMiddleware } from '../middleware/cache.middleware';
 import { requireRole } from '../middleware/role.middleware';
 
 const router = Router();
@@ -18,6 +19,8 @@ router.delete('/:id', requireRole(UserRole.SUPER_ADMIN), (req, res, next) => pro
 router.get('/:id/repositories', (req, res, next) => productRepositoryController.list(req, res, next));
 router.post('/:id/repositories', requireRole(UserRole.SUPER_ADMIN), (req, res, next) => productRepositoryController.link(req, res, next));
 router.delete('/:id/repositories/:repoId', requireRole(UserRole.SUPER_ADMIN), (req, res, next) => productRepositoryController.unlink(req, res, next));
-router.get('/:id/activity', requireRole(UserRole.SUPER_ADMIN), (req, res, next) => productRepositoryController.getActivity(req, res, next));
+router.get('/:id/activity', requireRole(UserRole.SUPER_ADMIN), cacheMiddleware({ maxAge: 300, staleWhileRevalidate: 60 }), (req, res, next) =>
+  productRepositoryController.getActivity(req, res, next)
+);
 
 export default router;
