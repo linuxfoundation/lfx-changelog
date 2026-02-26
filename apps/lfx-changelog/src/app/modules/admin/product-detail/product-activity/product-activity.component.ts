@@ -23,12 +23,18 @@ export class ProductActivityComponent implements OnInit {
   private readonly fetchActivity$ = new Subject<void>();
 
   protected readonly activityTab = signal<'releases' | 'pulls' | 'commits'>('releases');
+  protected readonly releasesExpanded = signal(false);
+  protected readonly commitsExpanded = signal(false);
+  protected readonly pullsExpanded = signal(false);
 
   private readonly activityState: Signal<LoadingState<ProductActivity>> = this.initActivityState();
   protected readonly releases = computed(() => this.activityState().data.releases);
   protected readonly pullRequests = computed(() => this.activityState().data.pullRequests);
   protected readonly commits = computed(() => this.activityState().data.commits);
   protected readonly loadingActivity = computed(() => this.activityState().loading);
+  protected readonly visibleReleases = computed(() => (this.releasesExpanded() ? this.releases() : this.releases().slice(0, 5)));
+  protected readonly visiblePullRequests = computed(() => (this.pullsExpanded() ? this.pullRequests() : this.pullRequests().slice(0, 5)));
+  protected readonly visibleCommits = computed(() => (this.commitsExpanded() ? this.commits() : this.commits().slice(0, 5)));
 
   public ngOnInit(): void {
     this.fetchActivity$.next();

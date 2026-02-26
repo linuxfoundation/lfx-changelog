@@ -3,12 +3,13 @@ import { Component, input } from '@angular/core';
 import { CardComponent } from '@components/card/card.component';
 
 import { ProductActivityComponent } from '../product-activity/product-activity.component';
+import { ProductChangelogsComponent } from '../product-changelogs/product-changelogs.component';
 
 import type { Product } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-product-overview-tab',
-  imports: [DatePipe, CardComponent, ProductActivityComponent],
+  imports: [DatePipe, CardComponent, ProductActivityComponent, ProductChangelogsComponent],
   templateUrl: './product-overview-tab.component.html',
   styleUrl: './product-overview-tab.component.css',
 })

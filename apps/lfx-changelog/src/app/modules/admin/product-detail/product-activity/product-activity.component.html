@@ -64,7 +64,7 @@
             </div>
           } @else {
             <div class="divide-border divide-y">
-              @for (release of releases(); track release.id) {
+              @for (release of visibleReleases(); track release.id) {
                 <div class="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
                   <img [src]="release.author.avatar_url" [alt]="release.author.login" class="mt-0.5 h-7 w-7 rounded-full" />
                   <div class="min-w-0 flex-1">
@@ -93,6 +93,15 @@
                 </div>
               }
             </div>
+            @if (releases().length > 5) {
+              <button class="text-brand-600 cursor-pointer hover:text-brand-700 mt-3 w-full text-center text-xs font-medium" (click)="releasesExpanded.set(!releasesExpanded())">
+                @if (releasesExpanded()) {
+                  <i class="fa-solid fa-chevron-up mr-1"></i> Show less
+                } @else {
+                  <i class="fa-solid fa-chevron-down mr-1"></i> Show all ({{ releases().length }})
+                }
+              </button>
+            }
           }
         }
 
@@ -105,7 +114,7 @@
             </div>
           } @else {
             <div class="divide-border divide-y">
-              @for (pr of pullRequests(); track pr.id) {
+              @for (pr of visiblePullRequests(); track pr.id) {
                 <div class="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
                   <img [src]="pr.user.avatar_url" [alt]="pr.user.login" class="mt-0.5 h-7 w-7 rounded-full" />
                   <div class="min-w-0 flex-1">
@@ -130,6 +139,15 @@
                 </div>
               }
             </div>
+            @if (pullRequests().length > 5) {
+              <button class="text-brand-600 cursor-pointer hover:text-brand-700 mt-3 w-full text-center text-xs font-medium" (click)="pullsExpanded.set(!pullsExpanded())">
+                @if (pullsExpanded()) {
+                  <i class="fa-solid fa-chevron-up mr-1"></i> Show less
+                } @else {
+                  <i class="fa-solid fa-chevron-down mr-1"></i> Show all ({{ pullRequests().length }})
+                }
+              </button>
+            }
           }
         }
 
@@ -142,7 +160,7 @@
             </div>
           } @else {
             <div class="divide-border divide-y">
-              @for (commit of commits(); track commit.sha) {
+              @for (commit of visibleCommits(); track commit.sha) {
                 <div class="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
                   @if (commit.author) {
                     <img [src]="commit.author.avatar_url" [alt]="commit.author.login" class="mt-0.5 h-7 w-7 rounded-full" />
@@ -168,6 +186,15 @@
                 </div>
               }
             </div>
+            @if (commits().length > 5) {
+              <button class="text-brand-600 cursor-pointer hover:text-brand-700 mt-3 w-full text-center text-xs font-medium" (click)="commitsExpanded.set(!commitsExpanded())">
+                @if (commitsExpanded()) {
+                  <i class="fa-solid fa-chevron-up mr-1"></i> Show less
+                } @else {
+                  <i class="fa-solid fa-chevron-down mr-1"></i> Show all ({{ commits().length }})
+                }
+              </button>
+            }
           }
         }
       </div>
