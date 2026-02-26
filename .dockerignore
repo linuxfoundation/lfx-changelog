@@ -1,0 +1,13 @@
+node_modules
+dist
+.angular
+.turbo
+.vscode
+.husky
+.github
+.git
+.env
+.env.*
+*.md
+*.pem
+cypress
