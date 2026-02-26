@@ -1,16 +1,73 @@
 # Copyright The Linux Foundation and each contributor to LFX.
 # SPDX-License-Identifier: MIT
 
+# Node.js
 node_modules
-dist
-.angular
-.turbo
-.vscode
-.husky
-.github
-.git
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+**/dist
+**/build
+**/.turbo
+**/node_modules
+**/.angular
+
+# Development files - Exclude all .env files
+.env*
 .env
 .env.*
-*.md
-*.pem
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+**/.env
+**/.env.*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github
+.husky
+
+# Testing
+coverage
+.nyc_output
 cypress
+
+# Logs
+logs
+*.log
+
+# Documentation
+*.md
+docs
+
+# Helm charts
+charts
+
+# Temporary files
+tmp
+temp
+
+# Certificates
+*.pem

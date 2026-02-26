@@ -1,0 +1,55 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lfx-changelog.fullname" . }}
+  labels:
+    {{- include "lfx-changelog.labels" . | nindent 4 }}
+  {{- with (include "lfx-changelog.annotations" .) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "lfx-changelog.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- include "lfx-changelog.podAnnotations" . | nindent 8 }}
+      labels:
+        {{- include "lfx-changelog.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (include "lfx-changelog.serviceAccountName" .) }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "lfx-changelog.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+          {{- range $name, $config := .Values.environment }}
+          - name: {{ $name }}
+            {{- if $config.value }}
+            value: {{ $config.value | quote }}
+            {{- else if $config.valueFrom }}
+            valueFrom:
+              {{- toYaml $config.valueFrom | nindent 14 }}
+            {{- end }}
+          {{- end }}

@@ -1,3 +1,6 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
 # Build stage
 FROM node:22-alpine AS builder
 
@@ -7,11 +10,17 @@ RUN corepack enable
 
 WORKDIR /app
 
-# Copy source
-COPY . .
+# Copy package files ONLY for dependency installation (better layer caching)
+COPY package.json yarn.lock turbo.json .yarnrc.yml ./
+COPY .yarn .yarn
+COPY apps/lfx-changelog/package.json ./apps/lfx-changelog/
+COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies
+# Install dependencies (this layer is cached when deps don't change)
 RUN yarn install --immutable
+
+# NOW copy source code (changes here won't invalidate the dependency layer)
+COPY . .
 
 # Generate Prisma client
 RUN yarn workspace lfx-changelog prisma generate
@@ -21,6 +30,13 @@ RUN yarn turbo run build:${BUILD_ENV} --filter=lfx-changelog
 
 # Production stage
 FROM node:22-alpine
+
+# OCI image labels
+LABEL org.opencontainers.image.title="LFX Changelog"
+LABEL org.opencontainers.image.description="Linux Foundation LFX Changelog application"
+LABEL org.opencontainers.image.vendor="The Linux Foundation"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/linuxfoundation/lfx-changelog"
 
 # Run as non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
