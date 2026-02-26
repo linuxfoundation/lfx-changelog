@@ -1,11 +1,15 @@
 import { Router } from 'express';
 
 import { ChangelogController } from '../controllers/changelog.controller';
+import { cacheMiddleware } from '../middleware/cache.middleware';
 
 const router = Router();
 const changelogController = new ChangelogController();
 
-router.get('/', (req, res, next) => changelogController.listPublished(req, res, next));
-router.get('/:id', (req, res, next) => changelogController.getPublishedById(req, res, next));
+// List: 1min cache (changelogs update frequently)
+router.get('/', cacheMiddleware({ maxAge: 60, staleWhileRevalidate: 30 }), (req, res, next) => changelogController.listPublished(req, res, next));
+
+// Detail: 5min cache (individual entries are stable once published)
+router.get('/:id', cacheMiddleware({ maxAge: 300, staleWhileRevalidate: 60 }), (req, res, next) => changelogController.getPublishedById(req, res, next));
 
 export default router;

@@ -1,19 +1,27 @@
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import { auth } from 'express-openid-connect';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 
-import type { AuthContext } from '@lfx-changelog/shared';
 import { authMiddleware } from './server/middleware/auth.middleware';
+import { noCacheMiddleware } from './server/middleware/cache.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
+import { requestIdMiddleware } from './server/middleware/request-id.middleware';
 import changelogRouter from './server/routes/changelog.route';
 import productRouter from './server/routes/product.route';
 import publicChangelogRouter from './server/routes/public-changelog.route';
 import publicProductRouter from './server/routes/public-product.route';
 import userRouter from './server/routes/user.route';
-import { serverLogger } from './server/server-logger';
+import { reqSerializer, resSerializer, serverLogger } from './server/server-logger';
+import { disconnectPrisma } from './server/services/prisma.service';
 import { UserService } from './server/services/user.service';
+
+import type { Server } from 'node:http';
+import type { AuthContext } from '@lfx-changelog/shared';
 
 if (process.env['NODE_ENV'] !== 'production') {
   dotenv.config();
@@ -25,7 +33,18 @@ const angularApp = new AngularNodeAppEngine();
 const app = express();
 const userService = new UserService();
 
-// 1. Compression
+// 1. Request ID (first — tracing for all downstream middleware + handlers)
+app.use(requestIdMiddleware);
+
+// 2. Helmet (security headers)
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Angular SSR manages its own CSP
+    crossOriginEmbedderPolicy: false, // Font Awesome kit requires cross-origin loading
+  })
+);
+
+// 3. Compression
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const compression = require('compression');
 app.use(
@@ -35,11 +54,21 @@ app.use(
   })
 );
 
-// 2. Body parsers
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+// 4. CORS — public API only (external consumers); protected routes stay same-origin
+app.use(
+  '/public/api',
+  cors({
+    origin: '*',
+    methods: ['GET', 'HEAD', 'OPTIONS'],
+    maxAge: 86400,
+  })
+);
 
-// 3. Static files
+// 5. Body parsers (1mb limit — sufficient for changelog API)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// 6. Static files
 app.use(
   express.static(browserDistFolder, {
     maxAge: '1y',
@@ -48,15 +77,35 @@ app.use(
   })
 );
 
-// 4. Health check
+// 7. Health check
 app.get('/health', (_req: Request, res: Response) => {
   res.send('OK');
 });
 
-// 5. Pino HTTP logger
+// 8. Rate limiter — 100 req/min per IP on API routes
+const apiRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 100,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    return ipKeyGenerator(ip);
+  },
+  message: { error: 'Too many requests, please try again later.' },
+});
+app.use('/public/api', apiRateLimiter);
+app.use('/api', apiRateLimiter);
+
+// 9. Pino HTTP logger (custom serializers to avoid leaking sessions/headers)
 app.use(
   pinoHttp({
     logger: serverLogger,
+    genReqId: (req) => (req as any).id,
+    serializers: {
+      req: reqSerializer,
+      res: resSerializer,
+    },
     autoLogging: {
       ignore: (req) => {
         const url = (req as Request).originalUrl || (req as Request).url;
@@ -66,7 +115,7 @@ app.use(
   })
 );
 
-// 6. OIDC (Auth0)
+// 10. OIDC (Auth0)
 app.use(
   auth({
     authRequired: false,
@@ -88,35 +137,38 @@ app.use(
   })
 );
 
-// 7. Custom login route with returnTo
+// 11. Custom login route with returnTo
 app.get('/login', (req: Request, res: Response) => {
   const returnTo = (req.query['returnTo'] as string) || '/';
   const safeReturnTo = returnTo.startsWith('/') ? returnTo : '/';
   (res as any).oidc.login({ returnTo: safeReturnTo });
 });
 
-// 7b. Custom logout route
+// 11b. Custom logout route
 app.get('/logout', (_req: Request, res: Response) => {
   (res as any).oidc.logout({ returnTo: '/' });
 });
 
-// 8. Public API routes (no auth required)
+// 12. Public API routes (no auth required — cache headers set per-route)
 app.use('/public/api/changelogs', publicChangelogRouter);
 app.use('/public/api/products', publicProductRouter);
 
-// 9. Auth middleware for protected routes
+// 13. No-cache middleware for protected routes
+app.use('/api', noCacheMiddleware);
+
+// 14. Auth middleware for protected routes
 app.use('/api', authMiddleware);
 
-// 10. Protected API routes
+// 15. Protected API routes
 app.use('/api/products', productRouter);
 app.use('/api/changelogs', changelogRouter);
 app.use('/api/users', userRouter);
 
-// 11. API error handler
+// 16. API error handler
 app.use('/api', apiErrorHandler);
 app.use('/public/api', apiErrorHandler);
 
-// 12. Angular SSR catch-all
+// 17. Angular SSR catch-all
 app.use(async (req: Request, res: Response, next: NextFunction) => {
   const authContext: AuthContext = {
     authenticated: false,
@@ -170,7 +222,7 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
     .catch(next);
 });
 
-// 13. Global error handler
+// 18. Global error handler
 app.use((error: Error, _req: Request, res: Response, next: NextFunction) => {
   if (res.headersSent) {
     next(error);
@@ -180,11 +232,36 @@ app.use((error: Error, _req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-export function startServer() {
+// Graceful shutdown
+function gracefulShutdown(server: Server): void {
+  const shutdown = (signal: string) => {
+    serverLogger.info(`${signal} received — shutting down gracefully`);
+
+    // Safety net: force exit after 10s
+    const forceTimer = setTimeout(() => {
+      serverLogger.error('Forced shutdown after 10s timeout');
+      process.exit(1);
+    }, 10_000);
+    forceTimer.unref();
+
+    server.close(async () => {
+      serverLogger.info('HTTP server closed');
+      await disconnectPrisma();
+      serverLogger.info('Shutdown complete');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+export function startServer(): void {
   const port = process.env['PORT'] || 4000;
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     serverLogger.info(`Node Express server listening on http://localhost:${port}`);
   });
+  gracefulShutdown(server);
 }
 
 if (isMainModule(import.meta.url) || process.env['pm_id']) {

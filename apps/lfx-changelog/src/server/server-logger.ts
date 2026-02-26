@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 
@@ -12,6 +13,30 @@ const prettyStream =
       })
     : process.stdout;
 
+/**
+ * Lean request serializer — only fields useful for debugging.
+ * Excludes all browser fingerprint headers, query/params (already in URL), cookies, etc.
+ */
+export function reqSerializer(req: IncomingMessage & { id?: string }) {
+  return {
+    id: req.id,
+    method: req.method,
+    url: (req as any).originalUrl || req.url,
+    remoteAddress: (req as any).ip || req.socket?.remoteAddress,
+    userAgent: req.headers['user-agent'],
+  };
+}
+
+/**
+ * Lean response serializer — statusCode only.
+ * Excludes all response headers (set-cookie with session JWT, security headers, etc.)
+ */
+export function resSerializer(res: ServerResponse) {
+  return {
+    statusCode: res.statusCode,
+  };
+}
+
 export const serverLogger = pino(
   {
     level: process.env['LOG_LEVEL'] || 'info',
@@ -22,12 +47,8 @@ export const serverLogger = pino(
     serializers: {
       err: customErrorSerializer,
       error: customErrorSerializer,
-      req: pino.stdSerializers.req,
-      res: pino.stdSerializers.res,
-    },
-    redact: {
-      paths: ['access_token', 'refresh_token', 'authorization', 'cookie', 'req.headers.authorization', 'req.headers.cookie'],
-      remove: true,
+      req: reqSerializer,
+      res: resSerializer,
     },
     formatters: {
       level: (label) => ({ level: label.toUpperCase() }),
