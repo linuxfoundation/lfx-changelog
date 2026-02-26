@@ -17,9 +17,11 @@
     "db:seed": "yarn workspace lfx-changelog run prisma db seed",
     "db:studio": "yarn workspace lfx-changelog run prisma studio",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "prettier": "^3.7.4",
     "prettier-plugin-organize-imports": "^4.1.0",
     "prettier-plugin-tailwindcss": "^0.6.12",

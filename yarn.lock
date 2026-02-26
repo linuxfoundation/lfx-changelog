@@ -6127,6 +6127,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"husky@npm:^9.1.7":
+  version: 9.1.7
+  resolution: "husky@npm:9.1.7"
+  bin:
+    husky: bin.js
+  checksum: 10c0/35bb110a71086c48906aa7cd3ed4913fb913823715359d65e32e0b964cb1e255593b0ae8014a5005c66a68e6fa66c38dcfa8056dbbdfb8b0187c0ffe7ee3a58f
+  languageName: node
+  linkType: hard
+
 "iconv-lite@npm:^0.7.0, iconv-lite@npm:^0.7.2, iconv-lite@npm:~0.7.0":
   version: 0.7.2
   resolution: "iconv-lite@npm:0.7.2"
@@ -6788,6 +6797,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "lfx-changelog-monorepo@workspace:."
   dependencies:
+    husky: "npm:^9.1.7"
     prettier: "npm:^3.7.4"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     prettier-plugin-tailwindcss: "npm:^0.6.12"
