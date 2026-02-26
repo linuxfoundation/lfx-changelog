@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lfx-changelog-db
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: changelog
+      POSTGRES_PASSWORD: changelog_dev
+      POSTGRES_DB: lfx_changelog
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

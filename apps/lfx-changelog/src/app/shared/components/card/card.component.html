@@ -1,0 +1,11 @@
+<div
+  class="rounded-xl border border-border bg-surface shadow-sm"
+  [class]="
+    (padding() === 'none' ? '' : '') +
+    (padding() === 'sm' ? 'p-3' : '') +
+    (padding() === 'md' ? 'p-5' : '') +
+    (padding() === 'lg' ? 'p-8' : '') +
+    (hoverable() ? ' transition-all duration-200 hover:shadow-md hover:border-border-strong' : '')
+  ">
+  <ng-content />
+</div>

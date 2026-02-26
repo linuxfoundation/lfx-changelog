@@ -1,0 +1,86 @@
+<div class="space-y-6">
+  <div>
+    <h1 class="font-display text-2xl font-bold text-text-primary">Users</h1>
+    <p class="mt-1 text-text-secondary">Manage user access and role assignments.</p>
+  </div>
+
+  <lfx-card padding="none">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-border bg-surface-alt text-left">
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">User</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Email</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Roles</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          @for (user of users; track user.id) {
+            <tr class="transition-colors hover:bg-surface-alt">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
+                  <span class="text-sm font-medium text-text-primary">{{ user.name }}</span>
+                </div>
+              </td>
+              <td class="px-5 py-3 text-sm text-text-secondary">{{ user.email }}</td>
+              <td class="px-5 py-3">
+                <div class="flex flex-wrap gap-1">
+                  @for (ra of user.roles; track ra.id) {
+                    <div class="flex items-center gap-1">
+                      <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
+                      @if (ra.productId) {
+                        <span class="text-xs text-text-muted">({{ ra.productId | productName }})</span>
+                      }
+                    </div>
+                  }
+                </div>
+              </td>
+              <td class="px-5 py-3">
+                <lfx-button variant="ghost" size="sm" (clicked)="openRoleDialog(user)">Manage Roles</lfx-button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </lfx-card>
+</div>
+
+<lfx-dialog [(visible)]="dialogVisible" title="Manage Roles">
+  @if (selectedUser(); as user) {
+    <div class="space-y-5">
+      <div>
+        <h3 class="text-sm font-medium text-text-primary">{{ user.name }}</h3>
+        <p class="text-xs text-text-muted">{{ user.email }}</p>
+      </div>
+
+      <div>
+        <h4 class="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">Current Roles</h4>
+        <div class="space-y-2">
+          @for (ra of user.roles; track ra.id) {
+            <div class="flex items-center justify-between rounded-lg border border-border bg-surface-alt px-3 py-2">
+              <div class="flex items-center gap-2">
+                <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
+                <span class="text-sm text-text-secondary">{{ ra.productId | productName }}</span>
+              </div>
+              <lfx-button variant="ghost" size="sm">Remove</lfx-button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="border-t border-border pt-4">
+        <h4 class="mb-3 text-xs font-medium uppercase tracking-wider text-text-muted">Assign New Role</h4>
+        <div class="grid grid-cols-2 gap-3">
+          <lfx-select label="Role" [options]="roleOptions" [formControl]="newRoleControl" placeholder="Select role..." />
+          <lfx-select label="Product" [options]="productOptions" [formControl]="newProductControl" placeholder="Select product..." />
+        </div>
+        <div class="mt-3 flex justify-end">
+          <lfx-button variant="primary" size="sm">Assign Role</lfx-button>
+        </div>
+      </div>
+    </div>
+  }
+</lfx-dialog>

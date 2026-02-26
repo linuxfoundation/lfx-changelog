@@ -1,0 +1,60 @@
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="font-display text-2xl font-bold text-text-primary">Products</h1>
+      <p class="mt-1 text-text-secondary">Manage LFX products for changelog categorization.</p>
+    </div>
+    <lfx-button variant="primary" (clicked)="openAdd()">
+      <i class="fa-solid fa-plus text-xs"></i>
+      Add Product
+    </lfx-button>
+  </div>
+
+  <lfx-card padding="none">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-border bg-surface-alt text-left">
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Name</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Slug</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Description</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Created</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          @for (product of products; track product.id) {
+            <tr class="transition-colors hover:bg-surface-alt">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-2.5">
+                  <i [class]="product.faIcon" class="text-brand-600"></i>
+                  <span class="text-sm font-medium text-text-primary">{{ product.name }}</span>
+                </div>
+              </td>
+              <td class="px-5 py-3 font-mono text-sm text-text-secondary">{{ product.slug }}</td>
+              <td class="max-w-xs truncate px-5 py-3 text-sm text-text-secondary">{{ product.description }}</td>
+              <td class="px-5 py-3 text-sm text-text-muted">{{ product.createdAt | dateFormat }}</td>
+              <td class="px-5 py-3">
+                <lfx-button variant="ghost" size="sm" (clicked)="openEdit(product)">Edit</lfx-button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </lfx-card>
+</div>
+
+<lfx-dialog [(visible)]="dialogVisible" [title]="editingProduct() ? 'Edit Product' : 'Add Product'">
+  <div class="space-y-4">
+    <lfx-input label="Name" placeholder="Product name..." [formControl]="formNameControl" />
+    <lfx-input label="Slug" placeholder="product-slug" [formControl]="formSlugControl" />
+    <lfx-textarea label="Description" [rows]="3" placeholder="Product description..." [formControl]="formDescriptionControl" />
+    <div class="flex justify-end gap-3 pt-2">
+      <lfx-button variant="secondary" (clicked)="dialogVisible.set(false)">Cancel</lfx-button>
+      <lfx-button variant="primary" (clicked)="dialogVisible.set(false)">
+        {{ editingProduct() ? 'Update' : 'Create' }}
+      </lfx-button>
+    </div>
+  </div>
+</lfx-dialog>

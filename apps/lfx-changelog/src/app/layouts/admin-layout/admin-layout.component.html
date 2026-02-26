@@ -1,0 +1,87 @@
+<div class="flex min-h-screen bg-canvas">
+  <!-- Sidebar -->
+  <aside class="border-r border-border bg-surface transition-all duration-200" [class]="sidebarCollapsed() ? 'w-16' : 'w-64'">
+    <div class="flex h-16 items-center justify-between border-b border-border px-4">
+      @if (!sidebarCollapsed()) {
+        <a routerLink="/" class="flex items-center gap-2">
+          <img src="/logo_lfx.svg" alt="LFX" class="h-6" />
+        </a>
+      }
+      <button (click)="toggleSidebar()" class="rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-surface-alt hover:text-text-primary">
+        @if (sidebarCollapsed()) {
+          <i class="fa-solid fa-chevrons-right text-sm"></i>
+        } @else {
+          <i class="fa-solid fa-chevrons-left text-sm"></i>
+        }
+      </button>
+    </div>
+
+    <nav class="flex flex-col gap-1 p-3">
+      <a
+        routerLink="/admin"
+        routerLinkActive="bg-brand-50 text-brand-700 font-medium"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-alt hover:text-text-primary">
+        <i class="fa-duotone fa-grid-2 w-5 shrink-0 text-center"></i>
+        @if (!sidebarCollapsed()) {
+          <span>Dashboard</span>
+        }
+      </a>
+
+      <a
+        routerLink="/admin/changelogs"
+        routerLinkActive="bg-brand-50 text-brand-700 font-medium"
+        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-alt hover:text-text-primary">
+        <i class="fa-duotone fa-rectangle-history w-5 shrink-0 text-center"></i>
+        @if (!sidebarCollapsed()) {
+          <span>Changelogs</span>
+        }
+      </a>
+
+      <a
+        routerLink="/admin/products"
+        routerLinkActive="bg-brand-50 text-brand-700 font-medium"
+        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-alt hover:text-text-primary">
+        <i class="fa-duotone fa-boxes-stacked w-5 shrink-0 text-center"></i>
+        @if (!sidebarCollapsed()) {
+          <span>Products</span>
+        }
+      </a>
+
+      <a
+        routerLink="/admin/users"
+        routerLinkActive="bg-brand-50 text-brand-700 font-medium"
+        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-alt hover:text-text-primary">
+        <i class="fa-duotone fa-users w-5 shrink-0 text-center"></i>
+        @if (!sidebarCollapsed()) {
+          <span>Users</span>
+        }
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <div class="flex flex-1 flex-col">
+    <header class="flex h-16 items-center justify-between border-b border-border bg-surface px-6">
+      <h1 class="font-display text-lg font-semibold text-text-primary">Admin Panel</h1>
+      <div class="flex items-center gap-2">
+        <!-- Theme toggle -->
+        <button
+          (click)="toggleTheme()"
+          class="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-alt hover:text-text-primary"
+          [attr.aria-label]="isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
+          @if (isDark()) {
+            <i class="fa-duotone fa-sun-bright text-base"></i>
+          } @else {
+            <i class="fa-duotone fa-moon text-base"></i>
+          }
+        </button>
+        <a routerLink="/" class="text-sm text-text-secondary transition-colors hover:text-brand-600">View Public Site</a>
+      </div>
+    </header>
+
+    <main class="flex-1 bg-canvas p-6">
+      <router-outlet />
+    </main>
+  </div>
+</div>

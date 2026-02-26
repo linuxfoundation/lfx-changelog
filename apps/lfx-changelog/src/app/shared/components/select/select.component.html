@@ -1,0 +1,61 @@
+<div class="flex flex-col gap-1.5">
+  @if (label()) {
+    <label class="text-sm font-medium text-text-primary">{{ label() }}</label>
+  }
+  <div class="relative">
+    <!-- Trigger -->
+    <button
+      type="button"
+      [disabled]="disabled()"
+      (click)="toggle()"
+      (keydown)="onKeydown($event)"
+      class="flex w-full items-center justify-between rounded-lg border bg-surface px-3 py-2 text-left text-sm transition-all duration-200 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+      [class]="error()
+        ? 'border-red-400'
+        : isOpen()
+          ? 'border-brand-500 ring-2 ring-brand-500/20'
+          : 'border-border hover:border-border-strong'"
+      role="combobox"
+      [attr.aria-expanded]="isOpen()"
+      aria-haspopup="listbox">
+      <span [class]="selectedLabel() ? 'text-text-primary' : 'text-text-muted'">
+        {{ selectedLabel() || placeholder() }}
+      </span>
+      <i
+        class="fa-solid fa-chevron-down text-[10px] text-text-muted transition-transform duration-200"
+        [class.rotate-180]="isOpen()"></i>
+    </button>
+
+    <!-- Dropdown -->
+    @if (isOpen()) {
+      <div
+        class="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg shadow-black/8 animate-in"
+        role="listbox">
+        <div class="max-h-60 overflow-y-auto py-1">
+          @for (opt of options(); track opt.value; let i = $index) {
+            <button
+              type="button"
+              (click)="selectOption(opt)"
+              (mouseenter)="focusedIndex.set(i)"
+              class="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors duration-100"
+              [class]="value() === opt.value
+                ? 'bg-brand-50 text-brand-700 font-medium'
+                : focusedIndex() === i
+                  ? 'bg-surface-alt text-text-primary'
+                  : 'text-text-secondary hover:bg-surface-alt hover:text-text-primary'"
+              role="option"
+              [attr.aria-selected]="value() === opt.value">
+              {{ opt.label }}
+              @if (value() === opt.value) {
+                <i class="fa-solid fa-check text-[10px] text-brand-600"></i>
+              }
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+  @if (error()) {
+    <p class="text-xs text-red-500">{{ error() }}</p>
+  }
+</div>

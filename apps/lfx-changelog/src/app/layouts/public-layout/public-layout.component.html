@@ -1,0 +1,49 @@
+<div class="min-h-screen bg-canvas">
+  <!-- Header -->
+  <header class="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-lg">
+    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-8">
+        <a routerLink="/" class="flex items-center gap-2.5">
+          <img src="/logo_lfx.svg" alt="LFX" class="h-7" />
+        </a>
+        <nav class="hidden items-center gap-1 sm:flex">
+          <a
+            routerLink="/"
+            routerLinkActive="bg-surface-alt text-text-primary"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="rounded-lg px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-alt hover:text-text-primary">
+            All Updates
+          </a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- Theme toggle -->
+        <button
+          (click)="toggleTheme()"
+          class="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-alt hover:text-text-primary"
+          [attr.aria-label]="isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
+          @if (isDark()) {
+            <i class="fa-duotone fa-sun-bright text-base"></i>
+          } @else {
+            <i class="fa-duotone fa-moon text-base"></i>
+          }
+        </button>
+        <a routerLink="/admin" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-brand-700 hover:shadow-md">
+          Admin
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <router-outlet />
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-border bg-surface py-8">
+    <div class="mx-auto max-w-7xl px-4 text-center text-sm text-text-muted sm:px-6 lg:px-8">
+      &copy; {{ currentYear }} The Linux Foundation. All rights reserved.
+    </div>
+  </footer>
+</div>

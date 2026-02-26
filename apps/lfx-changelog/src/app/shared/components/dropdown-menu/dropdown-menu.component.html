@@ -1,0 +1,18 @@
+<div class="relative inline-block">
+  <div (click)="toggle()">
+    <ng-content />
+  </div>
+
+  @if (isOpen()) {
+    <div class="absolute right-0 z-40 mt-1 min-w-[160px] rounded-lg border border-border bg-surface py-1 shadow-lg">
+      @for (item of items(); track item.label) {
+        <button
+          (click)="selectItem(item)"
+          class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-surface-alt"
+          [class]="item.danger ? 'text-red-500 hover:text-red-600' : 'text-text-primary'">
+          {{ item.label }}
+        </button>
+      }
+    </div>
+  }
+</div>

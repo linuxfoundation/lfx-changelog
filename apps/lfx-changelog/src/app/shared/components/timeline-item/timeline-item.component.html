@@ -1,0 +1,15 @@
+<div class="relative flex gap-6 pb-8 last:pb-0">
+  <!-- Timeline line -->
+  <div class="flex flex-col items-center">
+    <div class="h-3 w-3 shrink-0 rounded-full border-2 border-brand-500 bg-surface shadow-sm"></div>
+    <div class="w-px flex-1 bg-border"></div>
+  </div>
+
+  <!-- Content -->
+  <div class="-mt-1 flex-1 pb-2">
+    @if (date()) {
+      <time class="mb-2 block text-xs font-medium text-text-muted">{{ date() }}</time>
+    }
+    <ng-content />
+  </div>
+</div>

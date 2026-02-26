@@ -1,0 +1,7 @@
+dist
+node_modules
+.angular
+coverage
+.turbo
+*.min.js
+yarn.lock

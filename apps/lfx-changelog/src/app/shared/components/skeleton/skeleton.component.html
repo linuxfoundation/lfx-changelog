@@ -1,0 +1,9 @@
+<div
+  class="animate-pulse bg-surface-alt"
+  [class]="
+    (variant() === 'text' ? 'rounded' : '') +
+    (variant() === 'circle' ? 'rounded-full' : '') +
+    (variant() === 'rect' ? 'rounded-lg' : '')
+  "
+  [style]="'width: ' + width() + '; height: ' + height()">
+</div>

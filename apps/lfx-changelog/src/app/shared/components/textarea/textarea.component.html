@@ -1,0 +1,17 @@
+<div class="flex flex-col gap-1.5">
+  @if (label()) {
+    <label class="text-sm font-medium text-text-primary">{{ label() }}</label>
+  }
+  <textarea
+    [rows]="rows()"
+    [placeholder]="placeholder()"
+    [value]="value()"
+    [disabled]="disabled()"
+    (input)="onInput($event)"
+    (blur)="onBlur()"
+    class="rounded-lg border bg-surface px-3 py-2 text-sm text-text-primary placeholder-text-muted transition-all duration-200 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+    [class]="error() ? 'border-red-400' : 'border-border'"></textarea>
+  @if (error()) {
+    <p class="text-xs text-red-500">{{ error() }}</p>
+  }
+</div>

@@ -1,0 +1,37 @@
+{
+  "name": "lfx-changelog-monorepo",
+  "license": "MIT",
+  "author": "The Linux Foundation",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "start": "turbo run start --log-prefix=none",
+    "lint": "turbo run lint",
+    "watch": "turbo run watch",
+    "test": "turbo run test",
+    "start:server": "turbo run start:server",
+    "format": "prettier --write \"**/*.{ts,js,html,css,md,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,html,css,md,json}\"",
+    "db:generate": "yarn workspace lfx-changelog run prisma generate",
+    "db:migrate": "yarn workspace lfx-changelog run prisma migrate dev",
+    "db:seed": "yarn workspace lfx-changelog run prisma db seed",
+    "db:studio": "yarn workspace lfx-changelog run prisma studio",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "prettier": "^3.7.4",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "prettier-plugin-tailwindcss": "^0.6.12",
+    "turbo": "^2.6.3",
+    "typescript": "5.8.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "yarn@4.12.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

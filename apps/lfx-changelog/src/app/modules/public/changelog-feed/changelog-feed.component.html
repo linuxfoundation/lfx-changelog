@@ -1,0 +1,41 @@
+<div class="space-y-8">
+  <!-- Header -->
+  <div class="animate-in">
+    <h1 class="font-display text-3xl font-bold text-text-primary">What's New</h1>
+    <p class="mt-2 text-text-secondary">Stay up to date with the latest changes across LFX products.</p>
+  </div>
+
+  <!-- Product filter chips -->
+  <div class="animate-in animate-in-1 space-y-3">
+    <div class="flex flex-wrap gap-2">
+      @for (product of products; track product.id) {
+        <button
+          (click)="toggleProduct(product.id)"
+          class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200"
+          [class]="selectedProduct() === product.id
+            ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
+            : 'border-border bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary'">
+          <i [class]="product.faIcon" class="text-[10px]"></i>
+          {{ product.name }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="animate-in animate-in-2">
+    @for (entry of publishedEntries(); track entry.id) {
+      <lfx-timeline-item [date]="(entry.publishedAt! | dateFormat)">
+        <lfx-changelog-card [entry]="entry" />
+      </lfx-timeline-item>
+    }
+
+    @if (publishedEntries().length === 0) {
+      <div class="py-16 text-center">
+        <i class="fa-duotone fa-filter-slash mb-4 text-4xl text-text-muted"></i>
+        <p class="font-display text-lg font-medium text-text-secondary">No entries match your filters</p>
+        <p class="mt-1 text-sm text-text-muted">Try adjusting your filter criteria.</p>
+      </div>
+    }
+  </div>
+</div>

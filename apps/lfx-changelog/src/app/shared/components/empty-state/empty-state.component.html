@@ -1,0 +1,12 @@
+<div class="flex flex-col items-center justify-center py-16 text-center">
+  @if (icon()) {
+    <div class="mb-4 text-4xl text-text-muted">{{ icon() }}</div>
+  }
+  <h3 class="font-display text-lg font-semibold text-text-primary">{{ title() }}</h3>
+  @if (description()) {
+    <p class="mt-2 max-w-sm text-sm text-text-secondary">{{ description() }}</p>
+  }
+  <div class="mt-5">
+    <ng-content />
+  </div>
+</div>

@@ -1,0 +1,40 @@
+<div class="flex flex-col gap-1.5">
+  @if (label()) {
+    <label class="text-sm font-medium text-text-primary">{{ label() }}</label>
+  }
+  <div class="overflow-hidden rounded-lg border transition-all duration-200" [class]="error() ? 'border-red-400' : 'border-border'">
+    <!-- Toolbar -->
+    <div class="flex flex-wrap items-center gap-0.5 border-b border-border bg-surface-alt px-2 py-1.5">
+      @for (group of toolbarGroups; track $index) {
+        @if ($index > 0) {
+          <div class="mx-1 h-5 w-px bg-border"></div>
+        }
+        @for (action of group; track action.title) {
+          <button
+            type="button"
+            [title]="action.title"
+            [disabled]="disabled()"
+            (click)="action.action()"
+            class="flex h-7 w-7 items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50">
+            <i [class]="action.icon" class="text-xs"></i>
+          </button>
+        }
+      }
+    </div>
+
+    <!-- Textarea -->
+    <textarea
+      #textareaEl
+      [rows]="rows()"
+      [placeholder]="placeholder()"
+      [value]="value()"
+      [disabled]="disabled()"
+      (input)="onInput($event)"
+      (blur)="onBlur()"
+      (keydown)="onKeydown($event)"
+      class="w-full resize-y bg-surface px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"></textarea>
+  </div>
+  @if (error()) {
+    <p class="text-xs text-red-500">{{ error() }}</p>
+  }
+</div>

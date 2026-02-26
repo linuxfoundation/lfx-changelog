@@ -1,0 +1,16 @@
+<lfx-card [hoverable]="true">
+  <a [routerLink]="['/entry', entry().id]" class="block space-y-3">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-xs font-medium text-text-muted">v{{ entry().version }}</span>
+      <span class="text-xs text-text-muted">&middot;</span>
+      <span class="text-xs text-text-muted">{{ formattedDate() }}</span>
+    </div>
+    <h3 class="font-display text-lg font-semibold text-text-primary">{{ entry().title }}</h3>
+    <p class="text-sm leading-relaxed text-text-secondary">{{ preview() }}</p>
+    @if (product(); as prod) {
+      <div class="pt-1">
+        <lfx-product-pill [product]="prod" />
+      </div>
+    }
+  </a>
+</lfx-card>

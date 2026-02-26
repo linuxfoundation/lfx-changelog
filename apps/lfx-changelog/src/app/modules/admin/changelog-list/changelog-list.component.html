@@ -1,0 +1,58 @@
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="font-display text-2xl font-bold text-text-primary">Changelogs</h1>
+      <p class="mt-1 text-text-secondary">Manage changelog entries across all products.</p>
+    </div>
+    <a routerLink="/admin/changelogs/new">
+      <lfx-button variant="primary">
+        <i class="fa-solid fa-plus text-xs"></i>
+        New Entry
+      </lfx-button>
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <lfx-select label="Product" [options]="productOptions" [formControl]="productFilterControl" placeholder="All Products" />
+    <lfx-select label="Status" [options]="statusOptions" [formControl]="statusFilterControl" placeholder="All Statuses" />
+  </div>
+
+  <!-- Table -->
+  <lfx-card padding="none">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-border bg-surface-alt text-left">
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Title</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Product</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Status</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Version</th>
+            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Updated</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          @for (entry of filteredEntries(); track entry.id) {
+            <tr class="transition-colors hover:bg-surface-alt">
+              <td class="px-5 py-3">
+                <a [routerLink]="['/admin/changelogs', entry.id, 'edit']" class="text-sm font-medium text-brand-600 hover:text-brand-700">
+                  {{ entry.title }}
+                </a>
+              </td>
+              <td class="px-5 py-3 text-sm text-text-secondary">{{ entry.productId | productName }}</td>
+              <td class="px-5 py-3">
+                <lfx-status-badge [status]="entry.status" />
+              </td>
+              <td class="px-5 py-3 text-sm text-text-secondary">v{{ entry.version }}</td>
+              <td class="px-5 py-3 text-sm text-text-muted">{{ entry.updatedAt | dateFormat }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (filteredEntries().length === 0) {
+        <div class="py-12 text-center text-sm text-text-muted">No entries match the selected filters.</div>
+      }
+    </div>
+  </lfx-card>
+</div>

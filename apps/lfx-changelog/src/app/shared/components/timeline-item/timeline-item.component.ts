@@ -1,0 +1,10 @@
+import { Component, input } from '@angular/core';
+
+@Component({
+  selector: 'lfx-timeline-item',
+  templateUrl: './timeline-item.component.html',
+  styleUrl: './timeline-item.component.css',
+})
+export class TimelineItemComponent {
+  public readonly date = input<string>('');
+}
