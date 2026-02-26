@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 // @ts-check
 const eslint = require('@eslint/js');
 const { defineConfig } = require('eslint/config');

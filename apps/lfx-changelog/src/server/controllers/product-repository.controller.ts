@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import type { GitHubCommit, GitHubPullRequest, GitHubRelease, LinkRepositoryRequest, ProductActivity } from '@lfx-changelog/shared';
 import { NextFunction, Request, Response } from 'express';
 

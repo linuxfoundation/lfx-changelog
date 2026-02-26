@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 export abstract class BaseApiError extends Error {
   public readonly statusCode: number;
   public readonly code: string;

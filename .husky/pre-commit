@@ -1,3 +1,14 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+# Check license headers
+./check-headers.sh
+if [ $? -ne 0 ]; then
+  echo "❌ License header check failed. Please add missing headers."
+  echo "Run ./check-headers.sh to see which files are missing headers."
+  exit 1
+fi
+
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
 
 yarn format

@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 /** Role in an OpenAI-compatible chat message. */
 export type OpenAIChatRole = 'system' | 'user' | 'assistant';
 

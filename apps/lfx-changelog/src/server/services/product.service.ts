@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import type { PublicProduct } from '@lfx-changelog/shared';
 import { Product as PrismaProduct } from '@prisma/client';
 

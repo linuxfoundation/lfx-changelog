@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { DatePipe, SlicePipe } from '@angular/common';
 import { Component, computed, inject, input, OnInit, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';

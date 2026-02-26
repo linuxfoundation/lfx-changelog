@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { ROLE_HIERARCHY } from '../constants/role-hierarchy.constant.js';
 import { UserRole } from '../enums/user-role.enum.js';
 import type { UserRoleAssignment } from '../interfaces/user.interface.js';

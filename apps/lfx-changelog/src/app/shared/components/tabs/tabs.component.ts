@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { Component, ElementRef, afterNextRender, input, model, signal, viewChildren } from '@angular/core';
 import type { Tab } from '@shared/interfaces/form.interface';
 

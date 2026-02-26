@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
 import { NextFunction, Request, Response } from 'express';
 

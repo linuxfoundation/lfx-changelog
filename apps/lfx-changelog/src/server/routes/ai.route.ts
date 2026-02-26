@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { UserRole } from '@lfx-changelog/shared';
 import { Router } from 'express';
 

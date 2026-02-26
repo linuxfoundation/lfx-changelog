@@ -1,0 +1,27 @@
+---
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  license-headers:
+    runs-on: ubuntu-latest
+    name: Check License Headers
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check license headers
+        run: ./check-headers.sh

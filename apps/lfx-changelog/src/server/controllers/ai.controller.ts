@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { serverLogger } from '../server-logger';
 import { AiService } from '../services/ai.service';
 import { ChangelogService } from '../services/changelog.service';

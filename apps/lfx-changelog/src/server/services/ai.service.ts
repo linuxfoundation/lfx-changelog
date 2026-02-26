@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import {
   AI_CHANGELOG_CONFIG,
   AI_CHANGELOG_DESCRIPTION_SYSTEM_PROMPT,

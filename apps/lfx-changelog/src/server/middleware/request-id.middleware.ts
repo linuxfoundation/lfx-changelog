@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { randomUUID } from 'node:crypto';
 
 import { NextFunction, Request, Response } from 'express';

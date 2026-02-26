@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { Router } from 'express';
 
 import { ProductController } from '../controllers/product.controller';

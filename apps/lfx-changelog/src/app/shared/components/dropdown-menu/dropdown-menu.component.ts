@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { Component, input, signal } from '@angular/core';
 import type { DropdownMenuItem } from '@shared/interfaces/form.interface';
 

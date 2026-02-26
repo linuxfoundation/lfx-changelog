@@ -1,3 +1,6 @@
+-- Copyright The Linux Foundation and each contributor to LFX.
+-- SPDX-License-Identifier: MIT
+
 -- CreateEnum
 CREATE TYPE "ChangelogStatus" AS ENUM ('draft', 'published');
 

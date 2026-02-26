@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 module.exports = {
   printWidth: 160,
   singleQuote: true,

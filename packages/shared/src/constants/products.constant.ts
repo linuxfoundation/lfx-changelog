@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import type { Product } from '../interfaces/product.interface.js';
 
 export const PRODUCTS: Product[] = [

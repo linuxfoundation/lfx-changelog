@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { Request, Response } from 'express';
 
 import { serverLogger } from '../server-logger';

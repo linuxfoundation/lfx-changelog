@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { ChangelogStatus } from '../enums/changelog-status.enum.js';
 import type { CreateChangelogEntryRequest } from '../interfaces/dto.interface.js';
 

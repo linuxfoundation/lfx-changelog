@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 import { Component, computed, input } from '@angular/core';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ChangelogStatus } from '@lfx-changelog/shared';

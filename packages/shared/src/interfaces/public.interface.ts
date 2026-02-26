@@ -1,3 +1,6 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
 /** Trimmed product for public (unauthenticated) API responses. */
 export interface PublicProduct {
   id: string;
