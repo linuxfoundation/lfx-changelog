@@ -47,6 +47,22 @@ jobs:
           aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_HOST}
           docker buildx build --load --tag ${ECR_HOST}/${REPOSITORY}:${{ github.sha }} --build-arg BUILD_ENV=${STAGE} -f Dockerfile .
 
+      - name: Save Image Tarball Locally for Trufflehog Scanning
+        run: |
+          docker save -o ${REPOSITORY}:${{github.sha}}.tar ${ECR_HOST}/${REPOSITORY}:${{github.sha}}
+
+      - name: Install Trufflehog
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Scan Image Tarball with Trufflehog
+        run: |
+          trufflehog docker --fail --no-update --only-verified --image=file://${REPOSITORY}:${{github.sha}}.tar
+
+      - name: Remove Local Image Tarball
+        run: |
+          rm -f ${REPOSITORY}:${{github.sha}}.tar
+
       - name: Push Docker Image
         run: |
           docker push ${ECR_HOST}/${REPOSITORY}:${{ github.sha }}
