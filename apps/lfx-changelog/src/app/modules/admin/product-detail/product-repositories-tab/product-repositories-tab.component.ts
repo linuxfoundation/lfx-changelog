@@ -78,10 +78,15 @@ export class ProductRepositoriesTabComponent implements OnInit {
   }
 
   protected installOnNewOrg(): void {
-    const window = this.document.defaultView;
-    if (window) {
-      window.location.href = this.githubService.getInstallUrl(this.productId());
-    }
+    this.githubService
+      .getInstallUrl(this.productId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((url) => {
+        const window = this.document.defaultView;
+        if (window) {
+          window.location.href = url;
+        }
+      });
   }
 
   protected goToSelectRepos(): void {

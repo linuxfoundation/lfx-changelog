@@ -4,8 +4,10 @@
 <lfx-card [hoverable]="true">
   <a [routerLink]="['/entry', entry().id]" class="block space-y-3">
     <div class="flex flex-wrap items-center gap-2">
-      <span class="text-text-muted text-xs font-medium">v{{ entry().version }}</span>
-      <span class="text-text-muted text-xs">&middot;</span>
+      @if (entry().version) {
+        <span class="text-text-muted text-xs font-medium">v{{ entry().version }}</span>
+        <span class="text-text-muted text-xs">&middot;</span>
+      }
       <span class="text-text-muted text-xs">{{ formattedDate() }}</span>
     </div>
     <h3 class="font-display text-text-primary text-lg font-semibold">{{ entry().title }}</h3>

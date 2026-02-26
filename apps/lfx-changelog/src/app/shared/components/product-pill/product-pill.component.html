@@ -3,6 +3,8 @@
 
 <span
   class="border-border bg-surface-alt text-text-primary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors">
-  <i [class]="product().faIcon" class="text-brand-600"></i>
+  @if (product().faIcon) {
+    <i [class]="product().faIcon" class="text-brand-600"></i>
+  }
   {{ product().name }}
 </span>

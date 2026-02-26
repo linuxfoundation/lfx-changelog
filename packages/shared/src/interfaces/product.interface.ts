@@ -7,9 +7,9 @@ export interface Product {
   id: string;
   name: string;
   slug: string;
-  description: string;
-  iconUrl: string;
-  faIcon: string;
+  description: string | null;
+  iconUrl: string | null;
+  faIcon: string | null;
   githubInstallationId: number | null;
   createdAt: string;
   updatedAt: string;

@@ -46,7 +46,7 @@
               <td class="px-5 py-3">
                 <lfx-status-badge [status]="entry.status" />
               </td>
-              <td class="text-text-secondary px-5 py-3 text-sm">v{{ entry.version }}</td>
+              <td class="text-text-secondary px-5 py-3 text-sm">{{ entry.version ? 'v' + entry.version : '—' }}</td>
               <td class="text-text-muted px-5 py-3 text-sm">{{ entry.updatedAt | dateFormat }}</td>
             </tr>
           }

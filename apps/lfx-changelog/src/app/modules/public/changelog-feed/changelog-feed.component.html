@@ -20,7 +20,9 @@
               ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
               : 'border-border bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary'
           ">
-          <i [class]="product.faIcon" class="text-[10px]"></i>
+          @if (product.faIcon) {
+            <i [class]="product.faIcon" class="text-[10px]"></i>
+          }
           {{ product.name }}
         </button>
       }

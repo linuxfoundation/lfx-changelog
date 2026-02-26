@@ -56,7 +56,7 @@ export class ProductManagementComponent {
     this.editingProduct.set(product);
     this.formNameControl.setValue(product.name);
     this.formSlugControl.setValue(product.slug);
-    this.formDescriptionControl.setValue(product.description);
+    this.formDescriptionControl.setValue(product.description ?? '');
     this.dialogVisible.set(true);
   }
 

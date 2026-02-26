@@ -4,7 +4,8 @@
 import { ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
 import { NextFunction, Request, Response } from 'express';
 
-import { AuthorizationError } from '../errors';
+import { AuthorizationError, NotFoundError } from '../errors';
+import { getPrismaClient } from '../services/prisma.service';
 
 export function requireRole(minimumRole: UserRole) {
   return (req: Request, _res: Response, next: NextFunction): void => {
@@ -41,7 +42,7 @@ export function requireProductRole(minimumRole: UserRole) {
 
     const minimumLevel = ROLE_HIERARCHY[minimumRole];
     const userRoles = dbUser.userRoleAssignments || [];
-    const productId = req.params['id'] || req.body?.productId;
+    const productId = (req as any).resolvedProductId || req.body?.productId;
 
     const isSuperAdmin = userRoles.some((assignment: any) => assignment.role === UserRole.SUPER_ADMIN);
     if (isSuperAdmin) {
@@ -61,4 +62,29 @@ export function requireProductRole(minimumRole: UserRole) {
 
     next();
   };
+}
+
+/**
+ * Middleware that resolves the productId from a changelog entry ID in req.params['id'].
+ * Must be placed before requireProductRole on changelog routes where :id is the entry ID.
+ */
+export function resolveChangelogProductId(req: Request, _res: Response, next: NextFunction): void {
+  const entryId = req.params['id'] as string;
+  if (!entryId) {
+    next();
+    return;
+  }
+
+  const prisma = getPrismaClient();
+  prisma.changelogEntry
+    .findUnique({ where: { id: entryId }, select: { productId: true } })
+    .then((entry) => {
+      if (!entry) {
+        next(new NotFoundError(`Changelog entry not found: ${entryId}`, { operation: 'resolveProductId', service: 'changelog' }));
+        return;
+      }
+      (req as any).resolvedProductId = entry.productId;
+      next();
+    })
+    .catch(next);
 }

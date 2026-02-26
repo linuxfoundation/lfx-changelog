@@ -5,7 +5,7 @@ import { UserRole } from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { ChangelogController } from '../controllers/changelog.controller';
-import { requireProductRole } from '../middleware/role.middleware';
+import { requireProductRole, resolveChangelogProductId } from '../middleware/role.middleware';
 
 const router = Router();
 const changelogController = new ChangelogController();
@@ -13,8 +13,8 @@ const changelogController = new ChangelogController();
 router.get('/', (req, res, next) => changelogController.listAll(req, res, next));
 router.get('/:id', (req, res, next) => changelogController.getById(req, res, next));
 router.post('/', requireProductRole(UserRole.EDITOR), (req, res, next) => changelogController.create(req, res, next));
-router.put('/:id', requireProductRole(UserRole.EDITOR), (req, res, next) => changelogController.update(req, res, next));
-router.patch('/:id/publish', requireProductRole(UserRole.EDITOR), (req, res, next) => changelogController.publish(req, res, next));
-router.delete('/:id', requireProductRole(UserRole.PRODUCT_ADMIN), (req, res, next) => changelogController.delete(req, res, next));
+router.put('/:id', resolveChangelogProductId, requireProductRole(UserRole.EDITOR), (req, res, next) => changelogController.update(req, res, next));
+router.patch('/:id/publish', resolveChangelogProductId, requireProductRole(UserRole.EDITOR), (req, res, next) => changelogController.publish(req, res, next));
+router.delete('/:id', resolveChangelogProductId, requireProductRole(UserRole.PRODUCT_ADMIN), (req, res, next) => changelogController.delete(req, res, next));
 
 export default router;

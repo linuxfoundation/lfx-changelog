@@ -166,7 +166,7 @@ export class ChangelogEditorComponent {
         tap((entry) => {
           this.titleControl.setValue(entry.title);
           this.descriptionControl.setValue(entry.description);
-          this.versionControl.setValue(entry.version);
+          this.versionControl.setValue(entry.version ?? '');
           this.productIdControl.setValue(entry.productId);
           this.loading.set(false);
         })

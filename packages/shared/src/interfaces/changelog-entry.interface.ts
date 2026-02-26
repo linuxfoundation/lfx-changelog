@@ -10,7 +10,7 @@ export interface ChangelogEntry {
   productId: string;
   title: string;
   description: string;
-  version: string;
+  version: string | null;
   status: ChangelogStatus;
   publishedAt: string | null;
   createdBy: string;
