@@ -1,0 +1,185 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left flex items-center justify-between">
+    <div>
+      <h1 class="font-display text-text-primary text-2xl font-bold">
+        {{ isEditing() ? 'Edit Entry' : 'New Entry' }}
+      </h1>
+      <p class="text-text-secondary mt-1">{{ isEditing() ? 'Update this changelog entry.' : 'Create a new changelog entry with markdown preview.' }}</p>
+    </div>
+    <a routerLink="/admin/changelogs">
+      <lfx-button variant="ghost">
+        <i class="fa-solid fa-arrow-left text-xs"></i>
+        Back
+      </lfx-button>
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <!-- Form -->
+    <div class="animate-slide-in-left relative z-10 space-y-5 [animation-delay:150ms]">
+      <!-- Product selector (first — determines AI generation availability) -->
+      <lfx-select label="Product" [options]="productOptions()" [formControl]="productIdControl" placeholder="Select product..." />
+
+      <!-- AI Generation Panel (visible when product has GitHub repos) -->
+      @if (hasGitHubRepos() && !isEditing()) {
+        <div class="border-brand-200 bg-brand-50/50 dark:border-brand-800 dark:bg-brand-950/30 rounded-lg border p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-duotone fa-wand-magic-sparkles text-brand-500 text-sm"></i>
+              <span class="text-text-primary text-sm font-medium">AI-Powered Generation</span>
+            </div>
+            <lfx-button variant="secondary" size="sm" (clicked)="toggleAiPanel()">
+              @if (showAiPanel()) {
+                <i class="fa-solid fa-chevron-up text-xs"></i>
+                Hide Options
+              } @else {
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+                Generate from Releases
+              }
+            </lfx-button>
+          </div>
+
+          @if (showAiPanel()) {
+            <div class="mt-4 space-y-4">
+              <p class="text-text-secondary text-xs">
+                Generate changelog content from the GitHub releases linked to this product. The AI will analyze release notes and create a formatted summary.
+              </p>
+
+              <lfx-select label="Releases to include (per repo)" [options]="releaseCountOptions" [formControl]="releaseCountControl" />
+
+              <lfx-textarea
+                label="Additional context (optional)"
+                [formControl]="additionalContextControl"
+                placeholder="e.g., Focus on security fixes, ignore internal refactors..."
+                [rows]="3" />
+
+              <div class="flex items-center gap-2">
+                <lfx-button variant="primary" size="sm" [loading]="isGenerating()" [disabled]="isGenerating()" (clicked)="generateChangelog()">
+                  <i class="fa-duotone fa-sparkles text-xs"></i>
+                  Generate Changelog
+                </lfx-button>
+                @if (isGenerating()) {
+                  <lfx-button variant="ghost" size="sm" (clicked)="cancelGeneration()">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                    Cancel
+                  </lfx-button>
+                }
+              </div>
+
+              <!-- Generation status -->
+              @if (isGenerating() && generationStatus()) {
+                <div class="text-brand-600 dark:text-brand-400 flex items-center gap-2 text-xs">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  {{ generationStatus() }}
+                </div>
+              }
+
+              <!-- Generation error -->
+              @if (generationError()) {
+                <div
+                  class="flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+                  <span>
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                    {{ generationError() }}
+                  </span>
+                  <lfx-button variant="ghost" size="sm" (clicked)="dismissError()">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                  </lfx-button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (loadingRepos()) {
+        <div class="text-text-muted flex items-center gap-2 text-xs">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          Checking for linked repositories...
+        </div>
+      }
+
+      <lfx-input label="Title" placeholder="Enter entry title..." [formControl]="titleControl" />
+
+      <lfx-input label="Version" placeholder="e.g., 2.5.0" [formControl]="versionControl" />
+
+      <lfx-markdown-editor label="Description" [rows]="12" placeholder="Write markdown content..." [formControl]="descriptionControl" />
+
+      <div class="flex gap-3 pt-2">
+        <lfx-button variant="primary" [loading]="saving()" (clicked)="save()">
+          {{ isEditing() ? 'Update Entry' : 'Save as Draft' }}
+        </lfx-button>
+        <a routerLink="/admin/changelogs">
+          <lfx-button variant="secondary">Cancel</lfx-button>
+        </a>
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div class="animate-slide-in-right hidden [animation-delay:200ms] lg:block">
+      <div class="sticky top-6 space-y-6">
+        <h2 class="text-text-muted text-sm font-medium">
+          <i class="fa-duotone fa-eye mr-1"></i>
+          Live Preview
+        </h2>
+
+        <!-- Card Preview -->
+        <div class="space-y-2">
+          <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Card View</h3>
+          <lfx-changelog-card [entry]="previewEntry()" />
+        </div>
+
+        <!-- Detail Page Preview -->
+        <div class="space-y-2">
+          <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Detail View</h3>
+          <lfx-card>
+            <div class="space-y-5">
+              <!-- Header row: version + status -->
+              <div class="flex flex-wrap items-center gap-2">
+                @if (previewEntry().version) {
+                  <span class="text-text-muted text-xs font-medium">v{{ previewEntry().version }}</span>
+                }
+                <lfx-status-badge [status]="previewEntry().status" />
+              </div>
+
+              <!-- Title -->
+              <h3 class="font-display text-text-primary text-xl font-bold">{{ previewEntry().title }}</h3>
+
+              <!-- Metadata sidebar (inline for preview) -->
+              <div class="border-border bg-surface-alt flex flex-wrap items-center gap-4 rounded-lg border px-4 py-3">
+                @if (selectedProduct(); as prod) {
+                  <div class="flex items-center gap-2">
+                    <span class="text-text-muted text-xs font-medium uppercase">Product</span>
+                    <lfx-product-pill [product]="prod" />
+                  </div>
+                }
+                @if (previewEntry().version) {
+                  <div class="flex items-center gap-2">
+                    <span class="text-text-muted text-xs font-medium uppercase">Version</span>
+                    <span class="text-text-primary text-sm font-medium">v{{ previewEntry().version }}</span>
+                  </div>
+                }
+                <div class="flex items-center gap-2">
+                  <span class="text-text-muted text-xs font-medium uppercase">Status</span>
+                  <span class="text-text-secondary text-sm">Draft</span>
+                </div>
+              </div>
+
+              <!-- Markdown content -->
+              @if (descriptionValue()) {
+                <div class="border-border border-t pt-4">
+                  <lfx-markdown-renderer [content]="descriptionValue()" />
+                </div>
+              } @else {
+                <p class="text-text-muted py-6 text-center text-sm">Start typing a description to see the rendered preview.</p>
+              }
+            </div>
+          </lfx-card>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

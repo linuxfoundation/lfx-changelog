@@ -1,0 +1,18 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="timeline-enter relative flex gap-6 pb-8 last:pb-0" [style.animation-delay.ms]="index() * 120">
+  <!-- Timeline line -->
+  <div class="flex flex-col items-center">
+    <div class="border-brand-500 bg-surface h-3 w-3 shrink-0 rounded-full border-2 shadow-sm"></div>
+    <div class="bg-border w-px flex-1"></div>
+  </div>
+
+  <!-- Content -->
+  <div class="-mt-1 flex-1 pb-2">
+    @if (date()) {
+      <time class="text-text-muted mb-2 block text-xs font-medium">{{ date() }}</time>
+    }
+    <ng-content />
+  </div>
+</div>

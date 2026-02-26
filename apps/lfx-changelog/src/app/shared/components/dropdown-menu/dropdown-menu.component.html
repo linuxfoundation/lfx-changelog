@@ -1,0 +1,21 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="relative inline-block">
+  <div (click)="toggle()">
+    <ng-content />
+  </div>
+
+  @if (isOpen()) {
+    <div class="animate-dropdown-in border-border bg-surface absolute right-0 z-40 mt-1 min-w-[160px] rounded-lg border py-1 shadow-lg">
+      @for (item of items(); track item.label) {
+        <button
+          (click)="selectItem(item)"
+          class="hover:bg-surface-alt flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors"
+          [class]="item.danger ? 'text-red-500 hover:text-red-600' : 'text-text-primary'">
+          {{ item.label }}
+        </button>
+      }
+    </div>
+  }
+</div>

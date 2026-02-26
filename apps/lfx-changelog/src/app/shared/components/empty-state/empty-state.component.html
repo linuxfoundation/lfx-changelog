@@ -1,0 +1,15 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="animate-fade-in-up flex flex-col items-center justify-center py-16 text-center">
+  @if (icon()) {
+    <div class="animate-gentle-float text-text-muted mb-4 text-4xl">{{ icon() }}</div>
+  }
+  <h3 class="font-display text-text-primary text-lg font-semibold">{{ title() }}</h3>
+  @if (description()) {
+    <p class="text-text-secondary mt-2 max-w-sm text-sm">{{ description() }}</p>
+  }
+  <div class="mt-5">
+    <ng-content />
+  </div>
+</div>

@@ -1,0 +1,78 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (entry(); as entry) {
+  <div class="animate-fade-in-up space-y-6">
+    <a routerLink="/" class="text-brand-600 hover:text-brand-700 inline-flex items-center gap-1.5 text-sm font-medium transition-colors">
+      <i class="fa-solid fa-arrow-left text-xs"></i>
+      Back to changelog
+    </a>
+
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <!-- Main content -->
+      <div class="lg:col-span-2">
+        <div class="space-y-4">
+          @if (entry.version) {
+            <span class="text-text-muted text-sm font-medium">v{{ entry.version }}</span>
+          }
+          <h1 class="font-display text-text-primary text-3xl font-bold">{{ entry.title }}</h1>
+          <lfx-markdown-renderer [content]="entry.description" />
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-4">
+        <lfx-card>
+          <div class="space-y-5">
+            <div>
+              <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Product</h3>
+              @if (product(); as prod) {
+                <div class="mt-1.5">
+                  <lfx-product-pill [product]="prod" />
+                </div>
+              }
+            </div>
+
+            <div>
+              <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Published</h3>
+              <p class="text-text-primary mt-1 text-sm">{{ formattedPublishedAt() }}</p>
+            </div>
+
+            <div>
+              <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Created</h3>
+              <p class="text-text-primary mt-1 text-sm">{{ formattedCreatedAt() }}</p>
+            </div>
+
+            <div>
+              <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Author</h3>
+              @if (author(); as author) {
+                <p class="text-text-primary mt-1 text-sm">{{ author.name }}</p>
+              }
+            </div>
+
+            @if (entry.version) {
+              <div>
+                <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Version</h3>
+                <p class="text-text-primary mt-1 text-sm">v{{ entry.version }}</p>
+              </div>
+            }
+          </div>
+        </lfx-card>
+      </div>
+    </div>
+  </div>
+} @else if (loading()) {
+  <div class="py-16 text-center">
+    <i class="fa-duotone fa-spinner-third fa-spin text-brand-600 mb-4 text-4xl"></i>
+    <p class="text-text-muted text-sm">Loading entry...</p>
+  </div>
+} @else {
+  <div class="py-16 text-center">
+    <i class="fa-duotone fa-circle-question text-text-muted mb-4 text-4xl"></i>
+    <p class="font-display text-text-secondary text-lg font-medium">Entry not found</p>
+    <a routerLink="/" class="text-brand-600 hover:text-brand-700 mt-3 inline-flex items-center gap-1.5 text-sm font-medium">
+      <i class="fa-solid fa-arrow-left text-xs"></i>
+      Back to changelog
+    </a>
+  </div>
+}

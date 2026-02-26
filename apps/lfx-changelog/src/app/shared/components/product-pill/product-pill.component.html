@@ -1,0 +1,10 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<span
+  class="border-border bg-surface-alt text-text-primary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors">
+  @if (product().faIcon) {
+    <i [class]="product().faIcon" class="text-brand-600"></i>
+  }
+  {{ product().name }}
+</span>

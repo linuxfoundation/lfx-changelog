@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ChangelogStatus {
+  draft
+  published
+}
+
+enum UserRole {
+  super_admin
+  product_admin
+  editor
+}
+
+model Product {
+  id                    String   @id @default(uuid())
+  name                  String   @unique
+  slug                  String   @unique
+  description           String?
+  iconUrl               String?  @map("icon_url")
+  faIcon                String?  @map("fa_icon")
+  githubInstallationId  Int?     @map("github_installation_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  changelogEntries    ChangelogEntry[]
+  userRoleAssignments UserRoleAssignment[]
+  repositories        ProductRepository[]
+
+  @@map("products")
+}
+
+model ProductRepository {
+  id                    String   @id @default(uuid())
+  productId             String   @map("product_id")
+  githubInstallationId  Int      @map("github_installation_id")
+  owner                 String
+  name                  String
+  fullName              String   @map("full_name")
+  htmlUrl               String   @map("html_url")
+  description           String?
+  isPrivate             Boolean  @default(false) @map("is_private")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, owner, name])
+  @@index([productId])
+  @@map("product_repositories")
+}
+
+model ChangelogEntry {
+  id          String            @id @default(uuid())
+  productId   String            @map("product_id")
+  title       String
+  description String
+  version     String?
+  status      ChangelogStatus   @default(draft)
+  publishedAt DateTime?         @map("published_at")
+  createdBy   String            @map("created_by")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id])
+  author  User    @relation(fields: [createdBy], references: [id])
+
+  @@index([productId, status, publishedAt])
+  @@map("changelog_entries")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  auth0Id   String   @unique @map("auth0_id")
+  email     String   @unique
+  name      String
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  changelogEntries    ChangelogEntry[]
+  userRoleAssignments UserRoleAssignment[]
+
+  @@map("users")
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  productId String?  @map("product_id")
+  role      UserRole
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId, role])
+  @@index([userId, productId])
+  @@map("user_role_assignments")
+}

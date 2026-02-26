@@ -1,0 +1,63 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left flex items-center justify-between">
+    <div>
+      <h1 class="font-display text-text-primary text-2xl font-bold">Products</h1>
+      <p class="text-text-secondary mt-1">Manage LFX products for changelog categorization.</p>
+    </div>
+    <lfx-button variant="primary" (clicked)="openAdd()">
+      <i class="fa-solid fa-plus text-xs"></i>
+      Add Product
+    </lfx-button>
+  </div>
+
+  <lfx-card padding="none" class="animate-rise-in block [animation-delay:150ms]">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-border bg-surface-alt border-b text-left">
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Name</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Slug</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Description</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-border divide-y">
+          @for (product of products(); track product.id; let i = $index) {
+            <tr class="table-row-enter hover:bg-surface-alt transition-colors" [style.animation-delay.ms]="250 + i * 50">
+              <td class="px-5 py-3">
+                <a [routerLink]="['/admin/products', product.id]" class="flex items-center gap-2.5 hover:opacity-80">
+                  @if (product.faIcon) {
+                    <i [class]="product.faIcon" class="text-brand-600"></i>
+                  }
+                  <span class="text-text-primary text-sm font-medium hover:underline">{{ product.name }}</span>
+                </a>
+              </td>
+              <td class="text-text-secondary px-5 py-3 font-mono text-sm">{{ product.slug }}</td>
+              <td class="text-text-secondary max-w-xs truncate px-5 py-3 text-sm">{{ product.description || '—' }}</td>
+              <td class="px-5 py-3">
+                <lfx-button variant="ghost" size="sm" (clicked)="openEdit(product)">Edit</lfx-button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </lfx-card>
+</div>
+
+<lfx-dialog [(visible)]="dialogVisible" [title]="editingProduct() ? 'Edit Product' : 'Add Product'">
+  <div class="space-y-4">
+    <lfx-input label="Name" placeholder="Product name..." [formControl]="formNameControl" />
+    <lfx-input label="Slug" placeholder="product-slug" [formControl]="formSlugControl" />
+    <lfx-textarea label="Description" [rows]="3" placeholder="Product description..." [formControl]="formDescriptionControl" />
+    <div class="flex justify-end gap-3 pt-2">
+      <lfx-button variant="secondary" (clicked)="dialogVisible.set(false)">Cancel</lfx-button>
+      <lfx-button variant="primary" [loading]="saving()" (clicked)="saveProduct()">
+        {{ editingProduct() ? 'Update' : 'Create' }}
+      </lfx-button>
+    </div>
+  </div>
+</lfx-dialog>

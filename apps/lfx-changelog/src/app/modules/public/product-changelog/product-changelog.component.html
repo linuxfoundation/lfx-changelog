@@ -1,0 +1,61 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (product(); as prod) {
+  <div class="space-y-8">
+    <!-- Product header -->
+    <div class="animate-fade-in-up flex items-start gap-4">
+      @if (prod.faIcon) {
+        <div class="bg-brand-50 text-brand-600 flex h-12 w-12 items-center justify-center rounded-xl">
+          <i [class]="prod.faIcon" class="text-xl"></i>
+        </div>
+      }
+      <div>
+        <h1 class="font-display text-text-primary text-3xl font-bold">{{ prod.name }}</h1>
+        @if (prod.description) {
+          <p class="text-text-secondary mt-1">{{ prod.description }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="animate-fade-in-up flex items-center gap-4 [animation-delay:50ms]">
+      <a routerLink="/" class="text-brand-600 hover:text-brand-700 inline-flex items-center gap-1.5 text-sm font-medium transition-colors">
+        <i class="fa-solid fa-arrow-left text-xs"></i>
+        All Products
+      </a>
+    </div>
+
+    <!-- Timeline -->
+    <div class="animate-fade-in-up [animation-delay:100ms]">
+      @if (loading()) {
+        <div class="py-16 text-center">
+          <i class="fa-duotone fa-spinner-third fa-spin text-brand-600 mb-4 text-4xl"></i>
+          <p class="text-text-muted text-sm">Loading entries...</p>
+        </div>
+      } @else {
+        @for (entry of entries(); track entry.id; let i = $index) {
+          <lfx-timeline-item [date]="entry.publishedAt! | dateFormat" [index]="i">
+            <lfx-changelog-card [entry]="entry" />
+          </lfx-timeline-item>
+        }
+
+        @if (entries().length === 0) {
+          <div class="py-16 text-center">
+            <i class="fa-duotone fa-clock-rotate-left text-text-muted mb-4 text-4xl"></i>
+            <p class="font-display text-text-secondary text-lg font-medium">No changelog entries yet</p>
+            <p class="text-text-muted mt-1 text-sm">Check back later for updates to {{ prod.name }}.</p>
+          </div>
+        }
+      }
+    </div>
+  </div>
+} @else {
+  <div class="py-16 text-center">
+    <i class="fa-duotone fa-circle-question text-text-muted mb-4 text-4xl"></i>
+    <p class="font-display text-text-secondary text-lg font-medium">Product not found</p>
+    <a routerLink="/" class="text-brand-600 hover:text-brand-700 mt-3 inline-flex items-center gap-1.5 text-sm font-medium">
+      <i class="fa-solid fa-arrow-left text-xs"></i>
+      Back to all updates
+    </a>
+  </div>
+}

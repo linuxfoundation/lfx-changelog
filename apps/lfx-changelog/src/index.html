@@ -1,0 +1,28 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LFX Changelog</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Stay up to date with the latest changes across LFX products" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script src="https://kit.fontawesome.com/f8a96882e2.js" crossorigin="anonymous"></script>
+    <script>
+      // Prevent flash of wrong theme on page load
+      (function () {
+        var stored = localStorage.getItem('lfx-changelog-theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (stored === 'dark' || (!stored && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <lfx-root></lfx-root>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="border-border relative flex gap-1 border-b">
+  @for (tab of tabs(); track tab.value) {
+    <button
+      #tabBtn
+      (click)="selectTab(tab.value)"
+      class="relative px-4 py-2.5 text-sm font-medium transition-colors"
+      [class]="activeTab() === tab.value ? 'text-brand-600' : 'text-text-secondary hover:text-text-primary'">
+      {{ tab.label }}
+    </button>
+  }
+  <!-- Sliding indicator -->
+  <div
+    class="bg-brand-600 absolute bottom-0 h-0.5 rounded-full"
+    [class.transition-all]="indicatorReady()"
+    [class.duration-300]="indicatorReady()"
+    [class.ease-out]="indicatorReady()"
+    [style.left.px]="indicatorLeft()"
+    [style.width.px]="indicatorWidth()"></div>
+</div>

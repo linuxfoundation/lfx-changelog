@@ -1,0 +1,218 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-8">
+  <!-- Hero header -->
+  <div class="dashboard-header flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="text-text-muted text-sm font-medium tracking-wide uppercase">Changelog Admin</p>
+      <h1 class="font-display text-text-primary mt-1 text-3xl font-extrabold">Dashboard</h1>
+      <p class="text-text-secondary mt-2 max-w-lg">A summary of changelog activity, entries, and product coverage across the LFX platform.</p>
+    </div>
+    <div class="flex shrink-0 gap-2">
+      <a
+        routerLink="/admin/changelogs/new"
+        class="bg-brand-600 text-text-inverse hover:bg-brand-700 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-all hover:shadow-md">
+        <i class="fa-solid fa-plus text-xs"></i>
+        New Entry
+      </a>
+      <a
+        routerLink="/admin/changelogs"
+        class="border-border bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium shadow-sm transition-all">
+        <i class="fa-duotone fa-rectangle-history text-xs"></i>
+        All Entries
+      </a>
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div
+      class="dashboard-card dashboard-card-1 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
+      <div class="card-accent-bar from-accent-cyan to-accent-blue absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
+      <div class="p-5">
+        <div class="flex items-center justify-between">
+          <div
+            class="bg-brand-50 text-brand-600 ring-brand-100 flex h-11 w-11 items-center justify-center rounded-xl ring-1 transition-transform group-hover:scale-105">
+            <i class="fa-duotone fa-rectangle-history text-lg"></i>
+          </div>
+          <span class="font-display text-text-primary text-3xl font-extrabold">{{ totalEntries() }}</span>
+        </div>
+        <p class="text-text-muted mt-3 text-sm font-medium">Total Entries</p>
+      </div>
+    </div>
+
+    <div
+      class="dashboard-card dashboard-card-2 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
+      <div class="card-accent-bar from-new-feature to-new-feature/50 absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
+      <div class="p-5">
+        <div class="flex items-center justify-between">
+          <div
+            class="bg-new-feature-bg text-new-feature ring-new-feature/15 flex h-11 w-11 items-center justify-center rounded-xl ring-1 transition-transform group-hover:scale-105">
+            <i class="fa-duotone fa-circle-check text-lg"></i>
+          </div>
+          <span class="font-display text-new-feature text-3xl font-extrabold">{{ publishedCount() }}</span>
+        </div>
+        <p class="text-text-muted mt-3 text-sm font-medium">Published</p>
+      </div>
+    </div>
+
+    <div
+      class="dashboard-card dashboard-card-3 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
+      <div class="card-accent-bar from-draft to-draft/50 absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
+      <div class="p-5">
+        <div class="flex items-center justify-between">
+          <div
+            class="bg-draft-bg text-draft ring-draft/15 flex h-11 w-11 items-center justify-center rounded-xl ring-1 transition-transform group-hover:scale-105">
+            <i class="fa-duotone fa-pen-to-square text-lg"></i>
+          </div>
+          <span class="font-display text-draft text-3xl font-extrabold">{{ draftCount() }}</span>
+        </div>
+        <p class="text-text-muted mt-3 text-sm font-medium">Drafts</p>
+      </div>
+    </div>
+
+    <div
+      class="dashboard-card dashboard-card-4 group border-border bg-surface hover:border-border-strong relative overflow-hidden rounded-xl border shadow-sm transition-all hover:shadow-md">
+      <div class="card-accent-bar from-accent-indigo to-accent-violet absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r"></div>
+      <div class="p-5">
+        <div class="flex items-center justify-between">
+          <div
+            class="bg-surface-alt text-accent-indigo ring-accent-indigo/15 flex h-11 w-11 items-center justify-center rounded-xl ring-1 transition-transform group-hover:scale-105">
+            <i class="fa-duotone fa-boxes-stacked text-lg"></i>
+          </div>
+          <span class="font-display text-text-primary text-3xl font-extrabold">{{ productCount() }}</span>
+        </div>
+        <p class="text-text-muted mt-3 text-sm font-medium">Products</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-5">
+    <!-- Recent activity (wider) -->
+    <div class="dashboard-panel dashboard-panel-1 xl:col-span-3">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="font-display text-text-primary text-base font-semibold">Recent Activity</h2>
+        <a routerLink="/admin/changelogs" class="text-brand-600 hover:text-brand-700 text-xs font-medium transition-colors">
+          View all <i class="fa-solid fa-arrow-right ml-0.5 text-[0.6rem]"></i>
+        </a>
+      </div>
+      <div class="border-border bg-surface overflow-hidden rounded-xl border shadow-sm">
+        @for (entry of recentEntries(); track entry.id; let i = $index) {
+          @if (i > 0) {
+            <div class="border-border border-t"></div>
+          }
+          <a
+            [routerLink]="['/admin/changelogs', entry.id, 'edit']"
+            class="gradient-accent-bar group hover:bg-surface-alt flex items-center gap-4 px-5 py-4 pl-7 transition-colors"
+            [class]="'activity-row activity-row-' + i">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <p class="text-text-primary group-hover:text-brand-600 truncate text-sm font-medium transition-colors">{{ entry.title }}</p>
+              </div>
+              <div class="text-text-muted mt-1 flex items-center gap-2 text-xs">
+                <span>{{ entry.productId | productName: products() }}</span>
+                <span class="text-border-strong">&middot;</span>
+                <span>{{ entry.version ? 'v' + entry.version : '—' }}</span>
+                <span class="text-border-strong">&middot;</span>
+                <span>{{ entry.updatedAt | dateFormat }}</span>
+              </div>
+            </div>
+            <lfx-status-badge [status]="entry.status" />
+          </a>
+        }
+      </div>
+    </div>
+
+    <!-- Latest releases from linked repos -->
+    <div class="dashboard-panel dashboard-panel-2 xl:col-span-2">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="font-display text-text-primary text-base font-semibold">Latest Releases</h2>
+        <span class="text-text-muted text-xs">Linked repos</span>
+      </div>
+      <div class="border-border bg-surface overflow-hidden rounded-xl border shadow-sm">
+        <!-- Release items -->
+        <div class="release-row release-row-0 px-4 py-3.5">
+          <div class="flex items-center gap-2">
+            <i class="fa-brands fa-github text-text-muted text-sm"></i>
+            <span class="text-text-primary truncate text-sm font-medium">v2.6.0</span>
+            <span class="bg-new-feature-bg text-new-feature ml-auto shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium">Latest</span>
+          </div>
+          <p class="text-text-secondary mt-1 truncate text-xs">communitybridge/easycla</p>
+          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
+            <i class="fa-duotone fa-file-contract text-brand-600 text-[0.65rem]"></i>
+            <span>EasyCLA</span>
+            <span class="text-border-strong">&middot;</span>
+            <span>2 hours ago</span>
+          </div>
+        </div>
+
+        <div class="border-border border-t"></div>
+
+        <div class="release-row release-row-1 px-4 py-3.5">
+          <div class="flex items-center gap-2">
+            <i class="fa-brands fa-github text-text-muted text-sm"></i>
+            <span class="text-text-primary truncate text-sm font-medium">v4.3.0-rc.1</span>
+            <span class="bg-draft-bg text-draft ml-auto shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium">Pre-release</span>
+          </div>
+          <p class="text-text-secondary mt-1 truncate text-xs">lfx/security-scanner</p>
+          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
+            <i class="fa-duotone fa-shield-halved text-brand-600 text-[0.65rem]"></i>
+            <span>Security</span>
+            <span class="text-border-strong">&middot;</span>
+            <span>5 hours ago</span>
+          </div>
+        </div>
+
+        <div class="border-border border-t"></div>
+
+        <div class="release-row release-row-2 px-4 py-3.5">
+          <div class="flex items-center gap-2">
+            <i class="fa-brands fa-github text-text-muted text-sm"></i>
+            <span class="text-text-primary truncate text-sm font-medium">v3.2.0</span>
+            <span class="bg-new-feature-bg text-new-feature ml-auto shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium">Latest</span>
+          </div>
+          <p class="text-text-secondary mt-1 truncate text-xs">lfx/insights-v3</p>
+          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
+            <i class="fa-duotone fa-chart-mixed text-brand-600 text-[0.65rem]"></i>
+            <span>Insights</span>
+            <span class="text-border-strong">&middot;</span>
+            <span>1 day ago</span>
+          </div>
+        </div>
+
+        <div class="border-border border-t"></div>
+
+        <div class="release-row release-row-3 px-4 py-3.5">
+          <div class="flex items-center gap-2">
+            <i class="fa-brands fa-github text-text-muted text-sm"></i>
+            <span class="text-text-primary truncate text-sm font-medium">v5.0.1</span>
+          </div>
+          <p class="text-text-secondary mt-1 truncate text-xs">lfx/project-control-center</p>
+          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
+            <i class="fa-duotone fa-bars-progress text-brand-600 text-[0.65rem]"></i>
+            <span>Project Control Center</span>
+            <span class="text-border-strong">&middot;</span>
+            <span>3 days ago</span>
+          </div>
+        </div>
+
+        <div class="border-border border-t"></div>
+
+        <div class="release-row release-row-4 px-4 py-3.5">
+          <div class="flex items-center gap-2">
+            <i class="fa-brands fa-github text-text-muted text-sm"></i>
+            <span class="text-text-primary truncate text-sm font-medium">v1.8.1</span>
+          </div>
+          <p class="text-text-secondary mt-1 truncate text-xs">communitybridge/mentorship-backend</p>
+          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
+            <i class="fa-duotone fa-hand-holding-heart text-brand-600 text-[0.65rem]"></i>
+            <span>Mentorship</span>
+            <span class="text-border-strong">&middot;</span>
+            <span>5 days ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

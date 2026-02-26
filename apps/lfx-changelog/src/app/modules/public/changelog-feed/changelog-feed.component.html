@@ -1,0 +1,55 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-8">
+  <!-- Header -->
+  <div class="animate-fade-in-up">
+    <h1 class="font-display text-text-primary text-3xl font-bold">What's New</h1>
+    <p class="text-text-secondary mt-2">Stay up to date with the latest changes across LFX products.</p>
+  </div>
+
+  <!-- Product filter chips -->
+  <div class="animate-fade-in-up space-y-3 [animation-delay:50ms]">
+    <div class="flex flex-wrap gap-2">
+      @for (product of products(); track product.id) {
+        <button
+          (click)="toggleProduct(product.id)"
+          class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200"
+          [class]="
+            selectedProduct() === product.id
+              ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
+              : 'border-border bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary'
+          ">
+          @if (product.faIcon) {
+            <i [class]="product.faIcon" class="text-[10px]"></i>
+          }
+          {{ product.name }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="animate-fade-in-up [animation-delay:100ms]">
+    @if (loading()) {
+      <div class="py-16 text-center">
+        <i class="fa-duotone fa-spinner-third fa-spin text-brand-600 mb-4 text-4xl"></i>
+        <p class="text-text-muted text-sm">Loading entries...</p>
+      </div>
+    } @else {
+      @for (entry of publishedEntries(); track entry.id; let i = $index) {
+        <lfx-timeline-item [date]="entry.publishedAt! | dateFormat" [index]="i">
+          <lfx-changelog-card [entry]="entry" />
+        </lfx-timeline-item>
+      }
+
+      @if (publishedEntries().length === 0) {
+        <div class="py-16 text-center">
+          <i class="fa-duotone fa-filter-slash text-text-muted mb-4 text-4xl"></i>
+          <p class="font-display text-text-secondary text-lg font-medium">No entries match your filters</p>
+          <p class="text-text-muted mt-1 text-sm">Try adjusting your filter criteria.</p>
+        </div>
+      }
+    }
+  </div>
+</div>

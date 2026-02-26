@@ -1,0 +1,20 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="flex flex-col gap-1.5">
+  @if (label()) {
+    <label class="text-text-primary text-sm font-medium">{{ label() }}</label>
+  }
+  <textarea
+    [rows]="rows()"
+    [placeholder]="placeholder()"
+    [value]="value()"
+    [disabled]="disabled()"
+    (input)="onInput($event)"
+    (blur)="onBlur()"
+    class="bg-surface text-text-primary placeholder-text-muted focus:border-brand-500 focus:ring-brand-500/20 rounded-lg border px-3 py-2 text-sm transition-all duration-200 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    [class]="error() ? 'border-red-400' : 'border-border'"></textarea>
+  @if (error()) {
+    <p class="text-xs text-red-500">{{ error() }}</p>
+  }
+</div>
