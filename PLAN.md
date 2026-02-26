@@ -59,7 +59,7 @@ Flat config (ESLint 9+) with:
 
 ---
 
-## Phase 1: Monorepo Scaffolding
+## Phase 1: Monorepo Scaffolding ✅
 
 ### 1.1 Create Turborepo via CLI
 
@@ -92,7 +92,7 @@ Tasks: `build` (with `^build` dep), `lint`, `start`, `watch`, `test`, `start:ser
 
 ### 1.5 `.editorconfig`
 
-```
+```ini
 root = true
 [*]
 charset = utf-8
@@ -109,7 +109,7 @@ trim_trailing_whitespace = false
 
 ---
 
-## Phase 2: Angular App with SSR
+## Phase 2: Angular App with SSR ✅
 
 ### 2.1 Scaffold via Angular CLI
 
@@ -211,11 +211,11 @@ Inline the LFX prettier config values (documented above).
 
 ---
 
-## Phase 3: Shared Package (`packages/shared`)
+## Phase 3: Shared Package (`packages/shared`) ✅
 
 ### Structure
 
-```
+```text
 packages/shared/src/
 ├── interfaces/    → product, changelog-entry, user, auth, api-response
 ├── enums/         → ChangelogCategory, ChangelogStatus, UserRole
@@ -254,7 +254,7 @@ Pure TypeScript via `tsc`, exports via package.json `exports` field.
 
 ---
 
-## Phase 4: UI-First — Shared Components (Custom Tailwind)
+## Phase 4: UI-First — Shared Components (Custom Tailwind) ✅
 
 > **Use the `frontend-design` skill for page-level designs.** Build shared component wrappers first, then compose pages from them.
 
@@ -314,11 +314,11 @@ Build these pages with mock data to iterate on design:
 
 #### Admin Pages
 
-4. **Admin Dashboard** (`/admin`) — Overview cards (total entries, drafts, published counts per product), recent activity
-5. **Changelog List** (`/admin/changelogs`) — Data table with filters (product, status, category), bulk actions
-6. **Changelog Editor** (`/admin/changelogs/new` and `/edit`) — Form with markdown textarea + live preview, product/category/version selectors
-7. **Product Management** (`/admin/products`) — CRUD table for products
-8. **User Management** (`/admin/users`) — User list with role assignments per product
+1. **Admin Dashboard** (`/admin`) — Overview cards (total entries, drafts, published counts per product), recent activity
+2. **Changelog List** (`/admin/changelogs`) — Data table with filters (product, status, category), bulk actions
+3. **Changelog Editor** (`/admin/changelogs/new` and `/edit`) — Form with markdown textarea + live preview, product/category/version selectors
+4. **Product Management** (`/admin/products`) — CRUD table for products
+5. **User Management** (`/admin/users`) — User list with role assignments per product
 
 #### Layouts
 
@@ -335,7 +335,7 @@ Create `src/app/shared/mocks/` with hardcoded data arrays matching the shared in
 
 ---
 
-## Phase 5: Docker Compose for PostgreSQL
+## Phase 5: Docker Compose for PostgreSQL ✅
 
 **File:** `docker-compose.yml` (root)
 
@@ -358,7 +358,7 @@ volumes:
 
 ---
 
-## Phase 6: Prisma Setup
+## Phase 6: Prisma Setup ✅
 
 ### 6.1 Initialize via CLI
 
@@ -389,11 +389,11 @@ Seed data: 7 LFX products + sample users/entries
 
 ---
 
-## Phase 7: Express Server
+## Phase 7: Express Server ✅
 
 ### Directory structure (controller-service pattern from lfx-v2-ui)
 
-```
+```text
 src/server/
 ├── server.ts                  # Main Express + Angular SSR
 ├── server-logger.ts           # Pino logger
@@ -411,7 +411,7 @@ src/server/
 
 ---
 
-## Phase 8: Auth0 Integration
+## Phase 8: Auth0 Integration ✅
 
 - `express-openid-connect` with `authRequired: false`
 - Custom `/login` route with returnTo
@@ -420,7 +420,7 @@ src/server/
 
 ---
 
-## Phase 9: Role-Based Access Control
+## Phase 9: Role-Based Access Control ✅
 
 - Hierarchy: `super_admin (3) > product_admin (2) > editor (1)`
 - `requireRole(minimumRole)` middleware checks user roles from DB
@@ -430,7 +430,7 @@ src/server/
 
 ---
 
-## Phase 10: REST API Routes
+## Phase 10: REST API Routes ✅
 
 ### Public (no auth)
 
@@ -462,14 +462,139 @@ src/server/
 
 ---
 
-## Phase 11: Wire Up Frontend to API
+## Phase 11: Wire Up Frontend to API ✅
 
 Replace mock data with actual API calls in Angular services. Each service uses signals for state:
 
 - `ChangelogService` — signal-based state, HTTP calls to `/api/changelogs` and `/public/api/changelogs`
-- `ProductService` — signal-based state, HTTP calls to `/api/products`
+- `ProductService` — signal-based state, HTTP calls to `/api/products` and `/public/api/products`
 - `UserService` — signal-based state, HTTP calls to `/api/users`
-- `RoleService` — role management API calls
+- Public/admin API split: public endpoints at `/public/api/*` (no auth), protected at `/api/*`
+- All `MOCK_` data removed from components
+
+---
+
+## Phase 12: Auth Wiring & Animation System ✅
+
+- Auth0 login/logout flow wired to UI (header user menu, login button)
+- App-wide CSS animation system using Tailwind tokens (`--animate-*` in `@theme` block)
+- Global `@keyframes` in `styles.css`, orchestration in component CSS
+- Available tokens: `fade-in`, `fade-in-up`, `slide-in-left`, `slide-in-right`, `scale-in-up`, `rise-in`, `shimmer-in`
+
+---
+
+## Phase 13: Server Optimization ✅
+
+- CORS configuration
+- Cache headers (static assets, API responses)
+- Security headers (Helmet-style)
+- Rate limiting middleware
+- Graceful shutdown handling
+
+---
+
+## Phase 14: Docker & CI/CD Deployment ✅
+
+- Production `Dockerfile` (multi-stage, Alpine-based, non-root user)
+- CI/CD deployment pipeline for AWS ECS Fargate
+- Docker Compose for local development (PostgreSQL)
+
+---
+
+## Phase 15: GitHub Integration ✅
+
+- GitHub App install flow with signed state (HMAC CSRF protection)
+- Product detail page with repository management
+- Aggregated GitHub activity display
+- Webhook callback controller with signature verification
+
+---
+
+## Phase 16: AI Changelog Generation ✅
+
+- AI-powered changelog generation endpoint with SSE streaming
+- Integration with AI cluster for content generation
+- Latest changelogs panel in product overview
+- Expand/collapse functionality for product entries
+
+---
+
+## Phase 17: Open Source & Quality ✅
+
+- SPDX license headers (`MIT`) on all source files
+- Open source documentation (LICENSE, CONTRIBUTING, etc.)
+- GitHub Actions CI workflow
+- Husky pre-commit hook (format, lint, build checks)
+
+---
+
+## Phase 18: API Hardening — Input Validation & Security (PLANNED)
+
+### 18.1 Request Body Validation (zod)
+
+Add a schema validation layer using `zod` for all mutating API endpoints:
+
+- `POST /api/changelogs` — validate title (required, max length), description (required), productId (UUID), version (semver pattern), status (enum)
+- `PUT /api/changelogs/:id` — same fields, all optional
+- `POST /api/products` — validate name (required, unique), slug (required, kebab-case), description (optional, max length)
+- `PUT /api/products/:id` — same fields, all optional
+- `POST /api/users/:id/roles` — validate role (enum), productId (UUID or null)
+
+Create reusable `validateBody(schema)` Express middleware that returns 400 with structured errors on validation failure.
+
+### 18.2 UUID Format Validation on Route Params
+
+Add `validateUUID` middleware for all `:id` and `:roleId` route parameters. Return 400 with a clear error message if the param is not a valid UUID v4 — prevents unnecessary database queries with malformed IDs.
+
+### 18.3 Limit AI `additionalContext` Length
+
+Add a character limit (e.g., 5,000 chars) to the `additionalContext` field in the AI changelog generation endpoint to prevent abuse and excessive token consumption.
+
+### 18.4 Configurable AI Cluster URL
+
+Move the hardcoded AI cluster URL to an environment variable (`AI_CLUSTER_URL`). Add validation on startup to warn if not configured.
+
+---
+
+## Phase 19: Infrastructure Hardening (PLANNED)
+
+### 19.1 Add HEALTHCHECK to Dockerfile
+
+Add a Docker `HEALTHCHECK` instruction that hits the `/health` endpoint:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:4000/health || exit 1
+```
+
+### 19.2 Differentiate Rate Limits by Endpoint Type
+
+Replace the current blanket rate limiter with tiered limits:
+
+| Endpoint Type       | Limit       |
+| ------------------- | ----------- |
+| Public read APIs    | 100 req/min |
+| Auth-protected APIs | 60 req/min  |
+| AI generation       | 5 req/min   |
+| Login/auth          | 10 req/min  |
+
+### 19.3 Add Container Image Scanning to CI
+
+Add a Trivy or Snyk container image scanning step to the GitHub Actions CI workflow. Fail the build on critical/high vulnerabilities.
+
+---
+
+## Phase 20: Frontend Error Handling (PLANNED)
+
+### 20.1 Admin Component Error States
+
+Add proper error handling UI for destructive operations in admin components:
+
+- **Product Management** — confirmation dialog before delete, error toast on failure, loading state during operation
+- **User Management** — error feedback for role assignment/removal failures, optimistic UI with rollback on error
+- **Changelog List** — error handling for bulk operations, delete confirmation
+
+Use the existing `lfx-toast` and `lfx-confirm-dialog` components for consistent UX.
 
 ---
 
@@ -490,19 +615,28 @@ Replace mock data with actual API calls in Angular services. Each service uses s
 
 ## Implementation Order
 
-| Step | Phase                                                                       | Depends On   | Agent Team    |
-| ---- | --------------------------------------------------------------------------- | ------------ | ------------- |
-| 1    | Phase 1 — Monorepo scaffold                                                 | —            | infra agent   |
-| 2    | Phase 2 — Angular app (ng new --ssr) + config                               | Phase 1      | infra agent   |
-| 3    | Phase 3 — Shared package (types, enums, constants, mocks)                   | Phase 1      | shared agent  |
-| 4    | Phase 4 — UI shared components + pages (hardcoded, `frontend-design` skill) | Phase 2 + 3  | UI agent      |
-| 5    | Phase 5 — Docker Compose for PostgreSQL                                     | Phase 1      | infra agent   |
-| 6    | Phase 6 — Prisma schema, migration, seed                                    | Phase 2 + 5  | infra agent   |
-| 7    | Phase 7 — Express server skeleton                                           | Phase 2 + 3  | backend agent |
-| 8    | Phase 8 — Auth0 integration                                                 | Phase 7      | backend agent |
-| 9    | Phase 9 — RBAC middleware                                                   | Phase 8      | backend agent |
-| 10   | Phase 10 — REST API routes                                                  | Phase 6 + 9  | backend agent |
-| 11   | Phase 11 — Wire frontend to API                                             | Phase 4 + 10 | UI agent      |
+| Step | Phase                                                                       | Depends On   | Status  |
+| ---- | --------------------------------------------------------------------------- | ------------ | ------- |
+| 1    | Phase 1 — Monorepo scaffold                                                 | —            | ✅ DONE |
+| 2    | Phase 2 — Angular app (ng new --ssr) + config                               | Phase 1      | ✅ DONE |
+| 3    | Phase 3 — Shared package (types, enums, constants, mocks)                   | Phase 1      | ✅ DONE |
+| 4    | Phase 4 — UI shared components + pages (hardcoded, `frontend-design` skill) | Phase 2 + 3  | ✅ DONE |
+| 5    | Phase 5 — Docker Compose for PostgreSQL                                     | Phase 1      | ✅ DONE |
+| 6    | Phase 6 — Prisma schema, migration, seed                                    | Phase 2 + 5  | ✅ DONE |
+| 7    | Phase 7 — Express server skeleton                                           | Phase 2 + 3  | ✅ DONE |
+| 8    | Phase 8 — Auth0 integration                                                 | Phase 7      | ✅ DONE |
+| 9    | Phase 9 — RBAC middleware                                                   | Phase 8      | ✅ DONE |
+| 10   | Phase 10 — REST API routes                                                  | Phase 6 + 9  | ✅ DONE |
+| 11   | Phase 11 — Wire frontend to API                                             | Phase 4 + 10 | ✅ DONE |
+| 12   | Phase 12 — Auth wiring & animation system                                   | Phase 11     | ✅ DONE |
+| 13   | Phase 13 — Server optimization                                              | Phase 11     | ✅ DONE |
+| 14   | Phase 14 — Docker & CI/CD deployment                                        | Phase 13     | ✅ DONE |
+| 15   | Phase 15 — GitHub integration                                               | Phase 11     | ✅ DONE |
+| 16   | Phase 16 — AI changelog generation                                          | Phase 15     | ✅ DONE |
+| 17   | Phase 17 — Open source & quality                                            | Phase 14     | ✅ DONE |
+| 18   | Phase 18 — API hardening (validation, security)                             | Phase 17     | PLANNED |
+| 19   | Phase 19 — Infrastructure hardening                                         | Phase 17     | PLANNED |
+| 20   | Phase 20 — Frontend error handling                                          | Phase 17     | PLANNED |
 
 ---
 

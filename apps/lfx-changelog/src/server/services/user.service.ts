@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { UserRoleAssignment as PrismaRoleAssignment, User as PrismaUser } from '@prisma/client';
+import { UserRoleAssignment as PrismaRoleAssignment, User as PrismaUser, UserRole as PrismaUserRole } from '@prisma/client';
 
 import { NotFoundError } from '../errors';
 
@@ -64,7 +64,7 @@ export class UserService {
     return prisma.userRoleAssignment.create({
       data: {
         userId,
-        role: role as any,
+        role: role as PrismaUserRole,
         productId,
       },
       include: { product: true },

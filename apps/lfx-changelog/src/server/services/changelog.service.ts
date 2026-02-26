@@ -1,8 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { PublicChangelogEntry } from '@lfx-changelog/shared';
+import { ChangelogStatus as ChangelogStatusEnum } from '@lfx-changelog/shared';
 import { type ChangelogStatus, Prisma, type ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
+
+import type { PublicChangelogEntry } from '@lfx-changelog/shared';
 
 import { NotFoundError } from '../errors';
 
@@ -23,12 +25,12 @@ export interface PaginatedResult<T> {
   totalPages: number;
 }
 
+const MAX_PAGE_SIZE = 100;
+
 export class ChangelogService {
   public async findPublished(params: ChangelogQueryParams): Promise<PaginatedResult<PublicChangelogEntry>> {
     const prisma = getPrismaClient();
-    const page = params.page || 1;
-    const limit = params.limit || 20;
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = this.sanitizePagination(params);
 
     const where: Prisma.ChangelogEntryWhereInput = { status: 'published' };
     if (params.productId) where.productId = params.productId;
@@ -65,13 +67,16 @@ export class ChangelogService {
 
   public async findAll(params: ChangelogQueryParams): Promise<PaginatedResult<PrismaChangelogEntry>> {
     const prisma = getPrismaClient();
-    const page = params.page || 1;
-    const limit = params.limit || 20;
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = this.sanitizePagination(params);
 
     const where: Prisma.ChangelogEntryWhereInput = {};
     if (params.productId) where.productId = params.productId;
-    if (params.status) where.status = params.status as ChangelogStatus;
+    if (params.status) {
+      const validStatuses = Object.values(ChangelogStatusEnum) as string[];
+      if (validStatuses.includes(params.status)) {
+        where.status = params.status as ChangelogStatus;
+      }
+    }
 
     const [data, total] = await Promise.all([
       prisma.changelogEntry.findMany({
@@ -130,7 +135,7 @@ export class ChangelogService {
         title: data.title,
         description: data.description,
         version: data.version,
-        status: (data.status as ChangelogStatus) || 'draft',
+        status: (Object.values(ChangelogStatusEnum) as string[]).includes(data.status || '') ? (data.status as ChangelogStatus) : 'draft',
         createdBy: data.createdBy,
       },
       include: { product: true, author: true },
@@ -190,5 +195,11 @@ export class ChangelogService {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'findById', service: 'changelog' });
     }
     return entry;
+  }
+
+  private sanitizePagination(params: ChangelogQueryParams): { page: number; limit: number; skip: number } {
+    const page = Math.max(1, Math.floor(params.page || 1));
+    const limit = Math.max(1, Math.min(Math.floor(params.limit || 20), MAX_PAGE_SIZE));
+    return { page, limit, skip: (page - 1) * limit };
   }
 }

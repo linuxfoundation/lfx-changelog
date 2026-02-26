@@ -13,7 +13,7 @@ export const customErrorSerializer = (err: any) => {
   if (err.statusCode) serialized.statusCode = err.statusCode;
   if (err.status) serialized.status = err.status;
 
-  if (process.env['NODE_ENV'] === 'production' || process.env['LOG_LEVEL'] === 'debug') {
+  if (process.env['NODE_ENV'] !== 'production' || process.env['LOG_LEVEL'] === 'debug') {
     serialized.stack = err.stack;
   }
 

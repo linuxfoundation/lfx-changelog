@@ -1,21 +1,33 @@
 # LFX Changelog — Current Project State
 
-**Last updated:** 2026-02-25
+**Last updated:** 2026-02-26
 
 ---
 
 ## Completion Status
 
-| Phase        | Status      | Description                                                                          |
-| ------------ | ----------- | ------------------------------------------------------------------------------------ |
-| Phase 1      | DONE        | Turborepo monorepo scaffolded (Yarn 4, workspaces, turbo.json)                       |
-| Phase 2      | DONE        | Angular 20 SSR app created (`--style=tailwind --ssr --zoneless --prefix=lfx`)        |
-| Phase 3      | DONE        | Shared package (`@lfx-changelog/shared`) with types, enums, constants, mocks         |
-| Phase 4      | DONE        | UI shared components (16 core + 6 domain) + all pages with hardcoded mock data       |
-| Phase 5      | DONE        | Docker Compose for PostgreSQL                                                        |
-| Phase 6      | DONE        | Prisma schema, migration ready (seed script written)                                 |
-| Phase 7-10   | DONE        | Express server, Auth0 middleware, RBAC, all API routes (controllers/services/routes) |
-| **Phase 11** | **PENDING** | **Wire frontend to API — replace mock data with actual HTTP calls**                  |
+| Phase    | Status      | Description                                                                           |
+| -------- | ----------- | ------------------------------------------------------------------------------------- |
+| Phase 1  | DONE        | Turborepo monorepo scaffolded (Yarn 4, workspaces, turbo.json)                        |
+| Phase 2  | DONE        | Angular 20 SSR app created (`--style=tailwind --ssr --zoneless --prefix=lfx`)         |
+| Phase 3  | DONE        | Shared package (`@lfx-changelog/shared`) with types, enums, constants, mocks          |
+| Phase 4  | DONE        | UI shared components (16 core + 6 domain) + all pages with hardcoded mock data        |
+| Phase 5  | DONE        | Docker Compose for PostgreSQL                                                         |
+| Phase 6  | DONE        | Prisma schema, migration ready (seed script written)                                  |
+| Phase 7  | DONE        | Express server skeleton (controller/service pattern)                                  |
+| Phase 8  | DONE        | Auth0 integration (`express-openid-connect`)                                          |
+| Phase 9  | DONE        | RBAC middleware (super_admin / product_admin / editor)                                |
+| Phase 10 | DONE        | REST API routes (public + protected)                                                  |
+| Phase 11 | DONE        | Frontend wired to API — all MOCK\_ data removed, 3 Angular services                   |
+| Phase 12 | DONE        | Auth wiring & app-wide CSS animation system                                           |
+| Phase 13 | DONE        | Server optimization — CORS, cache, security headers, rate limiting, graceful shutdown |
+| Phase 14 | DONE        | Docker (multi-stage, non-root) & CI/CD deployment for AWS ECS Fargate                 |
+| Phase 15 | DONE        | GitHub integration — App install flow, product repos, aggregated activity             |
+| Phase 16 | DONE        | AI changelog generation with SSE streaming                                            |
+| Phase 17 | DONE        | Open source files (SPDX headers, LICENSE), CI workflow, Husky pre-commit              |
+| Phase 18 | **PLANNED** | **API hardening — zod validation, UUID params, AI context limits**                    |
+| Phase 19 | **PLANNED** | **Infrastructure hardening — Dockerfile HEALTHCHECK, tiered rate limits, image scan** |
+| Phase 20 | **PLANNED** | **Frontend error handling — admin delete/role error states, toasts, confirmations**   |
 
 ---
 
@@ -23,7 +35,7 @@
 
 ### Monorepo Structure
 
-```
+```text
 lfx-changelog/
 ├── apps/lfx-changelog/           # Angular 20 SSR app
 │   ├── src/
@@ -67,8 +79,7 @@ lfx-changelog/
 │   │   │       │   ├── tabs/
 │   │   │       │   ├── textarea/
 │   │   │       │   └── timeline-item/
-│   │   │       ├── mocks/             # Mock data (hardcoded)
-│   │   │       └── services/          # EMPTY — needs Phase 11
+│   │   │       └── services/          # changelog, product, user, auth, theme services
 │   │   ├── environments/              # env configs
 │   │   ├── server/
 │   │   │   ├── server-logger.ts       # Pino logger
@@ -109,7 +120,7 @@ lfx-changelog/
 - Auth0 via `express-openid-connect`
 - Yarn 4 + Turborepo
 
-### API Routes (Backend — Built, Not Yet Connected to Frontend)
+### API Routes (Backend — Fully Wired to Frontend)
 
 **Public:**
 
@@ -146,49 +157,41 @@ lfx-changelog/
 
 ---
 
-## What's Left (Phase 11)
+## What's Left (Phases 18-20)
 
-### 1. Create Angular Services (signal-based state)
+### Phase 18: API Hardening — Input Validation & Security
 
-The `src/app/shared/services/` directory is **empty**. Need to create:
+- Add `zod` schema validation middleware for all mutating endpoints (changelogs, products, roles)
+- Add UUID format validation on all `:id` route params (return 400 instead of querying DB with garbage)
+- Limit `additionalContext` field length in AI generation endpoint
+- Make AI cluster URL configurable via `AI_CLUSTER_URL` env var
 
-- `changelog.service.ts` — HTTP calls to `/api/changelogs` and `/public/api/changelogs`
-- `product.service.ts` — HTTP calls to `/api/products`
-- `user.service.ts` — HTTP calls to `/api/users`
-- `auth.service.ts` — Authentication state from SSR-injected context
-- `role.service.ts` — Role management API calls
+### Phase 19: Infrastructure Hardening
 
-### 2. Update Pages to Use Services
+- Add `HEALTHCHECK` instruction to Dockerfile (hit `/health` endpoint)
+- Differentiate rate limits by endpoint type (public reads: 100/min, auth APIs: 60/min, AI: 5/min, login: 10/min)
+- Add container image scanning (Trivy/Snyk) to CI pipeline
 
-All pages currently import from `shared/mocks/`. Replace with service injection + HTTP calls:
+### Phase 20: Frontend Error Handling
 
-- Public pages → use public API endpoints (no auth)
-- Admin pages → use protected API endpoints
-- Add auth guards for admin routes
-
-### 3. Auth UI
-
-- Login/logout buttons in header
-- User menu with profile info
-- Role-based visibility in admin panel
-
-### 4. Build & Verify
-
-- `yarn install` + `yarn build` from root
-- `docker compose up -d` for PostgreSQL
-- `yarn prisma migrate dev` + `yarn prisma db seed`
-- `yarn start` → verify SSR + API + auth flow
+- Admin product management: confirmation dialog before delete, error toast on failure
+- Admin user management: error feedback for role assignment/removal
+- Admin changelog list: error handling for delete operations
+- Use existing `lfx-toast` and `lfx-confirm-dialog` components
 
 ---
 
-## Key Files to Reference (from lfx-v2-ui)
+## Recent Security Fixes Applied (Code Review)
 
-| File                                                                      | Purpose                      |
-| ------------------------------------------------------------------------- | ---------------------------- |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/src/server/server.ts`                     | Express + SSR server pattern |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/src/server/middleware/auth.middleware.ts` | Auth middleware pattern      |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/src/app/app.config.ts`                    | Angular config pattern       |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/eslint.config.js`                         | ESLint config to match       |
+The following fixes from the PR #1 code review have been applied directly:
+
+1. **Non-root Dockerfile user** — Added `appuser:appgroup` with `USER appuser` directive
+2. **GitHub webhook state signing** — HMAC-based CSRF protection on GitHub App callback state parameter
+3. **Error serializer fix** — Corrected inverted condition that was leaking stack traces to production
+4. **Pagination bounds** — Clamped page/limit params (max 100 per page) in `ChangelogService`
+5. **Role enum validation** — Validated role values against `UserRole` enum before database operations
+
+---
 
 ## See Also
 

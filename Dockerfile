@@ -22,6 +22,9 @@ RUN yarn turbo run build:${BUILD_ENV} --filter=lfx-changelog
 # Production stage
 FROM node:22-alpine
 
+# Run as non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 WORKDIR /app
 
 # Copy root node_modules (runtime deps: @prisma/adapter-pg, pg + transitive deps)
@@ -37,6 +40,10 @@ COPY --from=builder /app/apps/lfx-changelog/dist/lfx-changelog ./dist/lfx-change
 # Copy entrypoint
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
+
+# Set ownership and switch to non-root user
+RUN chown -R appuser:appgroup /app
+USER appuser
 
 EXPOSE 4000
 
