@@ -136,7 +136,7 @@ environment:
 
   # Base URL
   BASE_URL:
-    value: "https://changelog.dev.platform.linuxfoundation.org"
+    value: "https://changelog.dev.lfx.dev"
 
   # Auth0 configuration (non-secret values)
   AUTH0_ISSUER_BASE_URL:
