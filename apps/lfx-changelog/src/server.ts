@@ -12,16 +12,18 @@ import { noCacheMiddleware } from './server/middleware/cache.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import { requestIdMiddleware } from './server/middleware/request-id.middleware';
 import changelogRouter from './server/routes/changelog.route';
+import githubRouter from './server/routes/github.route';
 import productRouter from './server/routes/product.route';
 import publicChangelogRouter from './server/routes/public-changelog.route';
 import publicProductRouter from './server/routes/public-product.route';
 import userRouter from './server/routes/user.route';
+import webhookRouter from './server/routes/webhook.route';
 import { reqSerializer, resSerializer, serverLogger } from './server/server-logger';
 import { disconnectPrisma } from './server/services/prisma.service';
 import { UserService } from './server/services/user.service';
 
-import type { Server } from 'node:http';
 import type { AuthContext } from '@lfx-changelog/shared';
+import type { Server } from 'node:http';
 
 if (process.env['NODE_ENV'] !== 'production') {
   dotenv.config();
@@ -149,7 +151,10 @@ app.get('/logout', (_req: Request, res: Response) => {
   (res as any).oidc.logout({ returnTo: '/' });
 });
 
-// 12. Public API routes (no auth required — cache headers set per-route)
+// 12. Webhook routes (unauthenticated — GitHub App callback)
+app.use('/webhooks', webhookRouter);
+
+// 13. Public API routes (no auth required — cache headers set per-route)
 app.use('/public/api/changelogs', publicChangelogRouter);
 app.use('/public/api/products', publicProductRouter);
 
@@ -159,10 +164,11 @@ app.use('/api', noCacheMiddleware);
 // 14. Auth middleware for protected routes
 app.use('/api', authMiddleware);
 
-// 15. Protected API routes
+// 16. Protected API routes
 app.use('/api/products', productRouter);
 app.use('/api/changelogs', changelogRouter);
 app.use('/api/users', userRouter);
+app.use('/api/github', githubRouter);
 
 // 16. API error handler
 app.use('/api', apiErrorHandler);

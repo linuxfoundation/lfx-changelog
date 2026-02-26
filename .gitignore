@@ -36,11 +36,14 @@ yarn-error.log*
 
 # Testing
 coverage/
-playwright-report/
-test-results/
 
 # Prisma
 prisma/migrations/**/migration_lock.toml
 
 # Docker volumes
 postgres_data/
+
+# Playwright
+playwright-report/
+test-results/
+.playwright-mcp

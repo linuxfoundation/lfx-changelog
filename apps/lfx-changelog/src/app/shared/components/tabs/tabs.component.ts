@@ -32,7 +32,7 @@ export class TabsComponent {
   private measureActiveTab(): void {
     const allTabs = this.tabs();
     const buttons = this.tabButtons();
-    const index = allTabs.findIndex(t => t.value === this.activeTab());
+    const index = allTabs.findIndex((t) => t.value === this.activeTab());
     if (index >= 0 && buttons[index]) {
       const el = buttons[index].nativeElement;
       this.indicatorLeft.set(el.offsetLeft);

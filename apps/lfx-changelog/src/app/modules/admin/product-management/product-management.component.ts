@@ -1,23 +1,25 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { DialogComponent } from '@components/dialog/dialog.component';
 import { InputComponent } from '@components/input/input.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import type { Product } from '@lfx-changelog/shared';
 import { ProductService } from '@services/product/product.service';
-import { BehaviorSubject, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
+import type { Product } from '@lfx-changelog/shared';
 @Component({
   selector: 'lfx-product-management',
-  imports: [ReactiveFormsModule, ButtonComponent, CardComponent, DialogComponent, InputComponent, TextareaComponent],
+  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, CardComponent, DialogComponent, InputComponent, TextareaComponent],
   templateUrl: './product-management.component.html',
   styleUrl: './product-management.component.css',
 })
 export class ProductManagementComponent {
   private readonly productService = inject(ProductService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly loading = signal(true);
@@ -26,7 +28,7 @@ export class ProductManagementComponent {
   protected readonly products = toSignal(
     this.refresh$.pipe(
       tap(() => this.loading.set(true)),
-      switchMap(() => this.productService.getAll()),
+      switchMap(() => this.productService.getAll().pipe(catchError(() => of([] as Product[])))),
       tap(() => this.loading.set(false))
     ),
     { initialValue: [] as Product[] }
@@ -79,6 +81,8 @@ export class ProductManagementComponent {
   }
 
   protected deleteProduct(product: Product): void {
-    this.productService.delete(product.id).subscribe(() => this.refresh$.next());
+    this.productService
+      .delete(product.id)
+      .subscribe(() => this.refresh$.next());
   }
 }

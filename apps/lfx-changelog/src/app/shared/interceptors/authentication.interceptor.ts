@@ -15,7 +15,7 @@ export const authenticationInterceptor: HttpInterceptorFn = (req, next) => {
         'Cookie',
         Object.entries(cookieService.getAll())
           .map(([key, value]) => `${key}=${value}`)
-          .join('; '),
+          .join('; ')
       ),
     });
 

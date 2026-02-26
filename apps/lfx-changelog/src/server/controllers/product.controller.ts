@@ -23,6 +23,15 @@ export class ProductController {
     }
   }
 
+  public async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const product = await this.productService.findById(req.params['id'] as string);
+      res.json({ success: true, data: product });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { name, slug, description, iconUrl } = req.body;

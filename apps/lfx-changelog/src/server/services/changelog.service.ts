@@ -1,5 +1,5 @@
 import type { PublicChangelogEntry } from '@lfx-changelog/shared';
-import { type ChangelogEntry as PrismaChangelogEntry, type ChangelogStatus, Prisma } from '@prisma/client';
+import { type ChangelogStatus, Prisma, type ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
 
 import { NotFoundError } from '../errors';
 

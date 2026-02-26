@@ -1,0 +1,37 @@
+<div class="space-y-6">
+  <lfx-card>
+    <div class="grid gap-6 sm:grid-cols-2">
+      <div>
+        <h3 class="text-text-muted mb-1 text-xs font-medium tracking-wider uppercase">Name</h3>
+        <p class="text-text-primary text-sm font-medium">{{ product().name }}</p>
+      </div>
+      <div>
+        <h3 class="text-text-muted mb-1 text-xs font-medium tracking-wider uppercase">Slug</h3>
+        <p class="text-text-primary font-mono text-sm">{{ product().slug }}</p>
+      </div>
+      <div class="sm:col-span-2">
+        <h3 class="text-text-muted mb-1 text-xs font-medium tracking-wider uppercase">Description</h3>
+        <p class="text-text-secondary text-sm">{{ product().description || 'No description provided.' }}</p>
+      </div>
+      @if (product().faIcon) {
+        <div>
+          <h3 class="text-text-muted mb-1 text-xs font-medium tracking-wider uppercase">Icon</h3>
+          <div class="flex items-center gap-2">
+            <i [class]="product().faIcon" class="text-brand-600 text-lg"></i>
+            <span class="text-text-secondary font-mono text-xs">{{ product().faIcon }}</span>
+          </div>
+        </div>
+      }
+      <div>
+        <h3 class="text-text-muted mb-1 text-xs font-medium tracking-wider uppercase">Created</h3>
+        <p class="text-text-secondary text-sm">{{ product().createdAt | date: 'MMM d, yyyy' }}</p>
+      </div>
+      <div>
+        <h3 class="text-text-muted mb-1 text-xs font-medium tracking-wider uppercase">Last Updated</h3>
+        <p class="text-text-secondary text-sm">{{ product().updatedAt | date: 'MMM d, yyyy' }}</p>
+      </div>
+    </div>
+  </lfx-card>
+
+  <lfx-product-activity [productId]="productId()" />
+</div>

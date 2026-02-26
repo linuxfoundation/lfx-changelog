@@ -18,19 +18,41 @@ enum UserRole {
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?
-  iconUrl     String?  @map("icon_url")
-  faIcon      String?  @map("fa_icon")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid())
+  name                  String   @unique
+  slug                  String   @unique
+  description           String?
+  iconUrl               String?  @map("icon_url")
+  faIcon                String?  @map("fa_icon")
+  githubInstallationId  Int?     @map("github_installation_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   changelogEntries    ChangelogEntry[]
   userRoleAssignments UserRoleAssignment[]
+  repositories        ProductRepository[]
 
   @@map("products")
+}
+
+model ProductRepository {
+  id                    String   @id @default(uuid())
+  productId             String   @map("product_id")
+  githubInstallationId  Int      @map("github_installation_id")
+  owner                 String
+  name                  String
+  fullName              String   @map("full_name")
+  htmlUrl               String   @map("html_url")
+  description           String?
+  isPrivate             Boolean  @default(false) @map("is_private")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, owner, name])
+  @@index([productId])
+  @@map("product_repositories")
 }
 
 model ChangelogEntry {

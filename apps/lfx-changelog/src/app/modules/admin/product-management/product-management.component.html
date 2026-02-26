@@ -25,10 +25,10 @@
           @for (product of products(); track product.id; let i = $index) {
             <tr class="table-row-enter hover:bg-surface-alt transition-colors" [style.animation-delay.ms]="250 + i * 50">
               <td class="px-5 py-3">
-                <div class="flex items-center gap-2.5">
+                <a [routerLink]="['/admin/products', product.id]" class="flex items-center gap-2.5 hover:opacity-80">
                   <i [class]="product.faIcon" class="text-brand-600"></i>
-                  <span class="text-text-primary text-sm font-medium">{{ product.name }}</span>
-                </div>
+                  <span class="text-text-primary text-sm font-medium hover:underline">{{ product.name }}</span>
+                </a>
               </td>
               <td class="text-text-secondary px-5 py-3 font-mono text-sm">{{ product.slug }}</td>
               <td class="text-text-secondary max-w-xs truncate px-5 py-3 text-sm">{{ product.description }}</td>

@@ -1,0 +1,176 @@
+<div class="space-y-4">
+  <h2 class="text-text-primary text-lg font-semibold">
+    <i class="fa-duotone fa-chart-line text-brand-600 mr-2"></i>
+    Repository Activity
+  </h2>
+
+  @if (loadingActivity()) {
+    <lfx-card>
+      <div class="flex items-center justify-center py-12">
+        <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-2xl"></i>
+      </div>
+    </lfx-card>
+  } @else if (releases().length === 0 && pullRequests().length === 0 && commits().length === 0) {
+    <lfx-card>
+      <div class="flex flex-col items-center justify-center py-12 text-center">
+        <i class="fa-duotone fa-code-branch text-text-muted mb-3 text-4xl"></i>
+        <h3 class="text-text-primary mb-1 text-base font-medium">No activity yet</h3>
+        <p class="text-text-muted max-w-sm text-sm">Link repositories to this product to see releases, open pull requests, and recent commits.</p>
+      </div>
+    </lfx-card>
+  } @else {
+    <lfx-card padding="none">
+      <!-- Sub-tab buttons -->
+      <div class="border-border flex gap-1 border-b px-5">
+        <button
+          class="text-text-secondary hover:text-text-primary -mb-px border-b-2 px-3 py-3 text-sm font-medium transition-colors"
+          [class.border-brand-600]="activityTab() === 'releases'"
+          [class.text-brand-600]="activityTab() === 'releases'"
+          [class.border-transparent]="activityTab() !== 'releases'"
+          (click)="activityTab.set('releases')"
+        >
+          <i class="fa-duotone fa-tags mr-1.5 text-xs"></i>
+          Releases
+        </button>
+        <button
+          class="text-text-secondary hover:text-text-primary -mb-px border-b-2 px-3 py-3 text-sm font-medium transition-colors"
+          [class.border-brand-600]="activityTab() === 'commits'"
+          [class.text-brand-600]="activityTab() === 'commits'"
+          [class.border-transparent]="activityTab() !== 'commits'"
+          (click)="activityTab.set('commits')"
+        >
+          <i class="fa-duotone fa-code-commit mr-1.5 text-xs"></i>
+          Commits
+        </button>
+        <button
+          class="text-text-secondary hover:text-text-primary -mb-px border-b-2 px-3 py-3 text-sm font-medium transition-colors"
+          [class.border-brand-600]="activityTab() === 'pulls'"
+          [class.text-brand-600]="activityTab() === 'pulls'"
+          [class.border-transparent]="activityTab() !== 'pulls'"
+          (click)="activityTab.set('pulls')"
+        >
+          <i class="fa-duotone fa-code-pull-request mr-1.5 text-xs"></i>
+          Open PRs ({{ pullRequests().length }})
+        </button>
+      </div>
+
+      <div class="p-5">
+        <!-- Releases list -->
+        @if (activityTab() === 'releases') {
+          @if (releases().length === 0) {
+            <div class="py-6 text-center">
+              <i class="fa-duotone fa-tags text-text-muted mb-2 text-2xl"></i>
+              <p class="text-text-muted text-sm">No releases found</p>
+            </div>
+          } @else {
+            <div class="divide-border divide-y">
+              @for (release of releases(); track release.id) {
+                <div class="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                  <img [src]="release.author.avatar_url" [alt]="release.author.login" class="mt-0.5 h-7 w-7 rounded-full" />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <a [href]="release.html_url" target="_blank" rel="noopener noreferrer" class="text-text-primary hover:text-brand-600 text-sm font-medium hover:underline">
+                        {{ release.name || release.tag_name }}
+                      </a>
+                      <span class="bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-medium">
+                        {{ release.tag_name }}
+                      </span>
+                      @if (release.prerelease) {
+                        <span class="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">Pre-release</span>
+                      }
+                      @if (release.draft) {
+                        <span class="bg-surface-alt text-text-muted shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">Draft</span>
+                      }
+                    </div>
+                    <p class="text-text-muted mt-0.5 text-xs">
+                      <span class="text-text-secondary font-medium">{{ release.repoFullName }}</span>
+                      by {{ release.author.login }}
+                      @if (release.published_at) {
+                        &middot; {{ release.published_at | date: 'MMM d, yyyy' }}
+                      }
+                    </p>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- Pull Requests list -->
+        @if (activityTab() === 'pulls') {
+          @if (pullRequests().length === 0) {
+            <div class="py-6 text-center">
+              <i class="fa-duotone fa-code-pull-request text-text-muted mb-2 text-2xl"></i>
+              <p class="text-text-muted text-sm">No open pull requests</p>
+            </div>
+          } @else {
+            <div class="divide-border divide-y">
+              @for (pr of pullRequests(); track pr.id) {
+                <div class="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                  <img [src]="pr.user.avatar_url" [alt]="pr.user.login" class="mt-0.5 h-7 w-7 rounded-full" />
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <a [href]="pr.html_url" target="_blank" rel="noopener noreferrer" class="text-text-primary hover:text-brand-600 text-sm font-medium hover:underline">
+                        {{ pr.title }}
+                      </a>
+                      @if (pr.draft) {
+                        <span class="bg-surface-alt text-text-muted shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">Draft</span>
+                      }
+                      @for (label of pr.labels; track label.name) {
+                        <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium" [style.background-color]="'#' + label.color + '20'" [style.color]="'#' + label.color">
+                          {{ label.name }}
+                        </span>
+                      }
+                    </div>
+                    <p class="text-text-muted mt-0.5 text-xs">
+                      <span class="text-text-secondary font-medium">{{ pr.repoFullName }}</span>
+                      #{{ pr.number }} by {{ pr.user.login }} &middot; updated {{ pr.updated_at | date: 'MMM d, yyyy' }}
+                    </p>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- Commits list -->
+        @if (activityTab() === 'commits') {
+          @if (commits().length === 0) {
+            <div class="py-6 text-center">
+              <i class="fa-duotone fa-code-commit text-text-muted mb-2 text-2xl"></i>
+              <p class="text-text-muted text-sm">No recent commits</p>
+            </div>
+          } @else {
+            <div class="divide-border divide-y">
+              @for (commit of commits(); track commit.sha) {
+                <div class="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                  @if (commit.author) {
+                    <img [src]="commit.author.avatar_url" [alt]="commit.author.login" class="mt-0.5 h-7 w-7 rounded-full" />
+                  } @else {
+                    <div class="bg-surface-alt mt-0.5 flex h-7 w-7 items-center justify-center rounded-full">
+                      <i class="fa-solid fa-user text-text-muted text-xs"></i>
+                    </div>
+                  }
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                      <a [href]="commit.html_url" target="_blank" rel="noopener noreferrer" class="text-text-primary hover:text-brand-600 truncate text-sm font-medium hover:underline">
+                        {{ commit.commit.message | firstLine }}
+                      </a>
+                      <a [href]="commit.html_url" target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:text-brand-700 shrink-0 font-mono text-xs hover:underline">
+                        {{ commit.sha | slice: 0 : 7 }}
+                      </a>
+                    </div>
+                    <p class="text-text-muted mt-0.5 text-xs">
+                      <span class="text-text-secondary font-medium">{{ commit.repoFullName }}</span>
+                      {{ commit.author?.login || commit.commit.author.name }} &middot; {{ commit.commit.author.date | date: 'MMM d, yyyy' }}
+                    </p>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </lfx-card>
+  }
+</div>
