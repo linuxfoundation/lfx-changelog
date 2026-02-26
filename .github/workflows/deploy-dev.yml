@@ -60,6 +60,7 @@ jobs:
           trufflehog docker --fail --no-update --only-verified --image=file://${REPOSITORY}:${{github.sha}}.tar
 
       - name: Remove Local Image Tarball
+        if: always()
         run: |
           rm -f ${REPOSITORY}:${{github.sha}}.tar
 
