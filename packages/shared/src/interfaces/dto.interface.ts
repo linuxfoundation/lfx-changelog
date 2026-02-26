@@ -16,6 +16,22 @@ export interface UpdateChangelogEntryRequest {
   status?: ChangelogStatus;
 }
 
+export interface CreateProductRequest {
+  name: string;
+  slug: string;
+  description?: string;
+  iconUrl?: string;
+  faIcon?: string;
+}
+
+export interface UpdateProductRequest {
+  name?: string;
+  slug?: string;
+  description?: string;
+  iconUrl?: string;
+  faIcon?: string;
+}
+
 export interface AssignRoleRequest {
   userId: string;
   productId: string | null;

@@ -1,9 +1,9 @@
-import { Component, forwardRef, input, signal } from '@angular/core';
+import { Component, input, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
   selector: 'lfx-input',
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => InputComponent), multi: true }],
+  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: InputComponent, multi: true }],
   templateUrl: './input.component.html',
   styleUrl: './input.component.css',
 })
@@ -15,9 +15,6 @@ export class InputComponent implements ControlValueAccessor {
 
   protected readonly value = signal('');
   protected readonly disabled = signal(false);
-
-  private onChange: (value: string) => void = () => {};
-  private onTouched: () => void = () => {};
 
   public writeValue(value: string): void {
     this.value.set(value ?? '');
@@ -44,4 +41,12 @@ export class InputComponent implements ControlValueAccessor {
   protected onBlur(): void {
     this.onTouched();
   }
+
+  private onChange: (value: string) => void = () => {
+    void 0;
+  };
+
+  private onTouched: () => void = () => {
+    void 0;
+  };
 }

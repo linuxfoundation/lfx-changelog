@@ -1,4 +1,4 @@
-import { User as PrismaUser, UserRoleAssignment as PrismaRoleAssignment } from '@prisma/client';
+import { UserRoleAssignment as PrismaRoleAssignment, User as PrismaUser } from '@prisma/client';
 
 import { NotFoundError } from '../errors';
 

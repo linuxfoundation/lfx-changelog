@@ -1,4 +1,6 @@
 import type { ChangelogStatus } from '../enums/changelog-status.enum.js';
+import type { Product } from './product.interface.js';
+import type { User } from './user.interface.js';
 
 export interface ChangelogEntry {
   id: string;
@@ -11,4 +13,9 @@ export interface ChangelogEntry {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ChangelogEntryWithRelations extends ChangelogEntry {
+  product?: Product;
+  author?: User;
 }

@@ -3,7 +3,16 @@ import { NextFunction, Request, Response } from 'express';
 import { ProductService } from '../services/product.service';
 
 export class ProductController {
-  private productService = new ProductService();
+  private readonly productService = new ProductService();
+
+  public async listPublic(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const products = await this.productService.findAllPublic();
+      res.json({ success: true, data: products });
+    } catch (error) {
+      next(error);
+    }
+  }
 
   public async list(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

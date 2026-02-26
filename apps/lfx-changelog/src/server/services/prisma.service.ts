@@ -1,3 +1,4 @@
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 import { serverLogger } from '../server-logger';
@@ -6,7 +7,8 @@ let prisma: PrismaClient;
 
 export function getPrismaClient(): PrismaClient {
   if (!prisma) {
-    prisma = new PrismaClient();
+    const adapter = new PrismaPg({ connectionString: process.env['DATABASE_URL'] });
+    prisma = new PrismaClient({ adapter });
     serverLogger.info('Prisma client initialized');
   }
   return prisma;

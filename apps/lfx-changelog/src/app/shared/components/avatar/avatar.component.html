@@ -1,10 +1,6 @@
 <div
-  class="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 font-medium text-brand-700"
-  [class]="
-    (size() === 'sm' ? 'h-7 w-7 text-xs' : '') +
-    (size() === 'md' ? 'h-9 w-9 text-sm' : '') +
-    (size() === 'lg' ? 'h-12 w-12 text-base' : '')
-  ">
+  class="bg-brand-100 text-brand-700 inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-medium"
+  [class]="(size() === 'sm' ? 'h-7 w-7 text-xs' : '') + (size() === 'md' ? 'h-9 w-9 text-sm' : '') + (size() === 'lg' ? 'h-12 w-12 text-base' : '')">
   @if (src()) {
     <img [src]="src()" [alt]="name()" class="h-full w-full object-cover" />
   } @else {

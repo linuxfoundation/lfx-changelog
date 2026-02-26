@@ -7,6 +7,8 @@ import { requireProductRole } from '../middleware/role.middleware';
 const router = Router();
 const changelogController = new ChangelogController();
 
+router.get('/', (req, res, next) => changelogController.listAll(req, res, next));
+router.get('/:id', (req, res, next) => changelogController.getById(req, res, next));
 router.post('/', requireProductRole(UserRole.EDITOR), (req, res, next) => changelogController.create(req, res, next));
 router.put('/:id', requireProductRole(UserRole.EDITOR), (req, res, next) => changelogController.update(req, res, next));
 router.patch('/:id/publish', requireProductRole(UserRole.EDITOR), (req, res, next) => changelogController.publish(req, res, next));

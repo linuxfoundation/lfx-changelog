@@ -10,22 +10,23 @@ A new standalone monorepo at `~/Sites/lfx-changelog` housing an Angular 20 SSR a
 
 ## Tech Stack Summary
 
-| Layer | Technology |
-|-------|-----------|
-| Monorepo | Turborepo + Yarn 4 workspaces |
-| Frontend | Angular 20 SSR (standalone components, signals, zoneless) |
-| Backend | Express (via Angular SSR server) |
-| Database | PostgreSQL 16 (Docker Compose locally) |
-| ORM | Prisma |
-| Auth | Auth0 (`express-openid-connect`) |
-| UI | Custom components with TailwindCSS 4 — CSS-first config (no PrimeNG) |
-| API | REST |
+| Layer    | Technology                                                           |
+| -------- | -------------------------------------------------------------------- |
+| Monorepo | Turborepo + Yarn 4 workspaces                                        |
+| Frontend | Angular 20 SSR (standalone components, signals, zoneless)            |
+| Backend  | Express (via Angular SSR server)                                     |
+| Database | PostgreSQL 16 (Docker Compose locally)                               |
+| ORM      | Prisma                                                               |
+| Auth     | Auth0 (`express-openid-connect`)                                     |
+| UI       | Custom components with TailwindCSS 4 — CSS-first config (no PrimeNG) |
+| API      | REST                                                                 |
 
 ---
 
 ## Prettier Config (from `@linuxfoundation/lfx-ui-core/prettier-config`)
 
 Since this is a standalone repo, we inline the LFX prettier values:
+
 ```js
 {
   printWidth: 160,
@@ -48,6 +49,7 @@ Since this is a standalone repo, we inline the LFX prettier values:
 ## ESLint Config (from `apps/lfx-one/eslint.config.js`)
 
 Flat config (ESLint 9+) with:
+
 - `angular-eslint` + `typescript-eslint` + `@eslint/js`
 - `lfx` prefix enforcement for components/directives
 - Naming conventions: camelCase vars, PascalCase types, flexible for destructured/imports
@@ -60,29 +62,36 @@ Flat config (ESLint 9+) with:
 ## Phase 1: Monorepo Scaffolding
 
 ### 1.1 Create Turborepo via CLI
+
 ```bash
 cd ~/Sites
 npx create-turbo@latest lfx-changelog --package-manager yarn
 cd lfx-changelog
 ```
+
 Remove default scaffold apps/packages (`apps/web`, `apps/docs`, `packages/ui`, `packages/eslint-config`, `packages/typescript-config`).
 
 ### 1.2 Configure Yarn 4
+
 ```bash
 yarn set version stable
 ```
+
 `.yarnrc.yml`: `nodeLinker: node-modules`
 
 ### 1.3 Root `package.json`
+
 - Workspaces: `["apps/*", "packages/*"]`
 - Scripts: `build`, `start`, `lint`, `watch`, `db:generate`, `db:migrate`, `db:seed`, `db:studio`, `docker:up`, `docker:down`
 - Engine: `node >=22`
 - Dev deps: `turbo`, `typescript 5.9.x`, `prettier`, `prettier-plugin-organize-imports`, `prettier-plugin-tailwindcss`
 
 ### 1.4 `turbo.json`
+
 Tasks: `build` (with `^build` dep), `lint`, `start`, `watch`, `test`, `start:server`
 
 ### 1.5 `.editorconfig`
+
 ```
 root = true
 [*]
@@ -103,6 +112,7 @@ trim_trailing_whitespace = false
 ## Phase 2: Angular App with SSR
 
 ### 2.1 Scaffold via Angular CLI
+
 ```bash
 cd ~/Sites/lfx-changelog/apps
 ng new lfx-changelog \
@@ -119,6 +129,7 @@ ng new lfx-changelog \
 ```
 
 Key flags:
+
 - `--style=tailwind` — Angular 20 first-class Tailwind v4 support (auto-configures PostCSS + imports)
 - `--ssr` — Server-Side Rendering with Express
 - `--skip-tests` — Skip generation of `.spec.ts` test files
@@ -127,12 +138,14 @@ Key flags:
 - `--skip-install` — Monorepo handles installation via Yarn workspaces
 
 ### 2.2 Configure `angular.json`
+
 - Builder: `@angular-devkit/build-angular:application`
 - Output mode: `server`
 - SSR entry: `src/server/server.ts`
 - Build configs: `production`, `development`, `local`
 
 ### 2.3 Install dependencies
+
 **Core:** `@angular/*@^20`, `@angular/ssr`, `@angular/cdk`, `express`, `compression`, `pino`, `pino-http`, `marked`, `date-fns`, `dotenv`, `rxjs`
 
 **Dev:** `pino-pretty`, `@types/express`, `@types/compression`, `angular-eslint@21`, `@eslint/js@^9`, `eslint@^9`, `typescript-eslint@^8`, `prettier-plugin-organize-imports`, `prettier-plugin-tailwindcss`
@@ -142,21 +155,25 @@ Key flags:
 > Note: `tailwindcss`, `@tailwindcss/postcss`, and `postcss` are auto-installed by `--style=tailwind`. No `autoprefixer` needed (Tailwind v4 handles it internally).
 
 ### 2.4 TypeScript config
+
 Strict mode, ES2022 target, bundler resolution, path aliases:
+
 - `@app/*`, `@shared/*`, `@components/*`, `@services/*`, `@modules/*`, `@environments/*`
 - `@lfx-changelog/shared` → `../../packages/shared/src`
 
 ### 2.5 Tailwind CSS v4 (CSS-first, no config file)
 
 Angular's `--style=tailwind` flag auto-generates:
+
 - `.postcssrc.json` with `@tailwindcss/postcss` plugin
 - `src/styles.css` with `@import "tailwindcss";`
 
 We customize theme via **CSS `@theme` block** (no `tailwind.config.js`):
 
 `src/styles.css`:
+
 ```css
-@import "tailwindcss";
+@import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 
 @theme {
@@ -185,9 +202,11 @@ We customize theme via **CSS `@theme` block** (no `tailwind.config.js`):
 Component styles use `.css` files (not `.scss`) — Tailwind v4's CSS-first approach makes SCSS unnecessary.
 
 ### 2.6 ESLint config (`eslint.config.js`)
+
 Copy the full flat config from `lfx-v2-ui/apps/lfx-one/eslint.config.js` with `lfx` prefix rules.
 
 ### 2.7 Prettier config (`.prettierrc.js`)
+
 Inline the LFX prettier config values (documented above).
 
 ---
@@ -195,6 +214,7 @@ Inline the LFX prettier config values (documented above).
 ## Phase 3: Shared Package (`packages/shared`)
 
 ### Structure
+
 ```
 packages/shared/src/
 ├── interfaces/    → product, changelog-entry, user, auth, api-response
@@ -208,11 +228,13 @@ packages/shared/src/
 ### Key Types
 
 **Enums:**
+
 - `ChangelogCategory`: `bug_fix`, `new_feature`, `improvement`, `breaking_change`
 - `ChangelogStatus`: `draft`, `published`
 - `UserRole`: `super_admin`, `product_admin`, `editor`
 
 **Interfaces:**
+
 - `Product` — id, name, slug, description, iconUrl, timestamps
 - `ChangelogEntry` — id, productId, title, description (markdown), version, category, status, publishedAt, createdBy, timestamps
 - `User` — id, auth0Id, email, name, avatarUrl, timestamps, roles
@@ -221,11 +243,13 @@ packages/shared/src/
 - Request/Response DTOs: `CreateChangelogEntryRequest`, `UpdateChangelogEntryRequest`, `AssignRoleRequest`
 
 **Constants:**
+
 - `CATEGORY_CONFIG` — maps each category to label, color, icon for UI rendering
 - `PRODUCTS` — default LFX product list for seeding/mocking
 - `ROLE_HIERARCHY` — numeric levels for role comparison
 
 ### Build
+
 Pure TypeScript via `tsc`, exports via package.json `exports` field.
 
 ---
@@ -237,6 +261,7 @@ Pure TypeScript via `tsc`, exports via package.json `exports` field.
 ### 4.1 Shared Component Library (`src/app/shared/components/`)
 
 All components follow Angular 20 best practices (per [angular.dev](https://angular.dev) docs):
+
 - **Standalone** (no NgModules) — the default in Angular 20
 - **Signal-based inputs/outputs** — `input()`, `input.required()`, `output()`, `model()` — NOT `@Input()`/`@Output()` decorators
 - **Signal-based computed state** — `computed()` — NOT getters
@@ -247,46 +272,48 @@ All components follow Angular 20 best practices (per [angular.dev](https://angul
 
 #### Core UI Wrapper Components
 
-| Component | Purpose | Key Inputs |
-|-----------|---------|------------|
-| `lfx-button` | Button wrapper with variants | `variant: 'primary'\|'secondary'\|'ghost'\|'danger'`, `size`, `loading`, `disabled` |
-| `lfx-badge` | Colored badge/pill | `label`, `color`, `size` |
-| `lfx-card` | Content card wrapper | `padding`, `hoverable` |
-| `lfx-input` | Text input wrapper | `label`, `placeholder`, `error`, `type` |
-| `lfx-textarea` | Textarea wrapper | `label`, `rows`, `error` |
-| `lfx-select` | Dropdown select wrapper | `label`, `options`, `error` |
-| `lfx-dialog` | Modal dialog | `visible` (model), `title`, `size` |
-| `lfx-avatar` | User avatar with fallback | `src`, `name`, `size` |
-| `lfx-empty-state` | Empty state placeholder | `icon`, `title`, `description` |
-| `lfx-skeleton` | Loading skeleton | `width`, `height`, `variant: 'text'\|'circle'\|'rect'` |
-| `lfx-data-table` | Table wrapper | `columns`, `data`, `loading` |
-| `lfx-pagination` | Pagination controls | `total`, `page`, `limit` |
-| `lfx-toast` | Toast notification service | via service injection |
-| `lfx-confirm-dialog` | Confirmation modal | via service injection |
-| `lfx-tabs` | Tab navigation | `tabs` array, `activeTab` (model) |
-| `lfx-dropdown-menu` | Context/action menu | `items`, `trigger` template |
+| Component            | Purpose                      | Key Inputs                                                                          |
+| -------------------- | ---------------------------- | ----------------------------------------------------------------------------------- |
+| `lfx-button`         | Button wrapper with variants | `variant: 'primary'\|'secondary'\|'ghost'\|'danger'`, `size`, `loading`, `disabled` |
+| `lfx-badge`          | Colored badge/pill           | `label`, `color`, `size`                                                            |
+| `lfx-card`           | Content card wrapper         | `padding`, `hoverable`                                                              |
+| `lfx-input`          | Text input wrapper           | `label`, `placeholder`, `error`, `type`                                             |
+| `lfx-textarea`       | Textarea wrapper             | `label`, `rows`, `error`                                                            |
+| `lfx-select`         | Dropdown select wrapper      | `label`, `options`, `error`                                                         |
+| `lfx-dialog`         | Modal dialog                 | `visible` (model), `title`, `size`                                                  |
+| `lfx-avatar`         | User avatar with fallback    | `src`, `name`, `size`                                                               |
+| `lfx-empty-state`    | Empty state placeholder      | `icon`, `title`, `description`                                                      |
+| `lfx-skeleton`       | Loading skeleton             | `width`, `height`, `variant: 'text'\|'circle'\|'rect'`                              |
+| `lfx-data-table`     | Table wrapper                | `columns`, `data`, `loading`                                                        |
+| `lfx-pagination`     | Pagination controls          | `total`, `page`, `limit`                                                            |
+| `lfx-toast`          | Toast notification service   | via service injection                                                               |
+| `lfx-confirm-dialog` | Confirmation modal           | via service injection                                                               |
+| `lfx-tabs`           | Tab navigation               | `tabs` array, `activeTab` (model)                                                   |
+| `lfx-dropdown-menu`  | Context/action menu          | `items`, `trigger` template                                                         |
 
 #### Domain-Specific Components
 
-| Component | Purpose |
-|-----------|---------|
-| `lfx-changelog-card` | Renders a single changelog entry (title, category badge, date, product, preview) |
-| `lfx-category-badge` | Maps ChangelogCategory to colored badge (bug=red, feature=green, improvement=blue, breaking=orange) |
-| `lfx-status-badge` | Draft (yellow) / Published (green) badge |
-| `lfx-product-pill` | Product name pill with optional icon |
-| `lfx-markdown-renderer` | Renders markdown to HTML (using `marked`) |
-| `lfx-timeline-item` | Timeline entry with connecting line, date marker, and content slot |
+| Component               | Purpose                                                                                             |
+| ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `lfx-changelog-card`    | Renders a single changelog entry (title, category badge, date, product, preview)                    |
+| `lfx-category-badge`    | Maps ChangelogCategory to colored badge (bug=red, feature=green, improvement=blue, breaking=orange) |
+| `lfx-status-badge`      | Draft (yellow) / Published (green) badge                                                            |
+| `lfx-product-pill`      | Product name pill with optional icon                                                                |
+| `lfx-markdown-renderer` | Renders markdown to HTML (using `marked`)                                                           |
+| `lfx-timeline-item`     | Timeline entry with connecting line, date marker, and content slot                                  |
 
 ### 4.2 UI Pages (via `frontend-design` skill, hardcoded data)
 
 Build these pages with mock data to iterate on design:
 
 #### Public Pages
+
 1. **Changelog Feed** (`/`) — Unified timeline of all published changelogs, product filter chips, category filter, timeline layout
 2. **Product Changelog** (`/products/:slug`) — Filtered to one product, same timeline layout with product header
 3. **Changelog Detail** (`/entry/:id`) — Full markdown-rendered entry with metadata sidebar
 
 #### Admin Pages
+
 4. **Admin Dashboard** (`/admin`) — Overview cards (total entries, drafts, published counts per product), recent activity
 5. **Changelog List** (`/admin/changelogs`) — Data table with filters (product, status, category), bulk actions
 6. **Changelog Editor** (`/admin/changelogs/new` and `/edit`) — Form with markdown textarea + live preview, product/category/version selectors
@@ -294,12 +321,14 @@ Build these pages with mock data to iterate on design:
 8. **User Management** (`/admin/users`) — User list with role assignments per product
 
 #### Layouts
+
 - **Public Layout** — Clean header with LFX branding, product nav, content area
 - **Admin Layout** — Sidebar navigation + header with user menu + content area
 
 ### 4.3 Mock Data
 
 Create `src/app/shared/mocks/` with hardcoded data arrays matching the shared interfaces:
+
 - `mock-products.ts` — 7 LFX products
 - `mock-changelog-entries.ts` — 15-20 sample entries across products, mix of draft/published, various categories
 - `mock-users.ts` — 5-6 sample users with different roles
@@ -309,13 +338,14 @@ Create `src/app/shared/mocks/` with hardcoded data arrays matching the shared in
 ## Phase 5: Docker Compose for PostgreSQL
 
 **File:** `docker-compose.yml` (root)
+
 ```yaml
 services:
   postgres:
     image: postgres:16-alpine
     container_name: lfx-changelog-db
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_USER: changelog
       POSTGRES_PASSWORD: changelog_dev
@@ -331,6 +361,7 @@ volumes:
 ## Phase 6: Prisma Setup
 
 ### 6.1 Initialize via CLI
+
 ```bash
 cd apps/lfx-changelog
 npx prisma init --datasource-provider postgresql
@@ -338,20 +369,22 @@ npx prisma init --datasource-provider postgresql
 
 ### 6.2 Schema (`prisma/schema.prisma`)
 
-| Model | Key Fields | Relations |
-|-------|-----------|-----------|
-| `Product` | id (uuid), name (unique), slug (unique), description?, iconUrl?, timestamps | → ChangelogEntry[], UserRoleAssignment[] |
-| `ChangelogEntry` | id (uuid), productId (FK), title, description, version?, category (enum), status (enum, default: draft), publishedAt?, createdBy (FK), timestamps | → Product, User |
-| `User` | id (uuid), auth0Id (unique), email (unique), name, avatarUrl?, timestamps | → ChangelogEntry[], UserRoleAssignment[] |
-| `UserRoleAssignment` | id (uuid), userId (FK), productId? (FK, null=global), role (enum), createdAt | → User, Product?; unique(userId, productId, role) |
+| Model                | Key Fields                                                                                                                                        | Relations                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `Product`            | id (uuid), name (unique), slug (unique), description?, iconUrl?, timestamps                                                                       | → ChangelogEntry[], UserRoleAssignment[]          |
+| `ChangelogEntry`     | id (uuid), productId (FK), title, description, version?, category (enum), status (enum, default: draft), publishedAt?, createdBy (FK), timestamps | → Product, User                                   |
+| `User`               | id (uuid), auth0Id (unique), email (unique), name, avatarUrl?, timestamps                                                                         | → ChangelogEntry[], UserRoleAssignment[]          |
+| `UserRoleAssignment` | id (uuid), userId (FK), productId? (FK, null=global), role (enum), createdAt                                                                      | → User, Product?; unique(userId, productId, role) |
 
 Indexes: productId + status + publishedAt on changelog_entries; userId + productId on user_roles
 
 ### 6.3 Migration & Seed
+
 ```bash
 npx prisma migrate dev --name init
 npx prisma db seed
 ```
+
 Seed data: 7 LFX products + sample users/entries
 
 ---
@@ -359,6 +392,7 @@ Seed data: 7 LFX products + sample users/entries
 ## Phase 7: Express Server
 
 ### Directory structure (controller-service pattern from lfx-v2-ui)
+
 ```
 src/server/
 ├── server.ts                  # Main Express + Angular SSR
@@ -372,6 +406,7 @@ src/server/
 ```
 
 ### Middleware order
+
 1. Compression → 2. Body parsers → 3. Static files → 4. Health → 5. Pino logger → 6. OIDC → 7. Login route → 8. Auth middleware → 9. Public API → 10. Protected API → 11. API error handler → 12. SSR catch-all → 13. Global error handler
 
 ---
@@ -398,24 +433,28 @@ src/server/
 ## Phase 10: REST API Routes
 
 ### Public (no auth)
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/public/api/changelogs` | Published entries (filterable, paginated) |
-| GET | `/public/api/changelogs/:id` | Single published entry |
+
+| Method | Path                         | Description                               |
+| ------ | ---------------------------- | ----------------------------------------- |
+| GET    | `/public/api/changelogs`     | Published entries (filterable, paginated) |
+| GET    | `/public/api/changelogs/:id` | Single published entry                    |
 
 ### Products (auth required)
+
 | GET | `/api/products` | any | List all |
 | POST | `/api/products` | super_admin | Create |
 | PUT | `/api/products/:id` | super_admin | Update |
 | DELETE | `/api/products/:id` | super_admin | Delete |
 
 ### Changelogs (auth required)
+
 | POST | `/api/changelogs` | editor+ | Create |
 | PUT | `/api/changelogs/:id` | editor+ | Update |
 | PATCH | `/api/changelogs/:id/publish` | editor+ | Publish |
 | DELETE | `/api/changelogs/:id` | product_admin+ | Delete |
 
 ### Users (auth required)
+
 | GET | `/api/users/me` | any | Current user |
 | GET | `/api/users` | super_admin | List all |
 | POST | `/api/users/:id/roles` | super_admin/product_admin | Assign role |
@@ -426,6 +465,7 @@ src/server/
 ## Phase 11: Wire Up Frontend to API
 
 Replace mock data with actual API calls in Angular services. Each service uses signals for state:
+
 - `ChangelogService` — signal-based state, HTTP calls to `/api/changelogs` and `/public/api/changelogs`
 - `ProductService` — signal-based state, HTTP calls to `/api/products`
 - `UserService` — signal-based state, HTTP calls to `/api/users`
@@ -435,34 +475,34 @@ Replace mock data with actual API calls in Angular services. Each service uses s
 
 ## Reference Files (from lfx-v2-ui)
 
-| File | Use For |
-|------|---------|
-| `~/Sites/lfx-v2-ui/apps/lfx-one/src/server/server.ts` | Express + SSR server setup, middleware ordering |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/src/server/middleware/auth.middleware.ts` | Route classification, auth enforcement |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/src/server/routes/projects.route.ts` | Router → Controller → Service pattern |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/src/app/app.config.ts` | Angular config (zoneless, hydration, providers) |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/angular.json` | Angular build configuration |
-| `~/Sites/lfx-v2-ui/apps/lfx-one/eslint.config.js` | ESLint flat config with Angular rules |
-| `~/Sites/lfx-v2-ui/packages/shared/package.json` | Shared package exports structure |
-| `~/Sites/lfx-v2-ui/turbo.json` | Turborepo task configuration |
+| File                                                                      | Use For                                         |
+| ------------------------------------------------------------------------- | ----------------------------------------------- |
+| `~/Sites/lfx-v2-ui/apps/lfx-one/src/server/server.ts`                     | Express + SSR server setup, middleware ordering |
+| `~/Sites/lfx-v2-ui/apps/lfx-one/src/server/middleware/auth.middleware.ts` | Route classification, auth enforcement          |
+| `~/Sites/lfx-v2-ui/apps/lfx-one/src/server/routes/projects.route.ts`      | Router → Controller → Service pattern           |
+| `~/Sites/lfx-v2-ui/apps/lfx-one/src/app/app.config.ts`                    | Angular config (zoneless, hydration, providers) |
+| `~/Sites/lfx-v2-ui/apps/lfx-one/angular.json`                             | Angular build configuration                     |
+| `~/Sites/lfx-v2-ui/apps/lfx-one/eslint.config.js`                         | ESLint flat config with Angular rules           |
+| `~/Sites/lfx-v2-ui/packages/shared/package.json`                          | Shared package exports structure                |
+| `~/Sites/lfx-v2-ui/turbo.json`                                            | Turborepo task configuration                    |
 
 ---
 
 ## Implementation Order
 
-| Step | Phase | Depends On | Agent Team |
-|------|-------|-----------|------------|
-| 1 | Phase 1 — Monorepo scaffold | — | infra agent |
-| 2 | Phase 2 — Angular app (ng new --ssr) + config | Phase 1 | infra agent |
-| 3 | Phase 3 — Shared package (types, enums, constants, mocks) | Phase 1 | shared agent |
-| 4 | Phase 4 — UI shared components + pages (hardcoded, `frontend-design` skill) | Phase 2 + 3 | UI agent |
-| 5 | Phase 5 — Docker Compose for PostgreSQL | Phase 1 | infra agent |
-| 6 | Phase 6 — Prisma schema, migration, seed | Phase 2 + 5 | infra agent |
-| 7 | Phase 7 — Express server skeleton | Phase 2 + 3 | backend agent |
-| 8 | Phase 8 — Auth0 integration | Phase 7 | backend agent |
-| 9 | Phase 9 — RBAC middleware | Phase 8 | backend agent |
-| 10 | Phase 10 — REST API routes | Phase 6 + 9 | backend agent |
-| 11 | Phase 11 — Wire frontend to API | Phase 4 + 10 | UI agent |
+| Step | Phase                                                                       | Depends On   | Agent Team    |
+| ---- | --------------------------------------------------------------------------- | ------------ | ------------- |
+| 1    | Phase 1 — Monorepo scaffold                                                 | —            | infra agent   |
+| 2    | Phase 2 — Angular app (ng new --ssr) + config                               | Phase 1      | infra agent   |
+| 3    | Phase 3 — Shared package (types, enums, constants, mocks)                   | Phase 1      | shared agent  |
+| 4    | Phase 4 — UI shared components + pages (hardcoded, `frontend-design` skill) | Phase 2 + 3  | UI agent      |
+| 5    | Phase 5 — Docker Compose for PostgreSQL                                     | Phase 1      | infra agent   |
+| 6    | Phase 6 — Prisma schema, migration, seed                                    | Phase 2 + 5  | infra agent   |
+| 7    | Phase 7 — Express server skeleton                                           | Phase 2 + 3  | backend agent |
+| 8    | Phase 8 — Auth0 integration                                                 | Phase 7      | backend agent |
+| 9    | Phase 9 — RBAC middleware                                                   | Phase 8      | backend agent |
+| 10   | Phase 10 — REST API routes                                                  | Phase 6 + 9  | backend agent |
+| 11   | Phase 11 — Wire frontend to API                                             | Phase 4 + 10 | UI agent      |
 
 ---
 

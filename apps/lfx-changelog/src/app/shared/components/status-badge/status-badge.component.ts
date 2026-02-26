@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
-import { ChangelogStatus } from '@lfx-changelog/shared';
 import { BadgeComponent } from '@components/badge/badge.component';
+import { ChangelogStatus } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-status-badge',

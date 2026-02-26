@@ -6,9 +6,7 @@ export interface ValidationError {
   message: string;
 }
 
-export function validateCreateChangelogEntry(
-  data: Partial<CreateChangelogEntryRequest>,
-): ValidationError[] {
+export function validateCreateChangelogEntry(data: Partial<CreateChangelogEntryRequest>): ValidationError[] {
   const errors: ValidationError[] = [];
 
   if (!data.productId?.trim()) {

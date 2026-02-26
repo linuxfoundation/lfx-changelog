@@ -1,10 +1,9 @@
 import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { ChangelogEntry, Product } from '@lfx-changelog/shared';
-import { MOCK_PRODUCTS } from '@lfx-changelog/shared';
-import { format } from 'date-fns';
 import { CardComponent } from '@components/card/card.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
+import type { ChangelogEntryWithRelations, Product } from '@lfx-changelog/shared';
+import { format } from 'date-fns';
 
 @Component({
   selector: 'lfx-changelog-card',
@@ -13,9 +12,9 @@ import { ProductPillComponent } from '@components/product-pill/product-pill.comp
   styleUrl: './changelog-card.component.css',
 })
 export class ChangelogCardComponent {
-  public readonly entry = input.required<ChangelogEntry>();
+  public readonly entry = input.required<ChangelogEntryWithRelations>();
 
-  protected readonly product = computed<Product | undefined>(() => MOCK_PRODUCTS.find((p) => p.id === this.entry().productId));
+  protected readonly product = computed<Product | undefined>(() => this.entry().product);
 
   protected readonly formattedDate = computed(() => {
     const date = this.entry().publishedAt ?? this.entry().createdAt;

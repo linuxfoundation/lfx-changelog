@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, forwardRef, inject, input, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, input, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
@@ -6,7 +6,7 @@ export type { SelectOption };
 
 @Component({
   selector: 'lfx-select',
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => SelectComponent), multi: true }],
+  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: SelectComponent, multi: true }],
   host: {
     '(document:click)': 'onDocumentClick($event)',
   },
@@ -30,9 +30,6 @@ export class SelectComponent implements ControlValueAccessor {
     const selected = this.options().find((o) => o.value === this.value());
     return selected?.label ?? '';
   });
-
-  private onChange: (value: string) => void = () => {};
-  private onTouched: () => void = () => {};
 
   public writeValue(value: string): void {
     this.value.set(value ?? '');
@@ -111,4 +108,12 @@ export class SelectComponent implements ControlValueAccessor {
       }
     }
   }
+
+  private onChange: (value: string) => void = () => {
+    void 0;
+  };
+
+  private onTouched: () => void = () => {
+    void 0;
+  };
 }

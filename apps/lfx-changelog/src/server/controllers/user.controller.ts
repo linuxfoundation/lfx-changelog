@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from 'express';
 import { UserService } from '../services/user.service';
 
 export class UserController {
-  private userService = new UserService();
+  private readonly userService = new UserService();
 
   public async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

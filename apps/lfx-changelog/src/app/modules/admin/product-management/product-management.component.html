@@ -1,8 +1,8 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="font-display text-2xl font-bold text-text-primary">Products</h1>
-      <p class="mt-1 text-text-secondary">Manage LFX products for changelog categorization.</p>
+      <h1 class="font-display text-text-primary text-2xl font-bold">Products</h1>
+      <p class="text-text-secondary mt-1">Manage LFX products for changelog categorization.</p>
     </div>
     <lfx-button variant="primary" (clicked)="openAdd()">
       <i class="fa-solid fa-plus text-xs"></i>
@@ -14,26 +14,26 @@
     <div class="overflow-x-auto">
       <table class="w-full">
         <thead>
-          <tr class="border-b border-border bg-surface-alt text-left">
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Name</th>
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Slug</th>
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Description</th>
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Created</th>
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Actions</th>
+          <tr class="border-border bg-surface-alt border-b text-left">
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Name</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Slug</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Description</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Created</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-border">
-          @for (product of products; track product.id) {
-            <tr class="transition-colors hover:bg-surface-alt">
+        <tbody class="divide-border divide-y">
+          @for (product of products(); track product.id) {
+            <tr class="hover:bg-surface-alt transition-colors">
               <td class="px-5 py-3">
                 <div class="flex items-center gap-2.5">
                   <i [class]="product.faIcon" class="text-brand-600"></i>
-                  <span class="text-sm font-medium text-text-primary">{{ product.name }}</span>
+                  <span class="text-text-primary text-sm font-medium">{{ product.name }}</span>
                 </div>
               </td>
-              <td class="px-5 py-3 font-mono text-sm text-text-secondary">{{ product.slug }}</td>
-              <td class="max-w-xs truncate px-5 py-3 text-sm text-text-secondary">{{ product.description }}</td>
-              <td class="px-5 py-3 text-sm text-text-muted">{{ product.createdAt | dateFormat }}</td>
+              <td class="text-text-secondary px-5 py-3 font-mono text-sm">{{ product.slug }}</td>
+              <td class="text-text-secondary max-w-xs truncate px-5 py-3 text-sm">{{ product.description }}</td>
+              <td class="text-text-muted px-5 py-3 text-sm">{{ product.createdAt | dateFormat }}</td>
               <td class="px-5 py-3">
                 <lfx-button variant="ghost" size="sm" (clicked)="openEdit(product)">Edit</lfx-button>
               </td>
@@ -52,7 +52,7 @@
     <lfx-textarea label="Description" [rows]="3" placeholder="Product description..." [formControl]="formDescriptionControl" />
     <div class="flex justify-end gap-3 pt-2">
       <lfx-button variant="secondary" (clicked)="dialogVisible.set(false)">Cancel</lfx-button>
-      <lfx-button variant="primary" (clicked)="dialogVisible.set(false)">
+      <lfx-button variant="primary" [loading]="saving()" (clicked)="saveProduct()">
         {{ editingProduct() ? 'Update' : 'Create' }}
       </lfx-button>
     </div>

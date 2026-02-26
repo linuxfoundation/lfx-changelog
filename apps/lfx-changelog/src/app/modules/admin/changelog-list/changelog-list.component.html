@@ -1,8 +1,8 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="font-display text-2xl font-bold text-text-primary">Changelogs</h1>
-      <p class="mt-1 text-text-secondary">Manage changelog entries across all products.</p>
+      <h1 class="font-display text-text-primary text-2xl font-bold">Changelogs</h1>
+      <p class="text-text-secondary mt-1">Manage changelog entries across all products.</p>
     </div>
     <a routerLink="/admin/changelogs/new">
       <lfx-button variant="primary">
@@ -14,7 +14,7 @@
 
   <!-- Filters -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    <lfx-select label="Product" [options]="productOptions" [formControl]="productFilterControl" placeholder="All Products" />
+    <lfx-select label="Product" [options]="productOptions()" [formControl]="productFilterControl" placeholder="All Products" />
     <lfx-select label="Status" [options]="statusOptions" [formControl]="statusFilterControl" placeholder="All Statuses" />
   </div>
 
@@ -23,35 +23,35 @@
     <div class="overflow-x-auto">
       <table class="w-full">
         <thead>
-          <tr class="border-b border-border bg-surface-alt text-left">
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Title</th>
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Product</th>
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Status</th>
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Version</th>
-            <th class="px-5 py-3 text-xs font-medium uppercase tracking-wider text-text-muted">Updated</th>
+          <tr class="border-border bg-surface-alt border-b text-left">
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Title</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Product</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Status</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Version</th>
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Updated</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-border">
+        <tbody class="divide-border divide-y">
           @for (entry of filteredEntries(); track entry.id) {
-            <tr class="transition-colors hover:bg-surface-alt">
+            <tr class="hover:bg-surface-alt transition-colors">
               <td class="px-5 py-3">
-                <a [routerLink]="['/admin/changelogs', entry.id, 'edit']" class="text-sm font-medium text-brand-600 hover:text-brand-700">
+                <a [routerLink]="['/admin/changelogs', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
                   {{ entry.title }}
                 </a>
               </td>
-              <td class="px-5 py-3 text-sm text-text-secondary">{{ entry.productId | productName }}</td>
+              <td class="text-text-secondary px-5 py-3 text-sm">{{ entry.productId | productName: products() }}</td>
               <td class="px-5 py-3">
                 <lfx-status-badge [status]="entry.status" />
               </td>
-              <td class="px-5 py-3 text-sm text-text-secondary">v{{ entry.version }}</td>
-              <td class="px-5 py-3 text-sm text-text-muted">{{ entry.updatedAt | dateFormat }}</td>
+              <td class="text-text-secondary px-5 py-3 text-sm">v{{ entry.version }}</td>
+              <td class="text-text-muted px-5 py-3 text-sm">{{ entry.updatedAt | dateFormat }}</td>
             </tr>
           }
         </tbody>
       </table>
 
       @if (filteredEntries().length === 0) {
-        <div class="py-12 text-center text-sm text-text-muted">No entries match the selected filters.</div>
+        <div class="text-text-muted py-12 text-center text-sm">No entries match the selected filters.</div>
       }
     </div>
   </lfx-card>

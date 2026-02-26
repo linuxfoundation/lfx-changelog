@@ -1,13 +1,15 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MOCK_PRODUCTS } from '@lfx-changelog/shared';
-import type { Product } from '@lfx-changelog/shared';
-import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { DialogComponent } from '@components/dialog/dialog.component';
 import { InputComponent } from '@components/input/input.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
+import type { Product } from '@lfx-changelog/shared';
+import { ProductService } from '@services/product/product.service';
+import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
+import { BehaviorSubject, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-product-management',
@@ -16,7 +18,20 @@ import { TextareaComponent } from '@components/textarea/textarea.component';
   styleUrl: './product-management.component.css',
 })
 export class ProductManagementComponent {
-  protected readonly products = MOCK_PRODUCTS;
+  private readonly productService = inject(ProductService);
+  private readonly refresh$ = new BehaviorSubject<void>(undefined);
+
+  protected readonly loading = signal(true);
+  protected readonly saving = signal(false);
+
+  protected readonly products = toSignal(
+    this.refresh$.pipe(
+      tap(() => this.loading.set(true)),
+      switchMap(() => this.productService.getAll()),
+      tap(() => this.loading.set(false))
+    ),
+    { initialValue: [] as Product[] }
+  );
 
   protected readonly formNameControl = new FormControl('', { nonNullable: true });
   protected readonly formSlugControl = new FormControl('', { nonNullable: true });
@@ -39,5 +54,32 @@ export class ProductManagementComponent {
     this.formSlugControl.setValue(product.slug);
     this.formDescriptionControl.setValue(product.description);
     this.dialogVisible.set(true);
+  }
+
+  protected saveProduct(): void {
+    this.saving.set(true);
+    const data = {
+      name: this.formNameControl.value,
+      slug: this.formSlugControl.value,
+      description: this.formDescriptionControl.value,
+    };
+
+    const editing = this.editingProduct();
+    const request$ = editing ? this.productService.update(editing.id, data) : this.productService.create(data);
+
+    request$.subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.dialogVisible.set(false);
+        this.refresh$.next();
+      },
+      error: () => {
+        this.saving.set(false);
+      },
+    });
+  }
+
+  protected deleteProduct(product: Product): void {
+    this.productService.delete(product.id).subscribe(() => this.refresh$.next());
   }
 }

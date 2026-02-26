@@ -85,7 +85,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
     productId: 'prod-mentorship',
     title: 'Fix timezone display in program schedules',
     description:
-      'Fixed an issue where program start and end dates were displayed in UTC instead of the user\'s local timezone. All date displays now respect the browser timezone setting.',
+      "Fixed an issue where program start and end dates were displayed in UTC instead of the user's local timezone. All date displays now respect the browser timezone setting.",
     version: '1.7.5',
     status: ChangelogStatus.PUBLISHED,
     publishedAt: '2024-08-20T15:30:00.000Z',

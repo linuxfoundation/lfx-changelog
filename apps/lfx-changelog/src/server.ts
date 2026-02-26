@@ -4,11 +4,12 @@ import express, { NextFunction, Request, Response } from 'express';
 import { auth } from 'express-openid-connect';
 import pinoHttp from 'pino-http';
 
-import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import { authMiddleware } from './server/middleware/auth.middleware';
-import publicChangelogRouter from './server/routes/public-changelog.route';
-import productRouter from './server/routes/product.route';
+import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import changelogRouter from './server/routes/changelog.route';
+import productRouter from './server/routes/product.route';
+import publicChangelogRouter from './server/routes/public-changelog.route';
+import publicProductRouter from './server/routes/public-product.route';
 import userRouter from './server/routes/user.route';
 import { serverLogger } from './server/server-logger';
 
@@ -88,6 +89,7 @@ app.get('/login', (req: Request, res: Response) => {
 
 // 8. Public API routes (no auth required)
 app.use('/public/api/changelogs', publicChangelogRouter);
+app.use('/public/api/products', publicProductRouter);
 
 // 9. Auth middleware for protected routes
 app.use('/api', authMiddleware);

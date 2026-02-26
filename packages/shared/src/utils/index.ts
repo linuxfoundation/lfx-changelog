@@ -1,1 +1,1 @@
-export { hasMinimumRole, getHighestRole } from './role.util.js';
+export { getHighestRole, hasMinimumRole } from './role.util.js';

@@ -1,11 +1,13 @@
-<div class="flex gap-1 border-b border-border">
+<div class="border-border flex gap-1 border-b">
   @for (tab of tabs(); track tab.value) {
     <button
       (click)="activeTab.set(tab.value)"
       class="relative px-4 py-2.5 text-sm font-medium transition-colors"
-      [class]="activeTab() === tab.value
-        ? 'text-brand-600 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:rounded-full after:bg-brand-600'
-        : 'text-text-secondary hover:text-text-primary'">
+      [class]="
+        activeTab() === tab.value
+          ? 'text-brand-600 after:bg-brand-600 after:absolute after:right-0 after:bottom-0 after:left-0 after:h-0.5 after:rounded-full'
+          : 'text-text-secondary hover:text-text-primary'
+      ">
       {{ tab.label }}
     </button>
   }

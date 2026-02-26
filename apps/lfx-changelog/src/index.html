@@ -10,7 +10,7 @@
     <script src="https://kit.fontawesome.com/f8a96882e2.js" crossorigin="anonymous"></script>
     <script>
       // Prevent flash of wrong theme on page load
-      (function() {
+      (function () {
         var stored = localStorage.getItem('lfx-changelog-theme');
         var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         if (stored === 'dark' || (!stored && prefersDark)) {

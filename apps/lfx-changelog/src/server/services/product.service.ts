@@ -1,3 +1,4 @@
+import type { PublicProduct } from '@lfx-changelog/shared';
 import { Product as PrismaProduct } from '@prisma/client';
 
 import { NotFoundError } from '../errors';
@@ -5,6 +6,14 @@ import { NotFoundError } from '../errors';
 import { getPrismaClient } from './prisma.service';
 
 export class ProductService {
+  public async findAllPublic(): Promise<PublicProduct[]> {
+    const prisma = getPrismaClient();
+    return prisma.product.findMany({
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, slug: true, description: true, faIcon: true },
+    });
+  }
+
   public async findAll(): Promise<PrismaProduct[]> {
     const prisma = getPrismaClient();
     return prisma.product.findMany({ orderBy: { name: 'asc' } });

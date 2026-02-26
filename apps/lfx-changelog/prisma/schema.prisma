@@ -23,6 +23,7 @@ model Product {
   slug        String   @unique
   description String?
   iconUrl     String?  @map("icon_url")
+  faIcon      String?  @map("fa_icon")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

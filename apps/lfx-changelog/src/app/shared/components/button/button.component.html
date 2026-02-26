@@ -2,10 +2,10 @@
   [type]="type()"
   [disabled]="disabled() || loading()"
   (click)="clicked.emit($event)"
-  class="inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:ring-offset-2 focus:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50"
+  class="focus:ring-brand-500/40 focus:ring-offset-surface inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
   [class]="
-    (variant() === 'primary' ? 'bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md' : '') +
-    (variant() === 'secondary' ? 'border border-border bg-surface text-text-primary hover:bg-surface-alt hover:border-border-strong' : '') +
+    (variant() === 'primary' ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-sm hover:shadow-md' : '') +
+    (variant() === 'secondary' ? 'border-border bg-surface text-text-primary hover:bg-surface-alt hover:border-border-strong border' : '') +
     (variant() === 'ghost' ? 'text-text-secondary hover:bg-surface-alt hover:text-text-primary' : '') +
     (variant() === 'danger' ? 'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md' : '') +
     ' ' +
