@@ -66,9 +66,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Generate Prisma client
-        run: yarn workspace lfx-changelog prisma generate
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -95,6 +92,9 @@ jobs:
           echo "BASE_URL=http://localhost:4204" >> "$GITHUB_ENV"
           echo "SKIP_RATE_LIMIT=true" >> "$GITHUB_ENV"
           echo "CI=true" >> "$GITHUB_ENV"
+
+      - name: Generate Prisma client
+        run: yarn workspace lfx-changelog prisma generate
 
       - name: Set up sensitive environment variables
         env:
