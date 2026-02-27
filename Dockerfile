@@ -21,6 +21,11 @@ RUN yarn install --immutable
 # NOW copy source code (changes here won't invalidate the dependency layer)
 COPY . .
 
+# Prisma generate only reads the schema (never connects), but prisma.config.ts
+# still loads buildConnectionString() which requires DB env vars. Provide
+# harmless defaults so the config resolves without error.
+ENV DB_HOST=localhost DB_PORT=5432 DB_NAME=placeholder DB_USER=placeholder DB_PASSWORD=placeholder
+
 # Generate Prisma client
 RUN yarn workspace lfx-changelog prisma generate
 
