@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-// @ts-check
 const eslint = require('@eslint/js');
 const { defineConfig } = require('eslint/config');
 const tseslint = require('typescript-eslint');
@@ -19,6 +18,10 @@ module.exports = defineConfig([
       '**/.angular/**',
       '**/coverage/**',
       '**/*.min.js',
+      'e2e/**/*',
+      'playwright.config.ts',
+      'prisma.config.ts',
+      'prisma/seed.ts',
     ],
   },
   {

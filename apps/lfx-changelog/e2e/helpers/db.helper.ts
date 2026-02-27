@@ -106,6 +106,16 @@ export async function seedTestDatabase(): Promise<void> {
   }
 }
 
+export async function deactivateProduct(slug: string): Promise<void> {
+  const client = getTestPrismaClient();
+  await client.product.update({ where: { slug }, data: { isActive: false } });
+}
+
+export async function activateProduct(slug: string): Promise<void> {
+  const client = getTestPrismaClient();
+  await client.product.update({ where: { slug }, data: { isActive: true } });
+}
+
 export async function disconnectTestDb(): Promise<void> {
   if (prisma) {
     await prisma.$disconnect();

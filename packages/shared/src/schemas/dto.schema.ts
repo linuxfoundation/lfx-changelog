@@ -48,6 +48,7 @@ export const UpdateProductRequestSchema = z
     description: z.string().optional(),
     iconUrl: z.string().optional(),
     faIcon: z.string().optional(),
+    isActive: z.boolean().optional(),
   })
   .openapi('UpdateProductRequest');
 
