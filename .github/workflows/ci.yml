@@ -80,7 +80,7 @@ jobs:
         uses: aws-actions/aws-secretsmanager-get-secrets@v2
         with:
           secret-ids: |
-            AUTH0, /cloudops/managed-secrets/cloud/changelog/auth0_client
+            AUTH0, /cloudops/managed-secrets/auth0/LFX_Changelog
             AUTH0_COOKIE_SECRET, /cloudops/managed-secrets/cloud/changelog/auth0_secret
 
       - name: Set up non-sensitive environment variables
