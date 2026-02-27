@@ -17,8 +17,8 @@ export async function loginViaAuth0(page: Page, email: string, password: string,
   // Submit (button enables after fields are filled)
   await page.getByRole('button', { name: 'SIGN IN' }).click();
 
-  // Wait for redirect back to app
-  await page.waitForURL(`**${returnTo}*`, { timeout: 30_000 });
+  // Wait for redirect back to localhost (not Auth0)
+  await page.waitForURL((url) => url.hostname === 'localhost', { timeout: 30_000 });
 }
 
 export async function expectAdminDashboard(page: Page): Promise<void> {

@@ -12,6 +12,7 @@ export class ProductService {
   public async findAllPublic(): Promise<PublicProduct[]> {
     const prisma = getPrismaClient();
     return prisma.product.findMany({
+      where: { isActive: true },
       orderBy: { name: 'asc' },
       select: { id: true, name: true, slug: true, description: true, faIcon: true },
     });
@@ -36,7 +37,10 @@ export class ProductService {
     return prisma.product.create({ data });
   }
 
-  public async update(id: string, data: { name?: string; slug?: string; description?: string; iconUrl?: string; faIcon?: string }): Promise<PrismaProduct> {
+  public async update(
+    id: string,
+    data: { name?: string; slug?: string; description?: string; iconUrl?: string; faIcon?: string; isActive?: boolean }
+  ): Promise<PrismaProduct> {
     const prisma = getPrismaClient();
     await this.findById(id);
     return prisma.product.update({ where: { id }, data });

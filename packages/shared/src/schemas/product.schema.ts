@@ -13,6 +13,7 @@ export const ProductSchema = z
     description: z.string().nullable(),
     iconUrl: z.string().nullable(),
     faIcon: z.string().nullable(),
+    isActive: z.boolean(),
     githubInstallationId: z.number().int().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),

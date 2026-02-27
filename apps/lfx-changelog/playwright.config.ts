@@ -72,8 +72,13 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
       },
     },
-  ],
 
+    {
+      name: 'api',
+      testMatch: /api\/.*\.api\.spec\.ts/,
+      dependencies: ['setup', 'auth'],
+    },
+  ],
   webServer: {
     command: 'yarn start',
     url: `${baseURL}/health`,
@@ -81,8 +86,6 @@ export default defineConfig({
     timeout: 120_000,
     stdout: 'ignore',
     stderr: 'ignore',
-    env: {
-      ...process.env,
-    },
+    env: process.env as Record<string, string>,
   },
 });

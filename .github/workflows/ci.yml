@@ -94,18 +94,14 @@ jobs:
 
       - name: Set up sensitive environment variables
         env:
-          E2E_SUPER_ADMIN_EMAIL: ${{ secrets.E2E_SUPER_ADMIN_EMAIL }}
+          E2E_SUPER_ADMIN_USERNAME: ${{ secrets.E2E_SUPER_ADMIN_USERNAME }}
           E2E_SUPER_ADMIN_PASSWORD: ${{ secrets.E2E_SUPER_ADMIN_PASSWORD }}
-          E2E_SUPER_ADMIN_AUTH0_ID: ${{ secrets.E2E_SUPER_ADMIN_AUTH0_ID }}
-          E2E_PRODUCT_ADMIN_EMAIL: ${{ secrets.E2E_PRODUCT_ADMIN_EMAIL }}
+          E2E_PRODUCT_ADMIN_USERNAME: ${{ secrets.E2E_PRODUCT_ADMIN_USERNAME }}
           E2E_PRODUCT_ADMIN_PASSWORD: ${{ secrets.E2E_PRODUCT_ADMIN_PASSWORD }}
-          E2E_PRODUCT_ADMIN_AUTH0_ID: ${{ secrets.E2E_PRODUCT_ADMIN_AUTH0_ID }}
-          E2E_EDITOR_EMAIL: ${{ secrets.E2E_EDITOR_EMAIL }}
+          E2E_EDITOR_USERNAME: ${{ secrets.E2E_EDITOR_USERNAME }}
           E2E_EDITOR_PASSWORD: ${{ secrets.E2E_EDITOR_PASSWORD }}
-          E2E_EDITOR_AUTH0_ID: ${{ secrets.E2E_EDITOR_AUTH0_ID }}
-          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_USERNAME: ${{ secrets.E2E_USER_USERNAME }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
-          E2E_USER_AUTH0_ID: ${{ secrets.E2E_USER_AUTH0_ID }}
         run: |
           # Parse Auth0 app credentials from JSON secret
           AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id')
@@ -129,31 +125,23 @@ jobs:
           echo "AUTH0_SECRET=$AUTH0_COOKIE_SECRET" >> "$GITHUB_ENV"
 
           # Set test user credentials
-          echo "::add-mask::$E2E_SUPER_ADMIN_EMAIL"
+          echo "::add-mask::$E2E_SUPER_ADMIN_USERNAME"
           echo "::add-mask::$E2E_SUPER_ADMIN_PASSWORD"
-          echo "::add-mask::$E2E_SUPER_ADMIN_AUTH0_ID"
-          echo "::add-mask::$E2E_PRODUCT_ADMIN_EMAIL"
+          echo "::add-mask::$E2E_PRODUCT_ADMIN_USERNAME"
           echo "::add-mask::$E2E_PRODUCT_ADMIN_PASSWORD"
-          echo "::add-mask::$E2E_PRODUCT_ADMIN_AUTH0_ID"
-          echo "::add-mask::$E2E_EDITOR_EMAIL"
+          echo "::add-mask::$E2E_EDITOR_USERNAME"
           echo "::add-mask::$E2E_EDITOR_PASSWORD"
-          echo "::add-mask::$E2E_EDITOR_AUTH0_ID"
-          echo "::add-mask::$E2E_USER_EMAIL"
+          echo "::add-mask::$E2E_USER_USERNAME"
           echo "::add-mask::$E2E_USER_PASSWORD"
-          echo "::add-mask::$E2E_USER_AUTH0_ID"
 
-          echo "E2E_SUPER_ADMIN_EMAIL=$E2E_SUPER_ADMIN_EMAIL" >> "$GITHUB_ENV"
+          echo "E2E_SUPER_ADMIN_USERNAME=$E2E_SUPER_ADMIN_USERNAME" >> "$GITHUB_ENV"
           echo "E2E_SUPER_ADMIN_PASSWORD=$E2E_SUPER_ADMIN_PASSWORD" >> "$GITHUB_ENV"
-          echo "E2E_SUPER_ADMIN_AUTH0_ID=$E2E_SUPER_ADMIN_AUTH0_ID" >> "$GITHUB_ENV"
-          echo "E2E_PRODUCT_ADMIN_EMAIL=$E2E_PRODUCT_ADMIN_EMAIL" >> "$GITHUB_ENV"
+          echo "E2E_PRODUCT_ADMIN_USERNAME=$E2E_PRODUCT_ADMIN_USERNAME" >> "$GITHUB_ENV"
           echo "E2E_PRODUCT_ADMIN_PASSWORD=$E2E_PRODUCT_ADMIN_PASSWORD" >> "$GITHUB_ENV"
-          echo "E2E_PRODUCT_ADMIN_AUTH0_ID=$E2E_PRODUCT_ADMIN_AUTH0_ID" >> "$GITHUB_ENV"
-          echo "E2E_EDITOR_EMAIL=$E2E_EDITOR_EMAIL" >> "$GITHUB_ENV"
+          echo "E2E_EDITOR_USERNAME=$E2E_EDITOR_USERNAME" >> "$GITHUB_ENV"
           echo "E2E_EDITOR_PASSWORD=$E2E_EDITOR_PASSWORD" >> "$GITHUB_ENV"
-          echo "E2E_EDITOR_AUTH0_ID=$E2E_EDITOR_AUTH0_ID" >> "$GITHUB_ENV"
-          echo "E2E_USER_EMAIL=$E2E_USER_EMAIL" >> "$GITHUB_ENV"
+          echo "E2E_USER_USERNAME=$E2E_USER_USERNAME" >> "$GITHUB_ENV"
           echo "E2E_USER_PASSWORD=$E2E_USER_PASSWORD" >> "$GITHUB_ENV"
-          echo "E2E_USER_AUTH0_ID=$E2E_USER_AUTH0_ID" >> "$GITHUB_ENV"
 
       - name: Install Playwright Chromium
         run: npx playwright install chromium --with-deps
