@@ -139,7 +139,6 @@ app.use(
     idTokenSigningAlg: 'HS256',
     authorizationParams: {
       response_type: 'code',
-      audience: process.env['AUTH0_AUDIENCE'] || 'https://example.com',
       scope: 'openid email profile api offline_access',
     },
     clientSecret: process.env['AUTH0_CLIENT_SECRET'] || 'CHANGE_ME_AUTH0_CLIENT_SECRET',
