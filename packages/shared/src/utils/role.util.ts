@@ -3,7 +3,7 @@
 
 import { ROLE_HIERARCHY } from '../constants/role-hierarchy.constant.js';
 import { UserRole } from '../enums/user-role.enum.js';
-import type { UserRoleAssignment } from '../interfaces/user.interface.js';
+import type { UserRoleAssignment } from '../schemas/user.schema.js';
 
 export function hasMinimumRole(assignments: UserRoleAssignment[], requiredRole: UserRole, productId?: string): boolean {
   const requiredLevel = ROLE_HIERARCHY[requiredRole];

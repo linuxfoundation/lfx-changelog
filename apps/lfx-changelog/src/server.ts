@@ -10,10 +10,13 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 
+import { UserRole } from '@lfx-changelog/shared';
+
 import { authMiddleware } from './server/middleware/auth.middleware';
 import { noCacheMiddleware } from './server/middleware/cache.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import { requestIdMiddleware } from './server/middleware/request-id.middleware';
+import { requireRole } from './server/middleware/role.middleware';
 import aiRouter from './server/routes/ai.route';
 import changelogRouter from './server/routes/changelog.route';
 import githubRouter from './server/routes/github.route';
@@ -25,6 +28,7 @@ import webhookRouter from './server/routes/webhook.route';
 import { reqSerializer, resSerializer, serverLogger } from './server/server-logger';
 import { disconnectPrisma } from './server/services/prisma.service';
 import { UserService } from './server/services/user.service';
+import { setupSwagger } from './server/swagger';
 
 import type { AuthContext } from '@lfx-changelog/shared';
 import type { Server } from 'node:http';
@@ -87,6 +91,9 @@ app.use(
 app.get('/health', (_req: Request, res: Response) => {
   res.send('OK');
 });
+
+// 7b. API documentation
+app.use('/docs', setupSwagger());
 
 // 8. Rate limiter — 100 req/min per IP on API routes
 const apiRateLimiter = rateLimit({
@@ -167,6 +174,9 @@ app.use('/api', noCacheMiddleware);
 
 // 14. Auth middleware for protected routes
 app.use('/api', authMiddleware);
+
+// 15. Minimum EDITOR role for all protected routes
+app.use('/api', requireRole(UserRole.EDITOR));
 
 // 16. Protected API routes
 app.use('/api/ai', aiRouter);
