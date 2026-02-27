@@ -80,8 +80,8 @@ jobs:
         uses: aws-actions/aws-secretsmanager-get-secrets@v2
         with:
           secret-ids: |
-            AUTH0, /cloudops/managed-secrets/auth0/LFX_Changelog
-            AUTH0_COOKIE_SECRET, /cloudops/managed-secrets/cloud/pcc-changelog/custom_cookie_sig_secret
+            AUTH0, /cloudops/managed-secrets/cloud/changelog/auth0_client
+            AUTH0_COOKIE_SECRET, /cloudops/managed-secrets/cloud/changelog/auth0_secret
 
       - name: Set up non-sensitive environment variables
         run: |
@@ -116,13 +116,21 @@ jobs:
             exit 1
           fi
 
+          # Parse Auth0 session secret from JSON secret
+          AUTH0_SECRET_VALUE=$(echo "$AUTH0_COOKIE_SECRET" | jq -r '.auth_secret')
+
+          if [ -z "$AUTH0_SECRET_VALUE" ] || [ "$AUTH0_SECRET_VALUE" = "null" ]; then
+            echo "::error::Failed to parse auth_secret from AWS secret"
+            exit 1
+          fi
+
           echo "::add-mask::$AUTH0_CLIENT_ID"
           echo "::add-mask::$AUTH0_CLIENT_SECRET"
-          echo "::add-mask::$AUTH0_COOKIE_SECRET"
+          echo "::add-mask::$AUTH0_SECRET_VALUE"
 
           echo "AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID" >> "$GITHUB_ENV"
           echo "AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET" >> "$GITHUB_ENV"
-          echo "AUTH0_SECRET=$AUTH0_COOKIE_SECRET" >> "$GITHUB_ENV"
+          echo "AUTH0_SECRET=$AUTH0_SECRET_VALUE" >> "$GITHUB_ENV"
 
           # Set test user credentials
           echo "::add-mask::$E2E_SUPER_ADMIN_USERNAME"
