@@ -12,7 +12,7 @@ const router = Router();
 const aiController = new AiController();
 
 router.post('/summarize-changes', requireRole(UserRole.EDITOR), (req, res, next) => aiController.summarizeChanges(req, res, next));
-router.post('/generate-changelog', validate({ body: GenerateChangelogRequestSchema }), requireRole(UserRole.EDITOR), (req, res) =>
+router.post('/generate-changelog', requireRole(UserRole.EDITOR), validate({ body: GenerateChangelogRequestSchema }), (req, res) =>
   aiController.generateChangelog(req, res)
 );
 

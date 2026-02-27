@@ -9,7 +9,7 @@ import { Component, computed, input } from '@angular/core';
   styleUrl: './avatar.component.css',
 })
 export class AvatarComponent {
-  public readonly src = input<string>('');
+  public readonly src = input<string | null>('');
   public readonly name = input<string>('');
   public readonly size = input<'sm' | 'md' | 'lg'>('md');
 

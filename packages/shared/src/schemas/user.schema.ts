@@ -22,7 +22,7 @@ export const UserSchema = z
     auth0Id: z.string(),
     email: z.string(),
     name: z.string(),
-    avatarUrl: z.string(),
+    avatarUrl: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
     roles: z.array(UserRoleAssignmentSchema),

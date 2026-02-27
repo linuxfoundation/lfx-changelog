@@ -4,7 +4,7 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-import { PublicProductSchema } from '@lfx-changelog/shared';
+import { PublicProductSchema, createApiResponseSchema } from '@lfx-changelog/shared';
 
 export const publicProductRegistry = new OpenAPIRegistry();
 
@@ -19,10 +19,7 @@ publicProductRegistry.registerPath({
       description: 'List of products',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.array(PublicProductSchema),
-          }),
+          schema: createApiResponseSchema(z.array(PublicProductSchema)),
         },
       },
     },

@@ -14,18 +14,18 @@ const router = Router();
 const productController = new ProductController();
 const productRepositoryController = new ProductRepositoryController();
 
-router.get('/', (req, res, next) => productController.list(req, res, next));
-router.get('/:id', (req, res, next) => productController.getById(req, res, next));
-router.post('/', validate({ body: CreateProductRequestSchema }), requireRole(UserRole.SUPER_ADMIN), (req, res, next) =>
+router.get('/', requireRole(UserRole.EDITOR), (req, res, next) => productController.list(req, res, next));
+router.get('/:id', requireRole(UserRole.EDITOR), (req, res, next) => productController.getById(req, res, next));
+router.post('/', requireRole(UserRole.SUPER_ADMIN), validate({ body: CreateProductRequestSchema }), (req, res, next) =>
   productController.create(req, res, next)
 );
-router.put('/:id', validate({ body: UpdateProductRequestSchema }), requireRole(UserRole.SUPER_ADMIN), (req, res, next) =>
+router.put('/:id', requireRole(UserRole.SUPER_ADMIN), validate({ body: UpdateProductRequestSchema }), (req, res, next) =>
   productController.update(req, res, next)
 );
 router.delete('/:id', requireRole(UserRole.SUPER_ADMIN), (req, res, next) => productController.delete(req, res, next));
 
-router.get('/:id/repositories', (req, res, next) => productRepositoryController.list(req, res, next));
-router.post('/:id/repositories', validate({ body: LinkRepositoryRequestSchema }), requireRole(UserRole.SUPER_ADMIN), (req, res, next) =>
+router.get('/:id/repositories', requireRole(UserRole.EDITOR), (req, res, next) => productRepositoryController.list(req, res, next));
+router.post('/:id/repositories', requireRole(UserRole.SUPER_ADMIN), validate({ body: LinkRepositoryRequestSchema }), (req, res, next) =>
   productRepositoryController.link(req, res, next)
 );
 router.delete('/:id/repositories/:repoId', requireRole(UserRole.SUPER_ADMIN), (req, res, next) => productRepositoryController.unlink(req, res, next));

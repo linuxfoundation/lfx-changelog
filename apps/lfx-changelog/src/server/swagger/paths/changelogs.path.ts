@@ -4,11 +4,17 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-import { ChangelogEntrySchema, CreateChangelogEntryRequestSchema, UpdateChangelogEntryRequestSchema } from '@lfx-changelog/shared';
+import {
+  ChangelogEntrySchema,
+  CreateChangelogEntryRequestSchema,
+  UpdateChangelogEntryRequestSchema,
+  createApiResponseSchema,
+  createPaginatedResponseSchema,
+} from '@lfx-changelog/shared';
+
+import { COOKIE_AUTH } from '../constants';
 
 export const changelogRegistry = new OpenAPIRegistry();
-
-const cookieAuth = [{ cookieAuth: [] }];
 
 changelogRegistry.registerPath({
   method: 'get',
@@ -16,7 +22,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'List all changelog entries',
   description: 'Returns all changelog entries with optional filters.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   request: {
     query: z.object({
       productId: z.string().optional().openapi({ description: 'Filter by product ID' }),
@@ -28,14 +34,7 @@ changelogRegistry.registerPath({
       description: 'Paginated list of changelog entries',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.array(ChangelogEntrySchema),
-            total: z.number(),
-            page: z.number(),
-            pageSize: z.number(),
-            totalPages: z.number(),
-          }),
+          schema: createPaginatedResponseSchema(ChangelogEntrySchema),
         },
       },
     },
@@ -50,7 +49,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Get changelog entry by ID',
   description: 'Returns a single changelog entry.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Changelog entry ID' }),
@@ -61,10 +60,7 @@ changelogRegistry.registerPath({
       description: 'Single changelog entry',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: ChangelogEntrySchema,
-          }),
+          schema: createApiResponseSchema(ChangelogEntrySchema),
         },
       },
     },
@@ -80,7 +76,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Create changelog entry',
   description: 'Creates a new changelog entry.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   request: {
     body: {
       content: {
@@ -95,10 +91,7 @@ changelogRegistry.registerPath({
       description: 'Changelog entry created',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: ChangelogEntrySchema,
-          }),
+          schema: createApiResponseSchema(ChangelogEntrySchema),
         },
       },
     },
@@ -113,7 +106,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Update changelog entry',
   description: 'Updates an existing changelog entry.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Changelog entry ID' }),
@@ -131,10 +124,7 @@ changelogRegistry.registerPath({
       description: 'Changelog entry updated',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: ChangelogEntrySchema,
-          }),
+          schema: createApiResponseSchema(ChangelogEntrySchema),
         },
       },
     },
@@ -150,7 +140,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Publish changelog entry',
   description: 'Publishes a draft changelog entry.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Changelog entry ID' }),
@@ -161,10 +151,7 @@ changelogRegistry.registerPath({
       description: 'Changelog entry published',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: ChangelogEntrySchema,
-          }),
+          schema: createApiResponseSchema(ChangelogEntrySchema),
         },
       },
     },
@@ -180,7 +167,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Delete changelog entry',
   description: 'Deletes a changelog entry.\n\n**Required privilege:** PRODUCT_ADMIN role or above for the target product.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Changelog entry ID' }),

@@ -38,7 +38,7 @@ export class ProductRepositoryController {
       const productId = req.params['id'] as string;
       const repoId = req.params['repoId'] as string;
       await this.productRepositoryService.unlinkRepository(productId, repoId);
-      res.json({ success: true, data: null, message: 'Repository unlinked' });
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

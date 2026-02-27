@@ -4,7 +4,7 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-import { PublicChangelogEntrySchema } from '@lfx-changelog/shared';
+import { PublicChangelogEntrySchema, createApiResponseSchema, createPaginatedResponseSchema } from '@lfx-changelog/shared';
 
 export const publicChangelogRegistry = new OpenAPIRegistry();
 
@@ -26,14 +26,7 @@ publicChangelogRegistry.registerPath({
       description: 'Paginated list of published changelogs',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.array(PublicChangelogEntrySchema),
-            total: z.number(),
-            page: z.number(),
-            pageSize: z.number(),
-            totalPages: z.number(),
-          }),
+          schema: createPaginatedResponseSchema(PublicChangelogEntrySchema),
         },
       },
     },
@@ -56,10 +49,7 @@ publicChangelogRegistry.registerPath({
       description: 'Single published changelog entry',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: PublicChangelogEntrySchema,
-          }),
+          schema: createApiResponseSchema(PublicChangelogEntrySchema),
         },
       },
     },

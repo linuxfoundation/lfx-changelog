@@ -4,33 +4,29 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-import { AssignRoleRequestSchema, UserRoleAssignmentSchema, UserSchema } from '@lfx-changelog/shared';
+import { AssignRoleRequestSchema, UserRoleAssignmentSchema, UserSchema, createApiResponseSchema } from '@lfx-changelog/shared';
+
+import { COOKIE_AUTH } from '../constants';
 
 export const userRegistry = new OpenAPIRegistry();
-
-const cookieAuth = [{ cookieAuth: [] }];
 
 userRegistry.registerPath({
   method: 'get',
   path: '/api/users/me',
   tags: ['Users'],
   summary: 'Get current user',
-  description: 'Returns the currently authenticated user with their roles.\n\n**Required privilege:** EDITOR role or above.',
-  security: cookieAuth,
+  description: 'Returns the currently authenticated user with their roles.\n\n**Required privilege:** Any authenticated user.',
+  security: COOKIE_AUTH,
   responses: {
     200: {
       description: 'Current user',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: UserSchema,
-          }),
+          schema: createApiResponseSchema(UserSchema),
         },
       },
     },
     401: { description: 'Unauthorized' },
-    403: { description: 'Forbidden — requires EDITOR role or above' },
   },
 });
 
@@ -40,16 +36,13 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'List all users',
   description: 'Returns all users.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   responses: {
     200: {
       description: 'List of users',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: z.array(UserSchema),
-          }),
+          schema: createApiResponseSchema(z.array(UserSchema)),
         },
       },
     },
@@ -64,7 +57,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'Assign role to user',
   description: 'Assigns a role to a user.\n\n**Required privilege:** PRODUCT_ADMIN role or above.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'User ID' }),
@@ -82,10 +75,7 @@ userRegistry.registerPath({
       description: 'Role assigned',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            data: UserRoleAssignmentSchema,
-          }),
+          schema: createApiResponseSchema(UserRoleAssignmentSchema),
         },
       },
     },
@@ -101,7 +91,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'Remove role from user',
   description: 'Removes a role assignment from a user.\n\n**Required privilege:** PRODUCT_ADMIN role or above.',
-  security: cookieAuth,
+  security: COOKIE_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'User ID' }),

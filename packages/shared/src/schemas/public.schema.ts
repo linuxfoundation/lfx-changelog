@@ -3,6 +3,8 @@
 
 import { z } from 'zod';
 
+import { ChangelogStatus } from '../enums/changelog-status.enum.js';
+
 export const PublicProductSchema = z
   .object({
     id: z.string(),
@@ -31,7 +33,7 @@ export const PublicChangelogEntrySchema = z
     title: z.string(),
     description: z.string(),
     version: z.string().nullable(),
-    status: z.string(),
+    status: z.nativeEnum(ChangelogStatus),
     publishedAt: z.union([z.string(), z.date()]).nullable(),
     createdAt: z.union([z.string(), z.date()]),
     product: PublicProductSchema.optional(),

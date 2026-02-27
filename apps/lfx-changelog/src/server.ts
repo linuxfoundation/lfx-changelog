@@ -10,13 +10,10 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 
-import { UserRole } from '@lfx-changelog/shared';
-
 import { authMiddleware } from './server/middleware/auth.middleware';
 import { noCacheMiddleware } from './server/middleware/cache.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import { requestIdMiddleware } from './server/middleware/request-id.middleware';
-import { requireRole } from './server/middleware/role.middleware';
 import aiRouter from './server/routes/ai.route';
 import changelogRouter from './server/routes/changelog.route';
 import githubRouter from './server/routes/github.route';
@@ -175,10 +172,7 @@ app.use('/api', noCacheMiddleware);
 // 14. Auth middleware for protected routes
 app.use('/api', authMiddleware);
 
-// 15. Minimum EDITOR role for all protected routes
-app.use('/api', requireRole(UserRole.EDITOR));
-
-// 16. Protected API routes
+// 15. Protected API routes
 app.use('/api/ai', aiRouter);
 app.use('/api/products', productRouter);
 app.use('/api/changelogs', changelogRouter);

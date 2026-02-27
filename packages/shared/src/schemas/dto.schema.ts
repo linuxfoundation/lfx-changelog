@@ -55,7 +55,6 @@ export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
 
 export const AssignRoleRequestSchema = z
   .object({
-    userId: z.string(),
     productId: z.string().nullable(),
     role: z.nativeEnum(UserRole),
   })

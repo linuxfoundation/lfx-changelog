@@ -25,9 +25,10 @@
 | Phase 15 | DONE        | GitHub integration — App install flow, product repos, aggregated activity             |
 | Phase 16 | DONE        | AI changelog generation with SSE streaming                                            |
 | Phase 17 | DONE        | Open source files (SPDX headers, LICENSE), CI workflow, Husky pre-commit              |
-| Phase 18 | **PLANNED** | **API hardening — zod validation, UUID params, AI context limits**                    |
-| Phase 19 | **PLANNED** | **Infrastructure hardening — Dockerfile HEALTHCHECK, tiered rate limits, image scan** |
-| Phase 20 | **PLANNED** | **Frontend error handling — admin delete/role error states, toasts, confirmations**   |
+| Phase 18 | DONE        | Zod schemas replace interfaces, validation middleware, Swagger UI at `/docs`          |
+| Phase 19 | **PLANNED** | **API hardening — UUID param validation, AI context limits, configurable AI URL**     |
+| Phase 20 | **PLANNED** | **Infrastructure hardening — Dockerfile HEALTHCHECK, tiered rate limits, image scan** |
+| Phase 21 | **PLANNED** | **Frontend error handling — admin delete/role error states, toasts, confirmations**   |
 
 ---
 
@@ -86,7 +87,10 @@ lfx-changelog/
 │   │   │   ├── controllers/           # product, changelog, user controllers
 │   │   │   ├── services/              # prisma, product, changelog, user services
 │   │   │   ├── routes/                # product, changelog, user, public-changelog routes
-│   │   │   ├── middleware/            # auth, role, error-handler
+│   │   │   ├── middleware/            # auth, role, error-handler, validate (Zod)
+│   │   │   ├── swagger/              # OpenAPI spec generation + Swagger UI setup
+│   │   │   │   ├── index.ts           # setupSwagger(), merges path registries
+│   │   │   │   └── paths/             # per-route-group OpenAPI path definitions
 │   │   │   ├── errors/               # BaseApiError, Auth/Authorization/NotFound errors
 │   │   │   └── helpers/              # error-serializer
 │   │   └── main.ts, main.server.ts
@@ -96,11 +100,20 @@ lfx-changelog/
 │   └── angular.json, package.json, tsconfig.json, eslint.config.js
 ├── packages/shared/                   # @lfx-changelog/shared
 │   └── src/
-│       ├── interfaces/                # Product, ChangelogEntry, User, Auth, DTO, ApiResponse
+│       ├── schemas/                   # Zod 4 schemas + z.infer<> types (single source of truth)
+│       │   ├── setup.ts               # extendZodWithOpenApi(z) — must import first
+│       │   ├── product.schema.ts      # ProductSchema
+│       │   ├── changelog-entry.schema.ts  # ChangelogEntry + WithRelations schemas
+│       │   ├── user.schema.ts         # UserSchema, UserRoleAssignmentSchema
+│       │   ├── dto.schema.ts          # Create/Update request body schemas
+│       │   ├── auth.schema.ts         # AuthUser, AuthContext
+│       │   ├── api-response.schema.ts # Generic response factories + interfaces
+│       │   ├── public.schema.ts       # Stripped-down public endpoint schemas
+│       │   ├── github.schema.ts       # GitHub integration schemas
+│       │   └── ai.schema.ts           # AI generation + SSE streaming schemas
 │       ├── enums/                     # ChangelogCategory, ChangelogStatus, UserRole
 │       ├── constants/                 # CATEGORY_CONFIG, PRODUCTS, ROLE_HIERARCHY
 │       ├── utils/                     # role.util.ts
-│       ├── validators/                # changelog.validator.ts
 │       └── mocks/                     # mock-products, mock-changelog-entries, mock-users
 ├── docker-compose.yml                 # PostgreSQL 16 Alpine
 ├── turbo.json
@@ -111,34 +124,40 @@ lfx-changelog/
 
 ### Tech Stack (Installed)
 
-- Angular 20 with SSR (Express)
+- Angular 20 with SSR (Express 5)
 - Tailwind CSS v4 (CSS-first `@theme`, no config file)
 - TypeScript 5.9.x (strict)
 - Prisma ORM (schema defined, migration ready)
 - PostgreSQL via Docker Compose
+- Zod 4 (schema validation + type inference)
+- `@asteasolutions/zod-to-openapi` (OpenAPI 3.1 spec generation)
+- `swagger-ui-express` (interactive API docs at `/docs`)
 - Pino logger
 - Auth0 via `express-openid-connect`
 - Yarn 4 + Turborepo
 
 ### API Routes (Backend — Fully Wired to Frontend)
 
+All mutating endpoints have **Zod validation middleware**. Interactive docs at **`/docs`** (Swagger UI).
+
 **Public:**
 
+- `GET /public/api/products` — List all products (public fields only)
 - `GET /public/api/changelogs` — Published entries (filterable, paginated)
 - `GET /public/api/changelogs/:id` — Single published entry
 
 **Products (auth required):**
 
 - `GET /api/products` — List all
-- `POST /api/products` — Create (super_admin)
-- `PUT /api/products/:id` — Update (super_admin)
+- `POST /api/products` — Create (super_admin) — validated: `CreateProductRequestSchema`
+- `PUT /api/products/:id` — Update (super_admin) — validated: `UpdateProductRequestSchema`
 - `DELETE /api/products/:id` — Delete (super_admin)
 
 **Changelogs (auth required):**
 
 - `GET /api/changelogs` — List all including drafts (editor+)
-- `POST /api/changelogs` — Create (editor+)
-- `PUT /api/changelogs/:id` — Update (editor+)
+- `POST /api/changelogs` — Create (editor+) — validated: `CreateChangelogEntryRequestSchema`
+- `PUT /api/changelogs/:id` — Update (editor+) — validated: `UpdateChangelogEntryRequestSchema`
 - `PATCH /api/changelogs/:id/publish` — Publish (editor+)
 - `DELETE /api/changelogs/:id` — Delete (product_admin+)
 
@@ -146,7 +165,7 @@ lfx-changelog/
 
 - `GET /api/users/me` — Current user
 - `GET /api/users` — List all (super_admin)
-- `POST /api/users/:id/roles` — Assign role
+- `POST /api/users/:id/roles` — Assign role — validated: `AssignRoleRequestSchema`
 - `DELETE /api/users/:id/roles/:roleId` — Remove role
 
 ### Roles
@@ -157,27 +176,39 @@ lfx-changelog/
 
 ---
 
-## What's Left (Phases 18-20)
+## What's Left (Phases 19-21)
 
-### Phase 18: API Hardening — Input Validation & Security
+### Phase 19: API Hardening — Remaining Items
 
-- Add `zod` schema validation middleware for all mutating endpoints (changelogs, products, roles)
-- Add UUID format validation on all `:id` route params (return 400 instead of querying DB with garbage)
-- Limit `additionalContext` field length in AI generation endpoint
+- Add UUID format validation on all `:id` / `:roleId` route params (return 400 for malformed IDs)
+- Limit `additionalContext` field length in AI generation endpoint (~5,000 chars)
 - Make AI cluster URL configurable via `AI_CLUSTER_URL` env var
 
-### Phase 19: Infrastructure Hardening
+### Phase 20: Infrastructure Hardening
 
 - Add `HEALTHCHECK` instruction to Dockerfile (hit `/health` endpoint)
 - Differentiate rate limits by endpoint type (public reads: 100/min, auth APIs: 60/min, AI: 5/min, login: 10/min)
 - Add container image scanning (Trivy/Snyk) to CI pipeline
 
-### Phase 20: Frontend Error Handling
+### Phase 21: Frontend Error Handling
 
 - Admin product management: confirmation dialog before delete, error toast on failure
 - Admin user management: error feedback for role assignment/removal
 - Admin changelog list: error handling for delete operations
 - Use existing `lfx-toast` and `lfx-confirm-dialog` components
+
+---
+
+## Recent Changes
+
+### Phase 18: Zod Schemas, Validation & Swagger UI (Latest)
+
+- **Zod 4 replaces all interfaces** — `packages/shared/src/interfaces/` and `validators/` fully removed
+- **Schemas at `packages/shared/src/schemas/`** — one file per domain, `.openapi('Name')` on each
+- **Types via `z.infer<>`** — Angular uses `import type` (tree-shaken), Express uses full schemas
+- **Validation middleware** (`validate.middleware.ts`) — parses body/query/params, returns 400 with structured errors
+- **Swagger UI at `/docs`** — OpenAPI 3.1 spec auto-generated from Zod schemas, auth status banner
+- **`zod` + `@asteasolutions/zod-to-openapi`** as peerDependencies of shared package
 
 ---
 
@@ -196,3 +227,4 @@ The following fixes from the PR #1 code review have been applied directly:
 ## See Also
 
 - `PLAN.md` — Full implementation plan with all phases documented
+- `/docs` — Interactive Swagger UI (when server is running)
