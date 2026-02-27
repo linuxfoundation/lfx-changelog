@@ -48,10 +48,11 @@ apps/lfx-changelog/
 │   │   ├── seed.setup.ts         # Docker, migrations, database seeding
 │   │   └── auth.setup.ts         # Auth0 login for all test roles
 │   ├── helpers/                  # Shared utilities
+│   │   ├── api.helper.ts         # API request context factories (auth + unauth)
 │   │   ├── auth.helper.ts        # Auth0 login/logout functions
-│   │   ├── db.helper.ts          # Prisma client, seed, clean functions
+│   │   ├── db.helper.ts          # Prisma client, seed, clean, activate/deactivate
 │   │   ├── docker.helper.ts      # Docker Compose container management
-│   │   └── test-data.ts          # Static test fixtures (users, products, changelogs)
+│   │   └── test-data.ts          # Zod-typed test fixtures (users, products, changelogs)
 │   ├── pages/                    # Page Object Model classes
 │   │   ├── admin-dashboard.page.ts
 │   │   ├── admin-layout.page.ts
@@ -70,17 +71,23 @@ apps/lfx-changelog/
 │       │   ├── changelog-feed.spec.ts
 │       │   ├── product-changelog.spec.ts
 │       │   └── theme-toggle.spec.ts
-│       └── admin/                # Admin tests (auth required)
-│           ├── admin-dashboard.spec.ts
-│           ├── auth-flow.spec.ts
-│           ├── changelog-editor.spec.ts
-│           ├── changelog-list.spec.ts
-│           ├── product-detail.spec.ts
-│           ├── product-management.spec.ts
-│           ├── rbac-editor.spec.ts
-│           ├── rbac-no-role.spec.ts
-│           ├── rbac-product-admin.spec.ts
-│           └── user-management.spec.ts
+│       ├── admin/                # Admin tests (auth required)
+│       │   ├── admin-dashboard.spec.ts
+│       │   ├── auth-flow.spec.ts
+│       │   ├── changelog-editor.spec.ts
+│       │   ├── changelog-list.spec.ts
+│       │   ├── product-detail.spec.ts
+│       │   ├── product-management.spec.ts
+│       │   ├── rbac-editor.spec.ts
+│       │   ├── rbac-no-role.spec.ts
+│       │   ├── rbac-product-admin.spec.ts
+│       │   └── user-management.spec.ts
+│       └── api/                  # API tests (no browser, direct HTTP)
+│           ├── changelogs.api.spec.ts
+│           ├── products.api.spec.ts
+│           ├── public-changelogs.api.spec.ts
+│           ├── public-products.api.spec.ts
+│           └── users.api.spec.ts
 ```
 
 ## Architecture
@@ -91,17 +98,19 @@ Playwright is configured with a multi-project pipeline where each project depend
 
 ```text
 setup ──► auth ──► admin-super-admin
-  │                admin-rbac
+  │         │      admin-rbac
+  │         └────► api
   └────► public
 ```
 
-| Project             | What it does                                  | Depends on |
-| ------------------- | --------------------------------------------- | ---------- |
-| `setup`             | Starts test DB, runs migrations, seeds data   | —          |
-| `auth`              | Logs in 4 test roles via Auth0, saves cookies | `setup`    |
-| `public`            | Tests public pages (no auth required)         | `setup`    |
-| `admin-super-admin` | Tests admin pages as super admin              | `auth`     |
-| `admin-rbac`        | Tests RBAC (product admin, editor, no-role)   | `auth`     |
+| Project             | What it does                                       | Depends on      |
+| ------------------- | -------------------------------------------------- | --------------- |
+| `setup`             | Starts test DB, runs migrations, seeds data        | —               |
+| `auth`              | Logs in 4 test roles via Auth0, saves cookies      | `setup`         |
+| `public`            | Tests public pages (no auth required)              | `setup`         |
+| `admin-super-admin` | Tests admin pages as super admin                   | `auth`          |
+| `admin-rbac`        | Tests RBAC (product admin, editor, no-role)        | `auth`          |
+| `api`               | Tests API endpoints directly via HTTP (no browser) | `setup`, `auth` |
 
 ### Test Database
 
@@ -220,14 +229,77 @@ test.describe('RBAC — Product Admin', () => {
 });
 ```
 
+### API Tests
+
+API tests verify REST endpoints directly via HTTP without a browser. They use Playwright's `APIRequestContext` instead of page objects.
+
+**File naming:** API specs use the `*.api.spec.ts` suffix and live in `e2e/specs/api/`.
+
+**Helpers:** `api.helper.ts` provides two factory functions:
+
+- `createAuthenticatedContext(role, baseURL)` — reads the saved Auth0 storage state for the given role and attaches session cookies to every request
+- `createUnauthenticatedContext(baseURL)` — creates a bare context with no credentials
+
+```typescript
+import { expect, test } from '@playwright/test';
+import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
+
+import type { APIRequestContext } from '@playwright/test';
+
+test.describe('GET /public/api/products', () => {
+  let api: APIRequestContext;
+
+  test.beforeAll(async ({}, testInfo) => {
+    const baseURL = testInfo.project.use.baseURL as string;
+    api = await createUnauthenticatedContext(baseURL);
+  });
+
+  test.afterAll(async () => {
+    await api.dispose();
+  });
+
+  test('should return 200 with product list', async () => {
+    const res = await api.get('/public/api/products');
+    expect(res.status()).toBe(200);
+
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+  });
+});
+```
+
+**What to test in each spec:**
+
+| Spec file                       | Coverage                                                             |
+| ------------------------------- | -------------------------------------------------------------------- |
+| `public-products.api.spec.ts`   | Public product list, field shape, internal field exclusion, isActive |
+| `public-changelogs.api.spec.ts` | Pagination, published-only filter, productId filter, isActive        |
+| `products.api.spec.ts`          | Auth 401, RBAC 403, CRUD lifecycle, validation 400                   |
+| `changelogs.api.spec.ts`        | Auth 401, RBAC 403, CRUD + publish lifecycle, validation 400         |
+| `users.api.spec.ts`             | Auth 401, /me endpoint, list users RBAC, role assign lifecycle       |
+
+**Database helpers for API tests:**
+
+`db.helper.ts` exports `deactivateProduct(slug)` and `activateProduct(slug)` for tests that verify inactive product filtering. Always wrap these in `try/finally` to restore state:
+
+```typescript
+await deactivateProduct('e2e-easycla');
+try {
+  // assertions against the API
+} finally {
+  await activateProduct('e2e-easycla');
+}
+```
+
 ### Test Data
 
-All test fixtures are defined in `e2e/helpers/test-data.ts`:
+All test fixtures are defined in `e2e/helpers/test-data.ts` and typed using Zod schemas derived from `@lfx-changelog/shared`. This ensures test data stays in sync with the actual API contracts — if a schema field changes in the shared package, TypeScript will flag the test data at compile time.
 
-- **`TEST_USERS`** — 4 users (super_admin, product_admin, editor, user) with Auth0 IDs from environment variables
-- **`TEST_PRODUCTS`** — 3 products (EasyCLA, Security, Insights) with Font Awesome icons
-- **`TEST_ROLE_ASSIGNMENTS`** — Maps product_admin to EasyCLA, editor to EasyCLA
-- **`TEST_CHANGELOGS`** — 4 entries (3 published, 1 draft) across different products
+- **`TEST_USERS`** — 4 users (super_admin, product_admin, editor, user) with Auth0 IDs from environment variables. Typed via `UserSchema.pick().extend()`.
+- **`TEST_PRODUCTS`** — 3 products (EasyCLA, Security, Insights) with Font Awesome icons. Typed as `CreateProductRequest[]`.
+- **`TEST_ROLE_ASSIGNMENTS`** — Maps product_admin to EasyCLA, editor to EasyCLA. Typed via `UserRoleAssignmentSchema.pick().extend()`.
+- **`TEST_CHANGELOGS`** — 4 entries (3 published, 1 draft) across different products. Typed via `CreateChangelogEntryRequestSchema.pick().extend()`.
 
 ## Configuration
 
@@ -383,6 +455,40 @@ test.describe('RBAC — My Role', () => {
   });
 });
 ```
+
+### 5. Adding an API test
+
+API tests don't need page objects or `data-testid` attributes. Place the spec in `e2e/specs/api/` with the `*.api.spec.ts` suffix:
+
+```typescript
+// e2e/specs/api/my-endpoint.api.spec.ts
+import { expect, test } from '@playwright/test';
+import { createAuthenticatedContext } from '../../helpers/api.helper.js';
+
+import type { APIRequestContext } from '@playwright/test';
+
+test.describe('POST /api/my-endpoint', () => {
+  let api: APIRequestContext;
+
+  test.beforeAll(async ({}, testInfo) => {
+    const baseURL = testInfo.project.use.baseURL as string;
+    api = await createAuthenticatedContext('super_admin', baseURL);
+  });
+
+  test.afterAll(async () => {
+    await api.dispose();
+  });
+
+  test('should create a resource', async () => {
+    const res = await api.post('/api/my-endpoint', {
+      data: { name: 'Test' },
+    });
+    expect(res.status()).toBe(201);
+  });
+});
+```
+
+The `api` project in `playwright.config.ts` matches `api/*.api.spec.ts` automatically — no config changes needed.
 
 ## Troubleshooting
 
