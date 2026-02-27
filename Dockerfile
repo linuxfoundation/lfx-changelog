@@ -12,7 +12,6 @@ WORKDIR /app
 
 # Copy package files ONLY for dependency installation (better layer caching)
 COPY package.json yarn.lock turbo.json .yarnrc.yml ./
-COPY .yarn .yarn
 COPY apps/lfx-changelog/package.json ./apps/lfx-changelog/
 COPY packages/shared/package.json ./packages/shared/
 
