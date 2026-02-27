@@ -74,7 +74,7 @@ jobs:
         with:
           audience: sts.amazonaws.com
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
-          aws-region: us-east-2
+          aws-region: us-west-2
 
       - name: Read secrets from AWS Secrets Manager into environment variables
         uses: aws-actions/aws-secretsmanager-get-secrets@v2
