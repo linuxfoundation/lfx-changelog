@@ -8,26 +8,12 @@ import { NotFoundError } from '../errors';
 import { getPrismaClient } from './prisma.service';
 
 export class UserService {
-  public async findOrCreateByAuth0(auth0Profile: { sub: string; email: string; name: string; picture?: string }): Promise<PrismaUser> {
+  public async findByAuth0Profile(auth0Profile: { sub: string }): Promise<PrismaUser | null> {
     const prisma = getPrismaClient();
-    let user = await prisma.user.findUnique({
+    return prisma.user.findUnique({
       where: { auth0Id: auth0Profile.sub },
       include: { userRoleAssignments: true },
     });
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          auth0Id: auth0Profile.sub,
-          email: auth0Profile.email,
-          name: auth0Profile.name,
-          avatarUrl: auth0Profile.picture || null,
-        },
-        include: { userRoleAssignments: true },
-      });
-    }
-
-    return user;
   }
 
   public async findById(id: string): Promise<PrismaUser> {

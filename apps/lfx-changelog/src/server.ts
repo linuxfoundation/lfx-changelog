@@ -93,19 +93,21 @@ app.get('/health', (_req: Request, res: Response) => {
 app.use('/docs', setupSwagger());
 
 // 8. Rate limiter — 100 req/min per IP on API routes
-const apiRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 100,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-    return ipKeyGenerator(ip);
-  },
-  message: { error: 'Too many requests, please try again later.' },
-});
-app.use('/public/api', apiRateLimiter);
-app.use('/api', apiRateLimiter);
+if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
+  const apiRateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 100,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+      return ipKeyGenerator(ip);
+    },
+    message: { error: 'Too many requests, please try again later.' },
+  });
+  app.use('/public/api', apiRateLimiter);
+  app.use('/api', apiRateLimiter);
+}
 
 // 9. Pino HTTP logger (custom serializers to avoid leaking sessions/headers)
 app.use(

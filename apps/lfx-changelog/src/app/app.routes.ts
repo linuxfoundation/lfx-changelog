@@ -4,6 +4,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from '@shared/guards/auth.guard';
+import { superAdminGuard } from '@shared/guards/super-admin.guard';
 
 export const routes: Routes = [
   {
@@ -55,6 +56,7 @@ export const routes: Routes = [
       },
       {
         path: 'users',
+        canActivate: [superAdminGuard],
         loadComponent: () => import('@modules/admin/user-management/user-management.component').then((m) => m.UserManagementComponent),
       },
     ],

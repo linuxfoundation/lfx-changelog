@@ -35,6 +35,10 @@
     "start:server": {
       "dependsOn": ["build"],
       "cache": false
+    },
+    "e2e": {
+      "cache": false,
+      "dependsOn": ["^build"]
     }
   }
 }

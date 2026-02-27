@@ -12,7 +12,11 @@
     "start:server": "node dist/lfx-changelog/server/server.mjs",
     "serve:ssr:lfx-changelog": "node dist/lfx-changelog/server/server.mjs",
     "format": "prettier --write \"**/*.{ts,js,html,css,md,json}\"",
-    "format:check": "prettier --check \"**/*.{ts,js,html,css,md,json}\""
+    "format:check": "prettier --check \"**/*.{ts,js,html,css,md,json}\"",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report"
   },
   "private": true,
   "dependencies": {
@@ -57,6 +61,7 @@
     "@angular/cli": "^20.3.14",
     "@angular/compiler-cli": "^20.3.0",
     "@eslint/js": "^9.28.0",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.19",

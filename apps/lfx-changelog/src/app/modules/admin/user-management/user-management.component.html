@@ -3,13 +3,13 @@
 
 <div class="space-y-6">
   <div class="animate-slide-in-left">
-    <h1 class="font-display text-text-primary text-2xl font-bold">Users</h1>
+    <h1 data-testid="user-management-heading" class="font-display text-text-primary text-2xl font-bold">Users</h1>
     <p class="text-text-secondary mt-1">Manage user access and role assignments.</p>
   </div>
 
   <lfx-card padding="none" class="animate-rise-in block [animation-delay:150ms]">
     <div class="overflow-x-auto">
-      <table class="w-full">
+      <table data-testid="user-management-table" class="w-full">
         <thead>
           <tr class="border-border bg-surface-alt border-b text-left">
             <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">User</th>
@@ -20,7 +20,10 @@
         </thead>
         <tbody class="divide-border divide-y">
           @for (user of users(); track user.id; let i = $index) {
-            <tr class="table-row-enter hover:bg-surface-alt transition-colors" [style.animation-delay.ms]="250 + i * 50">
+            <tr
+              [attr.data-testid]="'user-management-row-' + user.id"
+              class="table-row-enter hover:bg-surface-alt transition-colors"
+              [style.animation-delay.ms]="250 + i * 50">
               <td class="px-5 py-3">
                 <div class="flex items-center gap-3">
                   <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
@@ -41,7 +44,9 @@
                 </div>
               </td>
               <td class="px-5 py-3">
-                <lfx-button variant="ghost" size="sm" (clicked)="openRoleDialog(user)">Manage Roles</lfx-button>
+                <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
+                  >Manage Roles</lfx-button
+                >
               </td>
             </tr>
           }
@@ -51,24 +56,24 @@
   </lfx-card>
 </div>
 
-<lfx-dialog [(visible)]="dialogVisible" title="Manage Roles">
+<lfx-dialog data-testid="user-role-dialog" [(visible)]="dialogVisible" title="Manage Roles">
   @if (selectedUser(); as user) {
-    <div class="space-y-5">
+    <div data-testid="user-role-dialog-content" class="space-y-5">
       <div>
-        <h3 class="text-text-primary text-sm font-medium">{{ user.name }}</h3>
-        <p class="text-text-muted text-xs">{{ user.email }}</p>
+        <h3 data-testid="user-role-dialog-name" class="text-text-primary text-sm font-medium">{{ user.name }}</h3>
+        <p data-testid="user-role-dialog-email" class="text-text-muted text-xs">{{ user.email }}</p>
       </div>
 
       <div>
         <h4 class="text-text-muted mb-2 text-xs font-medium tracking-wider uppercase">Current Roles</h4>
-        <div class="space-y-2">
+        <div data-testid="user-role-dialog-current-roles" class="space-y-2">
           @for (ra of user.roles; track ra.id) {
-            <div class="border-border bg-surface-alt flex items-center justify-between rounded-lg border px-3 py-2">
+            <div data-testid="user-role-dialog-role-item" class="border-border bg-surface-alt flex items-center justify-between rounded-lg border px-3 py-2">
               <div class="flex items-center gap-2">
                 <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
                 <span class="text-text-secondary text-sm">{{ ra.productId | productName: products() }}</span>
               </div>
-              <lfx-button variant="ghost" size="sm" (clicked)="removeRole(user, ra.id)">Remove</lfx-button>
+              <lfx-button data-testid="user-role-dialog-remove-btn" variant="ghost" size="sm" (clicked)="removeRole(user, ra.id)">Remove</lfx-button>
             </div>
           }
         </div>
@@ -77,11 +82,21 @@
       <div class="border-border border-t pt-4">
         <h4 class="text-text-muted mb-3 text-xs font-medium tracking-wider uppercase">Assign New Role</h4>
         <div class="grid grid-cols-2 gap-3">
-          <lfx-select label="Role" [options]="roleOptions" [formControl]="newRoleControl" placeholder="Select role..." />
-          <lfx-select label="Product" [options]="productOptions()" [formControl]="newProductControl" placeholder="Select product..." />
+          <lfx-select
+            data-testid="user-role-dialog-role-select"
+            label="Role"
+            [options]="roleOptions"
+            [formControl]="newRoleControl"
+            placeholder="Select role..." />
+          <lfx-select
+            data-testid="user-role-dialog-product-select"
+            label="Product"
+            [options]="productOptions()"
+            [formControl]="newProductControl"
+            placeholder="Select product..." />
         </div>
         <div class="mt-3 flex justify-end">
-          <lfx-button variant="primary" size="sm" (clicked)="assignRole()">Assign Role</lfx-button>
+          <lfx-button data-testid="user-role-dialog-assign-btn" variant="primary" size="sm" (clicked)="assignRole()">Assign Role</lfx-button>
         </div>
       </div>
     </div>

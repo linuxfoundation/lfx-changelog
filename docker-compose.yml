@@ -14,5 +14,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: lfx-changelog-test-db
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: changelog
+      POSTGRES_PASSWORD: changelog_dev
+      POSTGRES_DB: lfx_changelog_test
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+
 volumes:
   postgres_data:
+  postgres_test_data:

@@ -5,7 +5,7 @@ import { Component, inject, signal, type Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
 import { TimelineItemComponent } from '@components/timeline-item/timeline-item.component';
-import type { ChangelogEntryWithRelations, Product } from '@lfx-changelog/shared';
+import type { ChangelogEntryWithRelations, PublicProduct } from '@lfx-changelog/shared';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
 import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
@@ -21,7 +21,7 @@ export class ChangelogFeedComponent {
   private readonly productService = inject(ProductService);
   private readonly changelogService = inject(ChangelogService);
 
-  protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
+  protected readonly products = toSignal(this.productService.getPublic(), { initialValue: [] as PublicProduct[] });
   protected readonly selectedProduct = signal<string>('');
   protected readonly loading = signal(true);
 

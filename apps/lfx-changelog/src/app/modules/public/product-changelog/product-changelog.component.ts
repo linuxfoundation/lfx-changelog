@@ -6,7 +6,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
 import { TimelineItemComponent } from '@components/timeline-item/timeline-item.component';
-import type { ChangelogEntryWithRelations, Product } from '@lfx-changelog/shared';
+import type { ChangelogEntryWithRelations, PublicProduct } from '@lfx-changelog/shared';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
 import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
@@ -23,7 +23,7 @@ export class ProductChangelogComponent {
   private readonly productService = inject(ProductService);
   private readonly changelogService = inject(ChangelogService);
 
-  protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
+  protected readonly products = toSignal(this.productService.getPublic(), { initialValue: [] as PublicProduct[] });
   protected readonly loading = signal(true);
 
   protected readonly slug = computed(() => this.route.snapshot.paramMap.get('slug') ?? '');

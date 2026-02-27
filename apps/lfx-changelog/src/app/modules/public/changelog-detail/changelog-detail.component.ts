@@ -9,7 +9,7 @@ import { MarkdownRendererComponent } from '@components/markdown-renderer/markdow
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { format } from 'date-fns';
-import { tap } from 'rxjs';
+import { catchError, of, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-changelog-detail',
@@ -24,7 +24,13 @@ export class ChangelogDetailComponent {
   protected readonly loading = signal(true);
 
   protected readonly entry = toSignal(
-    this.changelogService.getPublishedById(this.route.snapshot.paramMap.get('id') ?? '').pipe(tap(() => this.loading.set(false)))
+    this.changelogService.getPublishedById(this.route.snapshot.paramMap.get('id') ?? '').pipe(
+      tap(() => this.loading.set(false)),
+      catchError(() => {
+        this.loading.set(false);
+        return of(undefined);
+      })
+    )
   );
 
   protected readonly product = computed(() => this.entry()?.product);

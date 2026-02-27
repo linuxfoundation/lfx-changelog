@@ -22,18 +22,13 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   }
 
   userService
-    .findOrCreateByAuth0({
-      sub: auth0User['sub'],
-      email: auth0User['email'],
-      name: auth0User['name'] || auth0User['email'],
-      picture: auth0User['picture'],
-    })
+    .findByAuth0Profile({ sub: auth0User['sub'] })
     .then((dbUser) => {
       (req as any).dbUser = dbUser;
       next();
     })
     .catch((error: unknown) => {
-      serverLogger.error({ err: error }, 'Failed to sync user from Auth0');
+      serverLogger.error({ err: error }, 'Failed to look up user from Auth0');
       next(error);
     });
 }
