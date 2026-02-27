@@ -132,3 +132,7 @@ jobs:
       - name: Run Playwright tests
         working-directory: apps/lfx-changelog
         run: yarn playwright test
+
+      - name: Stop test database
+        if: ${{ !cancelled() }}
+        run: docker compose down postgres-test
