@@ -17,15 +17,15 @@ const adminRoles = new Set(['super_admin', 'product_admin', 'editor']);
 
 for (const user of TEST_USERS) {
   test(`authenticate ${user.role}`, async ({ page, context }) => {
-    const email = process.env[`E2E_${user.role.toUpperCase()}_EMAIL`] || user.email;
+    const username = process.env[`E2E_${user.role.toUpperCase()}_USERNAME`] || user.email;
     const password = process.env[`E2E_${user.role.toUpperCase()}_PASSWORD`] || '';
 
     if (adminRoles.has(user.role)) {
-      await loginViaAuth0(page, email, password, '/admin');
+      await loginViaAuth0(page, username, password, '/admin');
       await expectAdminDashboard(page);
     } else {
       // No-role users get redirected to public feed by the auth guard
-      await loginViaAuth0(page, email, password, '/');
+      await loginViaAuth0(page, username, password, '/');
     }
 
     await context.storageState({ path: roleToFile[user.role]! });

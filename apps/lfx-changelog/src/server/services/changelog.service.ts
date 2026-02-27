@@ -32,7 +32,7 @@ export class ChangelogService {
     const prisma = getPrismaClient();
     const { page, limit, skip } = this.sanitizePagination(params);
 
-    const where: Prisma.ChangelogEntryWhereInput = { status: 'published' };
+    const where: Prisma.ChangelogEntryWhereInput = { status: 'published', product: { isActive: true } };
     if (params.productId) where.productId = params.productId;
 
     const [data, total] = await Promise.all([
@@ -101,7 +101,7 @@ export class ChangelogService {
   public async findPublishedById(id: string): Promise<PublicChangelogEntry> {
     const prisma = getPrismaClient();
     const entry = await prisma.changelogEntry.findFirst({
-      where: { id, status: 'published' },
+      where: { id, status: 'published', product: { isActive: true } },
       select: {
         id: true,
         title: true,

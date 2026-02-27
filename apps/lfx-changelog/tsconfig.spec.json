@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./out-tsc/spec",
+    "rootDir": "../..",
+    "types": ["node"],
+    "module": "ESNext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["e2e/**/*.ts", "playwright.config.ts", "../../packages/shared/src/**/*.ts"]
+}
