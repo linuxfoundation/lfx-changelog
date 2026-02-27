@@ -4,9 +4,9 @@
 
 set -e
 
-# Construct DATABASE_URL from individual DB vars if not already set
-if [ -z "$DATABASE_URL" ] && [ -n "$DB_HOST" ]; then
-  export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?schema=public"
-fi
+# The Node.js runtime constructs the database connection string via
+# buildConnectionString(), which properly encodes special characters
+# in credentials using encodeURIComponent. Do NOT assemble DATABASE_URL
+# in shell — it cannot safely handle passwords with $, [, #, {, %, etc.
 
 exec "$@"

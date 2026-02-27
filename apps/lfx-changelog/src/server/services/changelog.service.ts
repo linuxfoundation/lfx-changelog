@@ -7,6 +7,7 @@ import { type ChangelogStatus, Prisma, type ChangelogEntry as PrismaChangelogEnt
 import type { PublicChangelogEntry } from '@lfx-changelog/shared';
 
 import { NotFoundError } from '../errors';
+import { serverLogger } from '../server-logger';
 
 import { getPrismaClient } from './prisma.service';
 
@@ -35,34 +36,39 @@ export class ChangelogService {
     const where: Prisma.ChangelogEntryWhereInput = { status: 'published', product: { isActive: true } };
     if (params.productId) where.productId = params.productId;
 
-    const [data, total] = await Promise.all([
-      prisma.changelogEntry.findMany({
-        where,
-        orderBy: { publishedAt: 'desc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          version: true,
-          status: true,
-          publishedAt: true,
-          createdAt: true,
-          product: { select: { id: true, name: true, slug: true, description: true, faIcon: true } },
-          author: { select: { id: true, name: true, avatarUrl: true } },
-        },
-      }),
-      prisma.changelogEntry.count({ where }),
-    ]);
+    try {
+      const [data, total] = await Promise.all([
+        prisma.changelogEntry.findMany({
+          where,
+          orderBy: { publishedAt: 'desc' },
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            version: true,
+            status: true,
+            publishedAt: true,
+            createdAt: true,
+            product: { select: { id: true, name: true, slug: true, description: true, faIcon: true } },
+            author: { select: { id: true, name: true, avatarUrl: true } },
+          },
+        }),
+        prisma.changelogEntry.count({ where }),
+      ]);
 
-    return {
-      data: data as PublicChangelogEntry[],
-      total,
-      page,
-      pageSize: limit,
-      totalPages: Math.ceil(total / limit),
-    };
+      return {
+        data: data as PublicChangelogEntry[],
+        total,
+        page,
+        pageSize: limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      serverLogger.error({ err: error, operation: 'findPublished', service: 'changelog' }, 'Prisma query failed');
+      throw error;
+    }
   }
 
   public async findAll(params: ChangelogQueryParams): Promise<PaginatedResult<PrismaChangelogEntry>> {

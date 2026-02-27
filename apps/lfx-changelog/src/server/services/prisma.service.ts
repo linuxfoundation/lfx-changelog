@@ -13,6 +13,7 @@ export function getPrismaClient(): PrismaClient {
   if (!prisma) {
     const connectionString = buildConnectionString();
     const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+    serverLogger.info({ isLocal, connectionStringLength: connectionString.length }, 'Prisma adapter connecting');
     const adapter = new PrismaPg({
       connectionString,
       ssl: isLocal ? undefined : { rejectUnauthorized: false },
