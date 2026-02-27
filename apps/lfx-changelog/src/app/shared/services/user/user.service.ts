@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import type { ApiResponse, User, UserRoleAssignment } from '@lfx-changelog/shared';
 import { map, take, type Observable } from 'rxjs';
@@ -25,7 +25,7 @@ export class UserService {
     );
   }
 
-  public removeRole(userId: string, roleId: string): Observable<void> {
-    return this.http.delete<void>(`/api/users/${userId}/roles/${roleId}`).pipe(take(1));
+  public removeRole(userId: string, roleId: string): Observable<HttpResponse<unknown>> {
+    return this.http.delete(`/api/users/${userId}/roles/${roleId}`, { observe: 'response' }).pipe(take(1));
   }
 }

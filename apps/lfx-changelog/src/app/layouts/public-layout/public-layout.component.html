@@ -3,14 +3,15 @@
 
 <div class="bg-canvas min-h-screen">
   <!-- Header -->
-  <header class="border-border bg-surface/80 sticky top-0 z-30 border-b backdrop-blur-lg">
+  <header data-testid="public-layout-header" class="border-border bg-surface/80 sticky top-0 z-30 border-b backdrop-blur-lg">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
       <div class="flex items-center gap-8">
-        <a routerLink="/" class="flex items-center gap-2.5">
+        <a data-testid="public-layout-logo" routerLink="/" class="flex items-center gap-2.5">
           <img src="/logo_lfx.svg" alt="LFX" class="h-7" />
         </a>
         <nav class="hidden items-center gap-1 sm:flex">
           <a
+            data-testid="public-layout-all-updates-link"
             routerLink="/"
             routerLinkActive="bg-surface-alt text-text-primary"
             [routerLinkActiveOptions]="{ exact: true }"
@@ -22,6 +23,7 @@
       <div class="flex items-center gap-2">
         <!-- Theme toggle -->
         <button
+          data-testid="public-layout-theme-toggle"
           (click)="toggleTheme()"
           class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg p-2 transition-colors"
           [attr.aria-label]="isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
@@ -33,18 +35,21 @@
         </button>
         @if (authenticated() && dbUser()) {
           <a
+            data-testid="public-layout-admin-btn"
             routerLink="/admin"
             class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
             Admin
           </a>
         } @else if (authenticated()) {
           <a
+            data-testid="public-layout-logout-btn"
             href="/logout"
             class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
             Logout
           </a>
         } @else {
           <a
+            data-testid="public-layout-login-btn"
             href="/login"
             class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
             Login

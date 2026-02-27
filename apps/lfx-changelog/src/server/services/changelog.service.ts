@@ -57,7 +57,7 @@ export class ChangelogService {
     ]);
 
     return {
-      data,
+      data: data as PublicChangelogEntry[],
       total,
       page,
       pageSize: limit,
@@ -117,7 +117,7 @@ export class ChangelogService {
     if (!entry) {
       throw new NotFoundError(`Published changelog entry not found: ${id}`, { operation: 'findPublishedById', service: 'changelog' });
     }
-    return entry;
+    return entry as PublicChangelogEntry;
   }
 
   public async create(data: {

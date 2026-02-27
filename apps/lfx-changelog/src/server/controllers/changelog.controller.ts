@@ -87,7 +87,7 @@ export class ChangelogController {
   public async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await this.changelogService.delete(req.params['id'] as string);
-      res.json({ success: true, data: null, message: 'Changelog entry deleted' });
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

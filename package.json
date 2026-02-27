@@ -20,6 +20,7 @@
     "db:studio": "yarn workspace lfx-changelog run prisma studio",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
+    "e2e": "turbo run e2e",
     "prepare": "husky"
   },
   "devDependencies": {

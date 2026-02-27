@@ -3,6 +3,7 @@
 
 import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { UserRole } from '@lfx-changelog/shared';
 import { AuthService } from '@services/auth/auth.service';
 import { ThemeService } from '@services/theme/theme.service';
 
@@ -22,6 +23,7 @@ export class AdminLayoutComponent {
   private readonly userMenuPopupRef = viewChild<ElementRef>('userMenuArea');
 
   protected readonly authUser = this.authService.user;
+  protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
   protected readonly userInitial = computed(() => this.authUser()?.name?.charAt(0)?.toUpperCase() || '?');
   protected readonly sidebarCollapsed = signal(false);
   protected readonly userMenuOpen = signal(false);

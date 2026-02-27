@@ -4,10 +4,10 @@
 <div class="space-y-6">
   <div class="animate-slide-in-left flex items-center justify-between">
     <div>
-      <h1 class="font-display text-text-primary text-2xl font-bold">Changelogs</h1>
+      <h1 data-testid="changelog-list-heading" class="font-display text-text-primary text-2xl font-bold">Changelogs</h1>
       <p class="text-text-secondary mt-1">Manage changelog entries across all products.</p>
     </div>
-    <a routerLink="/admin/changelogs/new">
+    <a data-testid="changelog-list-new-entry-btn" routerLink="/admin/changelogs/new">
       <lfx-button variant="primary">
         <i class="fa-solid fa-plus text-xs"></i>
         New Entry
@@ -17,14 +17,24 @@
 
   <!-- Filters -->
   <div class="animate-fade-in-up relative z-10 grid grid-cols-1 gap-4 [animation-delay:100ms] sm:grid-cols-2">
-    <lfx-select label="Product" [options]="productOptions()" [formControl]="productFilterControl" placeholder="All Products" />
-    <lfx-select label="Status" [options]="statusOptions" [formControl]="statusFilterControl" placeholder="All Statuses" />
+    <lfx-select
+      data-testid="changelog-list-product-filter"
+      label="Product"
+      [options]="productOptions()"
+      [formControl]="productFilterControl"
+      placeholder="All Products" />
+    <lfx-select
+      data-testid="changelog-list-status-filter"
+      label="Status"
+      [options]="statusOptions"
+      [formControl]="statusFilterControl"
+      placeholder="All Statuses" />
   </div>
 
   <!-- Table -->
   <lfx-card padding="none" class="animate-rise-in block [animation-delay:200ms]">
     <div class="overflow-x-auto">
-      <table class="w-full">
+      <table data-testid="changelog-list-table" class="w-full">
         <thead>
           <tr class="border-border bg-surface-alt border-b text-left">
             <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Title</th>
@@ -36,7 +46,10 @@
         </thead>
         <tbody class="divide-border divide-y">
           @for (entry of filteredEntries(); track entry.id; let i = $index) {
-            <tr class="table-row-enter hover:bg-surface-alt transition-colors" [style.animation-delay.ms]="300 + i * 50">
+            <tr
+              [attr.data-testid]="'changelog-list-row-' + entry.id"
+              class="table-row-enter hover:bg-surface-alt transition-colors"
+              [style.animation-delay.ms]="300 + i * 50">
               <td class="px-5 py-3">
                 <a [routerLink]="['/admin/changelogs', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
                   {{ entry.title }}
@@ -54,7 +67,7 @@
       </table>
 
       @if (filteredEntries().length === 0) {
-        <div class="text-text-muted py-12 text-center text-sm">No entries match the selected filters.</div>
+        <div data-testid="changelog-list-empty" class="text-text-muted py-12 text-center text-sm">No entries match the selected filters.</div>
       }
     </div>
   </lfx-card>

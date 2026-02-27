@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { UserRole } from '../enums/user-role.enum.js';
-import type { User } from '../interfaces/user.interface.js';
+import type { User } from '../schemas/user.schema.js';
 
 export const MOCK_USERS: User[] = [
   {

@@ -4,7 +4,7 @@
 <div class="space-y-6">
   <div class="animate-slide-in-left flex items-center justify-between">
     <div>
-      <h1 class="font-display text-text-primary text-2xl font-bold">
+      <h1 data-testid="changelog-editor-heading" class="font-display text-text-primary text-2xl font-bold">
         {{ isEditing() ? 'Edit Entry' : 'New Entry' }}
       </h1>
       <p class="text-text-secondary mt-1">{{ isEditing() ? 'Update this changelog entry.' : 'Create a new changelog entry with markdown preview.' }}</p>
@@ -21,11 +21,16 @@
     <!-- Form -->
     <div class="animate-slide-in-left relative z-10 space-y-5 [animation-delay:150ms]">
       <!-- Product selector (first — determines AI generation availability) -->
-      <lfx-select label="Product" [options]="productOptions()" [formControl]="productIdControl" placeholder="Select product..." />
+      <lfx-select
+        data-testid="changelog-editor-product-select"
+        label="Product"
+        [options]="productOptions()"
+        [formControl]="productIdControl"
+        placeholder="Select product..." />
 
       <!-- AI Generation Panel (visible when product has GitHub repos) -->
       @if (hasGitHubRepos() && !isEditing()) {
-        <div class="border-brand-200 bg-brand-50/50 dark:border-brand-800 dark:bg-brand-950/30 rounded-lg border p-4">
+        <div data-testid="changelog-editor-ai-panel" class="border-brand-200 bg-brand-50/50 dark:border-brand-800 dark:bg-brand-950/30 rounded-lg border p-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <i class="fa-duotone fa-wand-magic-sparkles text-brand-500 text-sm"></i>
@@ -102,17 +107,22 @@
         </div>
       }
 
-      <lfx-input label="Title" placeholder="Enter entry title..." [formControl]="titleControl" />
+      <lfx-input data-testid="changelog-editor-title-input" label="Title" placeholder="Enter entry title..." [formControl]="titleControl" />
 
-      <lfx-input label="Version" placeholder="e.g., 2.5.0" [formControl]="versionControl" />
+      <lfx-input data-testid="changelog-editor-version-input" label="Version" placeholder="e.g., 2.5.0" [formControl]="versionControl" />
 
-      <lfx-markdown-editor label="Description" [rows]="12" placeholder="Write markdown content..." [formControl]="descriptionControl" />
+      <lfx-markdown-editor
+        data-testid="changelog-editor-description"
+        label="Description"
+        [rows]="12"
+        placeholder="Write markdown content..."
+        [formControl]="descriptionControl" />
 
       <div class="flex gap-3 pt-2">
-        <lfx-button variant="primary" [loading]="saving()" (clicked)="save()">
+        <lfx-button data-testid="changelog-editor-save-btn" variant="primary" [loading]="saving()" (clicked)="save()">
           {{ isEditing() ? 'Update Entry' : 'Save as Draft' }}
         </lfx-button>
-        <a routerLink="/admin/changelogs">
+        <a data-testid="changelog-editor-cancel-btn" routerLink="/admin/changelogs">
           <lfx-button variant="secondary">Cancel</lfx-button>
         </a>
       </div>
@@ -121,7 +131,7 @@
     <!-- Live preview -->
     <div class="animate-slide-in-right hidden [animation-delay:200ms] lg:block">
       <div class="sticky top-6 space-y-6">
-        <h2 class="text-text-muted text-sm font-medium">
+        <h2 data-testid="changelog-editor-preview" class="text-text-muted text-sm font-medium">
           <i class="fa-duotone fa-eye mr-1"></i>
           Live Preview
         </h2>

@@ -25,6 +25,7 @@ import webhookRouter from './server/routes/webhook.route';
 import { reqSerializer, resSerializer, serverLogger } from './server/server-logger';
 import { disconnectPrisma } from './server/services/prisma.service';
 import { UserService } from './server/services/user.service';
+import { setupSwagger } from './server/swagger';
 
 import type { AuthContext } from '@lfx-changelog/shared';
 import type { Server } from 'node:http';
@@ -88,20 +89,25 @@ app.get('/health', (_req: Request, res: Response) => {
   res.send('OK');
 });
 
+// 7b. API documentation
+app.use('/docs', setupSwagger());
+
 // 8. Rate limiter — 100 req/min per IP on API routes
-const apiRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 100,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-    return ipKeyGenerator(ip);
-  },
-  message: { error: 'Too many requests, please try again later.' },
-});
-app.use('/public/api', apiRateLimiter);
-app.use('/api', apiRateLimiter);
+if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
+  const apiRateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 100,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+      return ipKeyGenerator(ip);
+    },
+    message: { error: 'Too many requests, please try again later.' },
+  });
+  app.use('/public/api', apiRateLimiter);
+  app.use('/api', apiRateLimiter);
+}
 
 // 9. Pino HTTP logger (custom serializers to avoid leaking sessions/headers)
 app.use(
@@ -168,7 +174,7 @@ app.use('/api', noCacheMiddleware);
 // 14. Auth middleware for protected routes
 app.use('/api', authMiddleware);
 
-// 16. Protected API routes
+// 15. Protected API routes
 app.use('/api/ai', aiRouter);
 app.use('/api/products', productRouter);
 app.use('/api/changelogs', changelogRouter);

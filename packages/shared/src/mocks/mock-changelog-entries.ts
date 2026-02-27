@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { ChangelogStatus } from '../enums/changelog-status.enum.js';
-import type { ChangelogEntry } from '../interfaces/changelog-entry.interface.js';
+import type { ChangelogEntry } from '../schemas/changelog-entry.schema.js';
 
 export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {

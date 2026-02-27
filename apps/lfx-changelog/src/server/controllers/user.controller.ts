@@ -51,7 +51,7 @@ export class UserController {
   public async removeRole(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await this.userService.removeRole(req.params['roleId'] as string);
-      res.json({ success: true, data: null, message: 'Role removed' });
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

@@ -31,12 +31,12 @@ export class ProductService {
     return product;
   }
 
-  public async create(data: { name: string; slug: string; description?: string; iconUrl?: string }): Promise<PrismaProduct> {
+  public async create(data: { name: string; slug: string; description?: string; iconUrl?: string; faIcon?: string }): Promise<PrismaProduct> {
     const prisma = getPrismaClient();
     return prisma.product.create({ data });
   }
 
-  public async update(id: string, data: { name?: string; slug?: string; description?: string; iconUrl?: string }): Promise<PrismaProduct> {
+  public async update(id: string, data: { name?: string; slug?: string; description?: string; iconUrl?: string; faIcon?: string }): Promise<PrismaProduct> {
     const prisma = getPrismaClient();
     await this.findById(id);
     return prisma.product.update({ where: { id }, data });

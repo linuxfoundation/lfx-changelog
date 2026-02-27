@@ -37,8 +37,8 @@ export class ProductController {
 
   public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, slug, description, iconUrl } = req.body;
-      const product = await this.productService.create({ name, slug, description, iconUrl });
+      const { name, slug, description, iconUrl, faIcon } = req.body;
+      const product = await this.productService.create({ name, slug, description, iconUrl, faIcon });
       res.status(201).json({ success: true, data: product });
     } catch (error) {
       next(error);
@@ -57,7 +57,7 @@ export class ProductController {
   public async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await this.productService.delete(req.params['id'] as string);
-      res.json({ success: true, data: null, message: 'Product deleted' });
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

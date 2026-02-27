@@ -12,7 +12,11 @@
     "start:server": "node dist/lfx-changelog/server/server.mjs",
     "serve:ssr:lfx-changelog": "node dist/lfx-changelog/server/server.mjs",
     "format": "prettier --write \"**/*.{ts,js,html,css,md,json}\"",
-    "format:check": "prettier --check \"**/*.{ts,js,html,css,md,json}\""
+    "format:check": "prettier --check \"**/*.{ts,js,html,css,md,json}\"",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report"
   },
   "private": true,
   "dependencies": {
@@ -25,6 +29,7 @@
     "@angular/platform-server": "^20.3.0",
     "@angular/router": "^20.3.0",
     "@angular/ssr": "^20.3.14",
+    "@asteasolutions/zod-to-openapi": "^8.4.1",
     "@lfx-changelog/shared": "workspace:*",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.0",
@@ -43,7 +48,9 @@
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "swagger-ui-express": "^5.0.1",
+    "tslib": "^2.3.0",
+    "zod": "^4.3.6"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -54,6 +61,7 @@
     "@angular/cli": "^20.3.14",
     "@angular/compiler-cli": "^20.3.0",
     "@eslint/js": "^9.28.0",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.19",
@@ -61,6 +69,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.0",
     "@types/pg": "^8.16.0",
+    "@types/swagger-ui-express": "^4.1.8",
     "angular-eslint": "^19.8.0",
     "eslint": "^9.28.0",
     "pino-pretty": "^13.0.0",

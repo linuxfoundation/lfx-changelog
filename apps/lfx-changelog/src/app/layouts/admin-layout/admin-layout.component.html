@@ -4,6 +4,7 @@
 <div class="bg-canvas flex min-h-screen">
   <!-- Sidebar -->
   <aside
+    data-testid="admin-layout-sidebar"
     class="border-border bg-surface sticky top-0 flex h-screen shrink-0 flex-col border-r transition-all duration-200"
     [class]="sidebarCollapsed() ? 'w-16' : 'w-64'">
     <div class="border-border flex h-16 items-center justify-between border-b px-4">
@@ -12,7 +13,10 @@
           <img src="/logo_lfx.svg" alt="LFX" class="h-6" />
         </a>
       }
-      <button (click)="toggleSidebar()" class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg p-1.5 transition-colors">
+      <button
+        data-testid="admin-sidebar-toggle"
+        (click)="toggleSidebar()"
+        class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg p-1.5 transition-colors">
         @if (sidebarCollapsed()) {
           <i class="fa-solid fa-chevrons-right text-sm"></i>
         } @else {
@@ -23,6 +27,7 @@
 
     <nav class="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
       <a
+        data-testid="admin-sidebar-dashboard"
         routerLink="/admin"
         routerLinkActive="bg-brand-50 text-brand-700 font-medium"
         [routerLinkActiveOptions]="{ exact: true }"
@@ -34,6 +39,7 @@
       </a>
 
       <a
+        data-testid="admin-sidebar-changelogs"
         routerLink="/admin/changelogs"
         routerLinkActive="bg-brand-50 text-brand-700 font-medium"
         class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors">
@@ -44,6 +50,7 @@
       </a>
 
       <a
+        data-testid="admin-sidebar-products"
         routerLink="/admin/products"
         routerLinkActive="bg-brand-50 text-brand-700 font-medium"
         class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors">
@@ -53,13 +60,29 @@
         }
       </a>
 
+      @if (isSuperAdmin()) {
+        <a
+          data-testid="admin-sidebar-users"
+          routerLink="/admin/users"
+          routerLinkActive="bg-brand-50 text-brand-700 font-medium"
+          class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors">
+          <i class="fa-duotone fa-users w-5 shrink-0 text-center"></i>
+          @if (!sidebarCollapsed()) {
+            <span>Users</span>
+          }
+        </a>
+      }
+
+      <div class="border-border my-1 border-t"></div>
+
       <a
-        routerLink="/admin/users"
-        routerLinkActive="bg-brand-50 text-brand-700 font-medium"
+        href="/docs"
+        target="_blank"
         class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors">
-        <i class="fa-duotone fa-users w-5 shrink-0 text-center"></i>
+        <i class="fa-duotone fa-book w-5 shrink-0 text-center"></i>
         @if (!sidebarCollapsed()) {
-          <span>Users</span>
+          <span>API Docs</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-text-muted ml-auto text-xs"></i>
         }
       </a>
     </nav>
@@ -69,6 +92,7 @@
       <div class="border-border border-t p-3">
         <button
           #userMenuButton
+          data-testid="admin-user-menu-btn"
           (click)="toggleUserMenu()"
           class="hover:bg-surface-alt flex w-full items-center justify-center gap-3 rounded-lg text-left transition-colors"
           [class.p-2]="!sidebarCollapsed()">
@@ -81,8 +105,8 @@
           }
           @if (!sidebarCollapsed()) {
             <div class="min-w-0 flex-1">
-              <div class="text-text-primary truncate text-sm font-medium">{{ user.name }}</div>
-              <div class="text-text-muted truncate text-xs">{{ user.email }}</div>
+              <div data-testid="admin-user-name" class="text-text-primary truncate text-sm font-medium">{{ user.name }}</div>
+              <div data-testid="admin-user-email" class="text-text-muted truncate text-xs">{{ user.email }}</div>
             </div>
             <i class="fa-solid fa-chevron-up text-text-muted text-xs transition-transform duration-200" [class.rotate-180]="!userMenuOpen()"></i>
           }
@@ -98,6 +122,7 @@
       <div class="flex items-center gap-2">
         <!-- Theme toggle -->
         <button
+          data-testid="admin-theme-toggle"
           (click)="toggleTheme()"
           class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg p-2 transition-colors"
           [attr.aria-label]="isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
@@ -120,18 +145,23 @@
 @if (userMenuOpen() && authUser()) {
   <div
     #userMenuArea
+    data-testid="admin-user-menu-popup"
     class="border-border bg-surface fixed z-50 mb-5 rounded-lg border shadow-lg"
     [class]="sidebarCollapsed() ? 'w-48' : 'w-[232px]'"
     [style.bottom.px]="userMenuBottom()"
     [style.left.px]="userMenuLeft()">
     <div class="p-1.5">
       <a
+        data-testid="admin-view-public-link"
         routerLink="/"
         class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors">
         <i class="fa-duotone fa-arrow-up-right-from-square w-4 text-center text-xs"></i>
         <span>View Public Site</span>
       </a>
-      <a href="/logout" class="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50">
+      <a
+        data-testid="admin-logout-link"
+        href="/logout"
+        class="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50">
         <i class="fa-duotone fa-arrow-right-from-bracket w-4 text-center text-xs"></i>
         <span>Logout</span>
       </a>
