@@ -33,11 +33,12 @@ test.describe('RBAC — Editor', () => {
     await expect(heading).not.toBeVisible();
   });
 
-  test('should see sidebar navigation', async ({ page }) => {
+  test('should see sidebar navigation without Users link', async ({ page }) => {
     const layout = new AdminLayoutPage(page);
     await page.goto('/admin');
     await expect(layout.sidebar).toBeVisible();
     await expect(layout.navDashboard).toBeVisible();
     await expect(layout.navChangelogs).toBeVisible();
+    await expect(layout.navUsers).not.toBeVisible();
   });
 });

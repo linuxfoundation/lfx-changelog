@@ -65,4 +65,8 @@ test.describe('Admin Dashboard', () => {
     await layoutPage.navigateToDashboard();
     await page.waitForURL(/\/admin$/);
   });
+
+  test('should show Users link in sidebar for super admin', async () => {
+    await expect(layoutPage.navUsers).toBeVisible();
+  });
 });
