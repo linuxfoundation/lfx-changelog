@@ -7,11 +7,11 @@ image:
   repository: ghcr.io/linuxfoundation/lfx-changelog
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: ''
 
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: ''
+fullnameOverride: ''
 
 # External Secrets Operator configuration
 # Manages secrets from external providers (AWS Secrets Manager, HashiCorp Vault, etc.)
@@ -45,27 +45,27 @@ externalSecrets:
     annotations: {}
     # Name of the SecretStore resource
     # Defaults to the fullname template if not specified
-    name: ""
+    name: ''
 
   # Name of the ExternalSecret resource
   # Defaults to the fullname template if not specified
-  name: ""
+  name: ''
 
   # How frequently the secret should be refreshed from the external provider
   # Format: 10s, 1m, 1h, etc. (default: 10m)
-  refreshInterval: "10m"
+  refreshInterval: '10m'
 
   # Target Kubernetes Secret configuration
   target:
     # Name of the Secret that will be created/managed (required)
-    name: ""
+    name: ''
 
     # Creation policy for the target Secret
     # - Owner: ExternalSecret owns the Secret, deletion of ExternalSecret deletes the Secret
     # - Orphan: Secret won't be deleted when ExternalSecret is deleted
     # - Merge: Merge with existing Secret if it exists
     # - None: Don't create or update the Secret
-    creationPolicy: "Owner"
+    creationPolicy: 'Owner'
 
     # Template for generating the Secret content
     template: {}
@@ -93,7 +93,7 @@ serviceAccount:
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
-  name: ""
+  name: ''
 
 podAnnotations: {}
 podLabels: {}
@@ -106,7 +106,7 @@ service:
 
 ingress:
   enabled: false
-  className: ""
+  className: ''
   annotations: {}
   hosts:
     - host: chart-example.local
@@ -132,35 +132,35 @@ environment:
 
   # Application configuration
   PORT:
-    value: "4000"
+    value: '4000'
 
   # Base URL
   BASE_URL:
-    value: "https://changelog.dev.lfx.dev"
+    value:
 
   # Auth0 configuration (non-secret values)
   AUTH0_ISSUER_BASE_URL:
-    value: "https://linuxfoundation-dev.auth0.com"
+    value:
 
   AUTH0_AUDIENCE:
-    value: "https://api-gw.dev.platform.linuxfoundation.org/"
+    value:
 
   # Database configuration (non-secret values)
   DB_HOST:
-    value: "dev-changelog-database.cs2y6rcs4jow.us-east-2.rds.amazonaws.com"
+    value:
 
   DB_PORT:
-    value: "5432"
+    value: '5432'
 
   DB_NAME:
-    value: "lfx_changelog"
+    value: 'lfx_changelog'
 
   DB_USER:
-    value: "changelog"
+    value:
 
   # AI configuration
   AI_API_URL:
-    value: "https://litellm.dev.v2.cluster.linuxfound.info/chat/completions"
+    value:
 
   # Secret environment variables (values injected by ExternalSecrets)
   AUTH0_SECRET:
