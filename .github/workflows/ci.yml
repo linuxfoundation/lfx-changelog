@@ -27,6 +27,25 @@ jobs:
       - name: Check license headers
         run: ./check-headers.sh
 
+  secret-scan:
+    runs-on: ubuntu-latest
+    name: Secret Scan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Trufflehog
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Scan with Trufflehog
+        env:
+          SINCE_COMMIT: ${{ github.event.before || github.event.pull_request.base.sha }}
+        run: |
+          trufflehog git file://. --fail --no-update --only-verified --since-commit="$SINCE_COMMIT"
+          
   e2e:
     runs-on: ubuntu-latest
     name: E2E Tests
@@ -55,14 +74,14 @@ jobs:
         with:
           audience: sts.amazonaws.com
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
-          aws-region: us-east-2
+          aws-region: us-west-2
 
       - name: Read secrets from AWS Secrets Manager into environment variables
         uses: aws-actions/aws-secretsmanager-get-secrets@v2
         with:
           secret-ids: |
             AUTH0, /cloudops/managed-secrets/auth0/LFX_Changelog
-            AUTH0_COOKIE_SECRET, /cloudops/managed-secrets/cloud/pcc-changelog/custom_cookie_sig_secret
+            AUTH0_COOKIE_SECRET, /cloudops/managed-secrets/cloud/changelog/auth0_secret
 
       - name: Set up non-sensitive environment variables
         run: |
@@ -97,13 +116,21 @@ jobs:
             exit 1
           fi
 
+          # Parse Auth0 session secret from JSON secret
+          AUTH0_SECRET_VALUE=$(echo "$AUTH0_COOKIE_SECRET" | jq -r '.auth_secret')
+
+          if [ -z "$AUTH0_SECRET_VALUE" ] || [ "$AUTH0_SECRET_VALUE" = "null" ]; then
+            echo "::error::Failed to parse auth_secret from AWS secret"
+            exit 1
+          fi
+
           echo "::add-mask::$AUTH0_CLIENT_ID"
           echo "::add-mask::$AUTH0_CLIENT_SECRET"
-          echo "::add-mask::$AUTH0_COOKIE_SECRET"
+          echo "::add-mask::$AUTH0_SECRET_VALUE"
 
           echo "AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID" >> "$GITHUB_ENV"
           echo "AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET" >> "$GITHUB_ENV"
-          echo "AUTH0_SECRET=$AUTH0_COOKIE_SECRET" >> "$GITHUB_ENV"
+          echo "AUTH0_SECRET=$AUTH0_SECRET_VALUE" >> "$GITHUB_ENV"
 
           # Set test user credentials
           echo "::add-mask::$E2E_SUPER_ADMIN_USERNAME"

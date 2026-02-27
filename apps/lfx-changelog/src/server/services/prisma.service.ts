@@ -10,7 +10,12 @@ let prisma: PrismaClient;
 
 export function getPrismaClient(): PrismaClient {
   if (!prisma) {
-    const adapter = new PrismaPg({ connectionString: process.env['DATABASE_URL'] });
+    const connectionString = process.env['DATABASE_URL'];
+    const isLocal = connectionString?.includes('localhost') || connectionString?.includes('127.0.0.1');
+    const adapter = new PrismaPg({
+      connectionString,
+      ssl: isLocal ? undefined : { rejectUnauthorized: false },
+    });
     prisma = new PrismaClient({ adapter });
     serverLogger.info('Prisma client initialized');
   }

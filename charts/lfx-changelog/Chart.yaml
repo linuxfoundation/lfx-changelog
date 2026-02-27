@@ -1,0 +1,16 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+---
+apiVersion: v2
+name: lfx-changelog
+description: A Helm chart for LFX Changelog - Angular SSR application with Express backend
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - lfx
+  - changelog
+  - ui
+home: https://github.com/linuxfoundation/lfx-changelog
+sources:
+  - https://github.com/linuxfoundation/lfx-changelog

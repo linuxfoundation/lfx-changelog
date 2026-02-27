@@ -142,7 +142,7 @@ app.use(
       audience: process.env['AUTH0_AUDIENCE'] || 'https://example.com',
       scope: 'openid email profile api offline_access',
     },
-    clientSecret: process.env['AUTH0_CLIENT_SECRET'] || 'bar',
+    clientSecret: process.env['AUTH0_CLIENT_SECRET'] || 'CHANGE_ME_AUTH0_CLIENT_SECRET',
     routes: {
       login: false,
     },
