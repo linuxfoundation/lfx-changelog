@@ -25,6 +25,7 @@ import webhookRouter from './server/routes/webhook.route';
 import { reqSerializer, resSerializer, serverLogger } from './server/server-logger';
 import { disconnectPrisma } from './server/services/prisma.service';
 import { UserService } from './server/services/user.service';
+import { setupSwagger } from './server/swagger';
 
 import type { AuthContext } from '@lfx-changelog/shared';
 import type { Server } from 'node:http';
@@ -87,6 +88,9 @@ app.use(
 app.get('/health', (_req: Request, res: Response) => {
   res.send('OK');
 });
+
+// 7b. API documentation
+app.use('/docs', setupSwagger());
 
 // 8. Rate limiter — 100 req/min per IP on API routes
 const apiRateLimiter = rateLimit({
@@ -168,7 +172,7 @@ app.use('/api', noCacheMiddleware);
 // 14. Auth middleware for protected routes
 app.use('/api', authMiddleware);
 
-// 16. Protected API routes
+// 15. Protected API routes
 app.use('/api/ai', aiRouter);
 app.use('/api/products', productRouter);
 app.use('/api/changelogs', changelogRouter);

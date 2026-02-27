@@ -62,6 +62,19 @@
           <span>Users</span>
         }
       </a>
+
+      <div class="border-border my-1 border-t"></div>
+
+      <a
+        href="/docs"
+        target="_blank"
+        class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors">
+        <i class="fa-duotone fa-book w-5 shrink-0 text-center"></i>
+        @if (!sidebarCollapsed()) {
+          <span>API Docs</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-text-muted ml-auto text-xs"></i>
+        }
+      </a>
     </nav>
 
     <!-- User menu (sidebar footer) -->

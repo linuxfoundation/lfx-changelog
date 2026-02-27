@@ -10,16 +10,18 @@ A new standalone monorepo at `~/Sites/lfx-changelog` housing an Angular 20 SSR a
 
 ## Tech Stack Summary
 
-| Layer    | Technology                                                           |
-| -------- | -------------------------------------------------------------------- |
-| Monorepo | Turborepo + Yarn 4 workspaces                                        |
-| Frontend | Angular 20 SSR (standalone components, signals, zoneless)            |
-| Backend  | Express (via Angular SSR server)                                     |
-| Database | PostgreSQL 16 (Docker Compose locally)                               |
-| ORM      | Prisma                                                               |
-| Auth     | Auth0 (`express-openid-connect`)                                     |
-| UI       | Custom components with TailwindCSS 4 — CSS-first config (no PrimeNG) |
-| API      | REST                                                                 |
+| Layer      | Technology                                                           |
+| ---------- | -------------------------------------------------------------------- |
+| Monorepo   | Turborepo + Yarn 4 workspaces                                        |
+| Frontend   | Angular 20 SSR (standalone components, signals, zoneless)            |
+| Backend    | Express 5 (via Angular SSR server)                                   |
+| Database   | PostgreSQL 16 (Docker Compose locally)                               |
+| ORM        | Prisma 7                                                             |
+| Auth       | Auth0 (`express-openid-connect`)                                     |
+| UI         | Custom components with TailwindCSS 4 — CSS-first config (no PrimeNG) |
+| API        | REST                                                                 |
+| Validation | Zod 4 (schemas, types, runtime validation)                           |
+| API Docs   | OpenAPI 3.1 (`zod-to-openapi`) + Swagger UI at `/docs`               |
 
 ---
 
@@ -217,15 +219,28 @@ Inline the LFX prettier config values (documented above).
 
 ```text
 packages/shared/src/
-├── interfaces/    → product, changelog-entry, user, auth, api-response
+├── schemas/       → Zod 4 schemas + z.infer<> types (single source of truth)
+│   ├── setup.ts           → extendZodWithOpenApi(z) — import first
+│   ├── product.schema.ts  → ProductSchema
+│   ├── changelog-entry.schema.ts → ChangelogEntry + WithRelations schemas
+│   ├── user.schema.ts     → UserSchema, UserRoleAssignmentSchema
+│   ├── dto.schema.ts      → Create/Update request body schemas
+│   ├── auth.schema.ts     → AuthUser, AuthContext
+│   ├── api-response.schema.ts → Generic response factories + interfaces
+│   ├── public.schema.ts   → Stripped-down public endpoint schemas
+│   ├── github.schema.ts   → GitHub integration schemas
+│   ├── ai.schema.ts       → AI generation + SSE streaming schemas
+│   └── index.ts           → barrel (imports setup.ts first, re-exports all)
 ├── enums/         → ChangelogCategory, ChangelogStatus, UserRole
 ├── constants/     → product slugs, category labels/colors, role hierarchy
 ├── utils/         → shared helpers
-├── validators/    → input validation
+├── mocks/         → mock-products, mock-changelog-entries, mock-users
 └── index.ts       → re-exports
 ```
 
-### Key Types
+> **Note:** `interfaces/` and `validators/` directories were removed in Phase 18. All types are now derived from Zod schemas via `z.infer<>`.
+
+### Key Types (Zod Schemas)
 
 **Enums:**
 
@@ -233,14 +248,17 @@ packages/shared/src/
 - `ChangelogStatus`: `draft`, `published`
 - `UserRole`: `super_admin`, `product_admin`, `editor`
 
-**Interfaces:**
+**Schemas (types via `z.infer<>`):**
 
-- `Product` — id, name, slug, description, iconUrl, timestamps
-- `ChangelogEntry` — id, productId, title, description (markdown), version, category, status, publishedAt, createdBy, timestamps
-- `User` — id, auth0Id, email, name, avatarUrl, timestamps, roles
-- `UserRoleAssignment` — id, userId, productId (nullable for super_admin), role
-- `AuthContext` — authenticated, user, dbUser
-- Request/Response DTOs: `CreateChangelogEntryRequest`, `UpdateChangelogEntryRequest`, `AssignRoleRequest`
+- `ProductSchema` — id, name, slug, description, iconUrl, faIcon, githubInstallationId, timestamps
+- `ChangelogEntrySchema` — id, productId, title, description (markdown), version, status, publishedAt, createdBy, timestamps
+- `ChangelogEntryWithRelationsSchema` — extends base with optional product + author relations
+- `UserSchema` — id, auth0Id, email, name, avatarUrl, timestamps, roles array
+- `UserRoleAssignmentSchema` — id, userId, productId (nullable for super_admin), role
+- `AuthContextSchema` — authenticated, user, dbUser
+- `PublicProductSchema` / `PublicChangelogEntrySchema` — stripped-down for public endpoints
+- Request DTOs: `CreateChangelogEntryRequestSchema`, `UpdateChangelogEntryRequestSchema`, `CreateProductRequestSchema`, `UpdateProductRequestSchema`, `AssignRoleRequestSchema`
+- Generic responses: `ApiResponse<T>` / `PaginatedResponse<T>` (plain interfaces with factory functions)
 
 **Constants:**
 
@@ -250,7 +268,7 @@ packages/shared/src/
 
 ### Build
 
-Pure TypeScript via `tsc`, exports via package.json `exports` field.
+Pure TypeScript via `tsc`, exports via package.json `exports` field. `zod` and `@asteasolutions/zod-to-openapi` are **peerDependencies** — the consuming app provides them.
 
 ---
 
@@ -528,37 +546,69 @@ Replace mock data with actual API calls in Angular services. Each service uses s
 
 ---
 
-## Phase 18: API Hardening — Input Validation & Security (PLANNED)
+## Phase 18: Zod Schemas, Validation & Swagger UI ✅
 
-### 18.1 Request Body Validation (zod)
+### 18.1 Replace Interfaces with Zod Schemas ✅
 
-Add a schema validation layer using `zod` for all mutating API endpoints:
+Migrated the entire shared package from TypeScript interfaces to **Zod 4 schemas** as the single source of truth for types, runtime validation, and OpenAPI documentation:
 
-- `POST /api/changelogs` — validate title (required, max length), description (required), productId (UUID), version (semver pattern), status (enum)
-- `PUT /api/changelogs/:id` — same fields, all optional
-- `POST /api/products` — validate name (required, unique), slug (required, kebab-case), description (optional, max length)
-- `PUT /api/products/:id` — same fields, all optional
-- `POST /api/users/:id/roles` — validate role (enum), productId (UUID or null)
+- Removed `packages/shared/src/interfaces/` and `packages/shared/src/validators/` entirely
+- Created `packages/shared/src/schemas/` with one file per domain: `product`, `changelog-entry`, `user`, `auth`, `dto`, `api-response`, `public`, `github`, `ai`
+- Every schema calls `.openapi('Name')` for OpenAPI 3.1 registration
+- Types derived via `z.infer<>` — Angular frontend uses `import type` (tree-shaken)
+- Generic response types (`ApiResponse<T>`, `PaginatedResponse<T>`) remain as plain interfaces with `createApiResponseSchema()` / `createPaginatedResponseSchema()` factory functions
+- `zod` and `@asteasolutions/zod-to-openapi` added as **peerDependencies** of shared package
 
-Create reusable `validateBody(schema)` Express middleware that returns 400 with structured errors on validation failure.
+### 18.2 Request Validation Middleware ✅
 
-### 18.2 UUID Format Validation on Route Params
+Created `validate(schemas)` Express middleware at `server/middleware/validate.middleware.ts`:
+
+- Accepts `{ body?, query?, params? }` — each an optional `ZodSchema`
+- Parses and replaces `req.body`, `req.query`, `req.params` with validated/coerced results
+- Returns 400 with structured `{ error, code: "VALIDATION_ERROR", details: [{ field, message }] }` on `ZodError`
+- Applied to all mutating endpoints:
+  - `POST/PUT /api/products` → `CreateProductRequestSchema` / `UpdateProductRequestSchema`
+  - `POST /api/products/:id/repositories` → `LinkRepositoryRequestSchema`
+  - `POST/PUT /api/changelogs` → `CreateChangelogEntryRequestSchema` / `UpdateChangelogEntryRequestSchema`
+  - `POST /api/users/:id/roles` → `AssignRoleRequestSchema`
+
+### 18.3 Swagger UI & OpenAPI Spec ✅
+
+Added interactive API documentation served at `/docs`:
+
+- `server/swagger/index.ts` — generates OpenAPI 3.1.0 spec from registered Zod schemas via `OpenApiGeneratorV31`
+- `server/swagger/paths/` — one registry per route group (`public-products`, `public-changelogs`, `products`, `changelogs`, `users`)
+- Cookie-based auth scheme (`appSession`)
+- Custom auth banner: shows green "Authenticated as [name]" or orange "Not authenticated" with login link
+- Admin sidebar includes "API Docs" navigation link
+
+### 18.4 Remaining API Hardening Items (PLANNED)
+
+- **UUID format validation** on `:id` / `:roleId` route params — return 400 for malformed IDs
+- **AI `additionalContext` length limit** — cap at ~5,000 chars to prevent abuse
+- **Configurable AI cluster URL** — move hardcoded URL to `AI_CLUSTER_URL` env var
+
+---
+
+## Phase 19: API Hardening — Remaining Items (PLANNED)
+
+### 19.1 UUID Format Validation on Route Params
 
 Add `validateUUID` middleware for all `:id` and `:roleId` route parameters. Return 400 with a clear error message if the param is not a valid UUID v4 — prevents unnecessary database queries with malformed IDs.
 
-### 18.3 Limit AI `additionalContext` Length
+### 19.2 Limit AI `additionalContext` Length
 
-Add a character limit (e.g., 5,000 chars) to the `additionalContext` field in the AI changelog generation endpoint to prevent abuse and excessive token consumption.
+Add a character limit (~5,000 chars) to the `additionalContext` field in the AI changelog generation endpoint to prevent abuse and excessive token consumption.
 
-### 18.4 Configurable AI Cluster URL
+### 19.3 Configurable AI Cluster URL
 
 Move the hardcoded AI cluster URL to an environment variable (`AI_CLUSTER_URL`). Add validation on startup to warn if not configured.
 
 ---
 
-## Phase 19: Infrastructure Hardening (PLANNED)
+## Phase 20: Infrastructure Hardening (PLANNED)
 
-### 19.1 Add HEALTHCHECK to Dockerfile
+### 20.1 Add HEALTHCHECK to Dockerfile
 
 Add a Docker `HEALTHCHECK` instruction that hits the `/health` endpoint:
 
@@ -567,7 +617,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget -qO- http://localhost:4000/health || exit 1
 ```
 
-### 19.2 Differentiate Rate Limits by Endpoint Type
+### 20.2 Differentiate Rate Limits by Endpoint Type
 
 Replace the current blanket rate limiter with tiered limits:
 
@@ -578,15 +628,15 @@ Replace the current blanket rate limiter with tiered limits:
 | AI generation       | 5 req/min   |
 | Login/auth          | 10 req/min  |
 
-### 19.3 Add Container Image Scanning to CI
+### 20.3 Add Container Image Scanning to CI
 
 Add a Trivy or Snyk container image scanning step to the GitHub Actions CI workflow. Fail the build on critical/high vulnerabilities.
 
 ---
 
-## Phase 20: Frontend Error Handling (PLANNED)
+## Phase 21: Frontend Error Handling (PLANNED)
 
-### 20.1 Admin Component Error States
+### 21.1 Admin Component Error States
 
 Add proper error handling UI for destructive operations in admin components:
 
@@ -634,9 +684,10 @@ Use the existing `lfx-toast` and `lfx-confirm-dialog` components for consistent 
 | 15   | Phase 15 — GitHub integration                                               | Phase 11     | ✅ DONE |
 | 16   | Phase 16 — AI changelog generation                                          | Phase 15     | ✅ DONE |
 | 17   | Phase 17 — Open source & quality                                            | Phase 14     | ✅ DONE |
-| 18   | Phase 18 — API hardening (validation, security)                             | Phase 17     | PLANNED |
-| 19   | Phase 19 — Infrastructure hardening                                         | Phase 17     | PLANNED |
-| 20   | Phase 20 — Frontend error handling                                          | Phase 17     | PLANNED |
+| 18   | Phase 18 — Zod schemas, validation & Swagger UI                             | Phase 17     | ✅ DONE |
+| 19   | Phase 19 — API hardening (UUID params, AI limits)                           | Phase 18     | PLANNED |
+| 20   | Phase 20 — Infrastructure hardening                                         | Phase 17     | PLANNED |
+| 21   | Phase 21 — Frontend error handling                                          | Phase 17     | PLANNED |
 
 ---
 

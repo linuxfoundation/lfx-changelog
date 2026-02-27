@@ -11,11 +11,11 @@
       "require": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./interfaces": {
-      "types": "./dist/interfaces/index.d.ts",
-      "import": "./dist/interfaces/index.js",
-      "require": "./dist/interfaces/index.js",
-      "default": "./dist/interfaces/index.js"
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js",
+      "require": "./dist/schemas/index.js",
+      "default": "./dist/schemas/index.js"
     },
     "./enums": {
       "types": "./dist/enums/index.d.ts",
@@ -28,12 +28,6 @@
       "import": "./dist/constants/index.js",
       "require": "./dist/constants/index.js",
       "default": "./dist/constants/index.js"
-    },
-    "./validators": {
-      "types": "./dist/validators/index.d.ts",
-      "import": "./dist/validators/index.js",
-      "require": "./dist/validators/index.js",
-      "default": "./dist/validators/index.js"
     },
     "./mocks": {
       "types": "./dist/mocks/index.d.ts",
@@ -54,5 +48,9 @@
   },
   "devDependencies": {
     "typescript": "5.8.3"
+  },
+  "peerDependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.0.0",
+    "zod": "^4.0.0"
   }
 }

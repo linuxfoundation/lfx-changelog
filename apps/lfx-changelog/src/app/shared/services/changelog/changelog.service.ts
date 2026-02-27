@@ -1,8 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { map, take } from 'rxjs';
+
 import type {
   ApiResponse,
   ChangelogEntryWithRelations,
@@ -10,7 +12,7 @@ import type {
   PaginatedResponse,
   UpdateChangelogEntryRequest,
 } from '@lfx-changelog/shared';
-import { map, take, type Observable } from 'rxjs';
+import type { Observable } from 'rxjs';
 
 export interface ChangelogQueryParams {
   productId?: string;
@@ -60,8 +62,8 @@ export class ChangelogService {
     );
   }
 
-  public remove(id: string): Observable<void> {
-    return this.http.delete<void>(`/api/changelogs/${id}`).pipe(take(1));
+  public remove(id: string): Observable<HttpResponse<unknown>> {
+    return this.http.delete(`/api/changelogs/${id}`, { observe: 'response' }).pipe(take(1));
   }
 
   private buildParams(params?: ChangelogQueryParams): HttpParams {
