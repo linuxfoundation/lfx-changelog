@@ -5,24 +5,7 @@
 // npm install --save-dev prisma dotenv
 import 'dotenv/config';
 import { defineConfig } from 'prisma/config';
-
-function buildDatasourceUrl(): string {
-  if (process.env['DATABASE_URL']) {
-    return process.env['DATABASE_URL'];
-  }
-
-  const host = process.env['DB_HOST'];
-  const port = process.env['DB_PORT'] || '5432';
-  const name = process.env['DB_NAME'];
-  const user = process.env['DB_USER'];
-  const password = process.env['DB_PASSWORD'];
-
-  if (!host || !name || !user || !password) {
-    throw new Error('DATABASE_URL or DB_HOST/DB_NAME/DB_USER/DB_PASSWORD environment variables are required');
-  }
-
-  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${name}`;
-}
+import { buildConnectionString } from './src/server/helpers/build-connection-string';
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
@@ -31,6 +14,6 @@ export default defineConfig({
     seed: 'yarn tsx prisma/seed.ts',
   },
   datasource: {
-    url: buildDatasourceUrl(),
+    url: buildConnectionString(),
   },
 });

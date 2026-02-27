@@ -4,24 +4,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import 'dotenv/config';
-
-function buildConnectionString(): string {
-  if (process.env['DATABASE_URL']) {
-    return process.env['DATABASE_URL'];
-  }
-
-  const host = process.env['DB_HOST'];
-  const port = process.env['DB_PORT'] || '5432';
-  const name = process.env['DB_NAME'];
-  const user = process.env['DB_USER'];
-  const password = process.env['DB_PASSWORD'];
-
-  if (!host || !name || !user || !password) {
-    throw new Error('DATABASE_URL or DB_HOST/DB_NAME/DB_USER/DB_PASSWORD environment variables are required');
-  }
-
-  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${name}`;
-}
+import { buildConnectionString } from '../src/server/helpers/build-connection-string';
 
 const adapter = new PrismaPg({ connectionString: buildConnectionString() });
 const prisma = new PrismaClient({ adapter });
