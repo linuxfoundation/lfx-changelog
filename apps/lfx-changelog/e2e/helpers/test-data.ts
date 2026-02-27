@@ -4,25 +4,25 @@
 export const TEST_USERS = [
   {
     auth0Id: process.env['E2E_SUPER_ADMIN_AUTH0_ID'] || 'auth0|REPLACE_ME',
-    email: 'adesilva+changelog_super_admin@linuxfoundation.org',
+    email: process.env['E2E_SUPER_ADMIN_EMAIL'] || 'test+changelog_super_admin@example.com',
     name: 'E2E Super Admin',
     role: 'super_admin' as const,
   },
   {
     auth0Id: process.env['E2E_PRODUCT_ADMIN_AUTH0_ID'] || 'auth0|REPLACE_ME',
-    email: 'adesilva+changelog_product_admin@linuxfoundation.org',
+    email: process.env['E2E_PRODUCT_ADMIN_EMAIL'] || 'test+changelog_product_admin@example.com',
     name: 'E2E Product Admin',
     role: 'product_admin' as const,
   },
   {
     auth0Id: process.env['E2E_EDITOR_AUTH0_ID'] || 'auth0|REPLACE_ME',
-    email: 'adesilva+changelog_editor@linuxfoundation.org',
+    email: process.env['E2E_EDITOR_EMAIL'] || 'test+changelog_editor@example.com',
     name: 'E2E Editor',
     role: 'editor' as const,
   },
   {
     auth0Id: process.env['E2E_USER_AUTH0_ID'] || 'auth0|REPLACE_ME',
-    email: 'adesilva+changelog_user@linuxfoundation.org',
+    email: process.env['E2E_USER_EMAIL'] || 'test+changelog_user@example.com',
     name: 'E2E User',
     role: 'user' as const,
   },

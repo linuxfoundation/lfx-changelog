@@ -28,22 +28,9 @@ test.describe('RBAC — Product Admin', () => {
   });
 
   test('should not have access to user management', async ({ page }) => {
-    const layout = new AdminLayoutPage(page);
-    await page.goto('/admin');
-    // Product admins should not see the Users nav link, or if they navigate directly,
-    // should be restricted
     await page.goto('/admin/users');
-    await page.waitForTimeout(2_000);
-    // The page should either redirect or show an error
     const heading = page.locator('[data-testid="user-management-heading"]');
-    const isVisible = await heading.isVisible().catch(() => false);
-    // If the app properly restricts access, the heading should not be visible
-    // or the user should be redirected
-    if (isVisible) {
-      // App may show the page but with restricted data — this is acceptable
-      // depending on RBAC implementation
-      expect(isVisible).toBe(true);
-    }
+    await expect(heading).not.toBeVisible();
   });
 
   test('should see sidebar navigation', async ({ page }) => {

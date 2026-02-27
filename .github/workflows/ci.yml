@@ -70,6 +70,7 @@ jobs:
           echo "AUTH0_ISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com" >> "$GITHUB_ENV"
           echo "AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> "$GITHUB_ENV"
           echo "BASE_URL=http://localhost:4204" >> "$GITHUB_ENV"
+          echo "SKIP_RATE_LIMIT=true" >> "$GITHUB_ENV"
           echo "CI=true" >> "$GITHUB_ENV"
 
       - name: Set up sensitive environment variables
@@ -90,6 +91,15 @@ jobs:
           # Parse Auth0 app credentials from JSON secret
           AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id')
           AUTH0_CLIENT_SECRET=$(echo "$AUTH0" | jq -r '.client_secret')
+
+          if [ -z "$AUTH0_CLIENT_ID" ] || [ "$AUTH0_CLIENT_ID" = "null" ]; then
+            echo "::error::Failed to parse AUTH0_CLIENT_ID from AWS secret"
+            exit 1
+          fi
+          if [ -z "$AUTH0_CLIENT_SECRET" ] || [ "$AUTH0_CLIENT_SECRET" = "null" ]; then
+            echo "::error::Failed to parse AUTH0_CLIENT_SECRET from AWS secret"
+            exit 1
+          fi
 
           echo "::add-mask::$AUTH0_CLIENT_ID"
           echo "::add-mask::$AUTH0_CLIENT_SECRET"

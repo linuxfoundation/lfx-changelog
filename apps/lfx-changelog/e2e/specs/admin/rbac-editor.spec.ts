@@ -29,12 +29,8 @@ test.describe('RBAC — Editor', () => {
 
   test('should not have access to user management', async ({ page }) => {
     await page.goto('/admin/users');
-    await page.waitForTimeout(2_000);
     const heading = page.locator('[data-testid="user-management-heading"]');
-    const isVisible = await heading.isVisible().catch(() => false);
-    if (isVisible) {
-      expect(isVisible).toBe(true);
-    }
+    await expect(heading).not.toBeVisible();
   });
 
   test('should see sidebar navigation', async ({ page }) => {

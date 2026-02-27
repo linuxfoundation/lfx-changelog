@@ -44,9 +44,10 @@ test.describe('Changelog Feed', () => {
     const chips = page.locator('[data-testid^="changelog-feed-filter-chip-"]');
     await expect(chips.first()).toBeVisible();
 
-    const initialCount = await feedPage.getEntryCards().count();
+    const initialCards = feedPage.getEntryCards();
+    const initialCount = await initialCards.count();
     await chips.first().click();
-    await page.waitForTimeout(500);
+    await expect(feedPage.getEntryCards()).not.toHaveCount(initialCount);
 
     const filteredCount = await feedPage.getEntryCards().count();
     expect(filteredCount).toBeLessThanOrEqual(initialCount);
@@ -58,13 +59,10 @@ test.describe('Changelog Feed', () => {
 
     const initialCount = await feedPage.getEntryCards().count();
     await chips.first().click();
-    await page.waitForTimeout(500);
+    await expect(feedPage.getEntryCards()).not.toHaveCount(initialCount);
 
     await chips.first().click();
-    await page.waitForTimeout(500);
-
-    const resetCount = await feedPage.getEntryCards().count();
-    expect(resetCount).toBe(initialCount);
+    await expect(feedPage.getEntryCards()).toHaveCount(initialCount);
   });
 
   test('should navigate to entry detail when clicking a card', async ({ page }) => {

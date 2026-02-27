@@ -92,8 +92,8 @@ app.get('/health', (_req: Request, res: Response) => {
 // 7b. API documentation
 app.use('/docs', setupSwagger());
 
-// 8. Rate limiter — 100 req/min per IP on API routes (skipped when DATABASE_URL targets test DB)
-if (!process.env['DATABASE_URL']?.includes('_test')) {
+// 8. Rate limiter — 100 req/min per IP on API routes
+if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
   const apiRateLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 100,
