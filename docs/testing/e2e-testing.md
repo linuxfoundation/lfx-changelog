@@ -136,7 +136,7 @@ Tests authenticate by automating the full Auth0 / LF SSO login flow in a browser
 
 1. Navigate to `/login?returnTo=/admin`
 2. Wait for redirect to the LF SSO page
-3. Fill email and password fields
+3. Fill username and password fields
 4. Click "SIGN IN"
 5. Wait for redirect back to the app
 
@@ -296,7 +296,7 @@ try {
 
 All test fixtures are defined in `e2e/helpers/test-data.ts` and typed using Zod schemas derived from `@lfx-changelog/shared`. This ensures test data stays in sync with the actual API contracts — if a schema field changes in the shared package, TypeScript will flag the test data at compile time.
 
-- **`TEST_USERS`** — 4 users (super_admin, product_admin, editor, user) with Auth0 IDs from environment variables. Typed via `UserSchema.pick().extend()`.
+- **`TEST_USERS`** — 4 users (super_admin, product_admin, editor, user) with Auth0 IDs derived from usernames (`auth0|<username>`). Typed via `UserSchema.pick().extend()`.
 - **`TEST_PRODUCTS`** — 3 products (EasyCLA, Security, Insights) with Font Awesome icons. Typed as `CreateProductRequest[]`.
 - **`TEST_ROLE_ASSIGNMENTS`** — Maps product_admin to EasyCLA, editor to EasyCLA. Typed via `UserRoleAssignmentSchema.pick().extend()`.
 - **`TEST_CHANGELOGS`** — 4 entries (3 published, 1 draft) across different products. Typed via `CreateChangelogEntryRequestSchema.pick().extend()`.
@@ -351,19 +351,15 @@ AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/
 BASE_URL=http://localhost:4204
 SKIP_RATE_LIMIT=true
 
-# Test Users (one set per role)
-E2E_SUPER_ADMIN_EMAIL=<email>
+# Test Users (one set per role — Auth0 IDs are derived as auth0|<username>)
+E2E_SUPER_ADMIN_USERNAME=<username>
 E2E_SUPER_ADMIN_PASSWORD=<password>
-E2E_SUPER_ADMIN_AUTH0_ID=<auth0|id>
-E2E_PRODUCT_ADMIN_EMAIL=<email>
+E2E_PRODUCT_ADMIN_USERNAME=<username>
 E2E_PRODUCT_ADMIN_PASSWORD=<password>
-E2E_PRODUCT_ADMIN_AUTH0_ID=<auth0|id>
-E2E_EDITOR_EMAIL=<email>
+E2E_EDITOR_USERNAME=<username>
 E2E_EDITOR_PASSWORD=<password>
-E2E_EDITOR_AUTH0_ID=<auth0|id>
-E2E_USER_EMAIL=<email>
+E2E_USER_USERNAME=<username>
 E2E_USER_PASSWORD=<password>
-E2E_USER_AUTH0_ID=<auth0|id>
 ```
 
 ### CI (GitHub Actions)
@@ -371,7 +367,7 @@ E2E_USER_AUTH0_ID=<auth0|id>
 In CI, credentials come from two sources:
 
 - **AWS Secrets Manager** — Auth0 client ID, client secret, cookie secret
-- **GitHub Secrets** — Test user emails, passwords, and Auth0 IDs
+- **GitHub Secrets** — Test user usernames, passwords, and Auth0 IDs
 
 See `.github/workflows/ci.yml` for the full pipeline.
 

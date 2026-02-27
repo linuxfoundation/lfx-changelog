@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import type { Product } from '../schemas/product.schema.js';
+import { PRODUCT_IDS } from './mock-seed.js';
 
 export const MOCK_PRODUCTS: Product[] = [
   {
-    id: 'prod-org-dashboard',
+    id: PRODUCT_IDS.ORG_DASHBOARD,
     name: 'Organization Dashboard',
     slug: 'organization-dashboard',
     description: 'Measure your impact',
@@ -17,7 +18,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updatedAt: '2024-03-25T13:10:00.000Z',
   },
   {
-    id: 'prod-individual-dashboard',
+    id: PRODUCT_IDS.INDIVIDUAL_DASHBOARD,
     name: 'Individual Dashboard',
     slug: 'individual-dashboard',
     description: 'Track and share your achievements',
@@ -29,7 +30,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updatedAt: '2024-02-20T10:00:00.000Z',
   },
   {
-    id: 'prod-pcc',
+    id: PRODUCT_IDS.PCC,
     name: 'Project Control Center',
     slug: 'project-control-center',
     description: 'Manage your project',
@@ -41,7 +42,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updatedAt: '2024-09-12T10:00:00.000Z',
   },
   {
-    id: 'prod-security',
+    id: PRODUCT_IDS.SECURITY,
     name: 'Security',
     slug: 'security',
     description: 'Secure your project',
@@ -53,7 +54,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updatedAt: '2024-08-05T11:45:00.000Z',
   },
   {
-    id: 'prod-easycla',
+    id: PRODUCT_IDS.EASYCLA,
     name: 'EasyCLA',
     slug: 'easycla',
     description: 'Make contributing easy',
@@ -65,7 +66,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updatedAt: '2024-06-10T12:30:00.000Z',
   },
   {
-    id: 'prod-insights',
+    id: PRODUCT_IDS.INSIGHTS,
     name: 'Insights',
     slug: 'insights',
     description: 'Gain deep analytics into project health',
@@ -77,7 +78,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updatedAt: '2024-07-22T09:15:00.000Z',
   },
   {
-    id: 'prod-mentorship',
+    id: PRODUCT_IDS.MENTORSHIP,
     name: 'Mentorship',
     slug: 'mentorship',
     description: 'Develop diverse talent',
@@ -89,7 +90,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updatedAt: '2024-05-18T14:00:00.000Z',
   },
   {
-    id: 'prod-crowdfunding',
+    id: PRODUCT_IDS.CROWDFUNDING,
     name: 'Crowdfunding',
     slug: 'crowdfunding',
     description: 'Support open technologies',
@@ -101,7 +102,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updatedAt: '2024-04-30T16:20:00.000Z',
   },
   {
-    id: 'prod-community-data',
+    id: PRODUCT_IDS.COMMUNITY_DATA,
     name: 'Community Data Platform',
     slug: 'community-data-platform',
     description: 'Collect and manage community data',

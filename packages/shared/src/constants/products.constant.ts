@@ -1,11 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { PRODUCT_IDS } from '../mocks/mock-seed.js';
 import type { Product } from '../schemas/product.schema.js';
 
 export const PRODUCTS: Product[] = [
   {
-    id: 'prod-org-dashboard',
+    id: PRODUCT_IDS.ORG_DASHBOARD,
     name: 'Organization Dashboard',
     slug: 'organization-dashboard',
     description: 'Measure your impact across Linux Foundation projects.',
@@ -17,7 +18,7 @@ export const PRODUCTS: Product[] = [
     updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 'prod-individual-dashboard',
+    id: PRODUCT_IDS.INDIVIDUAL_DASHBOARD,
     name: 'Individual Dashboard',
     slug: 'individual-dashboard',
     description: 'Track and share your achievements.',
@@ -29,7 +30,7 @@ export const PRODUCTS: Product[] = [
     updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 'prod-pcc',
+    id: PRODUCT_IDS.PCC,
     name: 'Project Control Center',
     slug: 'project-control-center',
     description: 'Manage your project operations and governance.',
@@ -41,7 +42,7 @@ export const PRODUCTS: Product[] = [
     updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 'prod-security',
+    id: PRODUCT_IDS.SECURITY,
     name: 'Security',
     slug: 'security',
     description: 'Secure your project dependencies and code.',
@@ -53,7 +54,7 @@ export const PRODUCTS: Product[] = [
     updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 'prod-easycla',
+    id: PRODUCT_IDS.EASYCLA,
     name: 'EasyCLA',
     slug: 'easycla',
     description: 'Make contributing easy with automated CLA workflows.',
@@ -65,7 +66,7 @@ export const PRODUCTS: Product[] = [
     updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 'prod-insights',
+    id: PRODUCT_IDS.INSIGHTS,
     name: 'Insights',
     slug: 'insights',
     description: 'Gain deep analytics into your open source project health.',
@@ -77,7 +78,7 @@ export const PRODUCTS: Product[] = [
     updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 'prod-mentorship',
+    id: PRODUCT_IDS.MENTORSHIP,
     name: 'Mentorship',
     slug: 'mentorship',
     description: 'Develop diverse talent through mentorship programs.',
@@ -89,7 +90,7 @@ export const PRODUCTS: Product[] = [
     updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 'prod-crowdfunding',
+    id: PRODUCT_IDS.CROWDFUNDING,
     name: 'Crowdfunding',
     slug: 'crowdfunding',
     description: 'Support open technologies through transparent funding.',
@@ -101,7 +102,7 @@ export const PRODUCTS: Product[] = [
     updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 'prod-community-data',
+    id: PRODUCT_IDS.COMMUNITY_DATA,
     name: 'Community Data Platform',
     slug: 'community-data-platform',
     description: 'Collect and manage community data.',

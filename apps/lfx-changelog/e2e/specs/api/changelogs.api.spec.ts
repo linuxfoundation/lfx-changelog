@@ -44,11 +44,11 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
   });
 
   test.describe('Authorization (RBAC)', () => {
-    test('user with no roles gets 401 on GET (no session for public-only login)', async () => {
+    test('user with no roles gets 403 on GET (insufficient permissions)', async () => {
       const res = await userApi.get('/api/changelogs');
-      expect(res.status()).toBe(401);
+      expect(res.status()).toBe(403);
       const body = await res.json();
-      expect(body.code).toBe('AUTHENTICATION_REQUIRED');
+      expect(body.code).toBe('AUTHORIZATION_REQUIRED');
     });
 
     test('super_admin can GET changelogs (200)', async () => {
