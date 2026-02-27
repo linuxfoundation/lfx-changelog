@@ -27,7 +27,17 @@ export function apiErrorHandler(error: Error | BaseApiError, req: Request, res: 
     return;
   }
 
-  serverLogger.error({ err: error, path: req.path, method: req.method }, 'Unhandled API error');
+  serverLogger.error(
+    {
+      err: error,
+      errorName: error.name,
+      errorCode: (error as any).code,
+      errorMeta: (error as any).meta,
+      path: req.path,
+      method: req.method,
+    },
+    'Unhandled API error'
+  );
 
   res.status(500).json({
     error: 'Internal server error',
