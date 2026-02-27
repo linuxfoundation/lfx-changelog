@@ -3,6 +3,8 @@
 
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+
+import { buildConnectionString } from '../../src/server/helpers/build-connection-string';
 import { TEST_CHANGELOGS, TEST_PRODUCTS, TEST_ROLE_ASSIGNMENTS, TEST_USERS } from './test-data.js';
 
 let prisma: PrismaClient | null = null;
@@ -10,16 +12,14 @@ let prisma: PrismaClient | null = null;
 export function getTestPrismaClient(): PrismaClient {
   if (prisma) return prisma;
 
-  const databaseUrl = process.env['DATABASE_URL'];
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL environment variable is not set. Ensure .env.e2e is configured.');
+  const connectionString = buildConnectionString();
+  const dbName = new URL(connectionString).pathname.slice(1);
+
+  if (!dbName.includes('_test')) {
+    throw new Error(`Database name "${dbName}" must contain "_test" to prevent accidental dev/prod database wipes. Aborting.`);
   }
 
-  if (!databaseUrl.includes('_test')) {
-    throw new Error('DATABASE_URL must contain "_test" to prevent accidental dev/prod database wipes. Aborting.');
-  }
-
-  const adapter = new PrismaPg({ connectionString: databaseUrl });
+  const adapter = new PrismaPg({ connectionString });
   prisma = new PrismaClient({ adapter });
   return prisma;
 }

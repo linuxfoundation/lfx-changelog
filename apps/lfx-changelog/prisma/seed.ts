@@ -4,8 +4,9 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import 'dotenv/config';
+import { buildConnectionString } from '../src/server/helpers/build-connection-string';
 
-const adapter = new PrismaPg({ connectionString: process.env['DATABASE_URL'] });
+const adapter = new PrismaPg({ connectionString: buildConnectionString() });
 const prisma = new PrismaClient({ adapter });
 
 const products = [

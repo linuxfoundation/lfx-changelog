@@ -4,14 +4,15 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
+import { buildConnectionString } from '../helpers/build-connection-string';
 import { serverLogger } from '../server-logger';
 
 let prisma: PrismaClient;
 
 export function getPrismaClient(): PrismaClient {
   if (!prisma) {
-    const connectionString = process.env['DATABASE_URL'];
-    const isLocal = connectionString?.includes('localhost') || connectionString?.includes('127.0.0.1');
+    const connectionString = buildConnectionString();
+    const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
     const adapter = new PrismaPg({
       connectionString,
       ssl: isLocal ? undefined : { rejectUnauthorized: false },

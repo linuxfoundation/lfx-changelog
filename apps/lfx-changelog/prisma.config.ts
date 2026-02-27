@@ -5,6 +5,7 @@
 // npm install --save-dev prisma dotenv
 import 'dotenv/config';
 import { defineConfig } from 'prisma/config';
+import { buildConnectionString } from './src/server/helpers/build-connection-string';
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
@@ -13,6 +14,6 @@ export default defineConfig({
     seed: 'yarn tsx prisma/seed.ts',
   },
   datasource: {
-    url: process.env['DATABASE_URL'],
+    url: buildConnectionString(),
   },
 });
