@@ -13,6 +13,7 @@ on:
       - main
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
@@ -25,3 +26,119 @@ jobs:
 
       - name: Check license headers
         run: ./check-headers.sh
+
+  e2e:
+    runs-on: ubuntu-latest
+    name: E2E Tests
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Generate Prisma client
+        run: yarn workspace lfx-changelog prisma generate
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
+          aws-region: us-east-2
+
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            AUTH0, /cloudops/managed-secrets/auth0/LFX_Changelog
+            AUTH0_COOKIE_SECRET, /cloudops/managed-secrets/cloud/pcc-changelog/custom_cookie_sig_secret
+
+      - name: Set up non-sensitive environment variables
+        run: |
+          echo "DATABASE_URL=postgresql://changelog:changelog_dev@localhost:5433/lfx_changelog_test" >> "$GITHUB_ENV"
+          echo "AUTH0_ISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com" >> "$GITHUB_ENV"
+          echo "AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> "$GITHUB_ENV"
+          echo "BASE_URL=http://localhost:4204" >> "$GITHUB_ENV"
+          echo "CI=true" >> "$GITHUB_ENV"
+
+      - name: Set up sensitive environment variables
+        env:
+          E2E_SUPER_ADMIN_EMAIL: ${{ secrets.E2E_SUPER_ADMIN_EMAIL }}
+          E2E_SUPER_ADMIN_PASSWORD: ${{ secrets.E2E_SUPER_ADMIN_PASSWORD }}
+          E2E_SUPER_ADMIN_AUTH0_ID: ${{ secrets.E2E_SUPER_ADMIN_AUTH0_ID }}
+          E2E_PRODUCT_ADMIN_EMAIL: ${{ secrets.E2E_PRODUCT_ADMIN_EMAIL }}
+          E2E_PRODUCT_ADMIN_PASSWORD: ${{ secrets.E2E_PRODUCT_ADMIN_PASSWORD }}
+          E2E_PRODUCT_ADMIN_AUTH0_ID: ${{ secrets.E2E_PRODUCT_ADMIN_AUTH0_ID }}
+          E2E_EDITOR_EMAIL: ${{ secrets.E2E_EDITOR_EMAIL }}
+          E2E_EDITOR_PASSWORD: ${{ secrets.E2E_EDITOR_PASSWORD }}
+          E2E_EDITOR_AUTH0_ID: ${{ secrets.E2E_EDITOR_AUTH0_ID }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+          E2E_USER_AUTH0_ID: ${{ secrets.E2E_USER_AUTH0_ID }}
+        run: |
+          # Parse Auth0 app credentials from JSON secret
+          AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id')
+          AUTH0_CLIENT_SECRET=$(echo "$AUTH0" | jq -r '.client_secret')
+
+          echo "::add-mask::$AUTH0_CLIENT_ID"
+          echo "::add-mask::$AUTH0_CLIENT_SECRET"
+          echo "::add-mask::$AUTH0_COOKIE_SECRET"
+
+          echo "AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID" >> "$GITHUB_ENV"
+          echo "AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET" >> "$GITHUB_ENV"
+          echo "AUTH0_SECRET=$AUTH0_COOKIE_SECRET" >> "$GITHUB_ENV"
+
+          # Set test user credentials
+          echo "::add-mask::$E2E_SUPER_ADMIN_EMAIL"
+          echo "::add-mask::$E2E_SUPER_ADMIN_PASSWORD"
+          echo "::add-mask::$E2E_SUPER_ADMIN_AUTH0_ID"
+          echo "::add-mask::$E2E_PRODUCT_ADMIN_EMAIL"
+          echo "::add-mask::$E2E_PRODUCT_ADMIN_PASSWORD"
+          echo "::add-mask::$E2E_PRODUCT_ADMIN_AUTH0_ID"
+          echo "::add-mask::$E2E_EDITOR_EMAIL"
+          echo "::add-mask::$E2E_EDITOR_PASSWORD"
+          echo "::add-mask::$E2E_EDITOR_AUTH0_ID"
+          echo "::add-mask::$E2E_USER_EMAIL"
+          echo "::add-mask::$E2E_USER_PASSWORD"
+          echo "::add-mask::$E2E_USER_AUTH0_ID"
+
+          echo "E2E_SUPER_ADMIN_EMAIL=$E2E_SUPER_ADMIN_EMAIL" >> "$GITHUB_ENV"
+          echo "E2E_SUPER_ADMIN_PASSWORD=$E2E_SUPER_ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          echo "E2E_SUPER_ADMIN_AUTH0_ID=$E2E_SUPER_ADMIN_AUTH0_ID" >> "$GITHUB_ENV"
+          echo "E2E_PRODUCT_ADMIN_EMAIL=$E2E_PRODUCT_ADMIN_EMAIL" >> "$GITHUB_ENV"
+          echo "E2E_PRODUCT_ADMIN_PASSWORD=$E2E_PRODUCT_ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          echo "E2E_PRODUCT_ADMIN_AUTH0_ID=$E2E_PRODUCT_ADMIN_AUTH0_ID" >> "$GITHUB_ENV"
+          echo "E2E_EDITOR_EMAIL=$E2E_EDITOR_EMAIL" >> "$GITHUB_ENV"
+          echo "E2E_EDITOR_PASSWORD=$E2E_EDITOR_PASSWORD" >> "$GITHUB_ENV"
+          echo "E2E_EDITOR_AUTH0_ID=$E2E_EDITOR_AUTH0_ID" >> "$GITHUB_ENV"
+          echo "E2E_USER_EMAIL=$E2E_USER_EMAIL" >> "$GITHUB_ENV"
+          echo "E2E_USER_PASSWORD=$E2E_USER_PASSWORD" >> "$GITHUB_ENV"
+          echo "E2E_USER_AUTH0_ID=$E2E_USER_AUTH0_ID" >> "$GITHUB_ENV"
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright tests
+        working-directory: apps/lfx-changelog
+        run: yarn playwright test
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/lfx-changelog/playwright-report/
+            apps/lfx-changelog/test-results/
+          retention-days: 14

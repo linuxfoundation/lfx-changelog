@@ -50,3 +50,5 @@ postgres_data/
 playwright-report/
 test-results/
 .playwright-mcp
+apps/lfx-changelog/e2e/.auth/
+.env.e2e

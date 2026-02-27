@@ -12,6 +12,7 @@ import type {
   Product,
   ProductActivity,
   ProductRepository,
+  PublicProduct,
   UpdateProductRequest,
 } from '@lfx-changelog/shared';
 import type { Observable } from 'rxjs';
@@ -19,8 +20,12 @@ import type { Observable } from 'rxjs';
 export class ProductService {
   private readonly http = inject(HttpClient);
 
+  public getPublic(): Observable<PublicProduct[]> {
+    return this.http.get<ApiResponse<PublicProduct[]>>('/public/api/products').pipe(map((res) => res.data));
+  }
+
   public getAll(): Observable<Product[]> {
-    return this.http.get<ApiResponse<Product[]>>('/public/api/products').pipe(map((res) => res.data));
+    return this.http.get<ApiResponse<Product[]>>('/api/products').pipe(map((res) => res.data));
   }
 
   public getById(id: string): Observable<Product> {

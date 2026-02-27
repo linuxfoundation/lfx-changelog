@@ -10,7 +10,7 @@ import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
 import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
 import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
-import { forkJoin, tap } from 'rxjs';
+import { catchError, combineLatest, of, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-admin-dashboard',
@@ -24,13 +24,15 @@ export class AdminDashboardComponent {
 
   protected readonly loading = signal(true);
 
+  private static readonly emptyPage = { data: [] as any[], total: 0 };
+
   protected readonly dashboardData = toSignal(
-    forkJoin({
-      all: this.changelogService.getAll({ limit: 1 }),
-      drafts: this.changelogService.getAll({ status: ChangelogStatus.DRAFT, limit: 1 }),
-      published: this.changelogService.getAll({ status: ChangelogStatus.PUBLISHED, limit: 1 }),
-      recent: this.changelogService.getAll({ limit: 5 }),
-      products: this.productService.getAll(),
+    combineLatest({
+      all: this.changelogService.getAll({ limit: 1 }).pipe(catchError(() => of(AdminDashboardComponent.emptyPage))),
+      drafts: this.changelogService.getAll({ status: ChangelogStatus.DRAFT, limit: 1 }).pipe(catchError(() => of(AdminDashboardComponent.emptyPage))),
+      published: this.changelogService.getAll({ status: ChangelogStatus.PUBLISHED, limit: 1 }).pipe(catchError(() => of(AdminDashboardComponent.emptyPage))),
+      recent: this.changelogService.getAll({ limit: 5 }).pipe(catchError(() => of(AdminDashboardComponent.emptyPage))),
+      products: this.productService.getAll().pipe(catchError(() => of([]))),
     }).pipe(tap(() => this.loading.set(false)))
   );
 

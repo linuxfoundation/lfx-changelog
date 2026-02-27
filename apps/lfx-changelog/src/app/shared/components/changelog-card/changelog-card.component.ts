@@ -13,6 +13,7 @@ import { format } from 'date-fns';
   imports: [CardComponent, ProductPillComponent, RouterLink],
   templateUrl: './changelog-card.component.html',
   styleUrl: './changelog-card.component.css',
+  host: { '[attr.data-testid]': "'changelog-card-' + entry()?.id" },
 })
 export class ChangelogCardComponent {
   public readonly entry = input.required<ChangelogEntryWithRelations>();

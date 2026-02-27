@@ -2,13 +2,13 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 @if (loading()) {
-  <div class="flex items-center justify-center py-24">
+  <div data-testid="product-detail-loading" class="flex items-center justify-center py-24">
     <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-3xl"></i>
   </div>
 } @else if (product(); as product) {
-  <div class="space-y-6">
+  <div data-testid="product-detail" class="space-y-6">
     <div class="animate-slide-in-left flex items-center gap-4">
-      <lfx-button variant="ghost" size="sm" (clicked)="goBack()">
+      <lfx-button data-testid="product-detail-back-btn" variant="ghost" size="sm" (clicked)="goBack()">
         <i class="fa-solid fa-arrow-left text-xs"></i>
         Back
       </lfx-button>
@@ -17,17 +17,17 @@
           <i [class]="product.faIcon" class="text-brand-600 text-2xl"></i>
         }
         <div>
-          <h1 class="font-display text-text-primary text-2xl font-bold">{{ product.name }}</h1>
-          <p class="text-text-muted font-mono text-sm">{{ product.slug }}</p>
+          <h1 data-testid="product-detail-heading" class="font-display text-text-primary text-2xl font-bold">{{ product.name }}</h1>
+          <p data-testid="product-detail-slug" class="text-text-muted font-mono text-sm">{{ product.slug }}</p>
         </div>
       </div>
     </div>
 
     <div class="animate-rise-in [animation-delay:100ms]">
-      <lfx-tabs [tabs]="tabs" [(activeTab)]="activeTab" />
+      <lfx-tabs data-testid="product-detail-tabs" [tabs]="tabs" [(activeTab)]="activeTab" />
     </div>
 
-    <div class="animate-fade-in-up [animation-delay:200ms]">
+    <div data-testid="product-detail-tab-content" class="animate-fade-in-up [animation-delay:200ms]">
       @switch (activeTab()) {
         @case ('overview') {
           <lfx-product-overview-tab [product]="product" [productId]="product.id" />
