@@ -6,19 +6,19 @@ Database migrations run automatically during Helm deployments via a Kubernetes *
 
 ### How It Works
 
-The migration Job is a **Helm hook** — it runs on every `helm upgrade`, regardless of which CI workflow built the image:
+The migration Job is defined as a Helm `pre-install,pre-upgrade` hook. Our dev and prod clusters use **ArgoCD** for deployments — ArgoCD renders the Helm chart, detects the hook annotations, and runs the Job as a **PreSync** resource before applying the main manifests.
 
-- **Dev:** merge to `main` → `docker-build-main.yml` builds image tagged `development` → Helm upgrade → migration Job runs
-- **Prod:** git tag push → `docker-build-tag.yml` builds versioned image → Helm upgrade → migration Job runs
+- **Dev:** merge to `main` → `docker-build-main.yml` builds image tagged `development` → ArgoCD syncs → migration Job runs → new pods roll out
+- **Prod:** git tag push → `docker-build-tag.yml` builds versioned image + publishes Helm chart → ArgoCD syncs → migration Job runs → new pods roll out
 
 The flow for each deployment:
 
 1. CI builds and pushes the Docker image (containing the latest migration files)
-2. Helm upgrade is triggered (via ArgoCD, manual, or CI)
-3. A **pre-install/pre-upgrade hook** Job runs before the new pods roll out
-4. The Job executes `npx prisma migrate deploy` inside the cluster using the same image and database credentials as the application
-5. If the migration succeeds, the Deployment rolls out the new pods
-6. If the migration fails, Helm aborts the upgrade and the existing pods continue running
+2. ArgoCD detects the updated image/chart and begins a sync
+3. ArgoCD runs the migration Job before applying the Deployment (PreSync phase)
+4. The Job executes `prisma migrate deploy` inside the cluster using the same image and database credentials as the application
+5. If the migration succeeds, ArgoCD proceeds to update the Deployment with new pods
+6. If the migration fails, the sync fails and the existing pods continue running
 
 ### Migration Job Details
 
@@ -54,15 +54,16 @@ kubectl describe job -n <namespace> <release-name>-lfx-changelog-migrate-<revisi
 
 | Scenario                  | Behavior                                                               |
 | ------------------------- | ---------------------------------------------------------------------- |
-| DB unreachable            | Job retries up to 3 times, then fails. Helm aborts upgrade.            |
-| Bad migration SQL         | Job fails immediately. Helm aborts upgrade. Old pods stay running.     |
-| Timeout (>2 min)          | Job is killed. Helm aborts upgrade.                                    |
+| DB unreachable            | Job retries up to 3 times, then fails. ArgoCD marks sync as failed.    |
+| Bad migration SQL         | Job fails immediately. ArgoCD sync fails. Old pods stay running.       |
+| Timeout (>2 min)          | Job is killed. ArgoCD sync fails.                                      |
 | Migration already applied | `prisma migrate deploy` is a no-op. Job succeeds. Deployment proceeds. |
 
 ### Docker Image Requirements
 
 The production Docker image includes the files needed for `prisma migrate deploy`:
 
+- `node_modules/prisma/` — Prisma CLI (invoked directly via `node node_modules/prisma/build/index.js` to avoid `npx` overhead)
 - `prisma/` — schema and migration SQL files
 - `prisma.config.ts` — Prisma CLI configuration
 - `src/server/helpers/build-connection-string.ts` — database URL builder (used by the config)
