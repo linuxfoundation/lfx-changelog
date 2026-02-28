@@ -95,6 +95,9 @@ jobs:
       - name: Generate Prisma client
         run: yarn workspace lfx-changelog prisma generate
 
+      - name: Build workspace packages
+        run: yarn turbo run build --filter=@lfx-changelog/mcp-server
+
       - name: Set up sensitive environment variables
         env:
           E2E_SUPER_ADMIN_USERNAME: ${{ secrets.E2E_SUPER_ADMIN_USERNAME }}
