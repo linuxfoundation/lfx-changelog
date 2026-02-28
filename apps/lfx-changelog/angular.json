@@ -53,7 +53,15 @@
               "entry": "src/server.ts"
             },
             "allowedCommonJsDependencies": ["compression", "cors", "swagger-ui-express"],
-            "externalDependencies": ["@prisma/client", "@prisma/adapter-pg", "pg", "jsonwebtoken", "swagger-ui-express"]
+            "externalDependencies": [
+              "@prisma/client",
+              "@prisma/adapter-pg",
+              "pg",
+              "jsonwebtoken",
+              "swagger-ui-express",
+              "@lfx-changelog/mcp-server",
+              "@modelcontextprotocol/sdk"
+            ]
           },
           "configurations": {
             "production": {
