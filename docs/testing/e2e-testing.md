@@ -345,7 +345,6 @@ AUTH0_CLIENT_ID=<from AWS Secrets Manager>
 AUTH0_CLIENT_SECRET=<from AWS Secrets Manager>
 AUTH0_ISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com
 AUTH0_SECRET=<cookie signing secret>
-AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/
 
 # App
 BASE_URL=http://localhost:4204
