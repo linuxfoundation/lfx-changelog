@@ -22,7 +22,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "lfx-changelog.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -33,6 +33,7 @@ spec:
       containers:
         - name: migrate
           image: {{ include "lfx-changelog.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["npx"]
           args: ["prisma", "migrate", "deploy"]
           env:

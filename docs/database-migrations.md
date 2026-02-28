@@ -2,7 +2,7 @@
 
 ## Automated Migrations (CI/CD)
 
-Database migrations run automatically during Helm deployments via a Kubernetes **pre-upgrade Job**. No manual port-forwarding or intervention is needed for routine deploys.
+Database migrations run automatically during Helm deployments via a Kubernetes **pre-install/pre-upgrade Job**. No manual port-forwarding or intervention is needed for routine deploys.
 
 ### How It Works
 
@@ -25,7 +25,7 @@ The flow for each deployment:
 The Job is defined in `charts/lfx-changelog/templates/migration-job.yaml`:
 
 - **Helm hooks:** `pre-install,pre-upgrade` — runs before both first install and subsequent upgrades
-- **Retries:** Up to 3 attempts (`backoffLimit: 3`) for transient failures (e.g. brief DB connectivity issues)
+- **Retries:** Up to 4 attempts (1 initial + 3 retries, `backoffLimit: 3`) for transient failures (e.g. brief DB connectivity issues)
 - **Timeout:** 2-minute hard deadline (`activeDeadlineSeconds: 120`)
 - **Cleanup:** Previous migration Jobs are deleted before creating a new one (`before-hook-creation` policy)
 - **Credentials:** Reuses the same `environment` block from `values.yaml` — no additional secret configuration needed
