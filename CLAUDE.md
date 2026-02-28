@@ -231,10 +231,12 @@ When creating Prisma migrations, **always use `--create-only` first** to avoid c
 
 1. `yarn prisma migrate dev --create-only --name <migration_name>` — generates the SQL file without applying
 2. Add the license header to the generated `migration.sql` file:
+
    ```sql
    -- Copyright The Linux Foundation and each contributor to LFX.
    -- SPDX-License-Identifier: MIT
    ```
+
 3. `yarn prisma migrate dev` — applies the migration (checksum now includes the header)
 
 **NEVER** run `yarn prisma migrate dev --name <name>` directly — it generates and applies in one step, meaning the checksum won't include the license header and modifying the file afterward causes integrity errors on production deploys.

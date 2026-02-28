@@ -14,19 +14,22 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 - **Auth0 authentication** --- secure login via OpenID Connect
 - **Dark mode** --- light/dark dual-theme with system preference detection
 - **Server-side rendering** --- Angular SSR for fast initial loads and SEO
+- **E2E test suite** --- Playwright tests covering public pages, admin flows, RBAC, and API endpoints
 
 ## Tech Stack
 
-| Layer    | Technology                                            |
-| -------- | ----------------------------------------------------- |
-| Monorepo | Turborepo + Yarn 4 workspaces                         |
-| Frontend | Angular 20 (standalone components, signals, zoneless) |
-| Backend  | Express 5 (via Angular SSR server)                    |
-| Database | PostgreSQL 16                                         |
-| ORM      | Prisma 7 with driver adapter                          |
-| Auth     | Auth0 (`express-openid-connect`)                      |
-| Styling  | Tailwind CSS 4 (CSS-first config, custom components)  |
-| CI/CD    | GitHub Actions, AWS ECS Fargate                       |
+| Layer      | Technology                                            |
+| ---------- | ----------------------------------------------------- |
+| Monorepo   | Turborepo + Yarn 4 workspaces                         |
+| Frontend   | Angular 20 (standalone components, signals, zoneless) |
+| Backend    | Express 5 (via Angular SSR server)                    |
+| Database   | PostgreSQL 16                                         |
+| ORM        | Prisma 7 with driver adapter                          |
+| Validation | Zod 4 + OpenAPI 3.1 (Swagger UI at `/docs`)           |
+| Auth       | Auth0 (`express-openid-connect`)                      |
+| Styling    | Tailwind CSS 4 (CSS-first config, custom components)  |
+| Testing    | Playwright (E2E, API)                                 |
+| CI/CD      | GitHub Actions, ArgoCD, Helm, GHCR                    |
 
 ## Prerequisites
 
@@ -39,7 +42,7 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/nicholasgasior/lfx-changelog.git
+git clone https://github.com/linuxfoundation/lfx-changelog.git
 cd lfx-changelog
 corepack enable
 yarn install
@@ -48,10 +51,10 @@ yarn install
 ### 2. Set up environment variables
 
 ```bash
-cp .env.example .env
+cp apps/lfx-changelog/.env.example apps/lfx-changelog/.env
 ```
 
-Edit `.env` with your values. See the [Environment Variables](#environment-variables) section below for details.
+Edit `apps/lfx-changelog/.env` with your values. See the [Environment Variables](#environment-variables) section below for details.
 
 ### 3. Start the database
 
@@ -77,13 +80,19 @@ The app runs at `http://localhost:4200` (Angular dev server) with the API at `ht
 
 ## Environment Variables
 
+The server supports two ways to configure the database connection: a single `DATABASE_URL` connection string, or individual `DB_*` variables (which the server assembles at runtime via `buildConnectionString`). Provide one or the other.
+
 | Variable                | Required | Description                                                                                              |
 | ----------------------- | -------- | -------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`          | Yes      | PostgreSQL connection string (e.g., `postgresql://changelog:changelog_dev@localhost:5432/lfx_changelog`) |
+| `DATABASE_URL`          | Yes\*    | PostgreSQL connection string (e.g., `postgresql://changelog:changelog_dev@localhost:5432/lfx_changelog`) |
+| `DB_HOST`               | Yes\*    | Database host (e.g., `localhost`)                                                                        |
+| `DB_PORT`               | No       | Database port (default: `5432`)                                                                          |
+| `DB_NAME`               | Yes\*    | Database name (e.g., `lfx_changelog`)                                                                    |
+| `DB_USER`               | Yes\*    | Database user (e.g., `changelog`)                                                                        |
+| `DB_PASSWORD`           | Yes\*    | Database password                                                                                        |
 | `AUTH0_CLIENT_ID`       | Yes      | Auth0 application client ID                                                                              |
 | `AUTH0_CLIENT_SECRET`   | Yes      | Auth0 application client secret                                                                          |
 | `AUTH0_ISSUER_BASE_URL` | Yes      | Auth0 tenant URL (e.g., `https://your-tenant.auth0.com`)                                                 |
-| `AUTH0_AUDIENCE`        | Yes      | Auth0 API audience identifier                                                                            |
 | `AUTH0_SECRET`          | Yes      | Session encryption secret (min 32 characters)                                                            |
 | `BASE_URL`              | Yes      | Application base URL (e.g., `http://localhost:4000`)                                                     |
 | `GITHUB_APP_ID`         | No       | GitHub App ID for repository integration                                                                 |
@@ -93,6 +102,8 @@ The app runs at `http://localhost:4200` (Angular dev server) with the API at `ht
 | `NODE_ENV`              | No       | `development` or `production` (default: `development`)                                                   |
 | `PORT`                  | No       | Server port (default: `4000`)                                                                            |
 | `LOG_LEVEL`             | No       | Logging level: `debug`, `info`, `warn`, `error` (default: `info`)                                        |
+
+\*Provide either `DATABASE_URL` **or** the `DB_HOST`/`DB_NAME`/`DB_USER`/`DB_PASSWORD` group.
 
 ## Scripts
 
@@ -113,15 +124,20 @@ The app runs at `http://localhost:4200` (Angular dev server) with the API at `ht
 | `yarn db:migrate`       | Run database migrations             |
 | `yarn db:seed`          | Seed the database with sample data  |
 | `yarn db:studio`        | Open Prisma Studio (database GUI)   |
+| `yarn e2e`              | Run Playwright E2E tests            |
+| `yarn test`             | Run tests across all workspaces     |
 
 ### App-level (`apps/lfx-changelog`)
 
-| Script            | Description                         |
-| ----------------- | ----------------------------------- |
-| `yarn start`      | Angular dev server with live reload |
-| `yarn build:dev`  | Development build                   |
-| `yarn build:prod` | Production build                    |
-| `yarn lint`       | Lint the Angular app                |
+| Script             | Description                         |
+| ------------------ | ----------------------------------- |
+| `yarn start`       | Angular dev server with live reload |
+| `yarn build:dev`   | Development build                   |
+| `yarn build:prod`  | Production build                    |
+| `yarn lint`        | Lint the Angular app                |
+| `yarn test`        | Run Playwright E2E tests            |
+| `yarn test:headed` | Run E2E tests with browser visible  |
+| `yarn test:ui`     | Run E2E tests in Playwright UI mode |
 
 ## Project Structure
 
@@ -137,12 +153,21 @@ lfx-changelog/
 │   │   │   ├── controllers/       # Request handlers
 │   │   │   ├── services/          # Business logic + Prisma queries
 │   │   │   ├── routes/            # Route definitions
-│   │   │   ├── middleware/        # Auth, RBAC, error handling
+│   │   │   ├── middleware/        # Auth, RBAC, validation, error handling
+│   │   │   ├── swagger/           # OpenAPI path definitions
+│   │   │   ├── helpers/           # Shared utilities (DB connection, etc.)
 │   │   │   └── errors/            # Custom error classes
 │   │   └── environments/          # Environment configs
-│   └── prisma/                    # Schema, migrations, seed
-├── packages/shared/               # @lfx-changelog/shared (types, enums, constants)
-├── docker-compose.yml             # Local PostgreSQL
+│   ├── prisma/                    # Schema, migrations, seed
+│   └── e2e/                       # Playwright E2E tests
+│       ├── setup/                 # DB + auth setup projects
+│       ├── helpers/               # Test utilities (API, DB, Docker, fixtures)
+│       ├── pages/                 # Page Object Model classes
+│       └── specs/                 # Test specs (public/, admin/, api/)
+├── packages/shared/               # @lfx-changelog/shared (Zod schemas, types, enums)
+├── charts/lfx-changelog/          # Helm chart for Kubernetes deployment
+├── docs/                          # Additional documentation
+├── docker-compose.yml             # Local PostgreSQL (dev + test)
 ├── Dockerfile                     # Multi-stage production build
 └── turbo.json                     # Turborepo task config
 ```
@@ -153,6 +178,7 @@ The application uses an Angular SSR server that also hosts the Express API backe
 
 - **Public API** (`/public/api/*`) --- unauthenticated endpoints for reading published changelogs and products
 - **Protected API** (`/api/*`) --- authenticated endpoints for CRUD operations, gated by Auth0 and RBAC middleware
+- **API docs** (`/docs`) --- interactive Swagger UI generated from Zod schemas via `@asteasolutions/zod-to-openapi`
 - **SSR** --- Angular pages are server-rendered for all routes
 
 ### Roles
@@ -165,9 +191,10 @@ The application uses an Angular SSR server that also hosts the Express API backe
 
 ## Database
 
-The PostgreSQL schema is managed by Prisma with four main models:
+The PostgreSQL schema is managed by Prisma with five models:
 
-- **Product** --- LFX products (e.g., Security, EasyCLA, Insights)
+- **Product** --- LFX products with activation status, Font Awesome icons, and optional GitHub App installation
+- **ProductRepository** --- GitHub repositories linked to products for changelog generation
 - **ChangelogEntry** --- individual changelog entries with markdown content, versioning, and status tracking
 - **User** --- users synced from Auth0 on first login
 - **UserRoleAssignment** --- maps users to roles, optionally scoped to a product
@@ -180,20 +207,73 @@ yarn db:migrate         # Apply pending migrations
 yarn db:seed            # Reset and seed sample data
 ```
 
-## Deployment
+## Testing
 
-The application deploys to **AWS ECS Fargate** via GitHub Actions:
+End-to-end tests use [Playwright](https://playwright.dev/) to verify the application from a user's perspective. Tests run against a real Angular SSR server backed by a test PostgreSQL database and authenticate through Auth0.
 
-1. Push to `main` triggers the `deploy-dev.yml` workflow
-2. Docker image is built and pushed to AWS ECR
-3. ECS task definition is registered and service is updated
-4. Secrets are pulled from AWS Secrets Manager at runtime
+```bash
+cd apps/lfx-changelog
+yarn test               # Run all tests (headless)
+yarn test:headed        # Run with browser visible
+yarn test:ui            # Run with Playwright UI mode
+```
+
+Tests automatically start a test database container on port 5433, run migrations, seed data, and launch the dev server --- no manual setup needed.
+
+The test suite covers:
+
+- **Public pages** --- changelog feed, product changelogs, theme toggle
+- **Admin flows** --- dashboard, changelog editor, product and user management
+- **RBAC** --- per-role access (super admin, product admin, editor, no-role)
+- **API endpoints** --- public and protected REST endpoints via direct HTTP
+
+See [docs/testing/e2e-testing.md](docs/testing/e2e-testing.md) for the full testing guide.
+
+## CI/CD
+
+GitHub Actions runs on every push to `main` and on pull requests:
+
+| Job             | Description                                                        |
+| --------------- | ------------------------------------------------------------------ |
+| License headers | Verifies all source files include the required SPDX license header |
+| Secret scan     | Scans for leaked secrets using Trufflehog                          |
+| E2E tests       | Runs the full Playwright test suite against a test database        |
+
+### Docker Builds
+
+| Workflow                | Trigger                        | Image Tag               |
+| ----------------------- | ------------------------------ | ----------------------- |
+| `docker-build-main.yml` | Push to `main`                 | `development`           |
+| `docker-build-tag.yml`  | Git tag push (`v*`)            | Semver (e.g., `1.2.3`)  |
+| `docker-build-pr.yml`   | PR with `deploy-preview` label | `changelog-pr-<number>` |
+
+All images are pushed to **GHCR** (`ghcr.io/linuxfoundation/lfx-changelog`).
+
+### Deployment
+
+The application deploys to **Kubernetes** via **ArgoCD**:
+
+- **Dev:** merge to `main` builds image tagged `development` --- ArgoCD syncs and runs the migration Job before updating pods
+- **Prod:** git tag push builds a versioned image + publishes a signed Helm chart (with [Cosign](https://docs.sigstore.dev/cosign/overview/) and [SLSA provenance](https://slsa.dev/)) --- ArgoCD syncs the new chart
+
+Database migrations run automatically as a Helm pre-upgrade Job. See [docs/database-migrations.md](docs/database-migrations.md) for details.
 
 The production container runs as a non-root user on port 4000.
 
-## Roadmap
+### PR Deploy Previews
 
-See [PLAN.md](PLAN.md) for the full implementation plan and upcoming phases.
+Adding the `deploy-preview` label to a PR builds and pushes a branch-specific image. ArgoCD provisions an isolated namespace (`changelog-pr-<number>`) with its own deployment. The preview is removed when the PR is closed or the label is removed.
+
+## Documentation
+
+| Document                                                 | Description                                       |
+| -------------------------------------------------------- | ------------------------------------------------- |
+| [Database Migrations](docs/database-migrations.md)       | Automated (CI/CD) and manual migration workflows  |
+| [Remote Database Access](docs/remote-database-access.md) | Connecting to RDS via kubectl port-forward        |
+| [E2E Testing](docs/testing/e2e-testing.md)               | Test architecture, patterns, and how to add tests |
+| [Contributing](CONTRIBUTING.md)                          | License headers, code style, commit conventions   |
+| [Security](SECURITY.md)                                  | Vulnerability reporting                           |
+| [Roadmap](PLAN.md)                                       | Implementation plan and upcoming phases           |
 
 ## Contributing
 
