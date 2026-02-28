@@ -14,22 +14,24 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 - **Auth0 authentication** --- secure login via OpenID Connect
 - **Dark mode** --- light/dark dual-theme with system preference detection
 - **Server-side rendering** --- Angular SSR for fast initial loads and SEO
+- **MCP server** --- AI tool integration via the Model Context Protocol (Claude Desktop, Cursor, etc.)
 - **E2E test suite** --- Playwright tests covering public pages, admin flows, RBAC, and API endpoints
 
 ## Tech Stack
 
-| Layer      | Technology                                            |
-| ---------- | ----------------------------------------------------- |
-| Monorepo   | Turborepo + Yarn 4 workspaces                         |
-| Frontend   | Angular 20 (standalone components, signals, zoneless) |
-| Backend    | Express 5 (via Angular SSR server)                    |
-| Database   | PostgreSQL 16                                         |
-| ORM        | Prisma 7 with driver adapter                          |
-| Validation | Zod 4 + OpenAPI 3.1 (Swagger UI at `/docs`)           |
-| Auth       | Auth0 (`express-openid-connect`)                      |
-| Styling    | Tailwind CSS 4 (CSS-first config, custom components)  |
-| Testing    | Playwright (E2E, API)                                 |
-| CI/CD      | GitHub Actions, ArgoCD, Helm, GHCR                    |
+| Layer       | Technology                                            |
+| ----------- | ----------------------------------------------------- |
+| Monorepo    | Turborepo + Yarn 4 workspaces                         |
+| Frontend    | Angular 20 (standalone components, signals, zoneless) |
+| Backend     | Express 5 (via Angular SSR server)                    |
+| Database    | PostgreSQL 16                                         |
+| ORM         | Prisma 7 with driver adapter                          |
+| Validation  | Zod 4 + OpenAPI 3.1 (Swagger UI at `/docs`)           |
+| Auth        | Auth0 (`express-openid-connect`)                      |
+| Styling     | Tailwind CSS 4 (CSS-first config, custom components)  |
+| Testing     | Playwright (E2E, API)                                 |
+| Integration | MCP SDK 1.x (Model Context Protocol)                  |
+| CI/CD       | GitHub Actions, ArgoCD, Helm, GHCR                    |
 
 ## Prerequisites
 
@@ -165,6 +167,7 @@ lfx-changelog/
 │       ├── pages/                 # Page Object Model classes
 │       └── specs/                 # Test specs (public/, admin/, api/)
 ├── packages/shared/               # @lfx-changelog/shared (Zod schemas, types, enums)
+├── packages/mcp-server/           # @lfx-changelog/mcp-server (MCP tools & resources)
 ├── charts/lfx-changelog/          # Helm chart for Kubernetes deployment
 ├── docs/                          # Additional documentation
 ├── docker-compose.yml             # Local PostgreSQL (dev + test)
@@ -179,6 +182,7 @@ The application uses an Angular SSR server that also hosts the Express API backe
 - **Public API** (`/public/api/*`) --- unauthenticated endpoints for reading published changelogs and products
 - **Protected API** (`/api/*`) --- authenticated endpoints for CRUD operations, gated by Auth0 and RBAC middleware
 - **API docs** (`/docs`) --- interactive Swagger UI generated from Zod schemas via `@asteasolutions/zod-to-openapi`
+- **MCP** (`/mcp`) --- Model Context Protocol endpoint for AI tool integration (Streamable HTTP)
 - **SSR** --- Angular pages are server-rendered for all routes
 
 ### Roles
@@ -273,6 +277,7 @@ Adding the `deploy-preview` label to a PR builds and pushes a branch-specific im
 | [E2E Testing](docs/testing/e2e-testing.md)               | Test architecture, patterns, and how to add tests |
 | [Contributing](CONTRIBUTING.md)                          | License headers, code style, commit conventions   |
 | [Security](SECURITY.md)                                  | Vulnerability reporting                           |
+| [MCP Server](docs/mcp-server.md)                         | MCP tools, resources, and client setup            |
 | [Roadmap](PLAN.md)                                       | Implementation plan and upcoming phases           |
 
 ## Contributing

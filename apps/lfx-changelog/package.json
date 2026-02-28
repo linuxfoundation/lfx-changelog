@@ -1,6 +1,7 @@
 {
   "name": "lfx-changelog",
   "version": "0.0.0",
+  "license": "MIT",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -30,6 +31,7 @@
     "@angular/router": "^20.3.0",
     "@angular/ssr": "^20.3.14",
     "@asteasolutions/zod-to-openapi": "^8.4.1",
+    "@lfx-changelog/mcp-server": "workspace:*",
     "@lfx-changelog/shared": "workspace:*",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.0",

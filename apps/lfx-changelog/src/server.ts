@@ -17,6 +17,7 @@ import { requestIdMiddleware } from './server/middleware/request-id.middleware';
 import aiRouter from './server/routes/ai.route';
 import changelogRouter from './server/routes/changelog.route';
 import githubRouter from './server/routes/github.route';
+import mcpRouter from './server/routes/mcp.route';
 import productRouter from './server/routes/product.route';
 import publicChangelogRouter from './server/routes/public-changelog.route';
 import publicProductRouter from './server/routes/public-product.route';
@@ -71,6 +72,16 @@ app.use(
   })
 );
 
+// 4b. CORS — MCP endpoint (AI clients need cross-origin access)
+app.use(
+  '/mcp',
+  cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    maxAge: 86400,
+  })
+);
+
 // 5. Body parsers (1mb limit — sufficient for changelog API)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -107,6 +118,7 @@ if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
   });
   app.use('/public/api', apiRateLimiter);
   app.use('/api', apiRateLimiter);
+  app.use('/mcp', apiRateLimiter);
 }
 
 // 9. Pino HTTP logger (custom serializers to avoid leaking sessions/headers)
@@ -167,7 +179,10 @@ app.use('/webhooks', webhookRouter);
 app.use('/public/api/changelogs', publicChangelogRouter);
 app.use('/public/api/products', publicProductRouter);
 
-// 13. No-cache middleware for protected routes
+// 13b. MCP (Model Context Protocol) endpoint — public, stateless HTTP transport
+app.use('/mcp', mcpRouter);
+
+// 14. No-cache middleware for protected routes
 app.use('/api', noCacheMiddleware);
 
 // 14. Auth middleware for protected routes
