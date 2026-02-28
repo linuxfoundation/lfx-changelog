@@ -76,7 +76,7 @@ yarn db:seed
 yarn start
 ```
 
-The app runs at `http://localhost:4200` (Angular dev server) with the API at `http://localhost:4000`.
+The app runs at `http://localhost:4204`
 
 ## Environment Variables
 
@@ -94,7 +94,7 @@ The server supports two ways to configure the database connection: a single `DAT
 | `AUTH0_CLIENT_SECRET`   | Yes      | Auth0 application client secret                                                                          |
 | `AUTH0_ISSUER_BASE_URL` | Yes      | Auth0 tenant URL (e.g., `https://your-tenant.auth0.com`)                                                 |
 | `AUTH0_SECRET`          | Yes      | Session encryption secret (min 32 characters)                                                            |
-| `BASE_URL`              | Yes      | Application base URL (e.g., `http://localhost:4000`)                                                     |
+| `BASE_URL`              | Yes      | Application base URL (e.g., `http://localhost:4204`)                                                     |
 | `GITHUB_APP_ID`         | No       | GitHub App ID for repository integration                                                                 |
 | `GITHUB_PRIVATE_KEY`    | No       | GitHub App RSA private key                                                                               |
 | `LITELLM_API_KEY`       | No       | API key for AI changelog generation                                                                      |
@@ -124,7 +124,7 @@ The server supports two ways to configure the database connection: a single `DAT
 | `yarn db:migrate`       | Run database migrations             |
 | `yarn db:seed`          | Seed the database with sample data  |
 | `yarn db:studio`        | Open Prisma Studio (database GUI)   |
-| `yarn e2e`              | Run Playwright E2E tests            |
+| `yarn test`             | Run Playwright E2E tests            |
 | `yarn test`             | Run tests across all workspaces     |
 
 ### App-level (`apps/lfx-changelog`)
