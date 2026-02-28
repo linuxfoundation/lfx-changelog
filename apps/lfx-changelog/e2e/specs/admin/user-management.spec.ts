@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { expect, test } from '@playwright/test';
+import { TEST_USERS } from '../../helpers/test-data.js';
 import { UserManagementPage } from '../../pages/user-management.page.js';
 
 test.describe('User Management', () => {
@@ -68,5 +69,46 @@ test.describe('User Management', () => {
     const closeBtn = page.locator('[data-testid="dialog-close-btn"]');
     await closeBtn.click();
     await expect(userPage.roleDialog).not.toBeVisible();
+  });
+
+  test('should show "Role" label (not optional) in add user dialog', async () => {
+    await userPage.openAddUserDialog();
+    await expect(userPage.addUserDialog).toBeVisible();
+
+    const roleLabel = userPage.addUserRoleSelect.locator('label');
+    await expect(roleLabel).toHaveText('Role');
+  });
+
+  test('should create a new user via the add user dialog', async () => {
+    const rowsBefore = userPage.getRows();
+    await expect(rowsBefore.first()).toBeVisible();
+    const countBefore = await rowsBefore.count();
+
+    await userPage.openAddUserDialog();
+    await expect(userPage.addUserDialog).toBeVisible();
+
+    await userPage.addUserEmailInput.locator('input').fill(`e2e-ui-${Date.now()}@example.com`);
+    await userPage.addUserNameInput.locator('input').fill('E2E UI Test User');
+    await userPage.selectOption(userPage.addUserRoleSelect, 'Editor');
+    await userPage.selectOption(userPage.addUserProductSelect, 'E2E EasyCLA');
+    await userPage.addUserCreateBtn.click();
+
+    await expect(userPage.addUserDialog).not.toBeVisible();
+    const rowsAfter = userPage.getRows();
+    await expect(rowsAfter).toHaveCount(countBefore + 1);
+  });
+
+  test('should show error for duplicate email in add user dialog', async () => {
+    await userPage.openAddUserDialog();
+    await expect(userPage.addUserDialog).toBeVisible();
+
+    await userPage.addUserEmailInput.locator('input').fill(TEST_USERS[0]!.email);
+    await userPage.addUserNameInput.locator('input').fill('Duplicate User');
+    await userPage.selectOption(userPage.addUserRoleSelect, 'Editor');
+    await userPage.selectOption(userPage.addUserProductSelect, 'E2E EasyCLA');
+    await userPage.addUserCreateBtn.click();
+
+    await expect(userPage.addUserError).toBeVisible();
+    await expect(userPage.addUserDialog).toBeVisible();
   });
 });

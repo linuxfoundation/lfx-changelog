@@ -22,7 +22,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   }
 
   userService
-    .findByAuth0Profile({ sub: auth0User['sub'] })
+    .findByEmail(auth0User['email'])
     .then((dbUser) => {
       (req as any).dbUser = dbUser;
       next();

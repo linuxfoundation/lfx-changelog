@@ -3,8 +3,9 @@
 
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { ApiResponse, User, UserRoleAssignment } from '@lfx-changelog/shared';
 import { map, take, type Observable } from 'rxjs';
+
+import type { ApiResponse, CreateUserRequest, User, UserRoleAssignment } from '@lfx-changelog/shared';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -16,6 +17,13 @@ export class UserService {
 
   public getAll(): Observable<User[]> {
     return this.http.get<ApiResponse<User[]>>('/api/users').pipe(map((res) => res.data));
+  }
+
+  public create(data: CreateUserRequest): Observable<User> {
+    return this.http.post<ApiResponse<User>>('/api/users', data).pipe(
+      map((res) => res.data),
+      take(1)
+    );
   }
 
   public assignRole(userId: string, role: string, productId: string | null): Observable<UserRoleAssignment> {

@@ -29,7 +29,7 @@ export class ProductManagementPage {
   }
 
   public getRows(): Locator {
-    return this.page.locator('[data-testid^="product-management-row-"]');
+    return this.table.locator('tbody tr');
   }
 
   public async openAddDialog() {

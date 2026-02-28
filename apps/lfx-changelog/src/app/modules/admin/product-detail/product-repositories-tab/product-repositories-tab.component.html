@@ -29,56 +29,35 @@
       </div>
     </lfx-card>
   } @else {
-    <lfx-card padding="none">
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-border bg-surface-alt border-b text-left">
-              <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Repository</th>
-              <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Owner</th>
-              <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Visibility</th>
-              <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-border divide-y">
-            @for (repo of linkedRepos(); track repo.id; let i = $index) {
-              <tr class="table-row-enter hover:bg-surface-alt transition-colors" [style.animation-delay.ms]="i * 50">
-                <td class="px-5 py-3">
-                  <a
-                    [href]="repo.htmlUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-brand-600 hover:text-brand-700 text-sm font-medium hover:underline">
-                    {{ repo.name }}
-                  </a>
-                  @if (repo.description) {
-                    <p class="text-text-muted mt-0.5 max-w-xs truncate text-xs">{{ repo.description }}</p>
-                  }
-                </td>
-                <td class="text-text-secondary px-5 py-3 text-sm">{{ repo.owner }}</td>
-                <td class="px-5 py-3">
-                  @if (repo.isPrivate) {
-                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                      >Private</span
-                    >
-                  } @else {
-                    <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                      >Public</span
-                    >
-                  }
-                </td>
-                <td class="px-5 py-3">
-                  <lfx-button variant="ghost" size="sm" (clicked)="unlinkRepository(repo)">
-                    <i class="fa-solid fa-unlink text-xs"></i>
-                    Unlink
-                  </lfx-button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </lfx-card>
+    <lfx-table [data]="linkedRepos()">
+      <ng-template lfxColumn="Repository" let-repo>
+        <a [href]="repo.htmlUrl" target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:text-brand-700 text-sm font-medium hover:underline">
+          {{ repo.name }}
+        </a>
+        @if (repo.description) {
+          <p class="text-text-muted mt-0.5 max-w-xs truncate text-xs">{{ repo.description }}</p>
+        }
+      </ng-template>
+
+      <ng-template lfxColumn="Owner" let-repo>
+        <span class="text-text-secondary text-sm">{{ repo.owner }}</span>
+      </ng-template>
+
+      <ng-template lfxColumn="Visibility" let-repo>
+        @if (repo.isPrivate) {
+          <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Private</span>
+        } @else {
+          <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">Public</span>
+        }
+      </ng-template>
+
+      <ng-template lfxColumn="Actions" let-repo>
+        <lfx-button variant="ghost" size="sm" (clicked)="unlinkRepository(repo)">
+          <i class="fa-solid fa-unlink text-xs"></i>
+          Unlink
+        </lfx-button>
+      </ng-template>
+    </lfx-table>
   }
 </div>
 

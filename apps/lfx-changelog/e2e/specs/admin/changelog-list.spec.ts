@@ -65,4 +65,16 @@ test.describe('Changelog List', () => {
     const badge = rows.first().locator('lfx-status-badge');
     await expect(badge).toBeVisible();
   });
+
+  test('should show table rows after loading completes', async () => {
+    // Verify loading resolves and we get either rows or the empty message
+    await expect(listPage.table.or(listPage.empty)).toBeVisible();
+    const rows = listPage.getRows();
+    const rowCount = await rows.count();
+    if (rowCount === 0) {
+      await expect(listPage.empty).toBeVisible();
+    } else {
+      await expect(rows.first()).toBeVisible();
+    }
+  });
 });

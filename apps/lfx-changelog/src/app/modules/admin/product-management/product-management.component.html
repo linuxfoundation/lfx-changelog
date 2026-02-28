@@ -13,42 +13,28 @@
     </lfx-button>
   </div>
 
-  <lfx-card padding="none" class="animate-rise-in block [animation-delay:150ms]">
-    <div class="overflow-x-auto">
-      <table data-testid="product-management-table" class="w-full">
-        <thead>
-          <tr class="border-border bg-surface-alt border-b text-left">
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Name</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Slug</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Description</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-border divide-y">
-          @for (product of products(); track product.id; let i = $index) {
-            <tr
-              [attr.data-testid]="'product-management-row-' + product.id"
-              class="table-row-enter hover:bg-surface-alt transition-colors"
-              [style.animation-delay.ms]="250 + i * 50">
-              <td class="px-5 py-3">
-                <a [routerLink]="['/admin/products', product.id]" class="flex items-center gap-2.5 hover:opacity-80">
-                  @if (product.faIcon) {
-                    <i [class]="product.faIcon" class="text-brand-600"></i>
-                  }
-                  <span class="text-text-primary text-sm font-medium hover:underline">{{ product.name }}</span>
-                </a>
-              </td>
-              <td class="text-text-secondary px-5 py-3 font-mono text-sm">{{ product.slug }}</td>
-              <td class="text-text-secondary max-w-xs truncate px-5 py-3 text-sm">{{ product.description || '—' }}</td>
-              <td class="px-5 py-3">
-                <lfx-button data-testid="product-management-edit-btn" variant="ghost" size="sm" (clicked)="openEdit(product)">Edit</lfx-button>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  </lfx-card>
+  <lfx-table class="animate-rise-in block [animation-delay:150ms]" [data]="products()" [loading]="loading()" testId="product-management-table">
+    <ng-template lfxColumn="Name" let-product>
+      <a [routerLink]="['/admin/products', product.id]" class="flex items-center gap-2.5 hover:opacity-80">
+        @if (product.faIcon) {
+          <i [class]="product.faIcon" class="text-brand-600"></i>
+        }
+        <span class="text-text-primary text-sm font-medium hover:underline">{{ product.name }}</span>
+      </a>
+    </ng-template>
+
+    <ng-template lfxColumn="Slug" let-product>
+      <span class="text-text-secondary font-mono text-sm">{{ product.slug }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Description" let-product>
+      <span class="text-text-secondary max-w-xs truncate text-sm">{{ product.description || '—' }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Actions" let-product>
+      <lfx-button data-testid="product-management-edit-btn" variant="ghost" size="sm" (clicked)="openEdit(product)">Edit</lfx-button>
+    </ng-template>
+  </lfx-table>
 </div>
 
 <lfx-dialog data-testid="product-dialog" [(visible)]="dialogVisible" [title]="editingProduct() ? 'Edit Product' : 'Add Product'">

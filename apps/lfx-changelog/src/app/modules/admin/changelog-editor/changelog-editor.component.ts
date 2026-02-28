@@ -62,11 +62,13 @@ export class ChangelogEditorComponent {
   protected readonly additionalContextControl = new FormControl('', { nonNullable: true });
 
   protected readonly saving = signal(false);
+  protected readonly publishing = signal(false);
   protected readonly loading = signal(false);
   protected readonly showAiPanel = signal(false);
 
   protected readonly existingEntry: Signal<ChangelogEntryWithRelations | undefined> = this.initExistingEntry();
   protected readonly isEditing = computed(() => !!this.existingEntry());
+  protected readonly isDraft = computed(() => this.existingEntry()?.status === ChangelogStatus.DRAFT);
 
   protected readonly isGenerating = computed(() => this.aiService.state().generating);
   protected readonly generationStatus = computed(() => this.aiService.state().status);
@@ -140,6 +142,22 @@ export class ChangelogEditorComponent {
     });
   }
 
+  protected publish(): void {
+    const entry = this.existingEntry();
+    if (!entry) return;
+
+    this.publishing.set(true);
+    this.changelogService.publish(entry.id).subscribe({
+      next: () => {
+        this.publishing.set(false);
+        this.router.navigate(['/admin/changelogs']);
+      },
+      error: () => {
+        this.publishing.set(false);
+      },
+    });
+  }
+
   private initAiStateWatcher(): void {
     toObservable(this.aiService.state)
       .pipe(pairwise(), takeUntilDestroyed(this.destroyRef))
@@ -185,7 +203,7 @@ export class ChangelogEditorComponent {
       title: this.titleValue() || 'Untitled Entry',
       description: this.descriptionValue(),
       version: this.versionValue() || '0.0.0',
-      status: ChangelogStatus.DRAFT,
+      status: this.existingEntry()?.status ?? ChangelogStatus.DRAFT,
       publishedAt: null,
       createdBy: 'preview-user',
       createdAt: new Date().toISOString(),

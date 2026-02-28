@@ -119,7 +119,18 @@
         [formControl]="descriptionControl" />
 
       <div class="flex gap-3 pt-2">
-        <lfx-button data-testid="changelog-editor-save-btn" variant="primary" [loading]="saving()" (clicked)="save()">
+        @if (isEditing() && isDraft()) {
+          <lfx-button data-testid="changelog-editor-publish-btn" variant="primary" [loading]="publishing()" [disabled]="saving()" (clicked)="publish()">
+            <i class="fa-duotone fa-paper-plane text-xs"></i>
+            Publish
+          </lfx-button>
+        }
+        <lfx-button
+          data-testid="changelog-editor-save-btn"
+          [variant]="isEditing() && isDraft() ? 'secondary' : 'primary'"
+          [loading]="saving()"
+          [disabled]="publishing()"
+          (clicked)="save()">
           {{ isEditing() ? 'Update Entry' : 'Save as Draft' }}
         </lfx-button>
         <a data-testid="changelog-editor-cancel-btn" routerLink="/admin/changelogs">
@@ -174,7 +185,7 @@
                 }
                 <div class="flex items-center gap-2">
                   <span class="text-text-muted text-xs font-medium uppercase">Status</span>
-                  <span class="text-text-secondary text-sm">Draft</span>
+                  <lfx-status-badge [status]="previewEntry().status" />
                 </div>
               </div>
 

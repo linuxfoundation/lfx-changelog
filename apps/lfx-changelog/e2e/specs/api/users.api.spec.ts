@@ -3,7 +3,7 @@
 
 import { expect, test } from '@playwright/test';
 import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
-import { TEST_USERS } from '../../helpers/test-data.js';
+import { TEST_PRODUCTS, TEST_USERS } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
 
@@ -131,6 +131,66 @@ test.describe('Protected Users API (/api/users)', () => {
       const finalUser = finalUsers.find((u: any) => u.id === targetUser.id);
       const removedRole = finalUser.roles.find((r: any) => r.id === roleId);
       expect(removedRole).toBeUndefined();
+    });
+  });
+
+  test.describe('POST /api/users (create)', () => {
+    let testProductId: string;
+
+    test.beforeAll(async () => {
+      const productsRes = await superAdminApi.get('/api/products');
+      const products = (await productsRes.json()).data;
+      const product = products.find((p: any) => p.slug === TEST_PRODUCTS[0]!.slug);
+      testProductId = product.id;
+    });
+
+    test('creates user with role atomically (201)', async () => {
+      const email = `e2e-create-${Date.now()}@example.com`;
+      const res = await superAdminApi.post('/api/users', {
+        data: { email, name: 'E2E Created User', role: 'editor', productId: testProductId },
+      });
+      expect(res.status()).toBe(201);
+
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.email).toBe(email);
+      expect(Array.isArray(body.data.roles)).toBe(true);
+      expect(body.data.roles).toHaveLength(1);
+      expect(body.data.roles[0].role).toBe('editor');
+    });
+
+    test('returns 409 when email already exists', async () => {
+      const res = await superAdminApi.post('/api/users', {
+        data: { email: TEST_USERS[0]!.email, name: 'Duplicate', role: 'editor', productId: testProductId },
+      });
+      expect(res.status()).toBe(409);
+
+      const body = await res.json();
+      expect(body.code).toBe('CONFLICT');
+    });
+
+    test('returns 409 on concurrent duplicate creation', async () => {
+      const email = `e2e-race-${Date.now()}@example.com`;
+      const payload = { email, name: 'E2E Race User', role: 'editor', productId: testProductId };
+
+      const [res1, res2] = await Promise.all([superAdminApi.post('/api/users', { data: payload }), superAdminApi.post('/api/users', { data: payload })]);
+
+      const statuses = [res1.status(), res2.status()].sort();
+      expect(statuses).toEqual([201, 409]);
+    });
+
+    test('product_admin gets 403 on create user', async () => {
+      const res = await productAdminApi.post('/api/users', {
+        data: { email: 'forbidden@example.com', name: 'Forbidden', role: 'editor', productId: testProductId },
+      });
+      expect(res.status()).toBe(403);
+    });
+
+    test('editor gets 403 on create user', async () => {
+      const res = await editorApi.post('/api/users', {
+        data: { email: 'forbidden@example.com', name: 'Forbidden', role: 'editor', productId: testProductId },
+      });
+      expect(res.status()).toBe(403);
     });
   });
 

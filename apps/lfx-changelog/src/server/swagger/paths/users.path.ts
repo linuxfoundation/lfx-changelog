@@ -4,7 +4,7 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-import { AssignRoleRequestSchema, UserRoleAssignmentSchema, UserSchema, createApiResponseSchema } from '@lfx-changelog/shared';
+import { AssignRoleRequestSchema, CreateUserRequestSchema, UserRoleAssignmentSchema, UserSchema, createApiResponseSchema } from '@lfx-changelog/shared';
 
 import { COOKIE_AUTH } from '../constants';
 
@@ -48,6 +48,37 @@ userRegistry.registerPath({
     },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires SUPER_ADMIN role' },
+  },
+});
+
+userRegistry.registerPath({
+  method: 'post',
+  path: '/api/users',
+  tags: ['Users'],
+  summary: 'Create a new user',
+  description: 'Creates a new user and assigns a role.\n\n**Required privilege:** SUPER_ADMIN role.',
+  security: COOKIE_AUTH,
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: CreateUserRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'User created',
+      content: {
+        'application/json': {
+          schema: createApiResponseSchema(UserSchema),
+        },
+      },
+    },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires SUPER_ADMIN role' },
+    409: { description: 'Conflict — user with this email already exists' },
   },
 });
 
