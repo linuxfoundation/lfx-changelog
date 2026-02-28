@@ -1,5 +1,7 @@
 # Remote Database Access (RDS)
 
+> **Note:** Routine migrations are now handled automatically during Helm deployments. See [Database Migrations](./database-migrations.md) for details. This guide is for manual access when needed (debugging, emergency fixes, Prisma Studio).
+
 This guide walks through connecting to the remote PostgreSQL RDS instance in the dev environment to run Prisma migrations and queries.
 
 ## Prerequisites
