@@ -14,6 +14,7 @@ WORKDIR /app
 COPY package.json yarn.lock turbo.json .yarnrc.yml ./
 COPY apps/lfx-changelog/package.json ./apps/lfx-changelog/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/mcp-server/package.json ./packages/mcp-server/
 
 # Install dependencies (this layer is cached when deps don't change)
 RUN yarn install --immutable
@@ -66,6 +67,10 @@ COPY --from=builder /app/apps/lfx-changelog/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/apps/lfx-changelog/src/server/helpers/build-connection-string.ts ./src/server/helpers/build-connection-string.ts
 COPY --from=builder /app/apps/lfx-changelog/src/server/helpers/error-serializer.ts ./src/server/helpers/error-serializer.ts
 COPY --from=builder /app/apps/lfx-changelog/src/server/server-logger.ts ./src/server/server-logger.ts
+
+# Copy workspace packages required at runtime (symlinked from node_modules)
+COPY --from=builder /app/packages/mcp-server/package.json ./packages/mcp-server/package.json
+COPY --from=builder /app/packages/mcp-server/dist ./packages/mcp-server/dist
 
 # Copy built application
 COPY --from=builder /app/apps/lfx-changelog/dist/lfx-changelog ./dist/lfx-changelog
