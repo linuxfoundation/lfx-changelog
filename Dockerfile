@@ -54,6 +54,16 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/lfx-changelog/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=builder /app/apps/lfx-changelog/node_modules/.prisma ./node_modules/.prisma
 
+# Copy Prisma schema, migrations, and config (needed for prisma migrate deploy in k8s)
+COPY --from=builder /app/apps/lfx-changelog/prisma ./prisma
+COPY --from=builder /app/apps/lfx-changelog/prisma.config.ts ./prisma.config.ts
+
+# Copy source files required by prisma.config.ts import chain:
+# prisma.config.ts → build-connection-string → server-logger → error-serializer
+COPY --from=builder /app/apps/lfx-changelog/src/server/helpers/build-connection-string.ts ./src/server/helpers/build-connection-string.ts
+COPY --from=builder /app/apps/lfx-changelog/src/server/helpers/error-serializer.ts ./src/server/helpers/error-serializer.ts
+COPY --from=builder /app/apps/lfx-changelog/src/server/server-logger.ts ./src/server/server-logger.ts
+
 # Copy built application
 COPY --from=builder /app/apps/lfx-changelog/dist/lfx-changelog ./dist/lfx-changelog
 
