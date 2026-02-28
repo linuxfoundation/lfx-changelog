@@ -50,9 +50,12 @@ WORKDIR /app
 # Copy root node_modules (runtime deps: @prisma/adapter-pg, pg + transitive deps)
 COPY --from=builder /app/node_modules ./node_modules
 
-# Copy app-level @prisma/client + generated .prisma client (not hoisted to root by Yarn)
+# Copy app-level Prisma packages (not hoisted to root by Yarn)
+# - @prisma/client + .prisma: generated client for the app
+# - prisma: CLI needed for prisma migrate deploy in k8s
 COPY --from=builder /app/apps/lfx-changelog/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=builder /app/apps/lfx-changelog/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/apps/lfx-changelog/node_modules/prisma ./node_modules/prisma
 
 # Copy Prisma schema, migrations, and config (needed for prisma migrate deploy in k8s)
 COPY --from=builder /app/apps/lfx-changelog/prisma ./prisma
