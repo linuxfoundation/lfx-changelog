@@ -3,7 +3,7 @@
 
 /**
  * Thin HTTP client for the LFX Changelog API.
- * Reads base URL from LFX_API_BASE_URL env var (defaults to http://localhost:4204).
+ * Constructor accepts a `baseUrl` parameter — callers provide it from `BASE_URL` env var.
  * Phase 2: reads LFX_API_KEY for Bearer auth on protected endpoints.
  */
 export class ApiClient {

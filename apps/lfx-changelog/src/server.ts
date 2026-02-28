@@ -118,6 +118,7 @@ if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
   });
   app.use('/public/api', apiRateLimiter);
   app.use('/api', apiRateLimiter);
+  app.use('/mcp', apiRateLimiter);
 }
 
 // 9. Pino HTTP logger (custom serializers to avoid leaking sessions/headers)

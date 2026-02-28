@@ -1967,7 +1967,7 @@ __metadata:
   dependencies:
     "@lfx-changelog/shared": "workspace:*"
     "@modelcontextprotocol/sdk": "npm:^1.27.1"
-    "@types/node": "npm:^22.0.0"
+    "@types/node": "npm:^22.15.0"
     typescript: "npm:5.8.3"
     zod: "npm:^4.3.6"
   bin:
@@ -3612,15 +3612,6 @@ __metadata:
   dependencies:
     undici-types: "npm:~7.18.0"
   checksum: 10c0/7b2b18c9d68047157367fc2f786d4f166d22dc0ad9f82331ca02fb16f2f391854123dbe604dcb938cda119c87051e4bb71dcb9ece44a579f483a6f96d4bd41de
-  languageName: node
-  linkType: hard
-
-"@types/node@npm:^22.0.0":
-  version: 22.19.13
-  resolution: "@types/node@npm:22.19.13"
-  dependencies:
-    undici-types: "npm:~6.21.0"
-  checksum: 10c0/ad8a0b6a69dd8ef663701573eca94ef6d20ce093f54f05bed823c826374eb1ea8b06e6f2c5d7f6cfc203b82dfd60293296bf80ea987ddb77775840bc2ef9f803
   languageName: node
   linkType: hard
 

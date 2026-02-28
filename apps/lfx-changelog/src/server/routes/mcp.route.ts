@@ -4,6 +4,7 @@
 import { createMcpServer } from '@lfx-changelog/mcp-server';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { Router } from 'express';
+import { serverLogger } from '../server-logger';
 
 import type { Request, Response } from 'express';
 
@@ -17,7 +18,8 @@ router.post('/', async (req: Request, res: Response) => {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
-  } catch {
+  } catch (error) {
+    serverLogger.error({ err: error }, 'MCP request failed');
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: '2.0',
