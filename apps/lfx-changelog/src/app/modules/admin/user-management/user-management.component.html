@@ -2,58 +2,48 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="space-y-6">
-  <div class="animate-slide-in-left">
-    <h1 data-testid="user-management-heading" class="font-display text-text-primary text-2xl font-bold">Users</h1>
-    <p class="text-text-secondary mt-1">Manage user access and role assignments.</p>
+  <div class="animate-slide-in-left flex items-center justify-between">
+    <div>
+      <h1 data-testid="user-management-heading" class="font-display text-text-primary text-2xl font-bold">Users</h1>
+      <p class="text-text-secondary mt-1">Manage user access and role assignments.</p>
+    </div>
+    <lfx-button variant="primary" (clicked)="openAddUserDialog()">
+      <i class="fa-solid fa-plus text-xs"></i>
+      Add User
+    </lfx-button>
   </div>
 
-  <lfx-card padding="none" class="animate-rise-in block [animation-delay:150ms]">
-    <div class="overflow-x-auto">
-      <table data-testid="user-management-table" class="w-full">
-        <thead>
-          <tr class="border-border bg-surface-alt border-b text-left">
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">User</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Email</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Roles</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-border divide-y">
-          @for (user of users(); track user.id; let i = $index) {
-            <tr
-              [attr.data-testid]="'user-management-row-' + user.id"
-              class="table-row-enter hover:bg-surface-alt transition-colors"
-              [style.animation-delay.ms]="250 + i * 50">
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-3">
-                  <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
-                  <span class="text-text-primary text-sm font-medium">{{ user.name }}</span>
-                </div>
-              </td>
-              <td class="text-text-secondary px-5 py-3 text-sm">{{ user.email }}</td>
-              <td class="px-5 py-3">
-                <div class="flex flex-wrap gap-1">
-                  @for (ra of user.roles; track ra.id) {
-                    <div class="flex items-center gap-1">
-                      <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
-                      @if (ra.productId) {
-                        <span class="text-text-muted text-xs">({{ ra.productId | productName: products() }})</span>
-                      }
-                    </div>
-                  }
-                </div>
-              </td>
-              <td class="px-5 py-3">
-                <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
-                  >Manage Roles</lfx-button
-                >
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  </lfx-card>
+  <lfx-table class="animate-rise-in block [animation-delay:150ms]" [data]="users()" [loading]="loading()" testId="user-management-table">
+    <ng-template lfxColumn="User" let-user>
+      <div class="flex items-center gap-3">
+        <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
+        <span class="text-text-primary text-sm font-medium">{{ user.name }}</span>
+      </div>
+    </ng-template>
+
+    <ng-template lfxColumn="Email" let-user>
+      <span class="text-text-secondary text-sm">{{ user.email }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Roles" let-user>
+      <div class="flex flex-wrap gap-1">
+        @for (ra of user.roles; track ra.id) {
+          <div class="flex items-center gap-1">
+            <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
+            @if (ra.productId) {
+              <span class="text-text-muted text-xs">({{ ra.productId | productName: products() }})</span>
+            }
+          </div>
+        }
+      </div>
+    </ng-template>
+
+    <ng-template lfxColumn="Actions" let-user>
+      <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
+        >Manage Roles</lfx-button
+      >
+    </ng-template>
+  </lfx-table>
 </div>
 
 <lfx-dialog data-testid="user-role-dialog" [(visible)]="dialogVisible" title="Manage Roles">
@@ -81,24 +71,45 @@
 
       <div class="border-border border-t pt-4">
         <h4 class="text-text-muted mb-3 text-xs font-medium tracking-wider uppercase">Assign New Role</h4>
-        <div class="grid grid-cols-2 gap-3">
-          <lfx-select
-            data-testid="user-role-dialog-role-select"
-            label="Role"
-            [options]="roleOptions"
-            [formControl]="newRoleControl"
-            placeholder="Select role..." />
+        <lfx-select
+          data-testid="user-role-dialog-role-select"
+          label="Role"
+          [options]="roleOptions"
+          [formControl]="newRoleControl"
+          placeholder="Select role..." />
+        @if (!newRoleIsSuperAdmin()) {
           <lfx-select
             data-testid="user-role-dialog-product-select"
             label="Product"
             [options]="productOptions()"
             [formControl]="newProductControl"
-            placeholder="Select product..." />
-        </div>
+            placeholder="Select product..."
+            class="mt-3 block" />
+        }
         <div class="mt-3 flex justify-end">
           <lfx-button data-testid="user-role-dialog-assign-btn" variant="primary" size="sm" (clicked)="assignRole()">Assign Role</lfx-button>
         </div>
       </div>
     </div>
   }
+</lfx-dialog>
+
+<lfx-dialog [(visible)]="addUserDialogVisible" title="Add User">
+  <div class="space-y-4">
+    @if (addUserError(); as errorMsg) {
+      <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+        {{ errorMsg }}
+      </div>
+    }
+    <lfx-input label="Email" [formControl]="addUserEmailControl" placeholder="user@example.com" type="email" />
+    <lfx-input label="Name" [formControl]="addUserNameControl" placeholder="Full name" />
+    <lfx-select label="Role (optional)" [options]="addUserRoleOptions" [formControl]="addUserRoleControl" placeholder="Select role..." />
+    @if (!addUserIsSuperAdmin()) {
+      <lfx-select label="Product" [options]="productOptions()" [formControl]="addUserProductControl" placeholder="Select product..." />
+    }
+    <div class="flex justify-end gap-2 pt-2">
+      <lfx-button variant="secondary" size="sm" (clicked)="addUserDialogVisible.set(false)">Cancel</lfx-button>
+      <lfx-button variant="primary" size="sm" (clicked)="createUser()">Create User</lfx-button>
+    </div>
+  </div>
 </lfx-dialog>

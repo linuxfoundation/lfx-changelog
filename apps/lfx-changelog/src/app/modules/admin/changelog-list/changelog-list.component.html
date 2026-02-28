@@ -32,43 +32,37 @@
   </div>
 
   <!-- Table -->
-  <lfx-card padding="none" class="animate-rise-in block [animation-delay:200ms]">
-    <div class="overflow-x-auto">
-      <table data-testid="changelog-list-table" class="w-full">
-        <thead>
-          <tr class="border-border bg-surface-alt border-b text-left">
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Title</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Product</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Status</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Version</th>
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase">Updated</th>
-          </tr>
-        </thead>
-        <tbody class="divide-border divide-y">
-          @for (entry of filteredEntries(); track entry.id; let i = $index) {
-            <tr
-              [attr.data-testid]="'changelog-list-row-' + entry.id"
-              class="table-row-enter hover:bg-surface-alt transition-colors"
-              [style.animation-delay.ms]="300 + i * 50">
-              <td class="px-5 py-3">
-                <a [routerLink]="['/admin/changelogs', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
-                  {{ entry.title }}
-                </a>
-              </td>
-              <td class="text-text-secondary px-5 py-3 text-sm">{{ entry.productId | productName: products() }}</td>
-              <td class="px-5 py-3">
-                <lfx-status-badge [status]="entry.status" />
-              </td>
-              <td class="text-text-secondary px-5 py-3 text-sm">{{ entry.version ? 'v' + entry.version : '—' }}</td>
-              <td class="text-text-muted px-5 py-3 text-sm">{{ entry.updatedAt | dateFormat }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
+  <lfx-table
+    class="animate-rise-in block [animation-delay:200ms]"
+    [data]="filteredEntries()"
+    [loading]="loading()"
+    testId="changelog-list-table"
+    emptyMessage="No entries match the selected filters."
+    [currentPage]="currentPage()"
+    [totalPages]="totalPages()"
+    [totalItems]="totalItems()"
+    [pageSize]="pageSize()"
+    (pageChange)="onPageChange($event)">
+    <ng-template lfxColumn="Title" let-entry>
+      <a [routerLink]="['/admin/changelogs', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
+        {{ entry.title }}
+      </a>
+    </ng-template>
 
-      @if (filteredEntries().length === 0) {
-        <div data-testid="changelog-list-empty" class="text-text-muted py-12 text-center text-sm">No entries match the selected filters.</div>
-      }
-    </div>
-  </lfx-card>
+    <ng-template lfxColumn="Product" let-entry>
+      <span class="text-text-secondary text-sm">{{ entry.productId | productName: products() }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Status" let-entry>
+      <lfx-status-badge [status]="entry.status" />
+    </ng-template>
+
+    <ng-template lfxColumn="Version" let-entry>
+      <span class="text-text-secondary text-sm">{{ entry.version ? 'v' + entry.version : '—' }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Updated" let-entry>
+      <span class="text-text-muted text-sm">{{ entry.updatedAt | dateFormat }}</span>
+    </ng-template>
+  </lfx-table>
 </div>

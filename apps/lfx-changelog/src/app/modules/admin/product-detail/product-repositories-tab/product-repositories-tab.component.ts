@@ -9,6 +9,8 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { DialogComponent } from '@components/dialog/dialog.component';
 import { SelectComponent, SelectOption } from '@components/select/select.component';
+import { TableColumnDirective } from '@components/table/table-column.directive';
+import { TableComponent } from '@components/table/table.component';
 import { GitHubService } from '@services/github/github.service';
 import { ProductService } from '@services/product/product.service';
 import { MapGetPipe } from '@shared/pipes/map-get/map-get.pipe';
@@ -18,7 +20,7 @@ import type { GitHubInstallation, GitHubRepository, LinkRepositoryRequest, Produ
 import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 @Component({
   selector: 'lfx-product-repositories-tab',
-  imports: [ReactiveFormsModule, ButtonComponent, CardComponent, DialogComponent, SelectComponent, MapGetPipe],
+  imports: [ReactiveFormsModule, ButtonComponent, CardComponent, DialogComponent, SelectComponent, TableComponent, TableColumnDirective, MapGetPipe],
   templateUrl: './product-repositories-tab.component.html',
   styleUrl: './product-repositories-tab.component.css',
 })

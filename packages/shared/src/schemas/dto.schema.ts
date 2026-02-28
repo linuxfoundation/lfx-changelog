@@ -62,3 +62,14 @@ export const AssignRoleRequestSchema = z
   .openapi('AssignRoleRequest');
 
 export type AssignRoleRequest = z.infer<typeof AssignRoleRequestSchema>;
+
+export const CreateUserRequestSchema = z
+  .object({
+    email: z.string().email(),
+    name: z.string().min(1),
+    role: z.nativeEnum(UserRole),
+    productId: z.string().optional(),
+  })
+  .openapi('CreateUserRequest');
+
+export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;

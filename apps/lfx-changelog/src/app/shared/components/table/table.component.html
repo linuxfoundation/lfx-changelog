@@ -1,0 +1,44 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<lfx-card padding="none">
+  <div class="overflow-x-auto">
+    <table [attr.data-testid]="testId() || null" class="w-full">
+      <thead>
+        <tr class="border-border bg-surface-alt border-b text-left">
+          @for (col of columns(); track col.lfxColumn()) {
+            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase" [class]="col.lfxColumnHeaderClass()">
+              {{ col.lfxColumn() }}
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody class="divide-border divide-y">
+        @if (!loading()) {
+          @for (item of data(); track $index; let i = $index) {
+            <tr class="table-row-enter hover:bg-surface-alt transition-colors" [style.animation-delay.ms]="i * 50">
+              @for (col of columns(); track col.lfxColumn()) {
+                <td class="px-5 py-3" [class]="col.lfxColumnCellClass()">
+                  <ng-container *ngTemplateOutlet="col.templateRef; context: { $implicit: item, index: i }" />
+                </td>
+              }
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+
+    @if (!loading() && data().length === 0) {
+      <div class="text-text-muted py-12 text-center text-sm">{{ emptyMessage() }}</div>
+    }
+  </div>
+
+  @if (totalPages() > 1) {
+    <lfx-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalItems]="totalItems()"
+      [pageSize]="pageSize()"
+      (pageChange)="pageChange.emit($event)" />
+  }
+</lfx-card>

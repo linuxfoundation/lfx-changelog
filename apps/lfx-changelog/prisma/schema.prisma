@@ -77,7 +77,7 @@ model ChangelogEntry {
 
 model User {
   id        String   @id @default(uuid())
-  auth0Id   String   @unique @map("auth0_id")
+  auth0Id   String?  @unique @map("auth0_id")
   email     String   @unique
   name      String
   avatarUrl String?  @map("avatar_url")

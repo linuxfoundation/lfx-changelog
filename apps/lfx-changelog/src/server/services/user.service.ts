@@ -3,16 +3,28 @@
 
 import { UserRoleAssignment as PrismaRoleAssignment, User as PrismaUser, UserRole as PrismaUserRole } from '@prisma/client';
 
-import { NotFoundError } from '../errors';
+import { ConflictError, NotFoundError } from '../errors';
 
 import { getPrismaClient } from './prisma.service';
 
 export class UserService {
-  public async findByAuth0Profile(auth0Profile: { sub: string }): Promise<PrismaUser | null> {
+  public async findByEmail(email: string): Promise<PrismaUser | null> {
     const prisma = getPrismaClient();
     return prisma.user.findUnique({
-      where: { auth0Id: auth0Profile.sub },
-      include: { userRoleAssignments: true },
+      where: { email },
+      include: { userRoleAssignments: { include: { product: true } } },
+    });
+  }
+
+  public async create(data: { email: string; name: string }): Promise<PrismaUser> {
+    const prisma = getPrismaClient();
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existing) {
+      throw new ConflictError(`User with email ${data.email} already exists`, { operation: 'create', service: 'user' });
+    }
+    return prisma.user.create({
+      data: { email: data.email, name: data.name },
+      include: { userRoleAssignments: { include: { product: true } } },
     });
   }
 

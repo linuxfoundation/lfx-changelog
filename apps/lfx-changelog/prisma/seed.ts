@@ -6,7 +6,11 @@ import { PrismaClient } from '@prisma/client';
 import 'dotenv/config';
 import { buildConnectionString } from '../src/server/helpers/build-connection-string';
 
-const adapter = new PrismaPg({ connectionString: buildConnectionString() });
+const isLocal = process.env['NODE_ENV'] !== 'production';
+const adapter = new PrismaPg({
+  connectionString: buildConnectionString(),
+  ssl: isLocal ? undefined : { rejectUnauthorized: false },
+});
 const prisma = new PrismaClient({ adapter });
 
 const products = [

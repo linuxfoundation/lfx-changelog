@@ -5,6 +5,7 @@ export { AiServiceError } from './ai.error';
 export { AuthenticationError } from './authentication.error';
 export { AuthorizationError } from './authorization.error';
 export { BaseApiError } from './base-api.error';
+export { ConflictError } from './conflict.error';
 export { NotFoundError } from './not-found.error';
 
 import { BaseApiError } from './base-api.error';

@@ -19,7 +19,7 @@ export type UserRoleAssignment = z.infer<typeof UserRoleAssignmentSchema>;
 export const UserSchema = z
   .object({
     id: z.string(),
-    auth0Id: z.string(),
+    auth0Id: z.string().nullable(),
     email: z.string(),
     name: z.string(),
     avatarUrl: z.string().nullable(),
