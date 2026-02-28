@@ -52,13 +52,13 @@ export async function seedTestDatabase(): Promise<void> {
   // Build slug-to-id map
   const productBySlug = new Map(products.map((p) => [p.slug, p]));
 
-  // 2. Upsert users
+  // 2. Upsert users (by email — auth0Id is no longer used for auth lookup)
   const users = await Promise.all(
     TEST_USERS.map((u) =>
       client.user.upsert({
-        where: { auth0Id: u.auth0Id },
-        update: { email: u.email, name: u.name },
-        create: { auth0Id: u.auth0Id, email: u.email, name: u.name },
+        where: { email: u.email },
+        update: { name: u.name },
+        create: { email: u.email, name: u.name },
       })
     )
   );
