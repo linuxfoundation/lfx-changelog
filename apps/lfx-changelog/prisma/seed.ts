@@ -8,10 +8,9 @@ import { buildConnectionString } from '../src/server/helpers/build-connection-st
 
 const connectionString = buildConnectionString();
 const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
-const rejectUnauthorized = process.env['DB_SSL_REJECT_UNAUTHORIZED'] !== 'false';
 const adapter = new PrismaPg({
   connectionString,
-  ssl: isLocal ? undefined : { rejectUnauthorized },
+  ssl: isLocal ? undefined : { rejectUnauthorized: false },
 });
 const prisma = new PrismaClient({ adapter });
 
