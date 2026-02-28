@@ -25,14 +25,6 @@ export class ChangelogListPage {
   }
 
   public getRows(): Locator {
-    return this.page.locator('[data-testid^="changelog-list-row-"]');
-  }
-
-  public getRow(entryId: string): Locator {
-    return this.page.locator(`[data-testid="changelog-list-row-${entryId}"]`);
-  }
-
-  public async clickEntry(entryId: string) {
-    await this.getRow(entryId).locator('a').click();
+    return this.table.locator('tbody tr');
   }
 }

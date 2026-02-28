@@ -7,7 +7,7 @@
       <h1 data-testid="user-management-heading" class="font-display text-text-primary text-2xl font-bold">Users</h1>
       <p class="text-text-secondary mt-1">Manage user access and role assignments.</p>
     </div>
-    <lfx-button variant="primary" (clicked)="openAddUserDialog()">
+    <lfx-button data-testid="user-management-add-user-btn" variant="primary" (clicked)="openAddUserDialog()">
       <i class="fa-solid fa-plus text-xs"></i>
       Add User
     </lfx-button>
@@ -94,22 +94,34 @@
   }
 </lfx-dialog>
 
-<lfx-dialog [(visible)]="addUserDialogVisible" title="Add User">
+<lfx-dialog data-testid="add-user-dialog" [(visible)]="addUserDialogVisible" title="Add User">
   <div class="space-y-4">
     @if (addUserError(); as errorMsg) {
-      <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+      <div
+        data-testid="add-user-error"
+        class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
         {{ errorMsg }}
       </div>
     }
-    <lfx-input label="Email" [formControl]="addUserEmailControl" placeholder="user@example.com" type="email" />
-    <lfx-input label="Name" [formControl]="addUserNameControl" placeholder="Full name" />
-    <lfx-select label="Role (optional)" [options]="addUserRoleOptions" [formControl]="addUserRoleControl" placeholder="Select role..." />
+    <lfx-input data-testid="add-user-email-input" label="Email" [formControl]="addUserEmailControl" placeholder="user@example.com" type="email" />
+    <lfx-input data-testid="add-user-name-input" label="Name" [formControl]="addUserNameControl" placeholder="Full name" />
+    <lfx-select
+      data-testid="add-user-role-select"
+      label="Role"
+      [options]="addUserRoleOptions"
+      [formControl]="addUserRoleControl"
+      placeholder="Select role..." />
     @if (!addUserIsSuperAdmin()) {
-      <lfx-select label="Product" [options]="productOptions()" [formControl]="addUserProductControl" placeholder="Select product..." />
+      <lfx-select
+        data-testid="add-user-product-select"
+        label="Product"
+        [options]="productOptions()"
+        [formControl]="addUserProductControl"
+        placeholder="Select product..." />
     }
     <div class="flex justify-end gap-2 pt-2">
       <lfx-button variant="secondary" size="sm" (clicked)="addUserDialogVisible.set(false)">Cancel</lfx-button>
-      <lfx-button variant="primary" size="sm" (clicked)="createUser()">Create User</lfx-button>
+      <lfx-button data-testid="add-user-create-btn" variant="primary" size="sm" (clicked)="createUser()">Create User</lfx-button>
     </div>
   </div>
 </lfx-dialog>

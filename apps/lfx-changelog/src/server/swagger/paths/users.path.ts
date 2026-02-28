@@ -56,7 +56,7 @@ userRegistry.registerPath({
   path: '/api/users',
   tags: ['Users'],
   summary: 'Create a new user',
-  description: 'Creates a new user and optionally assigns a role.\n\n**Required privilege:** SUPER_ADMIN role.',
+  description: 'Creates a new user and assigns a role.\n\n**Required privilege:** SUPER_ADMIN role.',
   security: COOKIE_AUTH,
   request: {
     body: {

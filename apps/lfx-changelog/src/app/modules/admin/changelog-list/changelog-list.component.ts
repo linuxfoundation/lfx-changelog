@@ -15,7 +15,7 @@ import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
 import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
 import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
-import { BehaviorSubject, combineLatest, map, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
@@ -112,7 +112,8 @@ export class ChangelogListComponent {
                   pageSize: res.pageSize,
                   totalPages: res.totalPages,
                 })
-              )
+              ),
+              catchError(() => of({ entries: [], total: 0, page: 1, pageSize: ChangelogListComponent.defaultPageSize, totalPages: 0 } as PageState))
             )
         ),
         tap(() => this.loading.set(false))

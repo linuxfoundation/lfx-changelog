@@ -18,7 +18,7 @@ import { UserService } from '@services/user/user.service';
 import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
 import { RoleColorPipe } from '@shared/pipes/role-color/role-color.pipe';
 import { RoleLabelPipe } from '@shared/pipes/role-label/role-label.pipe';
-import { BehaviorSubject, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
 import type { Product, User } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
@@ -52,7 +52,7 @@ export class UserManagementComponent {
   protected readonly users = toSignal(
     this.refreshUsers$.pipe(
       tap(() => this.loading.set(true)),
-      switchMap(() => this.userService.getAll()),
+      switchMap(() => this.userService.getAll().pipe(catchError(() => of([] as User[])))),
       tap(() => this.loading.set(false))
     ),
     { initialValue: [] as User[] }

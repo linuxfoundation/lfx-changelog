@@ -38,11 +38,8 @@ export class UserController {
   public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, name, role, productId } = req.body as CreateUserRequest;
-      const user = await this.userService.create({ email, name });
-      await this.userService.assignRole(user.id, role, productId ?? null);
-
-      const fullUser = await this.userService.findById(user.id);
-      res.status(201).json({ success: true, data: mapUser(fullUser) });
+      const user = await this.userService.createWithRole({ email, name, role, productId });
+      res.status(201).json({ success: true, data: mapUser(user) });
     } catch (error) {
       next(error);
     }

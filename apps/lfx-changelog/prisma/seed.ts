@@ -6,10 +6,12 @@ import { PrismaClient } from '@prisma/client';
 import 'dotenv/config';
 import { buildConnectionString } from '../src/server/helpers/build-connection-string';
 
-const isLocal = process.env['NODE_ENV'] !== 'production';
+const connectionString = buildConnectionString();
+const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+const rejectUnauthorized = process.env['DB_SSL_REJECT_UNAUTHORIZED'] !== 'false';
 const adapter = new PrismaPg({
-  connectionString: buildConnectionString(),
-  ssl: isLocal ? undefined : { rejectUnauthorized: false },
+  connectionString,
+  ssl: isLocal ? undefined : { rejectUnauthorized },
 });
 const prisma = new PrismaClient({ adapter });
 
