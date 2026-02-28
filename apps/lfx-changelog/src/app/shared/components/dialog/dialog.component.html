@@ -6,7 +6,7 @@
     <div data-testid="dialog-overlay" class="animate-fade-in fixed inset-0 bg-black/40 backdrop-blur-sm" (click)="close()"></div>
     <div
       data-testid="dialog-box"
-      class="border-border bg-surface animate-scale-in-up relative z-10 rounded-xl border shadow-xl"
+      class="border-border bg-surface animate-scale-in-up relative z-10 max-h-[85vh] overflow-y-auto rounded-xl border shadow-xl"
       [class]="(size() === 'sm' ? 'w-full max-w-sm' : '') + (size() === 'md' ? 'w-full max-w-lg' : '') + (size() === 'lg' ? 'w-full max-w-2xl' : '')">
       <div class="border-border flex items-center justify-between border-b px-6 py-4">
         <h2 data-testid="dialog-title" class="font-display text-text-primary text-lg font-semibold">{{ title() }}</h2>
