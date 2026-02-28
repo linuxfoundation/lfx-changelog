@@ -53,10 +53,7 @@
               "entry": "src/server.ts"
             },
             "allowedCommonJsDependencies": ["compression", "cors", "swagger-ui-express"],
-            "externalDependencies": ["@prisma/client", "@prisma/adapter-pg", "pg", "jsonwebtoken", "swagger-ui-express"],
-            "security": {
-              "allowedHosts": ["localhost"]
-            }
+            "externalDependencies": ["@prisma/client", "@prisma/adapter-pg", "pg", "jsonwebtoken", "swagger-ui-express"]
           },
           "configurations": {
             "production": {
@@ -94,7 +91,10 @@
             "local": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "security": {
+                "allowedHosts": ["localhost"]
+              }
             }
           },
           "defaultConfiguration": "production"
