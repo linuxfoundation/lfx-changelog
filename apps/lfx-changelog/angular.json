@@ -91,7 +91,10 @@
             "local": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "security": {
+                "allowedHosts": ["localhost"]
+              }
             }
           },
           "defaultConfiguration": "production"
