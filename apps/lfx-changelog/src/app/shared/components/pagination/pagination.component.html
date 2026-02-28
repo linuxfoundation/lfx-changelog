@@ -1,0 +1,49 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (totalPages() > 1) {
+  <div class="border-border flex flex-col items-center justify-between gap-3 border-t px-5 py-3 sm:flex-row">
+    @if (totalItems() > 0) {
+      <p class="text-text-muted text-sm">
+        Showing <span class="text-text-secondary font-medium">{{ rangeStart() }}</span> to
+        <span class="text-text-secondary font-medium">{{ rangeEnd() }}</span> of
+        <span class="text-text-secondary font-medium">{{ totalItems() }}</span>
+      </p>
+    }
+
+    <nav class="flex items-center gap-1">
+      <!-- Previous -->
+      <button
+        type="button"
+        class="text-text-muted hover:bg-surface-alt hover:text-text-secondary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40"
+        [disabled]="!hasPrevious()"
+        (click)="goToPage(currentPage() - 1)">
+        <i class="fa-solid fa-chevron-left text-xs"></i>
+      </button>
+
+      <!-- Page numbers -->
+      @for (page of visiblePages(); track $index) {
+        @if (page === null) {
+          <span class="text-text-muted inline-flex h-8 w-8 items-center justify-center text-sm">&hellip;</span>
+        } @else {
+          <button
+            type="button"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium transition-colors"
+            [class]="page === currentPage() ? 'bg-brand-600 text-white' : 'text-text-muted hover:bg-surface-alt hover:text-text-secondary'"
+            (click)="goToPage(page)">
+            {{ page }}
+          </button>
+        }
+      }
+
+      <!-- Next -->
+      <button
+        type="button"
+        class="text-text-muted hover:bg-surface-alt hover:text-text-secondary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40"
+        [disabled]="!hasNext()"
+        (click)="goToPage(currentPage() + 1)">
+        <i class="fa-solid fa-chevron-right text-xs"></i>
+      </button>
+    </nav>
+  </div>
+}

@@ -6,9 +6,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
-import { CardComponent } from '@components/card/card.component';
 import { DialogComponent } from '@components/dialog/dialog.component';
 import { InputComponent } from '@components/input/input.component';
+import { TableColumnDirective } from '@components/table/table-column.directive';
+import { TableComponent } from '@components/table/table.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { ProductService } from '@services/product/product.service';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
@@ -16,7 +17,7 @@ import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 import type { Product } from '@lfx-changelog/shared';
 @Component({
   selector: 'lfx-product-management',
-  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, CardComponent, DialogComponent, InputComponent, TextareaComponent],
+  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, DialogComponent, InputComponent, TableComponent, TableColumnDirective, TextareaComponent],
   templateUrl: './product-management.component.html',
   styleUrl: './product-management.component.css',
 })

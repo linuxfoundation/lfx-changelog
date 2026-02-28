@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import type { CreateProductRequest } from '@lfx-changelog/shared';
 
-const TestUserSchema = UserSchema.pick({ auth0Id: true, email: true, name: true }).extend({
+const TestUserSchema = UserSchema.pick({ email: true, name: true }).extend({
   role: z.union([UserRoleAssignmentSchema.shape.role, z.literal('user')]),
 });
 
@@ -25,32 +25,28 @@ type TestUser = z.infer<typeof TestUserSchema>;
 type TestRoleAssignment = z.infer<typeof TestRoleAssignmentSchema>;
 type TestChangelog = z.infer<typeof TestChangelogSchema>;
 
-function auth0Id(role: string): string {
-  return `auth0|${process.env[`E2E_${role}_USERNAME`] || 'REPLACE_ME'}`;
+function e2eEmail(role: string, fallback: string): string {
+  return process.env[`E2E_${role}_EMAIL`] || fallback;
 }
 
 export const TEST_USERS: TestUser[] = [
   {
-    auth0Id: auth0Id('SUPER_ADMIN'),
-    email: 'test+changelog_super_admin@example.com',
+    email: e2eEmail('SUPER_ADMIN', 'test+changelog_super_admin@example.com'),
     name: 'E2E Super Admin',
     role: UserRole.SUPER_ADMIN,
   },
   {
-    auth0Id: auth0Id('PRODUCT_ADMIN'),
-    email: 'test+changelog_product_admin@example.com',
+    email: e2eEmail('PRODUCT_ADMIN', 'test+changelog_product_admin@example.com'),
     name: 'E2E Product Admin',
     role: UserRole.PRODUCT_ADMIN,
   },
   {
-    auth0Id: auth0Id('EDITOR'),
-    email: 'test+changelog_editor@example.com',
+    email: e2eEmail('EDITOR', 'test+changelog_editor@example.com'),
     name: 'E2E Editor',
     role: UserRole.EDITOR,
   },
   {
-    auth0Id: auth0Id('USER'),
-    email: 'test+changelog_user@example.com',
+    email: e2eEmail('USER', 'test+changelog_user@example.com'),
     name: 'E2E User',
     role: 'user',
   },

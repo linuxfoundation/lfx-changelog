@@ -21,7 +21,7 @@ export function buildConnectionString(): string {
   const user = process.env['DB_USER'];
   const password = process.env['DB_PASSWORD'];
 
-  serverLogger.info({ host, port, db: name, user, passwordLength: password?.length ?? 0 }, 'buildConnectionString: assembling from individual DB_* vars');
+  serverLogger.info({ host, port, db: name, user }, 'buildConnectionString: assembling from individual DB_* vars');
 
   if (!host || !name || !user || !password) {
     throw new Error('DATABASE_URL or DB_HOST/DB_NAME/DB_USER/DB_PASSWORD environment variables are required');
