@@ -47,7 +47,13 @@ export class ChatController {
       const id = req.params['id'] as string;
       const conversation = await this.conversationService.getConversation(id);
 
-      // Verify ownership for authenticated users
+      // Block unauthenticated callers from reading admin conversations
+      if (!req.dbUser && conversation.accessLevel === 'admin') {
+        res.status(403).json({ success: false, error: 'Forbidden' });
+        return;
+      }
+
+      // Block authenticated users from reading other users' conversations
       if (req.dbUser && conversation.userId && conversation.userId !== req.dbUser.id) {
         res.status(403).json({ success: false, error: 'Forbidden' });
         return;
@@ -111,9 +117,18 @@ export class ChatController {
       let isNewConversation = false;
 
       if (conversationId) {
-        // Verify conversation exists and user has access
+        // Verify conversation exists and caller has access
         const existing = await this.conversationService.getConversation(conversationId);
-        if (existing.userId && userId && existing.userId !== userId) {
+
+        // Block public callers from accessing admin conversations
+        if (existing.accessLevel === 'admin' && accessLevel !== 'admin') {
+          sendEvent('error', 'You do not have access to this conversation.');
+          res.end();
+          return;
+        }
+
+        // Block unauthenticated callers from accessing owned conversations
+        if (existing.userId && (!userId || existing.userId !== userId)) {
           sendEvent('error', 'You do not have access to this conversation.');
           res.end();
           return;

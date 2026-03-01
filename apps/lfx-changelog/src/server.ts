@@ -15,6 +15,7 @@ import { hybridAuthMiddleware } from './server/middleware/api-key-auth.middlewar
 import { noCacheMiddleware } from './server/middleware/cache.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import { requestIdMiddleware } from './server/middleware/request-id.middleware';
+import { sameOriginOnly } from './server/middleware/same-origin.middleware';
 import aiRouter from './server/routes/ai.route';
 import apiKeyRouter from './server/routes/api-key.route';
 import changelogRouter from './server/routes/changelog.route';
@@ -66,25 +67,19 @@ app.use(
   })
 );
 
-// 4. CORS — public chat API (POST for SSE streaming)
-app.use(
-  '/public/api/chat',
-  cors({
-    origin: getCorsOrigins(),
-    methods: ['GET', 'HEAD', 'POST', 'OPTIONS'],
-    maxAge: 86400,
-  })
-);
-
-// 4a. CORS — public API only (external consumers); protected routes stay same-origin
-app.use(
-  '/public/api',
+// 4. CORS — public API only (external consumers); protected routes stay same-origin
+// Chat routes are excluded — they're same-origin only (served by this app)
+app.use('/public/api', (req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/chat')) {
+    next();
+    return;
+  }
   cors({
     origin: getCorsOrigins(),
     methods: ['GET', 'HEAD', 'OPTIONS'],
     maxAge: 86400,
-  })
-);
+  })(req, res, next);
+});
 
 // 4b. CORS — MCP endpoint (AI clients need cross-origin access)
 app.use(
@@ -97,7 +92,13 @@ app.use(
 );
 
 // 4c. CORS — protected API when accessed via API key (programmatic clients)
+// Chat routes are excluded — they're same-origin only
 app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/chat')) {
+    next();
+    return;
+  }
+
   const hasApiKey =
     req.headers['authorization']?.startsWith('Bearer lfx_') || (typeof req.headers['x-api-key'] === 'string' && req.headers['x-api-key'].startsWith('lfx_'));
 
@@ -212,7 +213,7 @@ app.get('/logout', (_req: Request, res: Response) => {
 app.use('/webhooks', webhookRouter);
 
 // 13. Public API routes (no auth required — cache headers set per-route)
-app.use('/public/api/chat', publicChatRouter);
+app.use('/public/api/chat', sameOriginOnly, publicChatRouter);
 app.use('/public/api/changelogs', publicChangelogRouter);
 app.use('/public/api/products', publicProductRouter);
 
@@ -246,6 +247,15 @@ if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
 
 // 15. Protected API routes
 app.use('/api/ai', aiRouter);
+
+// Chat is UI-only — same-origin + session auth only (no API key, no cross-origin)
+app.use('/api/chat', sameOriginOnly, (req: Request, res: Response, next: NextFunction) => {
+  if (req.authMethod === 'api_key') {
+    res.status(403).json({ success: false, error: 'Chat endpoints require session authentication' });
+    return;
+  }
+  next();
+});
 app.use('/api/chat', chatRouter);
 app.use('/api/api-keys', apiKeyRouter);
 app.use('/api/products', productRouter);

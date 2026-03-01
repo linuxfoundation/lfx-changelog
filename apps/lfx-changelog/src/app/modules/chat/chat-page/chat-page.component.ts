@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, DestroyRef, ElementRef, computed, inject, input, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { map } from 'rxjs';
@@ -14,7 +14,7 @@ import { ChatService } from '@services/chat/chat.service';
 
 import type { Signal } from '@angular/core';
 import type { ChatCopy } from '@app/shared/interfaces/chat.interface';
-import type { ChatMode } from '@lfx-changelog/shared';
+import type { ChatAccessLevel } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-chat-page',
@@ -27,7 +27,7 @@ export class ChatPageComponent {
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
-  public readonly mode = input<ChatMode>('public');
+  public readonly mode = input<ChatAccessLevel>('public');
   public readonly messageControl = new FormControl('');
 
   private readonly messagesContainer = viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
@@ -47,7 +47,10 @@ export class ChatPageComponent {
   protected readonly copy = computed<ChatCopy>(() => (this.mode() === 'admin' ? ADMIN_COPY : PUBLIC_COPY));
 
   public constructor() {
-    this.chatService.loadConversations();
+    afterNextRender(() => {
+      this.chatService.mode.set(this.mode());
+      this.chatService.loadConversations();
+    });
     this.initAutoScroll();
   }
 

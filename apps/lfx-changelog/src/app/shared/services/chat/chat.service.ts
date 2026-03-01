@@ -9,7 +9,7 @@ import { catchError, firstValueFrom, map, of, Subject, switchMap } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 
 import type { Signal } from '@angular/core';
-import type { ChatConversation, ChatConversationWithMessages, ChatMessageUI, ChatSSEEventType } from '@lfx-changelog/shared';
+import type { ChatAccessLevel, ChatConversation, ChatConversationWithMessages, ChatMessageUI, ChatSSEEventType } from '@lfx-changelog/shared';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
@@ -18,6 +18,7 @@ export class ChatService {
 
   private readonly conversationsRefresh$ = new Subject<void>();
 
+  public readonly mode = signal<ChatAccessLevel>('public');
   public readonly messages = signal<ChatMessageUI[]>([]);
   public readonly streaming = signal(false);
   public readonly currentStatus = signal('');
@@ -47,7 +48,7 @@ export class ChatService {
   }
 
   public async loadConversation(id: string): Promise<void> {
-    const url = this.authService.authenticated() ? `/api/chat/conversations/${id}` : `/public/api/chat/conversations/${id}`;
+    const url = this.mode() === 'admin' ? `/api/chat/conversations/${id}` : `/public/api/chat/conversations/${id}`;
 
     try {
       const res = await firstValueFrom(this.http.get<{ success: boolean; data: ChatConversationWithMessages }>(url));
@@ -104,8 +105,8 @@ export class ChatService {
   }
 
   private async streamChat(message: string, signal: AbortSignal): Promise<void> {
-    const isAuthenticated = this.authService.authenticated();
-    const url = isAuthenticated ? '/api/chat/send' : '/public/api/chat/send';
+    const isAdmin = this.mode() === 'admin';
+    const url = isAdmin ? '/api/chat/send' : '/public/api/chat/send';
 
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
@@ -204,8 +205,10 @@ export class ChatService {
         this.flushCharBuffer();
         this.streaming.set(false);
         this.currentStatus.set('');
-        // Refresh conversations list if authenticated
-        this.loadConversations();
+        // Refresh conversations list for admin mode
+        if (this.mode() === 'admin') {
+          this.loadConversations();
+        }
         break;
       case 'error':
         this.flushCharBuffer();
@@ -290,7 +293,7 @@ export class ChatService {
     return toSignal(
       this.conversationsRefresh$.pipe(
         switchMap(() =>
-          this.authService.authenticated()
+          this.mode() === 'admin' && this.authService.authenticated()
             ? this.http.get<{ success: boolean; data: ChatConversation[] }>('/api/chat/conversations').pipe(
                 map((res) => res.data),
                 catchError(() => of([] as ChatConversation[]))

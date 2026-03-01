@@ -10,9 +10,6 @@ import { OpenAIToolCallSchema } from './ai.schema.js';
 export const ChatAccessLevelSchema = z.enum(['public', 'admin']);
 export type ChatAccessLevel = z.infer<typeof ChatAccessLevelSchema>;
 
-export const ChatModeSchema = z.enum(['public', 'admin']);
-export type ChatMode = z.infer<typeof ChatModeSchema>;
-
 export const ChatMessageRoleSchema = z.enum(['user', 'assistant', 'system', 'tool']);
 export type ChatMessageRole = z.infer<typeof ChatMessageRoleSchema>;
 

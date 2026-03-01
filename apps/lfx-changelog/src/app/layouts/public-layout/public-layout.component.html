@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="bg-canvas min-h-screen">
+<div class="bg-canvas flex min-h-screen flex-col">
   <!-- Header -->
   <header data-testid="public-layout-header" class="border-border bg-surface/80 sticky top-0 z-30 border-b backdrop-blur-lg">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -67,15 +67,21 @@
     </div>
   </header>
 
-  <!-- Main content -->
-  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-    <router-outlet />
-  </main>
+  <!-- Main content: chat route gets full-bleed flex, other routes get constrained content -->
+  @if (isChatRoute()) {
+    <main class="flex min-h-0 flex-1 flex-col">
+      <router-outlet />
+    </main>
+  } @else {
+    <main class="mx-auto max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      <router-outlet />
+    </main>
 
-  <!-- Footer -->
-  <footer class="border-border bg-surface border-t py-8">
-    <div class="text-text-muted mx-auto max-w-7xl px-4 text-center text-sm sm:px-6 lg:px-8">
-      &copy; {{ currentYear }} The Linux Foundation. All rights reserved.
-    </div>
-  </footer>
+    <!-- Footer (hidden on chat route) -->
+    <footer class="border-border bg-surface border-t py-8">
+      <div class="text-text-muted mx-auto max-w-7xl px-4 text-center text-sm sm:px-6 lg:px-8">
+        &copy; {{ currentYear }} The Linux Foundation. All rights reserved.
+      </div>
+    </footer>
+  }
 </div>

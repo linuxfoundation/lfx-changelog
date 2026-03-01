@@ -1,9 +1,9 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="-m-6 flex h-[calc(100vh-4rem)]">
+<div class="flex" [class]="mode() === 'admin' ? '-m-6 h-[calc(100vh-4rem)]' : 'min-h-0 flex-1'">
   <!-- Sidebar: conversation history -->
-  @if (authenticated()) {
+  @if (mode() === 'admin' && authenticated()) {
     <aside class="animate-slide-in-left border-border bg-surface flex w-[280px] shrink-0 flex-col border-r">
       <!-- Sidebar header -->
       <div class="flex items-center justify-between px-5 py-4">
@@ -55,7 +55,12 @@
   <!-- Main chat area -->
   <div class="flex min-w-0 flex-1 flex-col">
     <!-- Messages -->
-    <div #messagesContainer class="flex-1 overflow-y-auto" (scroll)="onMessagesScroll()">
+    <div
+      #messagesContainer
+      class="flex-1 overflow-y-auto"
+      (scroll)="onMessagesScroll()"
+      [class.mx-auto]="mode() === 'public'"
+      [class.max-w-7xl]="mode() === 'public'">
       @if (!hasMessages()) {
         <!-- Empty state -->
         <div class="animate-fade-in flex h-full flex-col items-center justify-center px-8">
