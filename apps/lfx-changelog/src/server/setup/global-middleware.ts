@@ -8,7 +8,9 @@ import { requestIdMiddleware } from '../middleware/request-id.middleware';
 
 import type { Express } from 'express';
 
-const browserDistFolder = import.meta.dirname + '/../../browser';
+// At runtime, esbuild bundles all server code into a single server.mjs,
+// so import.meta.dirname always resolves to the bundle's directory (dist/.../server/).
+const browserDistFolder = import.meta.dirname + '/../browser';
 
 /**
  * Registers the lowest-level middleware that every request passes through:
