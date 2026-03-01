@@ -23,6 +23,10 @@ export const routes: Routes = [
         path: 'entry/:id',
         loadComponent: () => import('@modules/public/changelog-detail/changelog-detail.component').then((m) => m.ChangelogDetailComponent),
       },
+      {
+        path: 'chat',
+        loadComponent: () => import('@modules/public/public-chat/public-chat.component').then((m) => m.PublicChatComponent),
+      },
     ],
   },
   {
@@ -62,6 +66,10 @@ export const routes: Routes = [
       {
         path: 'api-keys',
         loadComponent: () => import('@modules/admin/api-keys/api-keys.component').then((m) => m.ApiKeysComponent),
+      },
+      {
+        path: 'chat',
+        loadComponent: () => import('@modules/admin/admin-chat/admin-chat.component').then((m) => m.AdminChatComponent),
       },
     ],
   },

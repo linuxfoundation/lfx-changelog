@@ -1,0 +1,15 @@
+/* Copyright The Linux Foundation and each contributor to LFX. */
+/* SPDX-License-Identifier: MIT */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Auto-grow textarea */
+.chat-textarea {
+  max-height: 160px;
+  field-sizing: content;
+}
