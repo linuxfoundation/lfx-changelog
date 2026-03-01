@@ -12,7 +12,8 @@ const router = Router();
 
 // POST /mcp — handle JSON-RPC requests (stateless: fresh server per request)
 router.post('/', async (req: Request, res: Response) => {
-  const server = createMcpServer(process.env['BASE_URL'] || 'http://localhost:4204');
+  const apiKey = extractApiKey(req);
+  const server = createMcpServer(process.env['BASE_URL'] || 'http://localhost:4204', apiKey);
 
   try {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -46,5 +47,21 @@ router.delete('/', (_req: Request, res: Response) => {
     id: null,
   });
 });
+
+/**
+ * Extract API key from the incoming request.
+ * Checks Authorization: Bearer header first, then X-API-Key header.
+ */
+function extractApiKey(req: Request): string | undefined {
+  const authHeader = req.headers['authorization'];
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+  const xApiKey = req.headers['x-api-key'];
+  if (typeof xApiKey === 'string') {
+    return xApiKey;
+  }
+  return undefined;
+}
 
 export default router;

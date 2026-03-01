@@ -13,7 +13,10 @@ wrappers.
 
 ## Quick Start
 
-Point your MCP client at the production endpoint — no API key required.
+Point your MCP client at the production endpoint. Public (read-only) tools
+work without an API key. For admin tools (create, update, delete), generate an
+API key from the admin UI and include it in the config — see
+[API Authentication](api-authentication.md) for details.
 
 ### Claude Desktop
 
@@ -26,6 +29,22 @@ Add to your Claude Desktop config
     "lfx-changelog": {
       "type": "streamable-http",
       "url": "https://changelog.lfx.dev/mcp"
+    }
+  }
+}
+```
+
+To enable admin tools, add your API key as a header:
+
+```json
+{
+  "mcpServers": {
+    "lfx-changelog": {
+      "type": "streamable-http",
+      "url": "https://changelog.lfx.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer lfx_your_api_key_here"
+      }
     }
   }
 }
@@ -46,6 +65,22 @@ Add to `.claude/settings.json` (project or global `~/.claude/settings.json`):
 }
 ```
 
+For admin tools, include the API key header:
+
+```json
+{
+  "mcpServers": {
+    "lfx-changelog": {
+      "type": "streamable-http",
+      "url": "https://changelog.lfx.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer lfx_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
 ### Cursor / Other MCP Clients
 
 Any MCP-compatible client can connect using:
@@ -53,6 +88,7 @@ Any MCP-compatible client can connect using:
 - **Transport:** Streamable HTTP
 - **URL:** `https://changelog.lfx.dev/mcp`
 - **Method:** `POST`
+- **Header (for admin tools):** `Authorization: Bearer lfx_your_api_key_here`
 
 ### curl
 
@@ -87,11 +123,31 @@ Tools are callable actions that an AI client can invoke. All tools declare an
 `outputSchema` so clients know the exact response shape — derived from the
 Zod schemas in `@lfx-changelog/shared`.
 
+### Public Tools (No API Key Required)
+
 | Tool              | Description                        | Parameters                                                  |
 | ----------------- | ---------------------------------- | ----------------------------------------------------------- |
 | `list-products`   | List all active LFX products       | _(none)_                                                    |
 | `list-changelogs` | List published changelog entries   | `productId?` (UUID), `page?` (int), `limit?` (int, max 100) |
 | `get-changelog`   | Get a single changelog entry by ID | `id` (UUID, required)                                       |
+
+### Admin Tools (API Key Required)
+
+These tools require an `LFX_API_KEY` with the appropriate scopes. Without a
+valid API key, they return an authentication error.
+
+| Tool                    | Description                               | Required Scope     |
+| ----------------------- | ----------------------------------------- | ------------------ |
+| `list-products-admin`   | List all products including inactive ones | `products:read`    |
+| `get-product`           | Get full product details by ID            | `products:read`    |
+| `create-product`        | Create a new product                      | `products:write`   |
+| `update-product`        | Update an existing product                | `products:write`   |
+| `delete-product`        | Permanently delete a product              | `products:write`   |
+| `list-draft-changelogs` | List changelogs including drafts          | `changelogs:read`  |
+| `create-changelog`      | Create a new changelog entry              | `changelogs:write` |
+| `update-changelog`      | Update an existing changelog entry        | `changelogs:write` |
+| `publish-changelog`     | Publish a draft changelog entry           | `changelogs:write` |
+| `delete-changelog`      | Permanently delete a changelog entry      | `changelogs:write` |
 
 ## Available Resources
 
@@ -107,10 +163,10 @@ Resources are read-only data endpoints that clients can subscribe to.
 These variables are only relevant when **self-hosting** or running the server
 locally. The production endpoint at `changelog.lfx.dev` is pre-configured.
 
-| Variable      | Default                 | Description                                                                                        |
-| ------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
-| `BASE_URL`    | `http://localhost:4204` | Base URL of the LFX Changelog API. Used by both stdio and HTTP transports to reach the public API. |
-| `LFX_API_KEY` | _(none)_                | Bearer token for protected endpoints (future — not yet required).                                  |
+| Variable      | Default                 | Description                                                                                                                                                                                   |
+| ------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BASE_URL`    | `http://localhost:4204` | Base URL of the LFX Changelog API. Used by both stdio and HTTP transports to reach the public API.                                                                                            |
+| `LFX_API_KEY` | _(none)_                | API key for authenticated MCP tools (admin tools). Generate one from the admin UI or API — see [API Authentication](api-authentication.md). Without this, only public (read-only) tools work. |
 
 ## Local Development
 
@@ -161,6 +217,23 @@ To connect Claude Desktop or Claude Code to a **local** instance via stdio:
 }
 ```
 
+To enable admin tools locally, add your API key:
+
+```json
+{
+  "mcpServers": {
+    "lfx-changelog-local": {
+      "command": "node",
+      "args": ["<path-to-repo>/packages/mcp-server/dist/index.js"],
+      "env": {
+        "BASE_URL": "http://localhost:4204",
+        "LFX_API_KEY": "lfx_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
 > **Tip:** Replace `<path-to-repo>` with the absolute path to your clone of
 > `lfx-changelog`. Make sure you have built the package first (`yarn build`).
 
@@ -182,22 +255,26 @@ workspace package `@lfx-changelog/mcp-server`.
 ```text
 packages/mcp-server/
 ├── src/
-│   ├── server.ts              # createMcpServer() factory — registers tools & resources
-│   ├── index.ts               # stdio entry point (bin: lfx-changelog-mcp)
-│   ├── api-client.ts          # HTTP client for the LFX Changelog public API
+│   ├── server.ts                    # createMcpServer() factory — registers tools & resources
+│   ├── index.ts                     # stdio entry point (bin: lfx-changelog-mcp)
+│   ├── api-client.ts                # HTTP client with optional API key auth
 │   ├── tools/
-│   │   ├── product.tools.ts   # list-products tool
-│   │   └── changelog.tools.ts # list-changelogs, get-changelog tools
+│   │   ├── product.tools.ts         # list-products (public)
+│   │   ├── changelog.tools.ts       # list-changelogs, get-changelog (public)
+│   │   ├── admin-product.tools.ts   # CRUD product tools (authenticated)
+│   │   └── admin-changelog.tools.ts # CRUD changelog tools (authenticated)
 │   └── resources/
-│       └── public.resources.ts # lfx://products, lfx://changelogs resources
-└── dist/                      # Compiled output (after yarn build)
+│       └── public.resources.ts      # lfx://products, lfx://changelogs resources
+└── dist/                            # Compiled output (after yarn build)
 
 apps/lfx-changelog/src/server/routes/
-└── mcp.route.ts               # Express route mounting StreamableHTTPServerTransport at POST /mcp
+└── mcp.route.ts                     # Express route mounting StreamableHTTPServerTransport at POST /mcp
 ```
 
 The `createMcpServer()` factory builds an `McpServer` instance with all tools
-and resources registered. The transport layer is chosen by the consumer:
+and resources registered. When an `apiKey` is provided, the `ApiClient`
+attaches it as a Bearer token for authenticated requests to `/api/*` endpoints,
+enabling the admin tools. The transport layer is chosen by the consumer:
 
 - **HTTP** — `mcp.route.ts` connects via `StreamableHTTPServerTransport` for
   remote access through the Express server (this is how `changelog.lfx.dev/mcp` works)

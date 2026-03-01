@@ -12,6 +12,7 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 - **GitHub integration** --- connect GitHub App installations to products for repository tracking
 - **Role-based access** --- super admin, product admin, and editor roles with per-product scoping
 - **Auth0 authentication** --- secure login via OpenID Connect
+- **API key access** --- scoped API keys for programmatic access to protected endpoints (CI/CD, scripts, external tools)
 - **Dark mode** --- light/dark dual-theme with system preference detection
 - **Server-side rendering** --- Angular SSR for fast initial loads and SEO
 - **MCP server** --- AI tool integration via the Model Context Protocol (Claude Desktop, Cursor, etc.)
@@ -180,10 +181,19 @@ lfx-changelog/
 The application uses an Angular SSR server that also hosts the Express API backend. This single-server approach means:
 
 - **Public API** (`/public/api/*`) --- unauthenticated endpoints for reading published changelogs and products
-- **Protected API** (`/api/*`) --- authenticated endpoints for CRUD operations, gated by Auth0 and RBAC middleware
+- **Protected API** (`/api/*`) --- authenticated endpoints for CRUD operations, supporting both OAuth sessions and [API keys](docs/api-authentication.md)
 - **API docs** (`/docs`) --- interactive Swagger UI generated from Zod schemas via `@asteasolutions/zod-to-openapi`
 - **MCP** (`/mcp`) --- Model Context Protocol endpoint for AI tool integration (Streamable HTTP)
 - **SSR** --- Angular pages are server-rendered for all routes
+
+### Authentication
+
+The API supports two authentication methods:
+
+- **OAuth sessions** --- browser-based login via Auth0 (session cookies)
+- **API keys** --- programmatic access via `Authorization: Bearer lfx_...` or `X-API-Key: lfx_...` headers
+
+API keys are scoped (`changelogs:read`, `changelogs:write`, `products:read`, `products:write`) and enforce the same role checks as OAuth sessions. See [API Authentication](docs/api-authentication.md) for details on creating keys, endpoint permissions, and usage examples.
 
 ### Roles
 
@@ -195,13 +205,14 @@ The application uses an Angular SSR server that also hosts the Express API backe
 
 ## Database
 
-The PostgreSQL schema is managed by Prisma with five models:
+The PostgreSQL schema is managed by Prisma with six models:
 
 - **Product** --- LFX products with activation status, Font Awesome icons, and optional GitHub App installation
 - **ProductRepository** --- GitHub repositories linked to products for changelog generation
 - **ChangelogEntry** --- individual changelog entries with markdown content, versioning, and status tracking
 - **User** --- users synced from Auth0 on first login
 - **UserRoleAssignment** --- maps users to roles, optionally scoped to a product
+- **ApiKey** --- scoped API keys for programmatic access, storing SHA-256 hashes with expiration and revocation tracking
 
 ### Useful commands
 
@@ -270,15 +281,16 @@ Adding the `deploy-preview` label to a PR builds and pushes a branch-specific im
 
 ## Documentation
 
-| Document                                                 | Description                                       |
-| -------------------------------------------------------- | ------------------------------------------------- |
-| [Database Migrations](docs/database-migrations.md)       | Automated (CI/CD) and manual migration workflows  |
-| [Remote Database Access](docs/remote-database-access.md) | Connecting to RDS via kubectl port-forward        |
-| [E2E Testing](docs/testing/e2e-testing.md)               | Test architecture, patterns, and how to add tests |
-| [Contributing](CONTRIBUTING.md)                          | License headers, code style, commit conventions   |
-| [Security](SECURITY.md)                                  | Vulnerability reporting                           |
-| [MCP Server](docs/mcp-server.md)                         | MCP tools, resources, and client setup            |
-| [Roadmap](PLAN.md)                                       | Implementation plan and upcoming phases           |
+| Document                                                 | Description                                          |
+| -------------------------------------------------------- | ---------------------------------------------------- |
+| [API Authentication](docs/api-authentication.md)         | API keys, OAuth sessions, scopes, and usage examples |
+| [Database Migrations](docs/database-migrations.md)       | Automated (CI/CD) and manual migration workflows     |
+| [Remote Database Access](docs/remote-database-access.md) | Connecting to RDS via kubectl port-forward           |
+| [E2E Testing](docs/testing/e2e-testing.md)               | Test architecture, patterns, and how to add tests    |
+| [Contributing](CONTRIBUTING.md)                          | License headers, code style, commit conventions      |
+| [Security](SECURITY.md)                                  | Vulnerability reporting                              |
+| [MCP Server](docs/mcp-server.md)                         | MCP tools, resources, and client setup               |
+| [Roadmap](PLAN.md)                                       | Implementation plan and upcoming phases              |
 
 ## Contributing
 

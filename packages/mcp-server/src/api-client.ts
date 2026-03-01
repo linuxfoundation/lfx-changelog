@@ -3,19 +3,44 @@
 
 /**
  * Thin HTTP client for the LFX Changelog API.
- * Constructor accepts a `baseUrl` parameter — callers provide it from `BASE_URL` env var.
- * Phase 2: reads LFX_API_KEY for Bearer auth on protected endpoints.
+ * Constructor accepts a `baseUrl` and optional `apiKey` parameter.
+ * When an API key is provided (or set via LFX_API_KEY env var), it is
+ * attached as a Bearer token for authenticated requests to `/api/*` endpoints.
  */
 export class ApiClient {
   private readonly baseUrl: string;
   private readonly apiKey: string | undefined;
 
-  public constructor(baseUrl: string) {
+  public constructor(baseUrl: string, apiKey?: string) {
     this.baseUrl = baseUrl.replace(/\/+$/, '');
-    this.apiKey = process.env['LFX_API_KEY'];
+    this.apiKey = apiKey || process.env['LFX_API_KEY'];
+  }
+
+  public get isAuthenticated(): boolean {
+    return !!this.apiKey;
   }
 
   public async get<T = unknown>(path: string, query?: Record<string, string>): Promise<T> {
+    return this.request<T>('GET', path, undefined, query);
+  }
+
+  public async post<T = unknown>(path: string, body: unknown): Promise<T> {
+    return this.request<T>('POST', path, body);
+  }
+
+  public async put<T = unknown>(path: string, body: unknown): Promise<T> {
+    return this.request<T>('PUT', path, body);
+  }
+
+  public async patch<T = unknown>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>('PATCH', path, body);
+  }
+
+  public async delete(path: string): Promise<void> {
+    await this.request('DELETE', path);
+  }
+
+  private async request<T = unknown>(method: string, path: string, body?: unknown, query?: Record<string, string>): Promise<T> {
     const url = new URL(path, this.baseUrl);
 
     if (query) {
@@ -30,16 +55,27 @@ export class ApiClient {
       Accept: 'application/json',
     };
 
-    // Phase 2: attach API key if configured
     if (this.apiKey) {
       headers['Authorization'] = `Bearer ${this.apiKey}`;
     }
 
-    const response = await fetch(url.toString(), { headers });
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const response = await fetch(url.toString(), {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
 
     if (!response.ok) {
-      const body = await response.text().catch(() => 'No response body');
-      throw new Error(`API request failed: ${response.status} ${response.statusText} — ${body}`);
+      const responseBody = await response.text().catch(() => 'No response body');
+      throw new Error(`API request failed: ${response.status} ${response.statusText} — ${responseBody}`);
+    }
+
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return undefined as T;
     }
 
     return response.json() as Promise<T>;
