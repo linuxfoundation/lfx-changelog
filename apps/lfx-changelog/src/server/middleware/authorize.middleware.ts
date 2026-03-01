@@ -94,15 +94,16 @@ export function authorize(options: AuthorizeOptions = {}) {
         }
       }
 
+      // Both productRole and role checks require a user context
+      if ((options.productRole || options.role) && !req.dbUser) {
+        next(new AuthorizationError('No user context available', { path: req.path }));
+        return;
+      }
+
       // productRole: product-scoped role check with SUPER_ADMIN bypass
       if (options.productRole) {
-        if (!req.dbUser) {
-          next(new AuthorizationError('No user context available', { path: req.path }));
-          return;
-        }
-
         const minimumLevel = ROLE_HIERARCHY[options.productRole];
-        const userRoles = req.dbUser.userRoleAssignments || [];
+        const userRoles = req.dbUser!.userRoleAssignments || [];
         const productId = req.resolvedProductId || req.body?.productId;
 
         const isSuperAdmin = userRoles.some((a: UserRoleAssignment) => a.role === UserRole.SUPER_ADMIN);
@@ -117,20 +118,12 @@ export function authorize(options: AuthorizeOptions = {}) {
             return;
           }
         }
-
-        next();
-        return;
       }
 
       // role: global role hierarchy check
       if (options.role) {
-        if (!req.dbUser) {
-          next(new AuthorizationError('No user context available', { path: req.path }));
-          return;
-        }
-
         const minimumLevel = ROLE_HIERARCHY[options.role];
-        const userRoles = req.dbUser.userRoleAssignments || [];
+        const userRoles = req.dbUser!.userRoleAssignments || [];
 
         const hasPermission = userRoles.some((a: UserRoleAssignment) => {
           const roleLevel = ROLE_HIERARCHY[a.role as UserRole];

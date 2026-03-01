@@ -46,13 +46,11 @@ export class ApiKeyController {
 
   /** Map Prisma underscore enum to API colon-based scope. */
   private toApiScope(prismaScope: PrismaApiKeyScope): string {
-    return prismaScope.replace('_', ':');
+    return prismaScope.replaceAll('_', ':');
   }
 
   /** Strip keyHash and convert scopes for client-safe response. */
-  private mapApiKey(
-    apiKey: ApiKey
-  ): Omit<ApiKey, 'keyHash' | 'scopes' | 'expiresAt' | 'lastUsedAt' | 'revokedAt' | 'createdAt'> & {
+  private mapApiKey(apiKey: ApiKey): Omit<ApiKey, 'keyHash' | 'scopes' | 'expiresAt' | 'lastUsedAt' | 'revokedAt' | 'createdAt'> & {
     scopes: string[];
     expiresAt: string;
     lastUsedAt: string | null;

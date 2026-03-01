@@ -29,10 +29,20 @@ export async function createAuthenticatedContext(role: TestRole, baseURL: string
   const cookieHeader = extractCookies(roleToFile[role], 'localhost');
   return request.newContext({
     baseURL,
-    extraHTTPHeaders: { Cookie: cookieHeader },
+    extraHTTPHeaders: {
+      Cookie: cookieHeader,
+      Origin: baseURL,
+    },
   });
 }
 
 export async function createUnauthenticatedContext(baseURL: string): Promise<APIRequestContext> {
   return request.newContext({ baseURL });
+}
+
+export async function createApiKeyContext(rawKey: string, baseURL: string): Promise<APIRequestContext> {
+  return request.newContext({
+    baseURL,
+    extraHTTPHeaders: { Authorization: `Bearer ${rawKey}` },
+  });
 }

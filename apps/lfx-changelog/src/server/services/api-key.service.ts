@@ -16,12 +16,12 @@ const KEY_PREFIX = 'lfx_';
 
 /** Map TypeScript colon-based scope to Prisma underscore enum. */
 function toPrismaScope(scope: ApiKeyScope): PrismaApiKeyScope {
-  return scope.replace(':', '_') as PrismaApiKeyScope;
+  return scope.replaceAll(':', '_') as PrismaApiKeyScope;
 }
 
 /** Map Prisma underscore enum to TypeScript colon-based scope. */
 function toApiScope(prismaScope: PrismaApiKeyScope): ApiKeyScope {
-  return prismaScope.replace('_', ':') as ApiKeyScope;
+  return prismaScope.replaceAll('_', ':') as ApiKeyScope;
 }
 
 export class ApiKeyService {

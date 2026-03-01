@@ -90,6 +90,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   if (hasApiKey) {
     cors({
       origin: '*',
+      credentials: false,
       methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
       maxAge: 86400,
@@ -212,7 +213,7 @@ if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
     limit: 1000,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => (req as Request).apiKey?.id || 'unknown',
+    keyGenerator: (req) => (req as Request).apiKey!.id,
     message: { error: 'API key rate limit exceeded. Maximum 1000 requests per hour.' },
   });
   app.use('/api', (req: Request, res: Response, next: NextFunction) => {
