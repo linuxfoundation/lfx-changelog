@@ -20,12 +20,12 @@ const prettyStream =
  * Lean request serializer — only fields useful for debugging.
  * Excludes all browser fingerprint headers, query/params (already in URL), cookies, etc.
  */
-export function reqSerializer(req: IncomingMessage & { id?: string }) {
+export function reqSerializer(req: IncomingMessage & { id?: string; originalUrl?: string; ip?: string }) {
   return {
     id: req.id,
     method: req.method,
-    url: (req as any).originalUrl || req.url,
-    remoteAddress: (req as any).ip || req.socket?.remoteAddress,
+    url: req.originalUrl || req.url,
+    remoteAddress: req.ip || req.socket?.remoteAddress,
     userAgent: req.headers['user-agent'],
   };
 }

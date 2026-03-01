@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { AssignRoleRequestSchema, CreateUserRequestSchema, UserRoleAssignmentSchema, UserSchema, createApiResponseSchema } from '@lfx-changelog/shared';
 
-import { COOKIE_AUTH } from '../constants';
+import { API_KEY_AUTH } from '../constants';
 
 export const userRegistry = new OpenAPIRegistry();
 
@@ -16,7 +16,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'Get current user',
   description: 'Returns the currently authenticated user with their roles.\n\n**Required privilege:** Any authenticated user.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   responses: {
     200: {
       description: 'Current user',
@@ -36,7 +36,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'List all users',
   description: 'Returns all users.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   responses: {
     200: {
       description: 'List of users',
@@ -57,7 +57,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'Create a new user',
   description: 'Creates a new user and assigns a role.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     body: {
       content: {
@@ -88,7 +88,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'Assign role to user',
   description: 'Assigns a role to a user.\n\n**Required privilege:** PRODUCT_ADMIN role or above.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'User ID' }),
@@ -122,7 +122,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'Remove role from user',
   description: 'Removes a role assignment from a user.\n\n**Required privilege:** PRODUCT_ADMIN role or above.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'User ID' }),

@@ -59,6 +59,10 @@ export const routes: Routes = [
         canActivate: [superAdminGuard],
         loadComponent: () => import('@modules/admin/user-management/user-management.component').then((m) => m.UserManagementComponent),
       },
+      {
+        path: 'api-keys',
+        loadComponent: () => import('@modules/admin/api-keys/api-keys.component').then((m) => m.ApiKeysComponent),
+      },
     ],
   },
   {

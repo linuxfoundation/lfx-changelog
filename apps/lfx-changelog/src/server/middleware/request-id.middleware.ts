@@ -11,7 +11,7 @@ import { NextFunction, Request, Response } from 'express';
  */
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
   const id = (req.headers['x-request-id'] as string) || randomUUID();
-  (req as any).id = id;
+  req.id = id;
   res.setHeader('x-request-id', id);
   next();
 }

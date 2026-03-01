@@ -14,7 +14,7 @@ import {
   createApiResponseSchema,
 } from '@lfx-changelog/shared';
 
-import { COOKIE_AUTH } from '../constants';
+import { API_KEY_AUTH } from '../constants';
 
 export const productRegistry = new OpenAPIRegistry();
 
@@ -24,7 +24,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'List all products',
   description: 'Returns all products.\n\n**Required privilege:** EDITOR role or above.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   responses: {
     200: {
       description: 'List of products',
@@ -45,7 +45,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'Get product by ID',
   description: 'Returns a single product.\n\n**Required privilege:** EDITOR role or above.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Product ID' }),
@@ -72,7 +72,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'Create product',
   description: 'Creates a new product.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     body: {
       content: {
@@ -102,7 +102,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'Update product',
   description: 'Updates an existing product.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Product ID' }),
@@ -136,7 +136,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'Delete product',
   description: 'Deletes a product.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Product ID' }),
@@ -156,7 +156,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'List linked repositories',
   description: 'Returns repositories linked to a product.\n\n**Required privilege:** EDITOR role or above.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Product ID' }),
@@ -183,7 +183,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'Link repository',
   description: 'Links a GitHub repository to a product.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Product ID' }),
@@ -217,7 +217,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'Unlink repository',
   description: 'Unlinks a GitHub repository from a product.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Product ID' }),
@@ -238,7 +238,7 @@ productRegistry.registerPath({
   tags: ['Products'],
   summary: 'Get product activity',
   description: 'Returns recent GitHub activity for a product (releases, PRs, commits).\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Product ID' }),
