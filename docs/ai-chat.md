@@ -281,7 +281,7 @@ Defined in `src/server/constants/chat.constants.ts`:
 Chat endpoints are **UI-only** — they are not part of the public API and cannot be called by external clients. A `sameOriginOnly` middleware (`src/server/middleware/same-origin.middleware.ts`) validates every request using three layered checks:
 
 1. **`Sec-Fetch-Site` header** — set by modern browsers and cannot be spoofed by JavaScript. Only `same-origin` and `none` (direct navigation) are allowed.
-2. **`Origin` header** — must match one of the allowed UI domains (`localhost:4204`, `changelog.dev.lfx.dev`, `changelog.lfx.dev`).
+2. **`Origin` header** — must match the `BASE_URL` environment variable (e.g. `http://localhost:4204` in dev).
 3. **`Referer` header** — fallback for GET requests where `Origin` may not be sent.
 
 If none of these headers are present (e.g. curl without spoofing), the request is rejected with **403 Forbidden**.

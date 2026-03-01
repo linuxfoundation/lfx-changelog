@@ -3,20 +3,17 @@
 
 import type { NextFunction, Request, Response } from 'express';
 
-/**
- * Allowed origins that the UI is served from.
- * Requests must originate from one of these to pass the check.
- */
-const ALLOWED_ORIGINS = new Set(['http://localhost:4204', 'https://changelog.dev.lfx.dev', 'https://changelog.lfx.dev']);
+/** Derives the allowed origin from the BASE_URL env var (falls back to localhost for dev). */
+const ALLOWED_ORIGIN = (process.env['BASE_URL'] || 'http://localhost:4204').replace(/\/+$/, '');
 
 function isAllowedOrigin(origin: string): boolean {
-  return ALLOWED_ORIGINS.has(origin);
+  return origin === ALLOWED_ORIGIN;
 }
 
 function isAllowedReferer(referer: string): boolean {
   try {
     const url = new URL(referer);
-    return ALLOWED_ORIGINS.has(url.origin);
+    return url.origin === ALLOWED_ORIGIN;
   } catch {
     return false;
   }
