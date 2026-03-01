@@ -143,7 +143,7 @@ valid API key, they return an authentication error.
 | `create-product`        | Create a new product                      | `products:write`   |
 | `update-product`        | Update an existing product                | `products:write`   |
 | `delete-product`        | Permanently delete a product              | `products:write`   |
-| `list-draft-changelogs` | List changelogs including drafts          | `changelogs:read`  |
+| `list-changelogs-admin` | List changelogs including drafts          | `changelogs:read`  |
 | `create-changelog`      | Create a new changelog entry              | `changelogs:write` |
 | `update-changelog`      | Update an existing changelog entry        | `changelogs:write` |
 | `publish-changelog`     | Publish a draft changelog entry           | `changelogs:write` |

@@ -136,7 +136,7 @@ test.describe('MCP Endpoint (/mcp)', () => {
       expect(toolNames).toContain('delete-product');
 
       // Admin changelog tools
-      expect(toolNames).toContain('list-draft-changelogs');
+      expect(toolNames).toContain('list-changelogs-admin');
       expect(toolNames).toContain('create-changelog');
       expect(toolNames).toContain('update-changelog');
       expect(toolNames).toContain('publish-changelog');
@@ -240,8 +240,8 @@ test.describe('MCP Endpoint (/mcp)', () => {
       await Promise.all([superAdminApi.dispose(), mcpFullApi.dispose()]);
     });
 
-    test('list-draft-changelogs returns entries', async () => {
-      const body = await callMcpTool(mcpFullApi, 'list-draft-changelogs');
+    test('list-changelogs-admin returns entries', async () => {
+      const body = await callMcpTool(mcpFullApi, 'list-changelogs-admin');
       expect(body.result).toBeDefined();
       expect(body.result.isError).toBeUndefined();
 
@@ -382,7 +382,7 @@ test.describe('MCP Endpoint (/mcp)', () => {
     });
 
     test('read-only key can list admin changelogs', async () => {
-      const body = await callMcpTool(mcpReadApi, 'list-draft-changelogs');
+      const body = await callMcpTool(mcpReadApi, 'list-changelogs-admin');
       expect(body.result).toBeDefined();
       expect(body.result.isError).toBeUndefined();
 

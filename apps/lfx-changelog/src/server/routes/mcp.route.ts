@@ -54,7 +54,7 @@ router.delete('/', (_req: Request, res: Response) => {
  */
 function extractApiKey(req: Request): string | undefined {
   const authHeader = req.headers['authorization'];
-  if (authHeader?.startsWith('Bearer ')) {
+  if (typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')) {
     return authHeader.slice(7);
   }
   const xApiKey = req.headers['x-api-key'];

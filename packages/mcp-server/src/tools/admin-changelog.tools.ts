@@ -15,7 +15,7 @@ const changelogDetailResponseSchema = createApiResponseSchema(ChangelogEntryWith
 
 export function registerAdminChangelogTools(server: McpServer, apiClient: ApiClient): void {
   server.registerTool(
-    'list-draft-changelogs',
+    'list-changelogs-admin',
     {
       title: 'List Changelogs (Admin)',
       description:
