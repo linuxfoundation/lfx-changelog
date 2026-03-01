@@ -16,11 +16,18 @@ import { userRegistry } from './paths/users.path';
 
 const registry = new OpenAPIRegistry();
 
-// Register security scheme — API key only for Swagger UI
+// Register security schemes
 registry.registerComponent('securitySchemes', 'apiKeyAuth', {
   type: 'http',
   scheme: 'bearer',
   description: 'API key authentication. Use a key with the `lfx_` prefix as the Bearer token.',
+});
+
+registry.registerComponent('securitySchemes', 'cookieAuth', {
+  type: 'apiKey',
+  in: 'cookie',
+  name: 'appSession',
+  description: 'Browser session authentication via Auth0 (OAuth login required). Not available for programmatic API key access.',
 });
 
 // Merge all path registries

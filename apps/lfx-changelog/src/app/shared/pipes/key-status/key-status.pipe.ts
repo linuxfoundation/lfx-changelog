@@ -11,7 +11,7 @@ import type { ApiKey } from '@lfx-changelog/shared';
 export class KeyStatusPipe implements PipeTransform {
   public transform(key: ApiKey): 'active' | 'expired' | 'revoked' {
     if (key.revokedAt) return 'revoked';
-    if (key.expiresAt <= new Date().toISOString()) return 'expired';
+    if (new Date(key.expiresAt) <= new Date()) return 'expired';
     return 'active';
   }
 }

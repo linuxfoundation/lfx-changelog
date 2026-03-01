@@ -49,13 +49,13 @@ export class ApiKeysComponent {
   );
 
   protected readonly activeKeys = computed(() => {
-    const now = new Date().toISOString();
-    return this.keys().filter((k) => !k.revokedAt && k.expiresAt > now);
+    const now = Date.now();
+    return this.keys().filter((k) => !k.revokedAt && new Date(k.expiresAt).getTime() > now);
   });
 
   protected readonly inactiveKeys = computed(() => {
-    const now = new Date().toISOString();
-    return this.keys().filter((k) => k.revokedAt || k.expiresAt <= now);
+    const now = Date.now();
+    return this.keys().filter((k) => k.revokedAt || new Date(k.expiresAt).getTime() <= now);
   });
 
   // Create dialog

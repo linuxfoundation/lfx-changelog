@@ -119,7 +119,7 @@ model ApiKey {
   name       String
   keyPrefix  String        @map("key_prefix")
   keyHash    String        @unique @map("key_hash")
-  scopes     ApiKeyScope[]
+  scopes     ApiKeyScope[] @default([])
   expiresAt  DateTime      @map("expires_at")
   lastUsedAt DateTime?     @map("last_used_at")
   revokedAt  DateTime?     @map("revoked_at")

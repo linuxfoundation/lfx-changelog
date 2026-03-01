@@ -47,7 +47,14 @@ export function authorize(options: AuthorizeOptions = {}) {
           const origin = req.headers['origin'];
           const baseUrl = (process.env['BASE_URL'] || 'http://localhost:4204').replace(/\/$/, '');
 
-          if (!origin || new URL(origin).origin !== new URL(baseUrl).origin) {
+          let originMatch = false;
+          try {
+            originMatch = !!origin && new URL(origin).origin === new URL(baseUrl).origin;
+          } catch {
+            // Malformed Origin header — treat as missing
+          }
+
+          if (!originMatch) {
             next(new AuthorizationError('This action is only available from the application UI', { path: req.path }));
             return;
           }
@@ -104,7 +111,7 @@ export function authorize(options: AuthorizeOptions = {}) {
       if (options.productRole) {
         const minimumLevel = ROLE_HIERARCHY[options.productRole];
         const userRoles = req.dbUser!.userRoleAssignments || [];
-        const productId = req.resolvedProductId || req.body?.productId;
+        const productId = req.resolvedProductId || req.body?.productId || (req.query['productId'] as string);
 
         const isSuperAdmin = userRoles.some((a: UserRoleAssignment) => a.role === UserRole.SUPER_ADMIN);
         if (!isSuperAdmin) {

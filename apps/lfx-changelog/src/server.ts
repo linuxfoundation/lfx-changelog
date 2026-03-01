@@ -87,7 +87,12 @@ app.use(
 app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   const hasApiKey =
     req.headers['authorization']?.startsWith('Bearer lfx_') || (typeof req.headers['x-api-key'] === 'string' && req.headers['x-api-key'].startsWith('lfx_'));
-  if (hasApiKey) {
+
+  // Preflight (OPTIONS) requests don't carry the actual Authorization header —
+  // they only list it in Access-Control-Request-Headers. Match those too.
+  const isPreflight = req.method === 'OPTIONS' && /\b(authorization|x-api-key)\b/i.test(req.headers['access-control-request-headers'] || '');
+
+  if (hasApiKey || isPreflight) {
     cors({
       origin: '*',
       credentials: false,
