@@ -25,7 +25,7 @@ export const UserSchema = z
     avatarUrl: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
-    roles: z.array(UserRoleAssignmentSchema),
+    roles: z.array(UserRoleAssignmentSchema).optional(),
   })
   .openapi('User');
 

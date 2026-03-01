@@ -17,7 +17,7 @@ const userService = new UserService();
  */
 function extractApiKey(req: Request): string | null {
   const authHeader = req.headers['authorization'];
-  if (authHeader?.startsWith('Bearer lfx_')) {
+  if (typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer lfx_')) {
     return authHeader.slice(7); // Remove "Bearer " prefix
   }
 
