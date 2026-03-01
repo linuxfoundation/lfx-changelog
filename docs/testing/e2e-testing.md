@@ -84,6 +84,7 @@ apps/lfx-changelog/
 │       │   └── user-management.spec.ts
 │       └── api/                  # API tests (no browser, direct HTTP)
 │           ├── changelogs.api.spec.ts
+│           ├── chat.api.spec.ts
 │           ├── products.api.spec.ts
 │           ├── public-changelogs.api.spec.ts
 │           ├── public-products.api.spec.ts
@@ -271,13 +272,14 @@ test.describe('GET /public/api/products', () => {
 
 **What to test in each spec:**
 
-| Spec file                       | Coverage                                                             |
-| ------------------------------- | -------------------------------------------------------------------- |
-| `public-products.api.spec.ts`   | Public product list, field shape, internal field exclusion, isActive |
-| `public-changelogs.api.spec.ts` | Pagination, published-only filter, productId filter, isActive        |
-| `products.api.spec.ts`          | Auth 401, RBAC 403, CRUD lifecycle, validation 400                   |
-| `changelogs.api.spec.ts`        | Auth 401, RBAC 403, CRUD + publish lifecycle, validation 400         |
-| `users.api.spec.ts`             | Auth 401, /me endpoint, list users RBAC, role assign lifecycle       |
+| Spec file                       | Coverage                                                                         |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `public-products.api.spec.ts`   | Public product list, field shape, internal field exclusion, isActive             |
+| `public-changelogs.api.spec.ts` | Pagination, published-only filter, productId filter, isActive                    |
+| `products.api.spec.ts`          | Auth 401, RBAC 403, CRUD lifecycle, validation 400                               |
+| `changelogs.api.spec.ts`        | Auth 401, RBAC 403, CRUD + publish lifecycle, validation 400                     |
+| `chat.api.spec.ts`              | Auth 401, validation 400, conversation CRUD, access control (public/admin/owner) |
+| `users.api.spec.ts`             | Auth 401, /me endpoint, list users RBAC, role assign lifecycle                   |
 
 **Database helpers for API tests:**
 

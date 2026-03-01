@@ -127,9 +127,9 @@ Revoked keys are immediately rejected on all subsequent requests.
 
 The API is organized into three categories based on authentication requirements:
 
-- **Public** (`/public/api/*`) --- no authentication required. Read-only access to published changelogs and active products.
+- **Public** (`/public/api/*`) --- no authentication required. Read-only access to published changelogs, active products, and the public AI chat assistant.
 - **Protected** (`/api/changelogs/*`, `/api/products/*`) --- accepts both OAuth sessions and API keys. Each endpoint declares which scope and role it requires. See the interactive [Swagger UI](https://changelog.lfx.dev/docs) for the full list of endpoints, required scopes, and request/response schemas.
-- **OAuth-only** (`/api/users/*`, `/api/api-keys/*`, `/api/ai/*`, `/api/github/*`) --- browser session only. These endpoints reject API key authentication because they involve user management, key lifecycle, or internal integrations that should not be accessed programmatically.
+- **OAuth-only** (`/api/users/*`, `/api/api-keys/*`, `/api/ai/*`, `/api/chat/*`, `/api/github/*`) --- browser session only. These endpoints reject API key authentication because they involve user management, key lifecycle, AI chat conversations, or internal integrations that should not be accessed programmatically.
 
 ## How Authorization Works
 

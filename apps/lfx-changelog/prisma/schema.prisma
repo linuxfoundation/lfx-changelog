@@ -24,6 +24,11 @@ enum ApiKeyScope {
   products_write
 }
 
+enum ChatAccessLevel {
+  public
+  admin
+}
+
 model Product {
   id                    String   @id @default(uuid())
   name                  String   @unique
@@ -94,6 +99,7 @@ model User {
   changelogEntries    ChangelogEntry[]
   userRoleAssignments UserRoleAssignment[]
   apiKeys             ApiKey[]
+  chatConversations   ChatConversation[]
 
   @@map("users")
 }
@@ -130,4 +136,35 @@ model ApiKey {
   @@index([userId])
   @@index([keyHash])
   @@map("api_keys")
+}
+
+model ChatConversation {
+  id          String          @id @default(uuid())
+  userId      String?         @map("user_id")
+  title       String          @default("New conversation")
+  accessLevel ChatAccessLevel @default(public) @map("access_level")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  role           String
+  content        String?
+  toolCalls      Json?    @map("tool_calls")
+  toolCallId     String?  @map("tool_call_id")
+  toolName       String?  @map("tool_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("chat_messages")
 }

@@ -28,6 +28,8 @@ export async function cleanTestDatabase(): Promise<void> {
   const client = getTestPrismaClient();
 
   // Delete in FK-safe order
+  await client.chatMessage.deleteMany();
+  await client.chatConversation.deleteMany();
   await client.apiKey.deleteMany();
   await client.userRoleAssignment.deleteMany();
   await client.changelogEntry.deleteMany();

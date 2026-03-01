@@ -1,0 +1,143 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="flex" [class]="mode() === 'admin' ? '-m-6 h-[calc(100vh-4rem)]' : 'min-h-0 flex-1'">
+  <!-- Sidebar: conversation history -->
+  @if (mode() === 'admin' && authenticated()) {
+    <aside class="animate-slide-in-left border-border bg-surface flex w-[280px] shrink-0 flex-col border-r">
+      <!-- Sidebar header -->
+      <div class="flex items-center justify-between px-5 py-4">
+        <h2 class="font-display text-text-muted text-[13px] font-bold tracking-wider uppercase">History</h2>
+        <button
+          (click)="newConversation()"
+          class="text-text-muted hover:bg-brand-50 hover:text-brand-600 flex h-7 w-7 items-center justify-center rounded-lg transition-all"
+          title="New conversation">
+          <i class="fa-duotone fa-pen-to-square text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Conversation list -->
+      <div class="flex-1 overflow-y-auto px-3 pb-4">
+        @for (conv of conversations(); track conv.id) {
+          <div
+            role="button"
+            tabindex="0"
+            (click)="loadConversation(conv.id)"
+            (keydown.enter)="loadConversation(conv.id)"
+            class="group mb-1 flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-[13px] leading-snug transition-all"
+            [class.bg-brand-50]="conversationId() === conv.id"
+            [class.text-brand-700]="conversationId() === conv.id"
+            [class.font-medium]="conversationId() === conv.id"
+            [class.text-text-secondary]="conversationId() !== conv.id"
+            [class.hover:bg-surface-alt]="conversationId() !== conv.id">
+            <i class="fa-duotone fa-message-lines w-4 shrink-0 text-center text-xs" [class.text-brand-500]="conversationId() === conv.id"></i>
+            <span class="flex-1 truncate">{{ conv.title }}</span>
+            <button
+              (click)="deleteConversation($event, conv.id)"
+              class="text-text-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+              title="Delete conversation">
+              <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+          </div>
+        } @empty {
+          <div class="flex flex-col items-center py-12 text-center">
+            <div class="bg-surface-alt mb-3 flex h-10 w-10 items-center justify-center rounded-xl">
+              <i class="fa-duotone fa-messages text-text-muted text-base"></i>
+            </div>
+            <p class="text-text-muted text-xs">No conversations yet</p>
+            <p class="text-text-muted/60 mt-0.5 text-[11px]">Start by asking a question</p>
+          </div>
+        }
+      </div>
+    </aside>
+  }
+
+  <!-- Main chat area -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <!-- Messages -->
+    <div
+      #messagesContainer
+      class="flex-1 overflow-y-auto"
+      (scroll)="onMessagesScroll()"
+      [class.mx-auto]="mode() === 'public'"
+      [class.max-w-7xl]="mode() === 'public'">
+      @if (!hasMessages()) {
+        <!-- Empty state -->
+        <div class="animate-fade-in flex h-full flex-col items-center justify-center px-8">
+          <div class="bg-brand-50 mb-6 flex h-16 w-16 items-center justify-center rounded-2xl">
+            <i class="fa-duotone fa-sparkles animate-gentle-float text-brand-500 text-2xl"></i>
+          </div>
+          <h2 class="font-display text-text-primary mb-2 text-xl font-bold">{{ copy().heading }}</h2>
+          <p class="text-text-secondary mb-10 max-w-md text-center text-sm leading-relaxed">
+            {{ copy().subheading }}
+          </p>
+          <div class="grid w-full max-w-xl grid-cols-2 gap-3">
+            @for (prompt of copy().prompts; track prompt; let i = $index) {
+              <button
+                (click)="sendPrompt(prompt)"
+                class="animate-fade-in-up group border-border bg-surface text-text-secondary hover:border-brand-300 hover:bg-brand-50 hover:text-text-primary rounded-xl border px-5 py-4 text-left text-[13px] leading-relaxed transition-all hover:shadow-sm"
+                [style.animation-delay]="i * 80 + 'ms'">
+                <i class="fa-duotone fa-arrow-right text-text-muted mr-2 text-xs transition-transform group-hover:translate-x-0.5"></i>
+                {{ prompt }}
+              </button>
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- Message list -->
+        <div class="mx-auto flex flex-col gap-6 px-8 py-8">
+          @for (msg of messages(); track $index) {
+            @if (msg.role === 'user' || msg.role === 'assistant') {
+              <lfx-chat-message [message]="msg" />
+            }
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Status bar -->
+    @if (currentStatus()) {
+      <div class="animate-fade-in mx-auto flex w-full max-w-2xl items-center gap-2.5 px-8 py-2">
+        <div class="animate-status-pulse bg-brand-500 h-1.5 w-1.5 rounded-full"></div>
+        <span class="text-text-muted text-xs">{{ currentStatus() }}</span>
+      </div>
+    }
+
+    <!-- Error bar -->
+    @if (error()) {
+      <div class="animate-fade-in mx-auto flex w-full max-w-2xl items-center gap-2.5 px-8 py-2">
+        <i class="fa-duotone fa-circle-exclamation text-xs text-red-500"></i>
+        <span class="text-xs text-red-600 dark:text-red-400">{{ error() }}</span>
+      </div>
+    }
+
+    <!-- Input area -->
+    <div class="border-border bg-surface/80 border-t px-8 pt-4 pb-5 backdrop-blur-sm">
+      <div class="mx-auto flex max-w-2xl items-center gap-3">
+        <textarea
+          [formControl]="messageControl"
+          (keydown)="onKeydown($event)"
+          [placeholder]="copy().placeholder"
+          rows="1"
+          class="chat-textarea border-border bg-canvas text-text-primary placeholder:text-text-muted min-w-0 flex-1 resize-none rounded-2xl border px-5 py-3.5 text-sm shadow-sm dark:shadow-none"></textarea>
+        @if (streaming()) {
+          <button
+            (click)="abort()"
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-500 text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md"
+            title="Stop generating">
+            <i class="fa-solid fa-stop text-sm"></i>
+          </button>
+        } @else {
+          <button
+            (click)="send()"
+            [disabled]="!canSend()"
+            class="bg-brand-600 hover:bg-brand-700 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none"
+            title="Send message">
+            <i class="fa-solid fa-paper-plane-top text-sm"></i>
+          </button>
+        }
+      </div>
+      <p class="text-text-muted/70 mx-auto mt-2 max-w-2xl text-center text-[10px]">AI can make mistakes. Verify important information.</p>
+    </div>
+  </div>
+</div>
