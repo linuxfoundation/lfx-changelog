@@ -18,6 +18,7 @@ export {
   OpenAIStreamChunkSchema,
   OpenAIStreamDeltaChoiceSchema,
 } from './ai.schema.js';
+export { ApiKeySchema, CreateApiKeyRequestSchema, CreateApiKeyResponseSchema } from './api-key.schema.js';
 export { createApiResponseSchema, createPaginatedResponseSchema } from './api-response.schema.js';
 export { AuthContextSchema, AuthUserSchema } from './auth.schema.js';
 export { ChangelogEntrySchema, ChangelogEntryWithRelationsSchema } from './changelog-entry.schema.js';
@@ -60,6 +61,7 @@ export type {
   OpenAIStreamChunk,
   OpenAIStreamDeltaChoice,
 } from './ai.schema.js';
+export type { ApiKey, ApiKeyScopeMetadata, CreateApiKeyRequest, CreateApiKeyResponse } from './api-key.schema.js';
 export type { ApiResponse, PaginatedResponse } from './api-response.schema.js';
 export type { AuthContext, AuthUser } from './auth.schema.js';
 export type { ChangelogEntry, ChangelogEntryWithRelations } from './changelog-entry.schema.js';

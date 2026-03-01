@@ -5,14 +5,14 @@ import { UserRole } from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { GitHubController } from '../controllers/github.controller';
-import { requireRole } from '../middleware/role.middleware';
+import { authorize } from '../middleware/authorize.middleware';
 
 const router = Router();
 const githubController = new GitHubController();
 
-router.get('/install-url', requireRole(UserRole.SUPER_ADMIN), (req, res, next) => githubController.getInstallUrl(req, res, next));
-router.get('/installations', requireRole(UserRole.SUPER_ADMIN), (req, res, next) => githubController.listInstallations(req, res, next));
-router.get('/installations/:installationId/repositories', requireRole(UserRole.SUPER_ADMIN), (req, res, next) =>
+router.get('/install-url', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.getInstallUrl(req, res, next));
+router.get('/installations', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.listInstallations(req, res, next));
+router.get('/installations/:installationId/repositories', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) =>
   githubController.listInstallationRepositories(req, res, next)
 );
 

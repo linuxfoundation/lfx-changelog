@@ -19,8 +19,7 @@ export class UserController {
 
   public async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const dbUser = (req as any).dbUser;
-      res.json({ success: true, data: mapUser(dbUser) });
+      res.json({ success: true, data: mapUser(req.dbUser!) });
     } catch (error) {
       next(error);
     }

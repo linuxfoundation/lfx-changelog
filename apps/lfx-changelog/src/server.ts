@@ -10,11 +10,12 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 
-import { authMiddleware } from './server/middleware/auth.middleware';
+import { hybridAuthMiddleware } from './server/middleware/api-key-auth.middleware';
 import { noCacheMiddleware } from './server/middleware/cache.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
 import { requestIdMiddleware } from './server/middleware/request-id.middleware';
 import aiRouter from './server/routes/ai.route';
+import apiKeyRouter from './server/routes/api-key.route';
 import changelogRouter from './server/routes/changelog.route';
 import githubRouter from './server/routes/github.route';
 import mcpRouter from './server/routes/mcp.route';
@@ -82,6 +83,28 @@ app.use(
   })
 );
 
+// 4c. CORS — protected API when accessed via API key (programmatic clients)
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  const hasApiKey =
+    req.headers['authorization']?.startsWith('Bearer lfx_') || (typeof req.headers['x-api-key'] === 'string' && req.headers['x-api-key'].startsWith('lfx_'));
+
+  // Preflight (OPTIONS) requests don't carry the actual Authorization header —
+  // they only list it in Access-Control-Request-Headers. Match those too.
+  const isPreflight = req.method === 'OPTIONS' && /\b(authorization|x-api-key)\b/i.test(req.headers['access-control-request-headers'] || '');
+
+  if (hasApiKey || isPreflight) {
+    cors({
+      origin: '*',
+      credentials: false,
+      methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+      maxAge: 86400,
+    })(req, res, next);
+    return;
+  }
+  next();
+});
+
 // 5. Body parsers (1mb limit — sufficient for changelog API)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -125,7 +148,7 @@ if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
 app.use(
   pinoHttp({
     logger: serverLogger,
-    genReqId: (req) => (req as any).id,
+    genReqId: (req) => (req as Request).id,
     serializers: {
       req: reqSerializer,
       res: resSerializer,
@@ -185,11 +208,31 @@ app.use('/mcp', mcpRouter);
 // 14. No-cache middleware for protected routes
 app.use('/api', noCacheMiddleware);
 
-// 14. Auth middleware for protected routes
-app.use('/api', authMiddleware);
+// 14. Auth middleware for protected routes (supports both API key + OAuth)
+app.use('/api', hybridAuthMiddleware);
+
+// 14b. API key rate limiter — 1000 req/hour per key (separate from IP-based limiter)
+if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
+  const apiKeyRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 1000,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    keyGenerator: (req) => (req as Request).apiKey!.id,
+    message: { error: 'API key rate limit exceeded. Maximum 1000 requests per hour.' },
+  });
+  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+    if (req.authMethod === 'api_key') {
+      apiKeyRateLimiter(req, res, next);
+      return;
+    }
+    next();
+  });
+}
 
 // 15. Protected API routes
 app.use('/api/ai', aiRouter);
+app.use('/api/api-keys', apiKeyRouter);
 app.use('/api/products', productRouter);
 app.use('/api/changelogs', changelogRouter);
 app.use('/api/users', userRouter);

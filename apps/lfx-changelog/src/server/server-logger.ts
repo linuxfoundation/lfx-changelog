@@ -1,11 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { IncomingMessage, ServerResponse } from 'node:http';
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 
 import { customErrorSerializer } from './helpers/error-serializer';
+
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const prettyStream =
   process.env['NODE_ENV'] !== 'production'
@@ -20,12 +21,12 @@ const prettyStream =
  * Lean request serializer — only fields useful for debugging.
  * Excludes all browser fingerprint headers, query/params (already in URL), cookies, etc.
  */
-export function reqSerializer(req: IncomingMessage & { id?: string }) {
+export function reqSerializer(req: IncomingMessage & { originalUrl?: string; ip?: string }) {
   return {
     id: req.id,
     method: req.method,
-    url: (req as any).originalUrl || req.url,
-    remoteAddress: (req as any).ip || req.socket?.remoteAddress,
+    url: req.originalUrl || req.url,
+    remoteAddress: req.ip || req.socket?.remoteAddress,
     userAgent: req.headers['user-agent'],
   };
 }

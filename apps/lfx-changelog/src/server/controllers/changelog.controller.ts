@@ -55,10 +55,9 @@ export class ChangelogController {
 
   public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const dbUser = (req as any).dbUser;
       const entry = await this.changelogService.create({
         ...req.body,
-        createdBy: dbUser.id,
+        createdBy: req.dbUser!.id,
       });
       res.status(201).json({ success: true, data: entry });
     } catch (error) {

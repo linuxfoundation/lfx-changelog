@@ -17,6 +17,13 @@ enum UserRole {
   editor
 }
 
+enum ApiKeyScope {
+  changelogs_read
+  changelogs_write
+  products_read
+  products_write
+}
+
 model Product {
   id                    String   @id @default(uuid())
   name                  String   @unique
@@ -86,6 +93,7 @@ model User {
 
   changelogEntries    ChangelogEntry[]
   userRoleAssignments UserRoleAssignment[]
+  apiKeys             ApiKey[]
 
   @@map("users")
 }
@@ -103,4 +111,23 @@ model UserRoleAssignment {
   @@unique([userId, productId, role])
   @@index([userId, productId])
   @@map("user_role_assignments")
+}
+
+model ApiKey {
+  id         String        @id @default(uuid())
+  userId     String        @map("user_id")
+  name       String
+  keyPrefix  String        @map("key_prefix")
+  keyHash    String        @unique @map("key_hash")
+  scopes     ApiKeyScope[] @default([])
+  expiresAt  DateTime      @map("expires_at")
+  lastUsedAt DateTime?     @map("last_used_at")
+  revokedAt  DateTime?     @map("revoked_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
 }

@@ -12,7 +12,7 @@ import {
   createPaginatedResponseSchema,
 } from '@lfx-changelog/shared';
 
-import { COOKIE_AUTH } from '../constants';
+import { API_KEY_AUTH } from '../constants';
 
 export const changelogRegistry = new OpenAPIRegistry();
 
@@ -22,7 +22,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'List all changelog entries',
   description: 'Returns all changelog entries with optional filters.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     query: z.object({
       productId: z.string().optional().openapi({ description: 'Filter by product ID' }),
@@ -49,7 +49,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Get changelog entry by ID',
   description: 'Returns a single changelog entry.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Changelog entry ID' }),
@@ -76,7 +76,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Create changelog entry',
   description: 'Creates a new changelog entry.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     body: {
       content: {
@@ -106,7 +106,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Update changelog entry',
   description: 'Updates an existing changelog entry.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Changelog entry ID' }),
@@ -140,7 +140,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Publish changelog entry',
   description: 'Publishes a draft changelog entry.\n\n**Required privilege:** EDITOR role or above for the target product.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Changelog entry ID' }),
@@ -167,7 +167,7 @@ changelogRegistry.registerPath({
   tags: ['Changelogs'],
   summary: 'Delete changelog entry',
   description: 'Deletes a changelog entry.\n\n**Required privilege:** PRODUCT_ADMIN role or above for the target product.',
-  security: COOKIE_AUTH,
+  security: API_KEY_AUTH,
   request: {
     params: z.object({
       id: z.string().openapi({ description: 'Changelog entry ID' }),
