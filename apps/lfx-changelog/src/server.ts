@@ -10,6 +10,7 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 
+import { getCorsOrigins } from './server/constants/cors.constants';
 import { hybridAuthMiddleware } from './server/middleware/api-key-auth.middleware';
 import { noCacheMiddleware } from './server/middleware/cache.middleware';
 import { apiErrorHandler } from './server/middleware/error-handler.middleware';
@@ -69,7 +70,7 @@ app.use(
 app.use(
   '/public/api/chat',
   cors({
-    origin: '*',
+    origin: getCorsOrigins(),
     methods: ['GET', 'HEAD', 'POST', 'OPTIONS'],
     maxAge: 86400,
   })
@@ -79,7 +80,7 @@ app.use(
 app.use(
   '/public/api',
   cors({
-    origin: '*',
+    origin: getCorsOrigins(),
     methods: ['GET', 'HEAD', 'OPTIONS'],
     maxAge: 86400,
   })

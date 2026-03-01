@@ -3,9 +3,12 @@
 
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, firstValueFrom, map, of, Subject, switchMap } from 'rxjs';
 
 import { AuthService } from '../auth/auth.service';
 
+import type { Signal } from '@angular/core';
 import type { ChatConversation, ChatConversationWithMessages, ChatMessageUI, ChatSSEEventType } from '@lfx-changelog/shared';
 
 @Injectable({ providedIn: 'root' })
@@ -13,12 +16,14 @@ export class ChatService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
 
+  private readonly conversationsRefresh$ = new Subject<void>();
+
   public readonly messages = signal<ChatMessageUI[]>([]);
   public readonly streaming = signal(false);
   public readonly currentStatus = signal('');
   public readonly conversationId = signal<string | null>(null);
   public readonly conversationTitle = signal('New conversation');
-  public readonly conversations = signal<ChatConversation[]>([]);
+  public readonly conversations: Signal<ChatConversation[]> = this.initConversations();
   public readonly error = signal('');
 
   private abortController: AbortController | null = null;
@@ -38,46 +43,42 @@ export class ChatService {
   }
 
   public loadConversations(): void {
-    if (!this.authService.authenticated()) return;
-
-    this.http.get<{ success: boolean; data: ChatConversation[] }>('/api/chat/conversations').subscribe({
-      next: (res) => this.conversations.set(res.data),
-      error: () => this.conversations.set([]),
-    });
+    this.conversationsRefresh$.next();
   }
 
-  public loadConversation(id: string): void {
+  public async loadConversation(id: string): Promise<void> {
     const url = this.authService.authenticated() ? `/api/chat/conversations/${id}` : `/public/api/chat/conversations/${id}`;
 
-    this.http.get<{ success: boolean; data: ChatConversationWithMessages }>(url).subscribe({
-      next: (res) => {
-        this.conversationId.set(res.data.id);
-        this.conversationTitle.set(res.data.title);
+    try {
+      const res = await firstValueFrom(this.http.get<{ success: boolean; data: ChatConversationWithMessages }>(url));
 
-        // Only show user + assistant messages in UI
-        const uiMessages: ChatMessageUI[] = res.data.messages
-          .filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content)
-          .map((m) => ({
-            role: m.role,
-            content: m.content!,
-          }));
+      this.conversationId.set(res.data.id);
+      this.conversationTitle.set(res.data.title);
 
-        this.messages.set(uiMessages);
-      },
-      error: () => this.error.set('Failed to load conversation.'),
-    });
+      // Only show user + assistant messages in UI
+      const uiMessages: ChatMessageUI[] = res.data.messages
+        .filter((m) => (m.role === 'user' || m.role === 'assistant') && m.content)
+        .map((m) => ({
+          role: m.role,
+          content: m.content!,
+        }));
+
+      this.messages.set(uiMessages);
+    } catch {
+      this.error.set('Failed to load conversation.');
+    }
   }
 
-  public deleteConversation(id: string): void {
-    this.http.delete<{ success: boolean }>(`/api/chat/conversations/${id}`).subscribe({
-      next: () => {
-        this.conversations.update((conversation) => conversation.filter((c) => c.id !== id));
-        if (this.conversationId() === id) {
-          this.reset();
-        }
-      },
-      error: () => this.error.set('Failed to delete conversation.'),
-    });
+  public async deleteConversation(id: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.delete<{ success: boolean }>(`/api/chat/conversations/${id}`));
+      this.conversationsRefresh$.next();
+      if (this.conversationId() === id) {
+        this.reset();
+      }
+    } catch {
+      this.error.set('Failed to delete conversation.');
+    }
   }
 
   public abort(): void {
@@ -188,8 +189,6 @@ export class ChatService {
         break;
       case 'title':
         this.conversationTitle.set(event.data);
-        // Update in conversations list too
-        this.conversations.update((conversation) => conversation.map((c) => (c.id === this.conversationId() ? { ...c, title: event.data } : c)));
         break;
       case 'content':
         this.charBuffer += event.data;
@@ -285,6 +284,22 @@ export class ChatService {
       }
       return updated;
     });
+  }
+
+  private initConversations(): Signal<ChatConversation[]> {
+    return toSignal(
+      this.conversationsRefresh$.pipe(
+        switchMap(() =>
+          this.authService.authenticated()
+            ? this.http.get<{ success: boolean; data: ChatConversation[] }>('/api/chat/conversations').pipe(
+                map((res) => res.data),
+                catchError(() => of([] as ChatConversation[]))
+              )
+            : of([] as ChatConversation[])
+        )
+      ),
+      { initialValue: [] }
+    );
   }
 
   private parseSSEBuffer(buffer: string): { parsed: { type: ChatSSEEventType; data: string }[]; remaining: string } {
