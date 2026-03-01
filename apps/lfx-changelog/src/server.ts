@@ -17,10 +17,12 @@ import { requestIdMiddleware } from './server/middleware/request-id.middleware';
 import aiRouter from './server/routes/ai.route';
 import apiKeyRouter from './server/routes/api-key.route';
 import changelogRouter from './server/routes/changelog.route';
+import chatRouter from './server/routes/chat.route';
 import githubRouter from './server/routes/github.route';
 import mcpRouter from './server/routes/mcp.route';
 import productRouter from './server/routes/product.route';
 import publicChangelogRouter from './server/routes/public-changelog.route';
+import publicChatRouter from './server/routes/public-chat.route';
 import publicProductRouter from './server/routes/public-product.route';
 import userRouter from './server/routes/user.route';
 import webhookRouter from './server/routes/webhook.route';
@@ -63,7 +65,17 @@ app.use(
   })
 );
 
-// 4. CORS — public API only (external consumers); protected routes stay same-origin
+// 4. CORS — public chat API (POST for SSE streaming)
+app.use(
+  '/public/api/chat',
+  cors({
+    origin: '*',
+    methods: ['GET', 'HEAD', 'POST', 'OPTIONS'],
+    maxAge: 86400,
+  })
+);
+
+// 4a. CORS — public API only (external consumers); protected routes stay same-origin
 app.use(
   '/public/api',
   cors({
@@ -199,6 +211,7 @@ app.get('/logout', (_req: Request, res: Response) => {
 app.use('/webhooks', webhookRouter);
 
 // 13. Public API routes (no auth required — cache headers set per-route)
+app.use('/public/api/chat', publicChatRouter);
 app.use('/public/api/changelogs', publicChangelogRouter);
 app.use('/public/api/products', publicProductRouter);
 
@@ -232,6 +245,7 @@ if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
 
 // 15. Protected API routes
 app.use('/api/ai', aiRouter);
+app.use('/api/chat', chatRouter);
 app.use('/api/api-keys', apiKeyRouter);
 app.use('/api/products', productRouter);
 app.use('/api/changelogs', changelogRouter);

@@ -90,6 +90,8 @@
   --animate-dropdown-in: dropdown-in 150ms ease-out both;
   --animate-gentle-float: gentle-float 3s ease-in-out infinite;
   --animate-spin-in: spin-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-status-pulse: status-pulse 1.5s ease-in-out infinite;
+  --animate-typing-bounce: typing-bounce 1.2s ease-in-out infinite;
 }
 
 /* ═══════════════════════════════════════════════
@@ -334,6 +336,29 @@ body {
   }
 }
 
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
 /* ═══════════════════════════════════════════════
    SCROLLBAR
    ═══════════════════════════════════════════════ */
@@ -444,6 +469,46 @@ body {
 .prose-themed img {
   border-radius: var(--radius-md);
   margin: 1em 0;
+}
+.prose-themed table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.875em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.prose-themed thead {
+  background: var(--color-surface-alt);
+}
+.prose-themed th {
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 2px solid var(--color-border);
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.prose-themed td {
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  vertical-align: top;
+}
+.prose-themed tbody tr:last-child td {
+  border-bottom: none;
+}
+.prose-themed tbody tr:hover {
+  background: var(--color-surface-alt);
+}
+.prose-themed td code,
+.prose-themed th code {
+  font-size: 0.8125em;
+  padding: 0.1em 0.35em;
 }
 
 /* ═══════════════════════════════════════════════
