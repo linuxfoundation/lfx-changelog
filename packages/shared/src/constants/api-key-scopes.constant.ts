@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { ApiKeyScope } from '../enums/api-key-scope.enum.js';
+import { UserRole } from '../enums/user-role.enum.js';
 
 import type { ApiKeyScopeMetadata } from '../schemas/api-key.schema.js';
 
@@ -13,6 +14,7 @@ export const API_KEY_SCOPES: ApiKeyScopeMetadata[] = [
     resource: 'changelogs',
     action: 'read',
     color: '#3B82F6',
+    minimumRole: UserRole.EDITOR,
   },
   {
     scope: ApiKeyScope.CHANGELOGS_WRITE,
@@ -21,6 +23,7 @@ export const API_KEY_SCOPES: ApiKeyScopeMetadata[] = [
     resource: 'changelogs',
     action: 'write',
     color: '#8B5CF6',
+    minimumRole: UserRole.EDITOR,
   },
   {
     scope: ApiKeyScope.PRODUCTS_READ,
@@ -29,6 +32,7 @@ export const API_KEY_SCOPES: ApiKeyScopeMetadata[] = [
     resource: 'products',
     action: 'read',
     color: '#10B981',
+    minimumRole: UserRole.EDITOR,
   },
   {
     scope: ApiKeyScope.PRODUCTS_WRITE,
@@ -37,6 +41,7 @@ export const API_KEY_SCOPES: ApiKeyScopeMetadata[] = [
     resource: 'products',
     action: 'write',
     color: '#F59E0B',
+    minimumRole: UserRole.SUPER_ADMIN,
   },
 ];
 

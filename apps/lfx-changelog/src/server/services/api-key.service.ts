@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { API_KEY_SCOPES, ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
 import { ApiKeyScope as PrismaApiKeyScope, User } from '@prisma/client';
 import crypto from 'node:crypto';
 
@@ -9,7 +10,7 @@ import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 
 import type { ApiKeyScope } from '@lfx-changelog/shared';
-import type { ApiKey } from '@prisma/client';
+import type { ApiKey, UserRoleAssignment } from '@prisma/client';
 
 const MAX_ACTIVE_KEYS_PER_USER = 10;
 const KEY_PREFIX = 'lfx_';
@@ -25,8 +26,15 @@ function toApiScope(prismaScope: PrismaApiKeyScope): ApiKeyScope {
 }
 
 export class ApiKeyService {
-  public async create(userId: string, data: { name: string; scopes: ApiKeyScope[]; expiresInDays: number }): Promise<{ apiKey: ApiKey; rawKey: string }> {
+  public async create(
+    userId: string,
+    data: { name: string; scopes: ApiKeyScope[]; expiresInDays: number },
+    userRoles: UserRoleAssignment[]
+  ): Promise<{ apiKey: ApiKey; rawKey: string }> {
     const prisma = getPrismaClient();
+
+    // Validate that the user's highest role meets the minimumRole for every requested scope
+    this.validateScopePermissions(data.scopes, userRoles);
 
     const activeCount = await prisma.apiKey.count({
       where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
@@ -129,5 +137,25 @@ export class ApiKeyService {
 
   public hasScope(apiKey: ApiKey, requiredScope: ApiKeyScope): boolean {
     return apiKey.scopes.some((s) => toApiScope(s) === requiredScope);
+  }
+
+  /** Verify the user's highest role meets the minimumRole for every requested scope. */
+  private validateScopePermissions(scopes: ApiKeyScope[], userRoles: UserRoleAssignment[]): void {
+    const userHighestLevel = Math.max(...userRoles.map((a) => ROLE_HIERARCHY[a.role as UserRole] ?? 0), 0);
+
+    for (const scope of scopes) {
+      const scopeMeta = API_KEY_SCOPES.find((s) => s.scope === scope);
+      if (!scopeMeta) {
+        throw new AuthorizationError(`Unknown scope: ${scope}`, { operation: 'create', service: 'api-key' });
+      }
+
+      const requiredLevel = ROLE_HIERARCHY[scopeMeta.minimumRole];
+      if (userHighestLevel < requiredLevel) {
+        throw new AuthorizationError(`Insufficient role to create API key with scope '${scope}' (requires ${scopeMeta.minimumRole})`, {
+          operation: 'create',
+          service: 'api-key',
+        });
+      }
+    }
   }
 }

@@ -22,7 +22,7 @@ export class ApiKeyController {
   public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { name, scopes, expiresInDays } = req.body;
-      const result = await this.apiKeyService.create(req.dbUser!.id, { name, scopes, expiresInDays });
+      const result = await this.apiKeyService.create(req.dbUser!.id, { name, scopes, expiresInDays }, req.dbUser!.userRoleAssignments || []);
       res.status(201).json({
         success: true,
         data: {

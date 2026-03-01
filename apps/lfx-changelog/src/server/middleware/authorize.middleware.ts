@@ -14,9 +14,9 @@ import type { UserRoleAssignment } from '@prisma/client';
 interface AuthorizeOptions {
   /** API key scope required. API keys are rejected if omitted. */
   scope?: ApiKeyScope;
-  /** Global role check (OAuth only). */
+  /** Global role check (applies to both OAuth and API key auth). */
   role?: UserRole;
-  /** Product-scoped role check (OAuth only). */
+  /** Product-scoped role check (applies to both OAuth and API key auth). */
   productRole?: UserRole;
   /** Resolve product ID from changelog entry :id param before productRole check. */
   resolveProductId?: boolean;
@@ -64,7 +64,7 @@ export function authorize(options: AuthorizeOptions = {}) {
         return;
       }
 
-      // ── API key path ──
+      // ── API key scope check ──
       if (req.authMethod === 'api_key') {
         if (!options.scope) {
           next(new AuthorizationError('API keys cannot access this endpoint', { path: req.path }));
@@ -81,11 +81,10 @@ export function authorize(options: AuthorizeOptions = {}) {
           return;
         }
 
-        next();
-        return;
+        // Fall through to role/productRole checks below
       }
 
-      // ── OAuth path ──
+      // ── Shared role checks (OAuth + API key) ──
 
       // resolveProductId: look up changelog entry → productId
       if (options.resolveProductId) {

@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import { ApiKeyScope } from '../enums/api-key-scope.enum.js';
 
+import type { UserRole } from '../enums/user-role.enum.js';
+
 export const ApiKeySchema = z
   .object({
     id: z.string().uuid(),
@@ -47,4 +49,6 @@ export interface ApiKeyScopeMetadata {
   resource: string;
   action: string;
   color: string;
+  /** Minimum user role required to create API keys with this scope. */
+  minimumRole: UserRole;
 }
