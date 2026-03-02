@@ -42,9 +42,17 @@ export const verifyGitHubWebhook = [
       return;
     }
 
-    const expected = 'sha256=' + crypto.createHmac('sha256', GITHUB_WEBHOOK_SECRET).update(rawBody).digest('hex');
+    const signaturePrefix = 'sha256=';
+    if (!signature.startsWith(signaturePrefix)) {
+      serverLogger.warn('GitHub webhook signature missing sha256= prefix');
+      res.status(401).json({ error: 'Invalid signature' });
+      return;
+    }
 
-    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+    const providedHmac = Buffer.from(signature.slice(signaturePrefix.length), 'hex');
+    const expectedHmac = crypto.createHmac('sha256', GITHUB_WEBHOOK_SECRET).update(rawBody).digest();
+
+    if (providedHmac.length !== expectedHmac.length || !crypto.timingSafeEqual(providedHmac, expectedHmac)) {
       serverLogger.warn('GitHub webhook signature mismatch');
       res.status(401).json({ error: 'Invalid signature' });
       return;

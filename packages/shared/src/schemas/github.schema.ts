@@ -143,6 +143,10 @@ export const StoredReleaseSchema = z
 
 export type StoredRelease = z.infer<typeof StoredReleaseSchema>;
 
+export const GitHubWebhookReleasePayloadSchema = GitHubReleaseSchema.omit({ repoFullName: true }).openapi('GitHubWebhookReleasePayload');
+
+export type GitHubWebhookReleasePayload = z.infer<typeof GitHubWebhookReleasePayloadSchema>;
+
 export const LinkRepositoryRequestSchema = z
   .object({
     githubInstallationId: z.number(),

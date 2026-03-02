@@ -37,7 +37,7 @@
             <button (click)="toggleGroup(group.productId)" class="text-text-secondary hover:text-text-primary transition-colors">
               <i
                 class="fa-solid fa-chevron-right w-4 text-center text-xs transition-transform duration-200"
-                [class.rotate-90]="!isGroupCollapsed(group.productId)"></i>
+                [class.rotate-90]="!(collapsedGroups() | setIncludes: group.productId)"></i>
             </button>
             @if (group.productFaIcon) {
               <i [class]="group.productFaIcon" class="text-brand-600 w-5 text-center"></i>
@@ -48,7 +48,7 @@
             </span>
             <span class="text-text-muted text-xs">{{ group.totalReleases }} releases</span>
             <div class="ml-auto">
-              <lfx-button variant="secondary" size="sm" [loading]="isSyncingProduct(group.productId)" (clicked)="syncProduct(group.productId)">
+              <lfx-button variant="secondary" size="sm" [loading]="syncingProduct() | setIncludes: group.productId" (clicked)="syncProduct(group.productId)">
                 <i class="fa-solid fa-arrows-rotate text-xs"></i>
                 Sync All
               </lfx-button>
@@ -56,7 +56,7 @@
           </div>
 
           <!-- Repository rows -->
-          @if (!isGroupCollapsed(group.productId)) {
+          @if (!(collapsedGroups() | setIncludes: group.productId)) {
             <div class="border-border border-t">
               @for (repo of group.repos; track repo.id) {
                 <div class="border-border flex items-center gap-4 px-5 py-3" [class.border-t]="!$first">
@@ -85,7 +85,7 @@
                     @if (repo.isPrivate) {
                       <span class="bg-warning-50 text-warning-700 rounded-full px-2 py-0.5 text-xs font-medium">Private</span>
                     }
-                    <lfx-button variant="ghost" size="sm" [loading]="isSyncingRepo(repo.id)" (clicked)="syncRepository(repo.id)">
+                    <lfx-button variant="ghost" size="sm" [loading]="syncingRepo() | setIncludes: repo.id" (clicked)="syncRepository(repo.id)">
                       <i class="fa-solid fa-arrows-rotate text-xs"></i>
                       Sync
                     </lfx-button>

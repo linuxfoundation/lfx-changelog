@@ -6,7 +6,6 @@ import { formatDistanceToNow } from 'date-fns';
 
 @Pipe({
   name: 'timeAgo',
-  standalone: true,
 })
 export class TimeAgoPipe implements PipeTransform {
   public transform(value: string | null | undefined): string {

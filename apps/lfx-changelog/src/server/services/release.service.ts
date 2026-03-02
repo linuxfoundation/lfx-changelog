@@ -7,25 +7,9 @@ import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
 import { ProductRepositoryService } from './product-repository.service';
 
-import type { StoredRelease } from '@lfx-changelog/shared';
+import type { GitHubWebhookReleasePayload, StoredRelease } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
-
-interface FindAllPublicOptions {
-  limit?: number;
-  productId?: string;
-}
-
-interface GitHubReleasePayload {
-  id: number;
-  tag_name: string;
-  name: string | null;
-  html_url: string;
-  body: string | null;
-  draft: boolean;
-  prerelease: boolean;
-  published_at: string | null;
-  author: { login: string; avatar_url: string };
-}
+import type { FindAllPublicOptions } from '../interfaces/release.interface';
 
 export class ReleaseService {
   private readonly githubService = new GitHubService();
@@ -33,7 +17,7 @@ export class ReleaseService {
 
   public async findAllPublic(options: FindAllPublicOptions = {}): Promise<StoredRelease[]> {
     const prisma = getPrismaClient();
-    const limit = Math.min(options.limit || 20, 100);
+    const limit = Math.min(Math.max(options.limit || 20, 1), 100);
 
     const releases = await prisma.gitHubRelease.findMany({
       where: {
@@ -139,7 +123,7 @@ export class ReleaseService {
     return synced;
   }
 
-  public async upsertFromWebhook(repositoryId: string, payload: GitHubReleasePayload): Promise<void> {
+  public async upsertFromWebhook(repositoryId: string, payload: GitHubWebhookReleasePayload): Promise<void> {
     const prisma = getPrismaClient();
 
     await prisma.gitHubRelease.upsert({

@@ -5,22 +5,16 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { RepositoryService } from '@services/repository/repository.service';
+import { SetIncludesPipe } from '@shared/pipes/set-includes/set-includes.pipe';
 import { TimeAgoPipe } from '@shared/pipes/time-ago/time-ago.pipe';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
 import type { RepositoryWithCounts } from '@lfx-changelog/shared';
-
-interface ProductGroup {
-  productId: string;
-  productName: string;
-  productFaIcon: string | null;
-  repos: RepositoryWithCounts[];
-  totalReleases: number;
-}
+import type { ProductGroup } from '@shared/interfaces/repository.interface';
 
 @Component({
   selector: 'lfx-repository-list',
-  imports: [ButtonComponent, TimeAgoPipe],
+  imports: [ButtonComponent, SetIncludesPipe, TimeAgoPipe],
   templateUrl: './repository-list.component.html',
   styleUrl: './repository-list.component.css',
 })
@@ -54,10 +48,6 @@ export class RepositoryListComponent {
       }
       return next;
     });
-  }
-
-  protected isGroupCollapsed(productId: string): boolean {
-    return this.collapsedGroups().has(productId);
   }
 
   protected syncProduct(productId: string): void {
@@ -102,14 +92,6 @@ export class RepositoryListComponent {
         });
       },
     });
-  }
-
-  protected isSyncingProduct(productId: string): boolean {
-    return this.syncingProduct().has(productId);
-  }
-
-  protected isSyncingRepo(repoId: string): boolean {
-    return this.syncingRepo().has(repoId);
   }
 
   private initGroupedByProduct() {

@@ -8,9 +8,12 @@ import { serverLogger } from '../server-logger';
 import { getPrismaClient } from '../services/prisma.service';
 import { ReleaseService } from '../services/release.service';
 
+import type { GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
+
 const WEBHOOK_STATE_SECRET = process.env['WEBHOOK_STATE_SECRET'] || process.env['AUTH0_SECRET'] || '';
 
 export class WebhookController {
+  private readonly releaseService = new ReleaseService();
   /**
    * Signs a state payload for GitHub App install redirects.
    * Called when generating the install URL to embed a verifiable signature.
@@ -82,47 +85,35 @@ export class WebhookController {
       return;
     }
 
-    // Look up the ProductRepository by full name
+    // Look up all ProductRepository entries by full name (a repo can be linked to multiple products)
     const prisma = getPrismaClient();
-    const productRepo = await prisma.productRepository.findFirst({
+    const productRepos = await prisma.productRepository.findMany({
       where: { fullName: repoFullName },
     });
 
-    if (!productRepo) {
+    if (productRepos.length === 0) {
       serverLogger.info({ repoFullName }, 'GitHub webhook release event for untracked repository — ignoring');
       res.status(200).json({ ok: true, ignored: true });
       return;
     }
 
-    const releasePayload = body.release as {
-      id: number;
-      tag_name: string;
-      name: string | null;
-      html_url: string;
-      body: string | null;
-      draft: boolean;
-      prerelease: boolean;
-      published_at: string | null;
-      author: { login: string; avatar_url: string };
-    };
+    const releasePayload = body.release as GitHubWebhookReleasePayload;
 
-    if (body.action === 'deleted') {
-      // Remove the release from DB
-      await prisma.gitHubRelease.deleteMany({
-        where: { repositoryId: productRepo.id, githubId: releasePayload.id },
+    for (const productRepo of productRepos) {
+      if (body.action === 'deleted') {
+        await prisma.gitHubRelease.deleteMany({
+          where: { repositoryId: productRepo.id, githubId: releasePayload.id },
+        });
+        serverLogger.info({ repoFullName, tag: releasePayload.tag_name }, 'Deleted release via webhook');
+      } else {
+        await this.releaseService.upsertFromWebhook(productRepo.id, releasePayload);
+      }
+
+      await prisma.productRepository.update({
+        where: { id: productRepo.id },
+        data: { lastSyncedAt: new Date() },
       });
-      serverLogger.info({ repoFullName, tag: releasePayload.tag_name }, 'Deleted release via webhook');
-    } else {
-      // Upsert for published, created, edited, prereleased, released actions
-      const releaseService = new ReleaseService();
-      await releaseService.upsertFromWebhook(productRepo.id, releasePayload);
     }
-
-    // Record when this repo was last synced via webhook
-    await prisma.productRepository.update({
-      where: { id: productRepo.id },
-      data: { lastSyncedAt: new Date() },
-    });
 
     res.status(200).json({ ok: true });
   }
