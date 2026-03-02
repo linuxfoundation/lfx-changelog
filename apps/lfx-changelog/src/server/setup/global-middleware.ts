@@ -39,7 +39,14 @@ export function setupGlobalMiddleware(app: Express): void {
   );
 
   // Body parsers (1mb limit — sufficient for changelog API)
-  app.use(express.json({ limit: '1mb' }));
+  // Skip JSON parsing for the webhook route — it needs the raw body for HMAC signature verification
+  app.use((req, res, next) => {
+    if (req.path === '/webhooks/github') {
+      next();
+      return;
+    }
+    express.json({ limit: '1mb' })(req, res, next);
+  });
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Static files

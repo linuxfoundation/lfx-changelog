@@ -15,6 +15,7 @@ import productRouter from '../routes/product.route';
 import publicChangelogRouter from '../routes/public-changelog.route';
 import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
+import releaseRouter from '../routes/release.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
 import { setupSwagger } from '../swagger';
@@ -79,6 +80,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/changelogs', changelogRouter);
   app.use('/api/users', userRouter);
   app.use('/api/github', githubRouter);
+  app.use('/api/releases', releaseRouter);
 
   // ── API error handlers ────────────────────────────────────────────────
   app.use('/api', apiErrorHandler);

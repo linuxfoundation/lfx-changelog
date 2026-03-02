@@ -1,14 +1,52 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { LinkRepositoryRequest } from '@lfx-changelog/shared';
-import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
-
 import { NotFoundError } from '../errors';
 
 import { getPrismaClient } from './prisma.service';
 
+import type { LinkRepositoryRequest, RepositoryWithCounts } from '@lfx-changelog/shared';
+import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
+
 export class ProductRepositoryService {
+  public async findById(repoId: string): Promise<PrismaProductRepository> {
+    const prisma = getPrismaClient();
+    const repo = await prisma.productRepository.findUnique({ where: { id: repoId } });
+    if (!repo) {
+      throw new NotFoundError(`Repository not found: ${repoId}`, { operation: 'findById', service: 'product-repository' });
+    }
+    return repo;
+  }
+
+  public async findAllWithCounts(): Promise<RepositoryWithCounts[]> {
+    const prisma = getPrismaClient();
+    const repos = await prisma.productRepository.findMany({
+      include: {
+        product: true,
+        _count: { select: { releases: true } },
+      },
+      orderBy: [{ product: { name: 'asc' } }, { fullName: 'asc' }],
+    });
+
+    return repos.map((r) => ({
+      id: r.id,
+      productId: r.productId,
+      githubInstallationId: r.githubInstallationId,
+      owner: r.owner,
+      name: r.name,
+      fullName: r.fullName,
+      htmlUrl: r.htmlUrl,
+      description: r.description,
+      isPrivate: r.isPrivate,
+      lastSyncedAt: r.lastSyncedAt?.toISOString() ?? null,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+      releaseCount: r._count.releases,
+      productName: r.product.name,
+      productFaIcon: r.product.faIcon,
+    }));
+  }
+
   public async findByProductId(productId: string): Promise<PrismaProductRepository[]> {
     const prisma = getPrismaClient();
     return prisma.productRepository.findMany({

@@ -25,6 +25,11 @@ test.describe('RBAC — No Role (authenticated user)', () => {
     await page.waitForURL('/');
   });
 
+  test('should redirect from /admin/repositories to public feed', async ({ page }) => {
+    await page.goto('/admin/repositories');
+    await page.waitForURL('/');
+  });
+
   test('should redirect from /admin/users to public feed', async ({ page }) => {
     await page.goto('/admin/users');
     await page.waitForURL('/');

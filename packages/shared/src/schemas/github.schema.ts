@@ -45,12 +45,21 @@ export const ProductRepositorySchema = z
     htmlUrl: z.string(),
     description: z.string().nullable(),
     isPrivate: z.boolean(),
+    lastSyncedAt: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   })
   .openapi('ProductRepository');
 
 export type ProductRepository = z.infer<typeof ProductRepositorySchema>;
+
+export const RepositoryWithCountsSchema = ProductRepositorySchema.extend({
+  releaseCount: z.number(),
+  productName: z.string(),
+  productFaIcon: z.string().nullable(),
+}).openapi('RepositoryWithCounts');
+
+export type RepositoryWithCounts = z.infer<typeof RepositoryWithCountsSchema>;
 
 export const GitHubPullRequestSchema = z
   .object({
@@ -111,6 +120,32 @@ export const ProductActivitySchema = z
   .openapi('ProductActivity');
 
 export type ProductActivity = z.infer<typeof ProductActivitySchema>;
+
+export const StoredReleaseSchema = z
+  .object({
+    id: z.string().uuid(),
+    tagName: z.string(),
+    name: z.string().nullable(),
+    htmlUrl: z.string(),
+    body: z.string().nullable(),
+    isDraft: z.boolean(),
+    isPrerelease: z.boolean(),
+    publishedAt: z.string().nullable(),
+    authorLogin: z.string(),
+    authorAvatarUrl: z.string(),
+    repositoryFullName: z.string(),
+    productId: z.string(),
+    productName: z.string(),
+    productSlug: z.string(),
+    productFaIcon: z.string().nullable(),
+  })
+  .openapi('StoredRelease');
+
+export type StoredRelease = z.infer<typeof StoredReleaseSchema>;
+
+export const GitHubWebhookReleasePayloadSchema = GitHubReleaseSchema.omit({ repoFullName: true }).openapi('GitHubWebhookReleasePayload');
+
+export type GitHubWebhookReleasePayload = z.infer<typeof GitHubWebhookReleasePayloadSchema>;
 
 export const LinkRepositoryRequestSchema = z
   .object({

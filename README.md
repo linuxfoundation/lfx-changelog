@@ -100,6 +100,7 @@ The server supports two ways to configure the database connection: a single `DAT
 | `BASE_URL`              | Yes      | Application base URL (e.g., `http://localhost:4204`)                                                     |
 | `GITHUB_APP_ID`         | No       | GitHub App ID for repository integration                                                                 |
 | `GITHUB_PRIVATE_KEY`    | No       | GitHub App RSA private key                                                                               |
+| `GITHUB_WEBHOOK_SECRET` | No       | Secret for verifying GitHub webhook signatures (see [Webhook Testing](docs/webhook-testing.md))          |
 | `LITELLM_API_KEY`       | No       | API key for AI changelog generation                                                                      |
 | `AI_API_URL`            | No       | AI service endpoint URL                                                                                  |
 | `NODE_ENV`              | No       | `development` or `production` (default: `development`)                                                   |
@@ -287,6 +288,7 @@ Adding the `deploy-preview` label to a PR builds and pushes a branch-specific im
 | [Database Migrations](docs/database-migrations.md)       | Automated (CI/CD) and manual migration workflows     |
 | [Remote Database Access](docs/remote-database-access.md) | Connecting to RDS via kubectl port-forward           |
 | [E2E Testing](docs/testing/e2e-testing.md)               | Test architecture, patterns, and how to add tests    |
+| [Webhook Testing](docs/webhook-testing.md)               | Testing GitHub release webhooks locally              |
 | [Contributing](CONTRIBUTING.md)                          | License headers, code style, commit conventions      |
 | [Security](SECURITY.md)                                  | Vulnerability reporting                              |
 | [MCP Server](docs/mcp-server.md)                         | MCP tools, resources, and client setup               |

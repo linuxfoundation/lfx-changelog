@@ -137,87 +137,37 @@
         <span class="text-text-muted text-xs">Linked repos</span>
       </div>
       <div class="border-border bg-surface overflow-hidden rounded-xl border shadow-sm">
-        <!-- Release items -->
-        <div class="release-row release-row-0 px-4 py-3.5">
-          <div class="flex items-center gap-2">
-            <i class="fa-brands fa-github text-text-muted text-sm"></i>
-            <span class="text-text-primary truncate text-sm font-medium">v2.6.0</span>
-            <span class="bg-new-feature-bg text-new-feature ml-auto shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium">Latest</span>
-          </div>
-          <p class="text-text-secondary mt-1 truncate text-xs">communitybridge/easycla</p>
-          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
-            <i class="fa-duotone fa-file-contract text-brand-600 text-[0.65rem]"></i>
-            <span>EasyCLA</span>
-            <span class="text-border-strong">&middot;</span>
-            <span>2 hours ago</span>
-          </div>
-        </div>
-
-        <div class="border-border border-t"></div>
-
-        <div class="release-row release-row-1 px-4 py-3.5">
-          <div class="flex items-center gap-2">
-            <i class="fa-brands fa-github text-text-muted text-sm"></i>
-            <span class="text-text-primary truncate text-sm font-medium">v4.3.0-rc.1</span>
-            <span class="bg-draft-bg text-draft ml-auto shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium">Pre-release</span>
-          </div>
-          <p class="text-text-secondary mt-1 truncate text-xs">lfx/security-scanner</p>
-          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
-            <i class="fa-duotone fa-shield-halved text-brand-600 text-[0.65rem]"></i>
-            <span>Security</span>
-            <span class="text-border-strong">&middot;</span>
-            <span>5 hours ago</span>
-          </div>
-        </div>
-
-        <div class="border-border border-t"></div>
-
-        <div class="release-row release-row-2 px-4 py-3.5">
-          <div class="flex items-center gap-2">
-            <i class="fa-brands fa-github text-text-muted text-sm"></i>
-            <span class="text-text-primary truncate text-sm font-medium">v3.2.0</span>
-            <span class="bg-new-feature-bg text-new-feature ml-auto shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium">Latest</span>
-          </div>
-          <p class="text-text-secondary mt-1 truncate text-xs">lfx/insights-v3</p>
-          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
-            <i class="fa-duotone fa-chart-mixed text-brand-600 text-[0.65rem]"></i>
-            <span>Insights</span>
-            <span class="text-border-strong">&middot;</span>
-            <span>1 day ago</span>
-          </div>
-        </div>
-
-        <div class="border-border border-t"></div>
-
-        <div class="release-row release-row-3 px-4 py-3.5">
-          <div class="flex items-center gap-2">
-            <i class="fa-brands fa-github text-text-muted text-sm"></i>
-            <span class="text-text-primary truncate text-sm font-medium">v5.0.1</span>
-          </div>
-          <p class="text-text-secondary mt-1 truncate text-xs">lfx/project-control-center</p>
-          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
-            <i class="fa-duotone fa-bars-progress text-brand-600 text-[0.65rem]"></i>
-            <span>Project Control Center</span>
-            <span class="text-border-strong">&middot;</span>
-            <span>3 days ago</span>
-          </div>
-        </div>
-
-        <div class="border-border border-t"></div>
-
-        <div class="release-row release-row-4 px-4 py-3.5">
-          <div class="flex items-center gap-2">
-            <i class="fa-brands fa-github text-text-muted text-sm"></i>
-            <span class="text-text-primary truncate text-sm font-medium">v1.8.1</span>
-          </div>
-          <p class="text-text-secondary mt-1 truncate text-xs">communitybridge/mentorship-backend</p>
-          <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
-            <i class="fa-duotone fa-hand-holding-heart text-brand-600 text-[0.65rem]"></i>
-            <span>Mentorship</span>
-            <span class="text-border-strong">&middot;</span>
-            <span>5 days ago</span>
-          </div>
-        </div>
+        @for (release of latestReleases(); track release.id; let i = $index) {
+          @if (i > 0) {
+            <div class="border-border border-t"></div>
+          }
+          <a
+            [href]="release.htmlUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            [class]="'release-row release-row-' + i + ' hover:bg-surface-alt block px-4 py-3.5 transition-colors'">
+            <div class="flex items-center gap-2">
+              <i class="fa-brands fa-github text-text-muted text-sm"></i>
+              <span class="text-text-primary truncate text-sm font-medium">{{ release.tagName }}</span>
+              @if (release.isPrerelease) {
+                <span class="bg-draft-bg text-draft ml-auto shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium">Pre-release</span>
+              } @else if (i === 0) {
+                <span class="bg-new-feature-bg text-new-feature ml-auto shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-medium">Latest</span>
+              }
+            </div>
+            <p class="text-text-secondary mt-1 truncate text-xs">{{ release.repositoryFullName }}</p>
+            <div class="text-text-muted mt-2 flex items-center gap-2 text-xs">
+              @if (release.productFaIcon) {
+                <i [class]="release.productFaIcon + ' text-brand-600 text-[0.65rem]'"></i>
+              }
+              <span>{{ release.productName }}</span>
+              <span class="text-border-strong">&middot;</span>
+              <span>{{ release.publishedAt | timeAgo }}</span>
+            </div>
+          </a>
+        } @empty {
+          <div class="text-text-muted px-4 py-6 text-center text-sm">No releases synced yet.</div>
+        }
       </div>
     </div>
   </div>
