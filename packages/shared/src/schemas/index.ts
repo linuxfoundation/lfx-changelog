@@ -60,6 +60,8 @@ export {
   LinkRepositoryRequestSchema,
   ProductActivitySchema,
   ProductRepositorySchema,
+  RepositoryWithCountsSchema,
+  StoredReleaseSchema,
 } from './github.schema.js';
 export { ProductSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
@@ -126,6 +128,8 @@ export type {
   LinkRepositoryRequest,
   ProductActivity,
   ProductRepository,
+  RepositoryWithCounts,
+  StoredRelease,
 } from './github.schema.js';
 export type { Product } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';

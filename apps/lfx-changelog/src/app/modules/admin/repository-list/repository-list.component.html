@@ -1,0 +1,101 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left">
+    <h1 class="font-display text-text-primary text-2xl font-bold">Repositories</h1>
+    <p class="text-text-secondary mt-1">Connected GitHub repositories grouped by product, with sync controls.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="animate-fade-in space-y-4">
+      @for (_ of [1, 2, 3]; track $index) {
+        <div class="border-border bg-surface rounded-lg border">
+          <div class="flex items-center gap-3 px-5 py-4">
+            <div class="bg-surface-alt h-5 w-5 animate-pulse rounded"></div>
+            <div class="bg-surface-alt h-5 w-32 animate-pulse rounded"></div>
+            <div class="bg-surface-alt ml-auto h-8 w-20 animate-pulse rounded"></div>
+          </div>
+          <div class="border-border border-t px-5 py-3">
+            <div class="bg-surface-alt h-4 w-64 animate-pulse rounded"></div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (groupedByProduct().length === 0) {
+    <div class="animate-fade-in border-border bg-surface rounded-lg border px-6 py-12 text-center">
+      <i class="fa-duotone fa-code-branch text-text-muted mb-3 text-4xl"></i>
+      <h3 class="text-text-primary text-lg font-medium">No repositories connected</h3>
+      <p class="text-text-secondary mt-1">Connect GitHub repositories to your products to start syncing releases.</p>
+    </div>
+  } @else {
+    <div class="animate-rise-in space-y-4">
+      @for (group of groupedByProduct(); track group.productId) {
+        <div class="border-border bg-surface overflow-hidden rounded-lg border">
+          <!-- Product header -->
+          <div class="flex items-center gap-3 px-5 py-4">
+            <button (click)="toggleGroup(group.productId)" class="text-text-secondary hover:text-text-primary transition-colors">
+              <i
+                class="fa-solid fa-chevron-right w-4 text-center text-xs transition-transform duration-200"
+                [class.rotate-90]="!isGroupCollapsed(group.productId)"></i>
+            </button>
+            @if (group.productFaIcon) {
+              <i [class]="group.productFaIcon" class="text-brand-600 w-5 text-center"></i>
+            }
+            <h2 class="text-text-primary text-sm font-semibold">{{ group.productName }}</h2>
+            <span class="bg-surface-alt text-text-secondary rounded-full px-2 py-0.5 text-xs font-medium">
+              {{ group.repos.length }} {{ group.repos.length === 1 ? 'repo' : 'repos' }}
+            </span>
+            <span class="text-text-muted text-xs">{{ group.totalReleases }} releases</span>
+            <div class="ml-auto">
+              <lfx-button variant="secondary" size="sm" [loading]="isSyncingProduct(group.productId)" (clicked)="syncProduct(group.productId)">
+                <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                Sync All
+              </lfx-button>
+            </div>
+          </div>
+
+          <!-- Repository rows -->
+          @if (!isGroupCollapsed(group.productId)) {
+            <div class="border-border border-t">
+              @for (repo of group.repos; track repo.id) {
+                <div class="border-border flex items-center gap-4 px-5 py-3" [class.border-t]="!$first">
+                  <i class="fa-duotone fa-code-branch text-text-muted w-5 text-center text-sm"></i>
+                  <div class="min-w-0 flex-1">
+                    <a
+                      [href]="repo.htmlUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-brand-600 hover:text-brand-700 text-sm font-medium hover:underline">
+                      {{ repo.fullName }}
+                    </a>
+                    @if (repo.description) {
+                      <p class="text-text-muted mt-0.5 truncate text-xs">{{ repo.description }}</p>
+                    }
+                  </div>
+                  <div class="flex items-center gap-6">
+                    <div class="text-right">
+                      <div class="text-text-secondary text-xs font-medium">{{ repo.releaseCount }} releases</div>
+                      @if (repo.lastSyncedAt) {
+                        <div class="text-text-muted text-xs">Synced {{ repo.lastSyncedAt | timeAgo }}</div>
+                      } @else {
+                        <div class="text-text-muted text-xs">Never synced</div>
+                      }
+                    </div>
+                    @if (repo.isPrivate) {
+                      <span class="bg-warning-50 text-warning-700 rounded-full px-2 py-0.5 text-xs font-medium">Private</span>
+                    }
+                    <lfx-button variant="ghost" size="sm" [loading]="isSyncingRepo(repo.id)" (clicked)="syncRepository(repo.id)">
+                      <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                      Sync
+                    </lfx-button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

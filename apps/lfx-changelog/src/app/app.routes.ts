@@ -59,6 +59,11 @@ export const routes: Routes = [
         loadComponent: () => import('@modules/admin/product-detail/product-detail.component').then((m) => m.ProductDetailComponent),
       },
       {
+        path: 'repositories',
+        canActivate: [superAdminGuard],
+        loadComponent: () => import('@modules/admin/repository-list/repository-list.component').then((m) => m.RepositoryListComponent),
+      },
+      {
         path: 'users',
         canActivate: [superAdminGuard],
         loadComponent: () => import('@modules/admin/user-management/user-management.component').then((m) => m.UserManagementComponent),

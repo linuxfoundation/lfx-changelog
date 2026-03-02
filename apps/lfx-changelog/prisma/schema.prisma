@@ -57,15 +57,40 @@ model ProductRepository {
   fullName              String   @map("full_name")
   htmlUrl               String   @map("html_url")
   description           String?
-  isPrivate             Boolean  @default(false) @map("is_private")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  isPrivate             Boolean   @default(false) @map("is_private")
+  lastSyncedAt          DateTime? @map("last_synced_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product  Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  releases GitHubRelease[]
 
   @@unique([productId, owner, name])
   @@index([productId])
   @@map("product_repositories")
+}
+
+model GitHubRelease {
+  id              String    @id @default(uuid())
+  repositoryId    String    @map("repository_id")
+  githubId        Int       @map("github_id")
+  tagName         String    @map("tag_name")
+  name            String?
+  htmlUrl         String    @map("html_url")
+  body            String?
+  isDraft         Boolean   @default(false) @map("is_draft")
+  isPrerelease    Boolean   @default(false) @map("is_prerelease")
+  publishedAt     DateTime? @map("published_at")
+  authorLogin     String    @map("author_login")
+  authorAvatarUrl String    @map("author_avatar_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  repository ProductRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([repositoryId, githubId])
+  @@index([publishedAt(sort: Desc)])
+  @@map("github_releases")
 }
 
 model ChangelogEntry {
