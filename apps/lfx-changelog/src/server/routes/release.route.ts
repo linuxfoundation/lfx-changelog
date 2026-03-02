@@ -10,8 +10,8 @@ import { authorize } from '../middleware/authorize.middleware';
 const router = Router();
 const releaseController = new ReleaseController();
 
-// List releases (any authenticated user)
-router.get('/', (req, res, next) => releaseController.listPublic(req, res, next));
+// List releases (editor and above)
+router.get('/', authorize({ role: UserRole.EDITOR }), (req, res, next) => releaseController.listPublic(req, res, next));
 
 // List all repositories with release counts (admin only)
 router.get('/repositories', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => releaseController.listRepositories(req, res, next));
