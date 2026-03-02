@@ -19,7 +19,7 @@ releaseRegistry.registerPath({
   security: API_KEY_AUTH,
   request: {
     query: z.object({
-      limit: z.string().optional().openapi({ description: 'Maximum results to return (default 20, max 100)' }),
+      limit: z.coerce.number().int().min(1).max(100).optional().openapi({ description: 'Maximum results to return (default 20, max 100)' }),
       productId: z.string().optional().openapi({ description: 'Filter releases by product ID' }),
     }),
   },

@@ -73,7 +73,7 @@ export class ReleaseService {
   }
 
   public async syncForRepository(repo: PrismaProductRepository): Promise<number> {
-    const releases = await this.githubService.getRepositoryReleases(repo.githubInstallationId, repo.owner, repo.name, repo.fullName);
+    const releases = await this.githubService.getRepositoryReleases(repo.githubInstallationId, repo.owner, repo.name, repo.fullName, 100);
 
     const prisma = getPrismaClient();
     let synced = 0;
