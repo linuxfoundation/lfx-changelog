@@ -13,6 +13,7 @@ import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
 import { publicProductRegistry } from './paths/public-products.path';
 import { releaseRegistry } from './paths/releases.path';
+import { searchRegistry } from './paths/search.path';
 import { userRegistry } from './paths/users.path';
 
 const registry = new OpenAPIRegistry();
@@ -32,7 +33,7 @@ registry.registerComponent('securitySchemes', 'cookieAuth', {
 });
 
 // Merge all path registries
-const allRegistries = [publicProductRegistry, publicChangelogRegistry, productRegistry, changelogRegistry, releaseRegistry, userRegistry];
+const allRegistries = [publicProductRegistry, publicChangelogRegistry, searchRegistry, productRegistry, changelogRegistry, releaseRegistry, userRegistry];
 
 // Collect all definitions from all registries
 const allDefinitions = [...registry.definitions, ...allRegistries.flatMap((r) => r.definitions)];
@@ -54,10 +55,12 @@ const document = generator.generateDocument({
   tags: [
     { name: 'Public - Products', description: 'No authentication required' },
     { name: 'Public - Changelogs', description: 'No authentication required' },
+    { name: 'Public - Search', description: 'Full-text search — no authentication required' },
 
     { name: 'Products', description: 'Authentication required' },
     { name: 'Changelogs', description: 'Authentication required' },
     { name: 'Releases', description: 'Authentication required' },
+    { name: 'OpenSearch', description: 'OpenSearch administration — super_admin only' },
     { name: 'Users', description: 'Authentication required' },
   ],
 });

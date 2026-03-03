@@ -10,12 +10,13 @@ import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
-import { ChangelogStatus } from '@lfx-changelog/shared';
+import { ChangelogStatus, UserRole } from '@lfx-changelog/shared';
+import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
 import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
 import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
-import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, take, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
@@ -45,6 +46,7 @@ interface PageState {
   styleUrl: './changelog-list.component.css',
 })
 export class ChangelogListComponent {
+  private readonly authService = inject(AuthService);
   private readonly changelogService = inject(ChangelogService);
   private readonly productService = inject(ProductService);
   private readonly destroyRef = inject(DestroyRef);
@@ -57,6 +59,9 @@ export class ChangelogListComponent {
 
   protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
   protected readonly loading = signal(true);
+  protected readonly reindexing = signal(false);
+  protected readonly reindexResult = signal<{ indexed: number; errors: number } | null>(null);
+  protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
 
   protected readonly productOptions: Signal<SelectOption[]> = this.initProductOptions();
   protected readonly statusOptions: SelectOption[] = [
@@ -81,6 +86,21 @@ export class ChangelogListComponent {
 
   protected onPageChange(page: number): void {
     this.page$.next(page);
+  }
+
+  protected reindex(): void {
+    this.reindexing.set(true);
+    this.reindexResult.set(null);
+    this.changelogService
+      .reindexSearch()
+      .pipe(take(1))
+      .subscribe({
+        next: (result) => {
+          this.reindexResult.set(result);
+          this.reindexing.set(false);
+        },
+        error: () => this.reindexing.set(false),
+      });
   }
 
   private initProductOptions(): Signal<SelectOption[]> {

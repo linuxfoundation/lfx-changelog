@@ -8,6 +8,30 @@
     <p class="text-text-secondary mt-2">Stay up to date with the latest changes across LFX products.</p>
   </div>
 
+  <!-- Search input -->
+  <div class="animate-fade-in-up [animation-delay:25ms]">
+    <div class="relative">
+      <input
+        data-testid="changelog-feed-search-input"
+        [formControl]="searchControl"
+        type="text"
+        placeholder="Search changelogs..."
+        class="border-border bg-surface text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:ring-brand-500/20 w-full rounded-lg border py-2.5 pr-9 pl-9 text-sm transition-colors focus:ring-2 focus:outline-none" />
+      <div class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+        <i class="fa-duotone fa-magnifying-glass text-text-muted text-sm"></i>
+      </div>
+      @if (searchControl.value) {
+        <button
+          data-testid="changelog-feed-search-clear"
+          (click)="clearSearch()"
+          class="text-text-muted hover:text-text-primary absolute inset-y-0 right-3 flex items-center text-sm transition-colors"
+          aria-label="Clear search">
+          <i class="fa-duotone fa-xmark"></i>
+        </button>
+      }
+    </div>
+  </div>
+
   <!-- Product filter chips -->
   <div class="animate-fade-in-up space-y-3 [animation-delay:50ms]">
     <div class="flex flex-wrap gap-2">
@@ -30,26 +54,50 @@
     </div>
   </div>
 
-  <!-- Timeline -->
+  <!-- Search results or Timeline -->
   <div data-testid="changelog-feed-timeline" class="animate-fade-in-up [animation-delay:100ms]">
-    @if (loading()) {
-      <div data-testid="changelog-feed-loading" class="py-16 text-center">
-        <i class="fa-duotone fa-spinner-third fa-spin text-brand-600 mb-4 text-4xl"></i>
-        <p class="text-text-muted text-sm">Loading entries...</p>
-      </div>
-    } @else {
-      @for (entry of publishedEntries(); track entry.id; let i = $index) {
-        <lfx-timeline-item [date]="entry.publishedAt! | dateFormat" [index]="i">
-          <lfx-changelog-card [entry]="entry" />
-        </lfx-timeline-item>
-      }
+    @if (isSearchActive()) {
+      @if (searchResponse(); as sr) {
+        <!-- Search result count -->
+        <p data-testid="changelog-feed-search-count" class="text-text-muted mb-4 text-sm">
+          {{ sr.total }} result{{ sr.total === 1 ? '' : 's' }} for
+          <span class="text-text-primary font-medium">"{{ searchControl.value }}"</span>
+        </p>
 
-      @if (publishedEntries().length === 0) {
-        <div data-testid="changelog-feed-empty" class="py-16 text-center">
-          <i class="fa-duotone fa-filter-slash text-text-muted mb-4 text-4xl"></i>
-          <p class="font-display text-text-secondary text-lg font-medium">No entries match your filters</p>
-          <p class="text-text-muted mt-1 text-sm">Try adjusting your filter criteria.</p>
+        @if (searchEntries().length > 0) {
+          <div data-testid="changelog-feed-search-results" class="space-y-4">
+            @for (entry of searchEntries(); track entry.id) {
+              <lfx-changelog-card [entry]="entry" />
+            }
+          </div>
+        } @else {
+          <div data-testid="changelog-feed-search-empty" class="py-16 text-center">
+            <i class="fa-duotone fa-magnifying-glass text-text-muted mb-4 text-4xl"></i>
+            <p class="font-display text-text-secondary text-lg font-medium">No results found</p>
+            <p class="text-text-muted mt-1 text-sm">Try a different search term or adjust your filters.</p>
+          </div>
+        }
+      }
+    } @else {
+      @if (loading()) {
+        <div data-testid="changelog-feed-loading" class="py-16 text-center">
+          <i class="fa-duotone fa-spinner-third fa-spin text-brand-600 mb-4 text-4xl"></i>
+          <p class="text-text-muted text-sm">Loading entries...</p>
         </div>
+      } @else {
+        @for (entry of publishedEntries(); track entry.id; let i = $index) {
+          <lfx-timeline-item [date]="entry.publishedAt! | dateFormat" [index]="i">
+            <lfx-changelog-card [entry]="entry" />
+          </lfx-timeline-item>
+        }
+
+        @if (publishedEntries().length === 0) {
+          <div data-testid="changelog-feed-empty" class="py-16 text-center">
+            <i class="fa-duotone fa-filter-slash text-text-muted mb-4 text-4xl"></i>
+            <p class="font-display text-text-secondary text-lg font-medium">No entries match your filters</p>
+            <p class="text-text-muted mt-1 text-sm">Try adjusting your filter criteria.</p>
+          </div>
+        }
       }
     }
   </div>

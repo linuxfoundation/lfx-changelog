@@ -9,7 +9,10 @@ import type { PublicChangelogEntry } from '@lfx-changelog/shared';
 import { NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 
+import { deleteChangelogFromIndex, indexChangelog } from './opensearch.service';
 import { getPrismaClient } from './prisma.service';
+
+import type { ChangelogDocument } from './opensearch.service';
 
 export interface ChangelogQueryParams {
   productId?: string;
@@ -135,7 +138,7 @@ export class ChangelogService {
     createdBy: string;
   }): Promise<PrismaChangelogEntry> {
     const prisma = getPrismaClient();
-    return prisma.changelogEntry.create({
+    const entry = await prisma.changelogEntry.create({
       data: {
         productId: data.productId,
         title: data.title,
@@ -146,6 +149,8 @@ export class ChangelogService {
       },
       include: { product: true, author: true },
     });
+    this.syncToOpenSearch(entry);
+    return entry;
   }
 
   public async update(
@@ -158,15 +163,23 @@ export class ChangelogService {
     }
   ): Promise<PrismaChangelogEntry> {
     const prisma = getPrismaClient();
-    const entry = await prisma.changelogEntry.findUnique({ where: { id } });
-    if (!entry) {
+    const existing = await prisma.changelogEntry.findUnique({ where: { id } });
+    if (!existing) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'update', service: 'changelog' });
     }
-    return prisma.changelogEntry.update({
+    const updated = await prisma.changelogEntry.update({
       where: { id },
       data: data as Prisma.ChangelogEntryUpdateInput,
       include: { product: true, author: true },
     });
+
+    // If status changed away from published, remove from search index
+    if (existing.status === 'published' && data.status && data.status !== 'published') {
+      deleteChangelogFromIndex(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+    } else {
+      this.syncToOpenSearch(updated);
+    }
+    return updated;
   }
 
   public async publish(id: string): Promise<PrismaChangelogEntry> {
@@ -175,11 +188,13 @@ export class ChangelogService {
     if (!entry) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'publish', service: 'changelog' });
     }
-    return prisma.changelogEntry.update({
+    const published = await prisma.changelogEntry.update({
       where: { id },
       data: { status: 'published', publishedAt: new Date() },
       include: { product: true, author: true },
     });
+    this.syncToOpenSearch(published);
+    return published;
   }
 
   public async delete(id: string): Promise<void> {
@@ -189,6 +204,7 @@ export class ChangelogService {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'delete', service: 'changelog' });
     }
     await prisma.changelogEntry.delete({ where: { id } });
+    deleteChangelogFromIndex(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
   }
 
   public async findById(id: string): Promise<PrismaChangelogEntry> {
@@ -201,6 +217,26 @@ export class ChangelogService {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'findById', service: 'changelog' });
     }
     return entry;
+  }
+
+  private syncToOpenSearch(entry: PrismaChangelogEntry & { product?: { name: string; slug: string; faIcon: string | null } | null }): void {
+    if (entry.status !== 'published' || !entry.product) return;
+
+    const doc: ChangelogDocument = {
+      id: entry.id,
+      title: entry.title,
+      description: entry.description,
+      version: entry.version,
+      status: entry.status,
+      publishedAt: entry.publishedAt?.toISOString() ?? null,
+      createdAt: entry.createdAt.toISOString(),
+      productId: entry.productId,
+      productName: entry.product.name,
+      productSlug: entry.product.slug,
+      productFaIcon: entry.product.faIcon,
+    };
+
+    indexChangelog(doc).catch((err) => serverLogger.warn({ err, id: entry.id }, 'Failed to sync changelog to OpenSearch'));
   }
 
   private sanitizePagination(params: ChangelogQueryParams): { page: number; limit: number; skip: number } {
