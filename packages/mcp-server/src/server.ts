@@ -7,8 +7,10 @@ import { ApiClient } from './api-client.js';
 import { registerPublicResources } from './resources/public.resources.js';
 import { registerAdminChangelogTools } from './tools/admin-changelog.tools.js';
 import { registerAdminProductTools } from './tools/admin-product.tools.js';
+import { registerAdminSearchTools } from './tools/admin-search.tools.js';
 import { registerChangelogTools } from './tools/changelog.tools.js';
 import { registerProductTools } from './tools/product.tools.js';
+import { registerSearchTools } from './tools/search.tools.js';
 
 export function createMcpServer(apiBaseUrl: string, apiKey?: string): McpServer {
   const server = new McpServer({ name: 'lfx-changelog', version: '0.1.0' });
@@ -17,11 +19,13 @@ export function createMcpServer(apiBaseUrl: string, apiKey?: string): McpServer 
   // Public tools (no auth required)
   registerProductTools(server, apiClient);
   registerChangelogTools(server, apiClient);
+  registerSearchTools(server, apiClient);
   registerPublicResources(server, apiClient);
 
   // Admin tools (require API key)
   registerAdminChangelogTools(server, apiClient);
   registerAdminProductTools(server, apiClient);
+  registerAdminSearchTools(server, apiClient);
 
   return server;
 }
