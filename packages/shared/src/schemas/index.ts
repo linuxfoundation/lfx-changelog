@@ -64,6 +64,15 @@ export {
   RepositoryWithCountsSchema,
   StoredReleaseSchema,
 } from './github.schema.js';
+export {
+  OpenSearchAggBucketSchema,
+  OpenSearchBulkActionSchema,
+  OpenSearchBulkResponseSchema,
+  OpenSearchHitItemSchema,
+  OpenSearchHitsResponseSchema,
+  OpenSearchQueryClauseSchema,
+  OpenSearchSearchResponseSchema,
+} from './opensearch.schema.js';
 export { ProductSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
 export {
@@ -142,6 +151,15 @@ export type {
   RepositoryWithCounts,
   StoredRelease,
 } from './github.schema.js';
+export type {
+  OpenSearchAggBucket,
+  OpenSearchBulkAction,
+  OpenSearchBulkResponse,
+  OpenSearchHitItem,
+  OpenSearchHitsResponse,
+  OpenSearchQueryClause,
+  OpenSearchSearchResponse,
+} from './opensearch.schema.js';
 export type { Product } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
 export type {

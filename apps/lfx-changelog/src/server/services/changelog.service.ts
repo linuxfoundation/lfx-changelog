@@ -7,7 +7,7 @@ import { type ChangelogStatus, Prisma, type ChangelogEntry as PrismaChangelogEnt
 import { NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 
-import { deleteChangelogFromIndex, indexChangelog } from './opensearch.service';
+import { getOpenSearchService } from './opensearch.service';
 import { getPrismaClient } from './prisma.service';
 
 import type { ChangelogDocument, ChangelogQueryParams, PaginatedResponse, PublicChangelogEntry } from '@lfx-changelog/shared';
@@ -158,7 +158,9 @@ export class ChangelogService {
 
     // If status changed away from published, remove from search index
     if (existing.status === 'published' && data.status && data.status !== 'published') {
-      deleteChangelogFromIndex(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+      getOpenSearchService()
+        .delete(id)
+        .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
     } else {
       this.syncToOpenSearch(updated);
     }
@@ -187,7 +189,9 @@ export class ChangelogService {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'delete', service: 'changelog' });
     }
     await prisma.changelogEntry.delete({ where: { id } });
-    deleteChangelogFromIndex(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+    getOpenSearchService()
+      .delete(id)
+      .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
   }
 
   public async findById(id: string): Promise<PrismaChangelogEntry> {
@@ -219,7 +223,9 @@ export class ChangelogService {
       productFaIcon: entry.product.faIcon,
     };
 
-    indexChangelog(doc).catch((err) => serverLogger.warn({ err, id: entry.id }, 'Failed to sync changelog to OpenSearch'));
+    getOpenSearchService()
+      .index(doc)
+      .catch((err) => serverLogger.warn({ err, id: entry.id }, 'Failed to sync changelog to OpenSearch'));
   }
 
   private sanitizePagination(params: ChangelogQueryParams): { page: number; limit: number; skip: number } {

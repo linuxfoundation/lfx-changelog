@@ -20,7 +20,7 @@ import publicSearchRouter from '../routes/public-search.route';
 import releaseRouter from '../routes/release.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
-import { pingOpenSearch } from '../services/opensearch.service';
+import { getOpenSearchService } from '../services/opensearch.service';
 import { setupSwagger } from '../swagger';
 import { createApiKeyRateLimiter } from './rate-limit';
 
@@ -35,7 +35,7 @@ export function setupRoutes(app: Express): void {
   app.get('/health', async (_req: Request, res: Response) => {
     let opensearchStatus: 'connected' | 'unavailable' | 'not_configured' = 'not_configured';
     if (process.env['OPENSEARCH_URL']) {
-      const opensearchUp = await Promise.race([pingOpenSearch(), new Promise<false>((resolve) => setTimeout(() => resolve(false), 1_000))]);
+      const opensearchUp = await Promise.race([getOpenSearchService().ping(), new Promise<false>((resolve) => setTimeout(() => resolve(false), 1_000))]);
       opensearchStatus = opensearchUp ? 'connected' : 'unavailable';
     }
     res.json({

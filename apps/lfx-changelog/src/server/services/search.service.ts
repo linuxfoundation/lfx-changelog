@@ -1,37 +1,43 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CHANGELOGS_INDEX } from '@lfx-changelog/shared';
+import { BULK_BATCH_SIZE, CHANGELOGS_INDEX } from '@lfx-changelog/shared';
 
 import { serverLogger } from '../server-logger';
 
-import { getOpenSearchClient } from './opensearch.service';
+import { getOpenSearchService } from './opensearch.service';
 import { getPrismaClient } from './prisma.service';
 
-import type { ChangelogDocument, SearchHit, SearchQueryParams, SearchResponse } from '@lfx-changelog/shared';
-
-const BULK_BATCH_SIZE = 500;
+import type {
+  ChangelogDocument,
+  OpenSearchAggBucket,
+  OpenSearchBulkAction,
+  OpenSearchBulkResponse,
+  SearchHit,
+  SearchQueryParams,
+  SearchResponse,
+} from '@lfx-changelog/shared';
 
 export class SearchService {
   public async search(params: SearchQueryParams): Promise<SearchResponse> {
-    const os = getOpenSearchClient();
+    const os = getOpenSearchService().getClient();
     if (!os) {
       return { success: true, hits: [], total: 0, page: params.page, pageSize: params.limit, totalPages: 0, facets: { products: [] } };
     }
 
     const from = (params.page - 1) * params.limit;
-    const must: Record<string, unknown>[] = [
+    const must = [
       {
         multi_match: {
           query: params.q,
           fields: ['title^3', 'description', 'productName^2', 'version'],
-          fuzziness: 'AUTO',
-          type: 'best_fields',
+          fuzziness: 'AUTO' as const,
+          type: 'best_fields' as const,
         },
       },
     ];
 
-    const filter: Record<string, unknown>[] = [{ term: { status: 'published' } }];
+    const filter: { term: Record<string, string> }[] = [{ term: { status: 'published' } }];
     if (params.productId) {
       filter.push({ term: { productId: params.productId } });
     }
@@ -62,16 +68,17 @@ export class SearchService {
     };
 
     const response = await os.search({ index: CHANGELOGS_INDEX, body });
-    const result = response.body as Record<string, unknown>;
-    const hitsObj = result['hits'] as { total: number | { value: number }; hits: Record<string, unknown>[] };
 
-    const total = typeof hitsObj.total === 'number' ? hitsObj.total : hitsObj.total.value;
+    // SDK types response.body as Search_Response — access properties directly
+    const hitsObj = response.body.hits;
+    const total = typeof hitsObj.total === 'number' ? hitsObj.total : (hitsObj.total as { value: number }).value;
+
     const hits: SearchHit[] = hitsObj.hits.map((hit) => {
-      const source = hit['_source'] as ChangelogDocument;
-      const highlight = (hit['highlight'] || {}) as Record<string, string[]>;
+      const source = hit._source as ChangelogDocument;
+      const highlight = hit.highlight || {};
       return {
         ...source,
-        score: hit['_score'] as number,
+        score: hit._score as number,
         highlights: {
           title: highlight['title'] || undefined,
           description: highlight['description'] || undefined,
@@ -79,17 +86,14 @@ export class SearchService {
       };
     });
 
-    const aggs = (result['aggregations'] || {}) as Record<string, { buckets?: Record<string, unknown>[] }>;
-    const productBuckets = aggs['products']?.buckets || [];
+    const aggs = response.body.aggregations || {};
+    const productBuckets = (aggs['products'] as { buckets?: OpenSearchAggBucket[] })?.buckets || [];
     const facets = {
-      products: productBuckets.map((bucket) => {
-        const subAgg = bucket['product_name'] as { buckets?: { key: string }[] } | undefined;
-        return {
-          productId: bucket['key'] as string,
-          productName: subAgg?.buckets?.[0]?.key || 'Unknown',
-          count: bucket['doc_count'] as number,
-        };
-      }),
+      products: productBuckets.map((bucket) => ({
+        productId: bucket.key,
+        productName: bucket.product_name?.buckets?.[0]?.key || 'Unknown',
+        count: bucket.doc_count,
+      })),
     };
 
     return {
@@ -104,7 +108,7 @@ export class SearchService {
   }
 
   public async reindexAll(): Promise<{ indexed: number; errors: number }> {
-    const os = getOpenSearchClient();
+    const os = getOpenSearchService().getClient();
     if (!os) {
       return { indexed: 0, errors: 0 };
     }
@@ -116,9 +120,7 @@ export class SearchService {
       // Index may not exist
     }
 
-    // Re-import to create fresh index
-    const { ensureChangelogsIndex } = await import('./opensearch.service');
-    await ensureChangelogsIndex();
+    await getOpenSearchService().ensureIndex();
 
     // Bulk index all published entries
     const prisma = getPrismaClient();
@@ -137,7 +139,7 @@ export class SearchService {
 
       if (entries.length === 0) break;
 
-      const bulkBody: Record<string, unknown>[] = [];
+      const bulkBody: (OpenSearchBulkAction | ChangelogDocument)[] = [];
       for (const entry of entries) {
         if (!entry.product) continue;
         const doc: ChangelogDocument = {
@@ -159,9 +161,10 @@ export class SearchService {
 
       if (bulkBody.length > 0) {
         const bulkResult = await os.bulk({ body: bulkBody, refresh: 'wait_for' });
-        if (bulkResult.body.errors) {
-          for (const item of bulkResult.body.items) {
-            const action = item['index'] || item['create'];
+        const bulkResponse = bulkResult.body as OpenSearchBulkResponse;
+        if (bulkResponse.errors) {
+          for (const item of bulkResponse.items) {
+            const action = item.index || item.create;
             if (action?.error) {
               errors++;
               serverLogger.warn({ error: action.error, id: action._id }, 'Failed to index changelog entry during reindex');
@@ -170,7 +173,7 @@ export class SearchService {
             }
           }
         } else {
-          indexed += bulkResult.body.items.length;
+          indexed += bulkResponse.items.length;
         }
       }
 

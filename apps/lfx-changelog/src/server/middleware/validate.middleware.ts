@@ -1,19 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ZodError } from 'zod';
-
 import type { NextFunction, Request, Response } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { ZodSchema } from 'zod';
 
-type ValidateOptions = {
-  body?: ZodSchema;
-  query?: ZodSchema;
-  params?: ZodSchema;
-};
+import { z, ZodError } from 'zod';
 
-export function validate(schemas: ValidateOptions) {
+export function validate(schemas: { body?: z.ZodType; query?: z.ZodType; params?: z.ZodType }) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       if (schemas.body) req.body = schemas.body.parse(req.body);

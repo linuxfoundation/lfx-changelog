@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, inject, signal, type Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -20,14 +20,6 @@ import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchM
 
 import type { ChangelogEntryWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
-
-type PageState = {
-  entries: ChangelogEntryWithRelations[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
 
 @Component({
   selector: 'lfx-changelog-list',
@@ -70,7 +62,7 @@ export class ChangelogListComponent {
     { label: 'Draft', value: ChangelogStatus.DRAFT },
   ];
 
-  protected readonly pageState: Signal<PageState> = this.initPageState();
+  protected readonly pageState = this.initPageState();
   protected readonly filteredEntries = computed(() => this.pageState().entries);
   protected readonly currentPage = computed(() => this.pageState().page);
   protected readonly totalPages = computed(() => this.pageState().totalPages);
@@ -107,7 +99,7 @@ export class ChangelogListComponent {
     return computed(() => [{ label: 'All Products', value: '' }, ...this.products().map((p) => ({ label: p.name, value: p.id }))]);
   }
 
-  private initPageState(): Signal<PageState> {
+  private initPageState() {
     return toSignal(
       combineLatest([
         this.productFilterControl.valueChanges.pipe(startWith(this.productFilterControl.value)),
@@ -124,16 +116,14 @@ export class ChangelogListComponent {
               limit: ChangelogListComponent.defaultPageSize,
             })
             .pipe(
-              map(
-                (res: PaginatedResponse<ChangelogEntryWithRelations>): PageState => ({
-                  entries: res.data,
-                  total: res.total,
-                  page: res.page,
-                  pageSize: res.pageSize,
-                  totalPages: res.totalPages,
-                })
-              ),
-              catchError(() => of({ entries: [], total: 0, page: 1, pageSize: ChangelogListComponent.defaultPageSize, totalPages: 0 } as PageState))
+              map((res: PaginatedResponse<ChangelogEntryWithRelations>) => ({
+                entries: res.data,
+                total: res.total,
+                page: res.page,
+                pageSize: res.pageSize,
+                totalPages: res.totalPages,
+              })),
+              catchError(() => of({ entries: [], total: 0, page: 1, pageSize: ChangelogListComponent.defaultPageSize, totalPages: 0 }))
             )
         ),
         tap(() => this.loading.set(false))

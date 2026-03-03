@@ -37,6 +37,7 @@ test.describe('Search API', () => {
       expect(body.success).toBe(true);
       expect(Array.isArray(body.hits)).toBe(true);
       expect(typeof body.total).toBe('number');
+      expect(body.total).toBeLessThanOrEqual(PUBLISHED_COUNT);
       expect(typeof body.page).toBe('number');
       expect(typeof body.pageSize).toBe('number');
       expect(typeof body.totalPages).toBe('number');
