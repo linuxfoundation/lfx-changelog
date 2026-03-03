@@ -4,6 +4,7 @@
 import { CHAT_CONFIG } from '../constants/chat.constants';
 import { serverLogger } from '../server-logger';
 import { ChangelogService } from './changelog.service';
+import { getOpenSearchService } from './opensearch.service';
 import { ProductService } from './product.service';
 import { SearchService } from './search.service';
 
@@ -59,12 +60,13 @@ export class ChatToolExecutorService {
     const limit = args.limit || 10;
     const page = args.page || 1;
 
-    // Use OpenSearch full-text search when a query is provided (public access only — OpenSearch only indexes published entries)
-    if (args.query && accessLevel === 'public') {
+    // Use OpenSearch full-text search when a query is provided and the client is available
+    // Public only — OpenSearch only indexes published entries; admin needs draft access via DB
+    if (args.query && accessLevel === 'public' && getOpenSearchService().getClient()) {
       return this.searchChangelogsViaOpenSearch(args.query, args.productId, page, limit);
     }
 
-    // Fall back to DB query when no search query or admin access (admin needs draft access)
+    // DB query: no search query, admin access, or OpenSearch unavailable
     return this.searchChangelogsViaDB(args, accessLevel, page, limit);
   }
 
@@ -72,14 +74,9 @@ export class ChatToolExecutorService {
     try {
       const result = await this.searchService.search({ q: query, productId, page, limit });
 
-      if (result.total === 0 && result.hits.length === 0) {
-        // OpenSearch returned nothing — may be unavailable or index empty, fall back to DB
-        return this.searchChangelogsViaDB({ query, productId, page, limit }, 'public', page, limit);
-      }
-
       const entries = result.hits.map((hit) => ({
         id: hit.id,
-        title: hit.highlights?.title?.[0] || hit.title,
+        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit.title,
         description: hit.description
           ? hit.description.slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) + (hit.description.length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
           : null,
@@ -109,6 +106,7 @@ export class ChatToolExecutorService {
     const params = {
       productId: args.productId,
       status: accessLevel === 'admin' ? args.status : undefined,
+      query: args.query,
       page,
       limit,
     };
@@ -137,6 +135,10 @@ export class ChatToolExecutorService {
       totalPages: result.totalPages,
       searchMethod: 'database',
     });
+  }
+
+  private stripHighlightTags(text: string | undefined): string | undefined {
+    return text?.replace(/<\/?mark>/g, '');
   }
 
   private async getChangelogDetail(args: GetChangelogDetailToolArgs, accessLevel: ChatAccessLevel): Promise<string> {

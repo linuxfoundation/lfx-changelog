@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -23,7 +23,6 @@ import type { Product } from '@lfx-changelog/shared';
 })
 export class ProductManagementComponent {
   private readonly productService = inject(ProductService);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly loading = signal(true);

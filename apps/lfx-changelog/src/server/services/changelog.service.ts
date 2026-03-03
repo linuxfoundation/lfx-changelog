@@ -21,6 +21,9 @@ export class ChangelogService {
 
     const where: Prisma.ChangelogEntryWhereInput = { status: 'published', product: { isActive: true } };
     if (params.productId) where.productId = params.productId;
+    if (params.query) {
+      where.OR = [{ title: { contains: params.query, mode: 'insensitive' } }, { description: { contains: params.query, mode: 'insensitive' } }];
+    }
 
     try {
       const [data, total] = await Promise.all([
@@ -63,6 +66,9 @@ export class ChangelogService {
 
     const where: Prisma.ChangelogEntryWhereInput = {};
     if (params.productId) where.productId = params.productId;
+    if (params.query) {
+      where.OR = [{ title: { contains: params.query, mode: 'insensitive' } }, { description: { contains: params.query, mode: 'insensitive' } }];
+    }
     if (params.status) {
       const validStatuses = Object.values(ChangelogStatusEnum) as string[];
       if (validStatuses.includes(params.status)) {
