@@ -8,6 +8,7 @@ export const ChangelogQueryParamsSchema = z
   .object({
     productId: z.string().uuid().optional().openapi({ description: 'Filter by product ID' }),
     status: z.string().optional().openapi({ description: 'Filter by status (draft, published)' }),
+    query: z.string().optional().openapi({ description: 'Text search keywords to filter by title or description' }),
     page: z.coerce.number().int().min(1).optional().openapi({ description: 'Page number' }),
     limit: z.coerce.number().int().min(1).max(100).optional().openapi({ description: 'Results per page (max: 100)' }),
   })

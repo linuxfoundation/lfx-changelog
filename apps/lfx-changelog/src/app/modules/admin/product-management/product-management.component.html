@@ -47,6 +47,31 @@
       [rows]="3"
       placeholder="Product description..."
       [formControl]="formDescriptionControl" />
+    <div>
+      <lfx-input
+        data-testid="product-dialog-icon-input"
+        label="Icon (Font Awesome class)"
+        placeholder="fa-duotone fa-building"
+        [formControl]="formFaIconControl" />
+      <div class="mt-2 flex items-center justify-between">
+        @if (iconPreview()) {
+          <div class="flex items-center gap-2">
+            <span class="text-text-muted text-xs">Preview:</span>
+            <i [class]="iconPreview()" class="text-brand-600 text-lg"></i>
+          </div>
+        } @else {
+          <div></div>
+        }
+        <a
+          href="https://fontawesome.com/icons/packs/duotone"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-brand-600 hover:text-brand-700 text-xs font-medium">
+          Browse icons
+          <i class="fa-solid fa-arrow-up-right-from-square ml-0.5 text-[10px]"></i>
+        </a>
+      </div>
+    </div>
     <div class="flex justify-end gap-3 pt-2">
       <lfx-button variant="secondary" (clicked)="dialogVisible.set(false)">Cancel</lfx-button>
       <lfx-button data-testid="product-dialog-save-btn" variant="primary" [loading]="saving()" (clicked)="saveProduct()">

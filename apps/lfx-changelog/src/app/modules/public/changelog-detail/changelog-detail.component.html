@@ -11,9 +11,9 @@
       Back to changelog
     </a>
 
-    <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_280px]">
       <!-- Main content -->
-      <div class="lg:col-span-2">
+      <div>
         <div class="space-y-4">
           @if (entry.version) {
             <span data-testid="changelog-detail-version" class="text-text-muted text-sm font-medium">v{{ entry.version }}</span>
@@ -24,7 +24,7 @@
       </div>
 
       <!-- Sidebar -->
-      <div class="space-y-4">
+      <div class="space-y-4 self-start lg:sticky lg:top-24">
         <lfx-card>
           <div class="space-y-5">
             <div data-testid="changelog-detail-product">

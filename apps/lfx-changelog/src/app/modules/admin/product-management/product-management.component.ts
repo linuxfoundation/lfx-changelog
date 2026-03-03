@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -23,7 +23,6 @@ import type { Product } from '@lfx-changelog/shared';
 })
 export class ProductManagementComponent {
   private readonly productService = inject(ProductService);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly loading = signal(true);
@@ -41,6 +40,8 @@ export class ProductManagementComponent {
   protected readonly formNameControl = new FormControl('', { nonNullable: true });
   protected readonly formSlugControl = new FormControl('', { nonNullable: true });
   protected readonly formDescriptionControl = new FormControl('', { nonNullable: true });
+  protected readonly formFaIconControl = new FormControl('', { nonNullable: true });
+  protected readonly iconPreview = toSignal(this.formFaIconControl.valueChanges, { initialValue: '' });
 
   protected readonly dialogVisible = signal(false);
   protected readonly editingProduct = signal<Product | null>(null);
@@ -50,6 +51,7 @@ export class ProductManagementComponent {
     this.formNameControl.setValue('');
     this.formSlugControl.setValue('');
     this.formDescriptionControl.setValue('');
+    this.formFaIconControl.setValue('');
     this.dialogVisible.set(true);
   }
 
@@ -58,6 +60,7 @@ export class ProductManagementComponent {
     this.formNameControl.setValue(product.name);
     this.formSlugControl.setValue(product.slug);
     this.formDescriptionControl.setValue(product.description ?? '');
+    this.formFaIconControl.setValue(product.faIcon ?? '');
     this.dialogVisible.set(true);
   }
 
@@ -67,6 +70,7 @@ export class ProductManagementComponent {
       name: this.formNameControl.value,
       slug: this.formSlugControl.value,
       description: this.formDescriptionControl.value,
+      faIcon: this.formFaIconControl.value || undefined,
     };
 
     const editing = this.editingProduct();
