@@ -1,24 +1,18 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ZodError } from 'zod';
-
 import type { NextFunction, Request, Response } from 'express';
 import type { ParamsDictionary } from 'express-serve-static-core';
-import type { ParsedQs } from 'qs';
-import type { ZodSchema } from 'zod';
 
-interface ValidateOptions {
-  body?: ZodSchema;
-  query?: ZodSchema;
-  params?: ZodSchema;
-}
+import { z, ZodError } from 'zod';
 
-export function validate(schemas: ValidateOptions) {
+export function validate(schemas: { body?: z.ZodType; query?: z.ZodType; params?: z.ZodType }) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       if (schemas.body) req.body = schemas.body.parse(req.body);
-      if (schemas.query) req.query = schemas.query.parse(req.query) as ParsedQs;
+      // req.query is read-only in Express 5 — validate but don't assign back.
+      // Controllers must re-parse req.query with the schema to get coerced/defaulted values.
+      if (schemas.query) schemas.query.parse(req.query);
       if (schemas.params) req.params = schemas.params.parse(req.params) as ParamsDictionary;
       next();
     } catch (error) {

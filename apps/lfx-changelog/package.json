@@ -33,6 +33,7 @@
     "@asteasolutions/zod-to-openapi": "^8.4.1",
     "@lfx-changelog/mcp-server": "workspace:*",
     "@lfx-changelog/shared": "workspace:*",
+    "@opensearch-project/opensearch": "^3.5.1",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.0",
     "compression": "^1.8.0",

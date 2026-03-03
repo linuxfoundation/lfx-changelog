@@ -11,13 +11,16 @@ import changelogRouter from '../routes/changelog.route';
 import chatRouter from '../routes/chat.route';
 import githubRouter from '../routes/github.route';
 import mcpRouter from '../routes/mcp.route';
+import opensearchRouter from '../routes/opensearch.route';
 import productRouter from '../routes/product.route';
 import publicChangelogRouter from '../routes/public-changelog.route';
 import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
+import publicSearchRouter from '../routes/public-search.route';
 import releaseRouter from '../routes/release.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
+import { getOpenSearchService } from '../services/opensearch.service';
 import { setupSwagger } from '../swagger';
 import { createApiKeyRateLimiter } from './rate-limit';
 
@@ -29,8 +32,18 @@ import type { Express, NextFunction, Request, Response } from 'express';
  */
 export function setupRoutes(app: Express): void {
   // ── Health check ──────────────────────────────────────────────────────
-  app.get('/health', (_req: Request, res: Response) => {
-    res.send('OK');
+  app.get('/health', async (_req: Request, res: Response) => {
+    let opensearchStatus: 'connected' | 'unavailable' | 'not_configured' = 'not_configured';
+    if (process.env['OPENSEARCH_URL']) {
+      const opensearchUp = await Promise.race([getOpenSearchService().ping(), new Promise<false>((resolve) => setTimeout(() => resolve(false), 1_000))]);
+      opensearchStatus = opensearchUp ? 'connected' : 'unavailable';
+    }
+    res.json({
+      status: 'OK',
+      services: {
+        opensearch: opensearchStatus,
+      },
+    });
   });
 
   // ── API documentation ─────────────────────────────────────────────────
@@ -41,6 +54,7 @@ export function setupRoutes(app: Express): void {
 
   // ── Public API routes (no auth required) ──────────────────────────────
   app.use('/public/api/chat', sameOriginOnly, publicChatRouter);
+  app.use('/public/api/changelogs/search', publicSearchRouter);
   app.use('/public/api/changelogs', publicChangelogRouter);
   app.use('/public/api/products', publicProductRouter);
 
@@ -80,6 +94,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/changelogs', changelogRouter);
   app.use('/api/users', userRouter);
   app.use('/api/github', githubRouter);
+  app.use('/api/opensearch', opensearchRouter);
   app.use('/api/releases', releaseRouter);
 
   // ── API error handlers ────────────────────────────────────────────────

@@ -8,18 +8,12 @@ import { map, take } from 'rxjs';
 import type {
   ApiResponse,
   ChangelogEntryWithRelations,
+  ChangelogQueryParams,
   CreateChangelogEntryRequest,
   PaginatedResponse,
   UpdateChangelogEntryRequest,
 } from '@lfx-changelog/shared';
 import type { Observable } from 'rxjs';
-
-export interface ChangelogQueryParams {
-  productId?: string;
-  status?: string;
-  page?: number;
-  limit?: number;
-}
 
 @Injectable({ providedIn: 'root' })
 export class ChangelogService {
@@ -62,8 +56,15 @@ export class ChangelogService {
     );
   }
 
-  public remove(id: string): Observable<HttpResponse<unknown>> {
-    return this.http.delete(`/api/changelogs/${id}`, { observe: 'response' }).pipe(take(1));
+  public remove(id: string): Observable<HttpResponse<void>> {
+    return this.http.delete<void>(`/api/changelogs/${id}`, { observe: 'response' }).pipe(take(1));
+  }
+
+  public reindexSearch(): Observable<{ indexed: number; errors: number }> {
+    return this.http.post<ApiResponse<{ indexed: number; errors: number }>>('/api/opensearch/reindex', {}).pipe(
+      map((res) => res.data),
+      take(1)
+    );
   }
 
   private buildParams(params?: ChangelogQueryParams): HttpParams {

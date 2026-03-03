@@ -26,6 +26,44 @@ services:
     volumes:
       - postgres_test_data:/var/lib/postgresql/data
 
+  opensearch:
+    image: opensearchproject/opensearch:2.19.1
+    container_name: lfx-changelog-opensearch
+    environment:
+      - discovery.type=single-node
+      - DISABLE_SECURITY_PLUGIN=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - '9200:9200'
+      - '9600:9600'
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+
+  opensearch-test:
+    image: opensearchproject/opensearch:2.19.1
+    container_name: lfx-changelog-opensearch-test
+    environment:
+      - discovery.type=single-node
+      - DISABLE_SECURITY_PLUGIN=true
+      - OPENSEARCH_JAVA_OPTS=-Xms256m -Xmx256m
+    ports:
+      - '9202:9200'
+    volumes:
+      - opensearch_test_data:/usr/share/opensearch/data
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.1
+    container_name: lfx-changelog-opensearch-dashboards
+    environment:
+      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    ports:
+      - '5601:5601'
+    depends_on:
+      - opensearch
+
 volumes:
   postgres_data:
   postgres_test_data:
+  opensearch_data:
+  opensearch_test_data:

@@ -5,20 +5,20 @@ import { z } from 'zod';
 
 import type { ZodType } from 'zod';
 
-export interface ApiResponse<T> {
+export type ApiResponse<T> = {
   success: boolean;
   data: T;
   message?: string;
-}
+};
 
-export interface PaginatedResponse<T> {
+export type PaginatedResponse<T> = {
   success: boolean;
   data: T[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
-}
+};
 
 /** Creates a typed ApiResponse schema for a given data schema. */
 export function createApiResponseSchema<T extends ZodType>(dataSchema: T) {

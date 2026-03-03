@@ -64,8 +64,26 @@ export {
   RepositoryWithCountsSchema,
   StoredReleaseSchema,
 } from './github.schema.js';
+export {
+  OpenSearchAggBucketSchema,
+  OpenSearchBulkActionSchema,
+  OpenSearchBulkResponseSchema,
+  OpenSearchHitItemSchema,
+  OpenSearchHitsResponseSchema,
+  OpenSearchQueryClauseSchema,
+  OpenSearchSearchResponseSchema,
+} from './opensearch.schema.js';
 export { ProductSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
+export {
+  ChangelogDocumentSchema,
+  ChangelogQueryParamsSchema,
+  ProductFacetSchema,
+  SearchHighlightsSchema,
+  SearchHitSchema,
+  SearchQueryParamsSchema,
+  SearchResponseSchema,
+} from './search.schema.js';
 export { UserRoleAssignmentSchema, UserSchema } from './user.schema.js';
 
 export type {
@@ -133,6 +151,25 @@ export type {
   RepositoryWithCounts,
   StoredRelease,
 } from './github.schema.js';
+export type {
+  OpenSearchAggBucket,
+  OpenSearchBulkAction,
+  OpenSearchBulkResponse,
+  OpenSearchHitItem,
+  OpenSearchHitsResponse,
+  OpenSearchQueryClause,
+  OpenSearchSearchResponse,
+} from './opensearch.schema.js';
 export type { Product } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
+export type {
+  ChangelogDocument,
+  ChangelogQueryParams,
+  ProductFacet,
+  SearchHighlights,
+  SearchHit,
+  SearchQueryParams,
+  SearchQueryParamsInput,
+  SearchResponse,
+} from './search.schema.js';
 export type { User, UserRoleAssignment } from './user.schema.js';

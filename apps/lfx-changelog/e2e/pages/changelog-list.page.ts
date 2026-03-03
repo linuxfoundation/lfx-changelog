@@ -10,6 +10,8 @@ export class ChangelogListPage {
   public readonly statusFilter: Locator;
   public readonly table: Locator;
   public readonly empty: Locator;
+  public readonly resyncBtn: Locator;
+  public readonly resyncResult: Locator;
 
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="changelog-list-heading"]');
@@ -18,6 +20,8 @@ export class ChangelogListPage {
     this.statusFilter = page.locator('[data-testid="changelog-list-status-filter"]');
     this.table = page.locator('[data-testid="changelog-list-table"]');
     this.empty = page.locator('[data-testid="changelog-list-empty"]');
+    this.resyncBtn = page.locator('[data-testid="changelog-list-resync-btn"]');
+    this.resyncResult = page.locator('[data-testid="changelog-list-resync-result"]');
   }
 
   public async goto() {

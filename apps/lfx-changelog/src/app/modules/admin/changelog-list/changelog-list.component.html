@@ -7,12 +7,34 @@
       <h1 data-testid="changelog-list-heading" class="font-display text-text-primary text-2xl font-bold">Changelogs</h1>
       <p class="text-text-secondary mt-1">Manage changelog entries across all products.</p>
     </div>
-    <a data-testid="changelog-list-new-entry-btn" routerLink="/admin/changelogs/new">
-      <lfx-button variant="primary">
-        <i class="fa-solid fa-plus text-xs"></i>
-        New Entry
-      </lfx-button>
-    </a>
+    <div class="flex items-center gap-3">
+      @if (isSuperAdmin()) {
+        <button
+          data-testid="changelog-list-resync-btn"
+          (click)="reindex()"
+          [disabled]="reindexing()"
+          class="border-border bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all duration-200 disabled:opacity-50">
+          @if (reindexing()) {
+            <i class="fa-duotone fa-spinner-third fa-spin text-xs"></i>
+            Resyncing...
+          } @else {
+            <i class="fa-duotone fa-arrows-rotate text-xs"></i>
+            Resync Search
+          }
+        </button>
+        @if (reindexResult(); as result) {
+          <span data-testid="changelog-list-resync-result" class="text-text-muted text-xs">
+            {{ result.indexed }} indexed{{ result.errors > 0 ? ', ' + result.errors + ' errors' : '' }}
+          </span>
+        }
+      }
+      <a data-testid="changelog-list-new-entry-btn" routerLink="/admin/changelogs/new">
+        <lfx-button variant="primary">
+          <i class="fa-solid fa-plus text-xs"></i>
+          New Entry
+        </lfx-button>
+      </a>
+    </div>
   </div>
 
   <!-- Filters -->

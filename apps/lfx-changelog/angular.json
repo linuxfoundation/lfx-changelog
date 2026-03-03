@@ -60,7 +60,8 @@
               "jsonwebtoken",
               "swagger-ui-express",
               "@lfx-changelog/mcp-server",
-              "@modelcontextprotocol/sdk"
+              "@modelcontextprotocol/sdk",
+              "@opensearch-project/opensearch"
             ]
           },
           "configurations": {

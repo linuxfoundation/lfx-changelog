@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { CHANGELOGS_INDEX } from '@lfx-changelog/shared';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
 
@@ -26,6 +27,36 @@ export function waitForTestDatabase(retries = 30): void {
     }
   }
   throw new Error('postgres-test did not become ready within 30s');
+}
+
+export function startTestOpenSearch(): void {
+  execFileSync('docker', ['compose', '-f', composeFile, 'up', '-d', 'opensearch-test'], {
+    stdio: 'inherit',
+  });
+}
+
+export function waitForTestOpenSearch(retries = 60): void {
+  for (let i = 0; i < retries; i++) {
+    try {
+      execFileSync('curl', ['-sf', 'http://localhost:9202/_cluster/health'], {
+        stdio: 'ignore',
+      });
+      return;
+    } catch {
+      execFileSync('sleep', ['1']);
+    }
+  }
+  throw new Error('opensearch-test did not become ready within 60s');
+}
+
+export function cleanTestOpenSearch(): void {
+  try {
+    execFileSync('curl', ['-sf', '-X', 'DELETE', `http://localhost:9202/${CHANGELOGS_INDEX}`], {
+      stdio: 'ignore',
+    });
+  } catch {
+    // Index may not exist yet — safe to ignore
+  }
 }
 
 export function runMigrations(): void {

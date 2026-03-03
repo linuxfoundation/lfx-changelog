@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { CHANGELOGS_INDEX } from '@lfx-changelog/shared';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
@@ -106,6 +107,71 @@ export async function seedTestDatabase(): Promise<void> {
         createdBy: users[entry.authorIndex]!.id,
       },
     });
+  }
+}
+
+const OPENSEARCH_URL = process.env['OPENSEARCH_URL'] || 'http://localhost:9202';
+
+export async function seedTestOpenSearch(): Promise<void> {
+  const client = getTestPrismaClient();
+
+  // Create the changelogs index with the correct mapping
+  const indexRes = await fetch(`${OPENSEARCH_URL}/${CHANGELOGS_INDEX}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      settings: { number_of_shards: 1, number_of_replicas: 0 },
+      mappings: {
+        properties: {
+          id: { type: 'keyword' },
+          title: { type: 'text', boost: 3 },
+          description: { type: 'text' },
+          version: { type: 'keyword' },
+          status: { type: 'keyword' },
+          publishedAt: { type: 'date' },
+          createdAt: { type: 'date' },
+          productId: { type: 'keyword' },
+          productName: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+          productSlug: { type: 'keyword' },
+          productFaIcon: { type: 'keyword' },
+        },
+      },
+    }),
+  });
+  if (!indexRes.ok) {
+    throw new Error(`Failed to create OpenSearch index: ${indexRes.status} ${await indexRes.text()}`);
+  }
+
+  // Query all published entries with their product relations
+  const entries = await client.changelogEntry.findMany({
+    where: { status: 'published' },
+    include: { product: true },
+  });
+
+  // Index each published entry
+  for (const entry of entries) {
+    if (!entry.product) continue;
+
+    const docRes = await fetch(`${OPENSEARCH_URL}/${CHANGELOGS_INDEX}/_doc/${entry.id}?refresh=wait_for`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: entry.id,
+        title: entry.title,
+        description: entry.description,
+        version: entry.version,
+        status: entry.status,
+        publishedAt: entry.publishedAt?.toISOString() ?? null,
+        createdAt: entry.createdAt.toISOString(),
+        productId: entry.productId,
+        productName: entry.product.name,
+        productSlug: entry.product.slug,
+        productFaIcon: entry.product.faIcon,
+      }),
+    });
+    if (!docRes.ok) {
+      throw new Error(`Failed to index entry ${entry.id}: ${docRes.status} ${await docRes.text()}`);
+    }
   }
 }
 

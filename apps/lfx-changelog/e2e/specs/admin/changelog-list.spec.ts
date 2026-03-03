@@ -77,4 +77,15 @@ test.describe('Changelog List', () => {
       await expect(rows.first()).toBeVisible();
     }
   });
+
+  test('should display the Resync Search button for super admin', async () => {
+    await expect(listPage.resyncBtn).toBeVisible();
+    await expect(listPage.resyncBtn).toContainText('Resync Search');
+  });
+
+  test('should show reindex result after clicking Resync Search', async () => {
+    await listPage.resyncBtn.click();
+    await expect(listPage.resyncResult).toBeVisible({ timeout: 30_000 });
+    await expect(listPage.resyncResult).toContainText('indexed');
+  });
 });

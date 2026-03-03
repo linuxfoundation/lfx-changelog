@@ -84,4 +84,35 @@ test.describe('Changelog Feed', () => {
     await expect(footer).toBeVisible();
     await expect(footer).toContainText('The Linux Foundation');
   });
+
+  test('should display the search input', async () => {
+    await expect(feedPage.searchInput).toBeVisible();
+    await expect(feedPage.searchInput).toHaveAttribute('placeholder', 'Search changelogs...');
+  });
+
+  test('should show search results when typing a query', async () => {
+    await feedPage.search('CLA');
+    await expect(feedPage.searchCount).toBeVisible({ timeout: 10_000 });
+    await expect(feedPage.searchCount).toContainText('result');
+    await expect(feedPage.searchResults).toBeVisible();
+  });
+
+  test('should show clear button when search has value', async () => {
+    await feedPage.search('CLA');
+    await expect(feedPage.searchClear).toBeVisible();
+  });
+
+  test('should clear search and return to timeline when clear is clicked', async () => {
+    await feedPage.search('CLA');
+    await expect(feedPage.searchResults).toBeVisible({ timeout: 10_000 });
+    await feedPage.clearSearch();
+    await expect(feedPage.searchInput).toHaveValue('');
+    await expect(feedPage.timeline).toBeVisible();
+  });
+
+  test('should show empty state for non-matching search', async () => {
+    await feedPage.search('xyznonexistent123');
+    await expect(feedPage.searchEmpty).toBeVisible({ timeout: 10_000 });
+    await expect(feedPage.searchEmpty).toContainText('No results found');
+  });
 });
