@@ -1,25 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { CHANGELOGS_INDEX } from '@lfx-changelog/shared';
 import { Client } from '@opensearch-project/opensearch';
 
 import { serverLogger } from '../server-logger';
 
-export const CHANGELOGS_INDEX = 'changelogs';
-
-export interface ChangelogDocument {
-  id: string;
-  title: string;
-  description: string;
-  version: string | null;
-  status: string;
-  publishedAt: string | null;
-  createdAt: string;
-  productId: string;
-  productName: string;
-  productSlug: string;
-  productFaIcon: string | null;
-}
+import type { ChangelogDocument } from '@lfx-changelog/shared';
 
 let client: Client | null = null;
 
@@ -35,7 +22,15 @@ export function getOpenSearchClient(): Client | null {
 
   if (!client) {
     client = new Client({ node: url });
-    serverLogger.info({ url }, 'OpenSearch client initialized');
+    const safeUrl = (() => {
+      try {
+        const parsed = new URL(url);
+        return `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        return '[invalid URL]';
+      }
+    })();
+    serverLogger.info({ node: safeUrl }, 'OpenSearch client initialized');
   }
   return client;
 }
@@ -95,7 +90,6 @@ export async function indexChangelog(doc: ChangelogDocument): Promise<void> {
     index: CHANGELOGS_INDEX,
     id: doc.id,
     body: doc,
-    refresh: 'wait_for',
   });
 }
 

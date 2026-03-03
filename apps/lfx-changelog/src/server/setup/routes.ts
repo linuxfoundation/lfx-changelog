@@ -33,11 +33,15 @@ import type { Express, NextFunction, Request, Response } from 'express';
 export function setupRoutes(app: Express): void {
   // ── Health check ──────────────────────────────────────────────────────
   app.get('/health', async (_req: Request, res: Response) => {
-    const opensearchUp = await pingOpenSearch();
+    let opensearchStatus: 'connected' | 'unavailable' | 'not_configured' = 'not_configured';
+    if (process.env['OPENSEARCH_URL']) {
+      const opensearchUp = await Promise.race([pingOpenSearch(), new Promise<false>((resolve) => setTimeout(() => resolve(false), 1_000))]);
+      opensearchStatus = opensearchUp ? 'connected' : 'unavailable';
+    }
     res.json({
       status: 'OK',
       services: {
-        opensearch: opensearchUp ? 'connected' : 'unavailable',
+        opensearch: opensearchStatus,
       },
     });
   });

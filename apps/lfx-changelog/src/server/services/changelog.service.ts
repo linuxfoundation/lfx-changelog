@@ -1,10 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangelogStatus as ChangelogStatusEnum } from '@lfx-changelog/shared';
+import { ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
 import { type ChangelogStatus, Prisma, type ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
-
-import type { PublicChangelogEntry } from '@lfx-changelog/shared';
 
 import { NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
@@ -12,24 +10,9 @@ import { serverLogger } from '../server-logger';
 import { deleteChangelogFromIndex, indexChangelog } from './opensearch.service';
 import { getPrismaClient } from './prisma.service';
 
-import type { ChangelogDocument } from './opensearch.service';
+import type { ChangelogDocument, ChangelogQueryParams, PaginatedResponse, PublicChangelogEntry } from '@lfx-changelog/shared';
 
-export interface ChangelogQueryParams {
-  productId?: string;
-  status?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-const MAX_PAGE_SIZE = 100;
+type PaginatedResult<T> = Omit<PaginatedResponse<T>, 'success'>;
 
 export class ChangelogService {
   public async findPublished(params: ChangelogQueryParams): Promise<PaginatedResult<PublicChangelogEntry>> {

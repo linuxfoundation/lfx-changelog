@@ -66,7 +66,15 @@ export {
 } from './github.schema.js';
 export { ProductSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
-export { ProductFacetSchema, SearchHighlightsSchema, SearchHitSchema, SearchQueryParamsSchema, SearchResponseSchema } from './search.schema.js';
+export {
+  ChangelogDocumentSchema,
+  ChangelogQueryParamsSchema,
+  ProductFacetSchema,
+  SearchHighlightsSchema,
+  SearchHitSchema,
+  SearchQueryParamsSchema,
+  SearchResponseSchema,
+} from './search.schema.js';
 export { UserRoleAssignmentSchema, UserSchema } from './user.schema.js';
 
 export type {
@@ -136,5 +144,14 @@ export type {
 } from './github.schema.js';
 export type { Product } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
-export type { ProductFacet, SearchHighlights, SearchHit, SearchQueryParams, SearchResponse } from './search.schema.js';
+export type {
+  ChangelogDocument,
+  ChangelogQueryParams,
+  ProductFacet,
+  SearchHighlights,
+  SearchHit,
+  SearchQueryParams,
+  SearchQueryParamsInput,
+  SearchResponse,
+} from './search.schema.js';
 export type { User, UserRoleAssignment } from './user.schema.js';

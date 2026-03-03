@@ -21,13 +21,13 @@ import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchM
 import type { ChangelogEntryWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
-interface PageState {
+type PageState = {
   entries: ChangelogEntryWithRelations[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
-}
+};
 
 @Component({
   selector: 'lfx-changelog-list',

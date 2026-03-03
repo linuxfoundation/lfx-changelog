@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { CHANGELOGS_INDEX } from '@lfx-changelog/shared';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
@@ -115,7 +116,7 @@ export async function seedTestOpenSearch(): Promise<void> {
   const client = getTestPrismaClient();
 
   // Create the changelogs index with the correct mapping
-  await fetch(`${OPENSEARCH_URL}/changelogs`, {
+  const indexRes = await fetch(`${OPENSEARCH_URL}/${CHANGELOGS_INDEX}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -137,6 +138,9 @@ export async function seedTestOpenSearch(): Promise<void> {
       },
     }),
   });
+  if (!indexRes.ok) {
+    throw new Error(`Failed to create OpenSearch index: ${indexRes.status} ${await indexRes.text()}`);
+  }
 
   // Query all published entries with their product relations
   const entries = await client.changelogEntry.findMany({
@@ -148,7 +152,7 @@ export async function seedTestOpenSearch(): Promise<void> {
   for (const entry of entries) {
     if (!entry.product) continue;
 
-    await fetch(`${OPENSEARCH_URL}/changelogs/_doc/${entry.id}?refresh=wait_for`, {
+    const docRes = await fetch(`${OPENSEARCH_URL}/${CHANGELOGS_INDEX}/_doc/${entry.id}?refresh=wait_for`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -165,6 +169,9 @@ export async function seedTestOpenSearch(): Promise<void> {
         productFaIcon: entry.product.faIcon,
       }),
     });
+    if (!docRes.ok) {
+      throw new Error(`Failed to index entry ${entry.id}: ${docRes.status} ${await docRes.text()}`);
+    }
   }
 }
 

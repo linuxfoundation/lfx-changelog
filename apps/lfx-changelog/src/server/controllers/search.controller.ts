@@ -17,10 +17,15 @@ export class SearchController {
         res.status(503).json({ success: false, error: 'Search is currently unavailable' });
         return;
       }
+      // Re-parse to get coerced/defaulted values (req.query is read-only in Express 5)
       const params = SearchQueryParamsSchema.parse(req.query);
       const result = await this.searchService.search(params);
       res.json(result);
     } catch (error) {
+      if (this.isOpenSearchConnectionError(error)) {
+        res.status(503).json({ success: false, error: 'Search is currently unavailable' });
+        return;
+      }
       next(error);
     }
   }
@@ -34,7 +39,16 @@ export class SearchController {
       const result = await this.searchService.reindexAll();
       res.json({ success: true, data: result });
     } catch (error) {
+      if (this.isOpenSearchConnectionError(error)) {
+        res.status(503).json({ success: false, error: 'OpenSearch is currently unavailable' });
+        return;
+      }
       next(error);
     }
+  }
+
+  private isOpenSearchConnectionError(error: unknown): boolean {
+    const name = (error as { name?: string })?.name;
+    return name === 'ConnectionError' || name === 'TimeoutError' || name === 'NoLivingConnectionsError';
   }
 }

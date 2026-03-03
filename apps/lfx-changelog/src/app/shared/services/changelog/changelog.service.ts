@@ -8,18 +8,12 @@ import { map, take } from 'rxjs';
 import type {
   ApiResponse,
   ChangelogEntryWithRelations,
+  ChangelogQueryParams,
   CreateChangelogEntryRequest,
   PaginatedResponse,
   UpdateChangelogEntryRequest,
 } from '@lfx-changelog/shared';
 import type { Observable } from 'rxjs';
-
-export interface ChangelogQueryParams {
-  productId?: string;
-  status?: string;
-  page?: number;
-  limit?: number;
-}
 
 @Injectable({ providedIn: 'root' })
 export class ChangelogService {

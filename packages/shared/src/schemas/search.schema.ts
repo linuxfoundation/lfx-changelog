@@ -3,7 +3,19 @@
 
 import { z } from 'zod';
 
-// ── Query params ─────────────────────────────────────────────────────────────
+// ── Changelog query params (listing) ────────────────────────────────────────
+export const ChangelogQueryParamsSchema = z
+  .object({
+    productId: z.string().uuid().optional().openapi({ description: 'Filter by product ID' }),
+    status: z.string().optional().openapi({ description: 'Filter by status (draft, published)' }),
+    page: z.coerce.number().int().min(1).optional().openapi({ description: 'Page number' }),
+    limit: z.coerce.number().int().min(1).max(100).optional().openapi({ description: 'Results per page (max: 100)' }),
+  })
+  .openapi('ChangelogQueryParams');
+
+export type ChangelogQueryParams = z.infer<typeof ChangelogQueryParamsSchema>;
+
+// ── Search query params ─────────────────────────────────────────────────────
 export const SearchQueryParamsSchema = z
   .object({
     q: z.string().min(1).openapi({ description: 'Search query string' }),
@@ -14,6 +26,7 @@ export const SearchQueryParamsSchema = z
   .openapi('SearchQueryParams');
 
 export type SearchQueryParams = z.infer<typeof SearchQueryParamsSchema>;
+export type SearchQueryParamsInput = z.input<typeof SearchQueryParamsSchema>;
 
 // ── Highlights ───────────────────────────────────────────────────────────────
 export const SearchHighlightsSchema = z
@@ -25,8 +38,8 @@ export const SearchHighlightsSchema = z
 
 export type SearchHighlights = z.infer<typeof SearchHighlightsSchema>;
 
-// ── Search hit ───────────────────────────────────────────────────────────────
-export const SearchHitSchema = z
+// ── Changelog document (OpenSearch index shape) ─────────────────────────────
+export const ChangelogDocumentSchema = z
   .object({
     id: z.string().openapi({ description: 'Changelog entry ID' }),
     title: z.string().openapi({ description: 'Changelog title' }),
@@ -39,10 +52,16 @@ export const SearchHitSchema = z
     productName: z.string().openapi({ description: 'Product name' }),
     productSlug: z.string().openapi({ description: 'Product slug' }),
     productFaIcon: z.string().nullable().optional().openapi({ description: 'Product Font Awesome icon class' }),
-    score: z.number().openapi({ description: 'Relevance score from OpenSearch' }),
-    highlights: SearchHighlightsSchema.openapi({ description: 'Highlighted matching fragments' }),
   })
-  .openapi('SearchHit');
+  .openapi('ChangelogDocument');
+
+export type ChangelogDocument = z.infer<typeof ChangelogDocumentSchema>;
+
+// ── Search hit ───────────────────────────────────────────────────────────────
+export const SearchHitSchema = ChangelogDocumentSchema.extend({
+  score: z.number().openapi({ description: 'Relevance score from OpenSearch' }),
+  highlights: SearchHighlightsSchema.openapi({ description: 'Highlighted matching fragments' }),
+}).openapi('SearchHit');
 
 export type SearchHit = z.infer<typeof SearchHitSchema>;
 

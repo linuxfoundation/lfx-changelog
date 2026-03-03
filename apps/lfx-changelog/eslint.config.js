@@ -80,6 +80,7 @@ module.exports = defineConfig([
       'class-methods-use-this': 'off',
       'no-constant-condition': 'off',
       'no-empty': 'error',
+      '@typescript-eslint/consistent-type-definitions': 'off',
       '@typescript-eslint/no-inferrable-types': 'off',
       '@typescript-eslint/explicit-member-accessibility': 'warn',
       'no-console': 'off',

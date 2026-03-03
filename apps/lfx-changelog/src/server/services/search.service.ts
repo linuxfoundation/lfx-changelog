@@ -1,13 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { CHANGELOGS_INDEX } from '@lfx-changelog/shared';
+
 import { serverLogger } from '../server-logger';
 
-import { CHANGELOGS_INDEX, getOpenSearchClient, indexChangelog } from './opensearch.service';
+import { getOpenSearchClient } from './opensearch.service';
 import { getPrismaClient } from './prisma.service';
 
-import type { SearchHit, SearchQueryParams, SearchResponse } from '@lfx-changelog/shared';
-import type { ChangelogDocument } from './opensearch.service';
+import type { ChangelogDocument, SearchHit, SearchQueryParams, SearchResponse } from '@lfx-changelog/shared';
 
 const BULK_BATCH_SIZE = 500;
 
@@ -136,6 +137,7 @@ export class SearchService {
 
       if (entries.length === 0) break;
 
+      const bulkBody: Record<string, unknown>[] = [];
       for (const entry of entries) {
         if (!entry.product) continue;
         const doc: ChangelogDocument = {
@@ -151,13 +153,24 @@ export class SearchService {
           productSlug: entry.product.slug,
           productFaIcon: entry.product.faIcon,
         };
+        bulkBody.push({ index: { _index: CHANGELOGS_INDEX, _id: doc.id } });
+        bulkBody.push(doc);
+      }
 
-        try {
-          await indexChangelog(doc);
-          indexed++;
-        } catch (err) {
-          errors++;
-          serverLogger.warn({ err, id: entry.id }, 'Failed to index changelog entry during reindex');
+      if (bulkBody.length > 0) {
+        const bulkResult = await os.bulk({ body: bulkBody, refresh: 'wait_for' });
+        if (bulkResult.body.errors) {
+          for (const item of bulkResult.body.items) {
+            const action = item['index'] || item['create'];
+            if (action?.error) {
+              errors++;
+              serverLogger.warn({ error: action.error, id: action._id }, 'Failed to index changelog entry during reindex');
+            } else {
+              indexed++;
+            }
+          }
+        } else {
+          indexed += bulkResult.body.items.length;
         }
       }
 

@@ -10,7 +10,7 @@ import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
 import { SearchService } from '@services/search/search.service';
 import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
-import { combineLatest, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, PublicProduct, SearchHit, SearchResponse } from '@lfx-changelog/shared';
 
@@ -29,6 +29,7 @@ export class ChangelogFeedComponent {
   protected readonly selectedProduct = signal<string>('');
   protected readonly loading = signal(true);
   protected readonly searchControl = new FormControl('');
+  protected readonly searchValue = toSignal(this.searchControl.valueChanges.pipe(startWith('')), { initialValue: '' });
 
   protected readonly publishedEntries: Signal<ChangelogEntryWithRelations[]> = this.initPublishedEntries();
   protected readonly searchResponse: Signal<SearchResponse | null> = this.initSearchResponse();
@@ -92,7 +93,7 @@ export class ChangelogFeedComponent {
         switchMap(([query, productId]) => {
           const q = (query || '').trim();
           if (!q) return of(null);
-          return this.searchService.search({ q, productId: productId || undefined });
+          return this.searchService.search({ q, productId: productId || undefined }).pipe(catchError(() => of(null)));
         })
       ),
       { initialValue: null }

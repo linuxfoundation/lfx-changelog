@@ -20,7 +20,7 @@
       <div class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
         <i class="fa-duotone fa-magnifying-glass text-text-muted text-sm"></i>
       </div>
-      @if (searchControl.value) {
+      @if (searchValue()) {
         <button
           data-testid="changelog-feed-search-clear"
           (click)="clearSearch()"
@@ -61,7 +61,7 @@
         <!-- Search result count -->
         <p data-testid="changelog-feed-search-count" class="text-text-muted mb-4 text-sm">
           {{ sr.total }} result{{ sr.total === 1 ? '' : 's' }} for
-          <span class="text-text-primary font-medium">"{{ searchControl.value }}"</span>
+          <span class="text-text-primary font-medium">"{{ searchValue() }}"</span>
         </p>
 
         @if (searchEntries().length > 0) {
