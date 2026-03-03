@@ -21,13 +21,18 @@ export const CHAT_TOOLS_PUBLIC: OpenAIFunctionTool[] = [
     function: {
       name: 'search_changelogs',
       description:
-        'Search published changelog entries. Can filter by product ID. Returns paginated results with title, version, date, and a truncated description.',
+        "Search published changelog entries by keywords. ALWAYS provide a query with relevant keywords extracted from the user's question to get the most relevant results. Can also filter by product ID. Returns paginated results ranked by relevance with title, version, date, and a truncated description.",
       parameters: {
         type: 'object',
         properties: {
+          query: {
+            type: 'string',
+            description:
+              'Search keywords to find relevant changelogs (e.g. "security fix", "new dashboard", "performance improvement"). Highly recommended — omitting this returns all entries sorted by date which is less efficient.',
+          },
           productId: { type: 'string', description: 'Filter by product UUID. Use list_products first to find the ID.' },
           page: { type: 'number', description: 'Page number (default 1)' },
-          limit: { type: 'number', description: 'Results per page (default 20, max 100)' },
+          limit: { type: 'number', description: 'Results per page (default 10, max 100)' },
         },
         required: [],
       },
@@ -68,14 +73,19 @@ export const CHAT_TOOLS_ADMIN: OpenAIFunctionTool[] = [
     function: {
       name: 'search_changelogs',
       description:
-        'Search changelog entries including drafts. Can filter by product ID and status. Returns paginated results with title, version, date, status, and a truncated description.',
+        "Search changelog entries (including drafts) by keywords. ALWAYS provide a query with relevant keywords extracted from the user's question to get the most relevant results. Can also filter by product ID and status. Returns paginated results ranked by relevance with title, version, date, status, and a truncated description.",
       parameters: {
         type: 'object',
         properties: {
+          query: {
+            type: 'string',
+            description:
+              'Search keywords to find relevant changelogs (e.g. "security fix", "new dashboard", "performance improvement"). Highly recommended — omitting this returns all entries sorted by date which is less efficient.',
+          },
           productId: { type: 'string', description: 'Filter by product UUID. Use list_products first to find the ID.' },
           status: { type: 'string', enum: ['draft', 'published'], description: 'Filter by status (default: all)' },
           page: { type: 'number', description: 'Page number (default 1)' },
-          limit: { type: 'number', description: 'Results per page (default 20, max 100)' },
+          limit: { type: 'number', description: 'Results per page (default 10, max 100)' },
         },
         required: [],
       },

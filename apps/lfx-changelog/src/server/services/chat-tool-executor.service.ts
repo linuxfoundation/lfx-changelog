@@ -3,15 +3,16 @@
 
 import { CHAT_CONFIG } from '../constants/chat.constants';
 import { serverLogger } from '../server-logger';
-
 import { ChangelogService } from './changelog.service';
 import { ProductService } from './product.service';
+import { SearchService } from './search.service';
 
 import type { ChatAccessLevel, GetChangelogDetailToolArgs, OpenAIToolCall, SearchChangelogsToolArgs } from '@lfx-changelog/shared';
 
 export class ChatToolExecutorService {
   private readonly productService = new ProductService();
   private readonly changelogService = new ChangelogService();
+  private readonly searchService = new SearchService();
 
   public async execute(toolCall: OpenAIToolCall, accessLevel: ChatAccessLevel): Promise<string> {
     const { name, arguments: argsString } = toolCall.function;
@@ -55,11 +56,61 @@ export class ChatToolExecutorService {
   }
 
   private async searchChangelogs(args: SearchChangelogsToolArgs, accessLevel: ChatAccessLevel): Promise<string> {
+    const limit = args.limit || 10;
+    const page = args.page || 1;
+
+    // Use OpenSearch full-text search when a query is provided (public access only — OpenSearch only indexes published entries)
+    if (args.query && accessLevel === 'public') {
+      return this.searchChangelogsViaOpenSearch(args.query, args.productId, page, limit);
+    }
+
+    // Fall back to DB query when no search query or admin access (admin needs draft access)
+    return this.searchChangelogsViaDB(args, accessLevel, page, limit);
+  }
+
+  private async searchChangelogsViaOpenSearch(query: string, productId: string | undefined, page: number, limit: number): Promise<string> {
+    try {
+      const result = await this.searchService.search({ q: query, productId, page, limit });
+
+      if (result.total === 0 && result.hits.length === 0) {
+        // OpenSearch returned nothing — may be unavailable or index empty, fall back to DB
+        return this.searchChangelogsViaDB({ query, productId, page, limit }, 'public', page, limit);
+      }
+
+      const entries = result.hits.map((hit) => ({
+        id: hit.id,
+        title: hit.highlights?.title?.[0] || hit.title,
+        description: hit.description
+          ? hit.description.slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) + (hit.description.length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
+          : null,
+        version: hit.version,
+        status: hit.status,
+        publishedAt: hit.publishedAt,
+        productName: hit.productName,
+        productSlug: hit.productSlug,
+        score: hit.score,
+      }));
+
+      return JSON.stringify({
+        entries,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+        totalPages: result.totalPages,
+        searchMethod: 'opensearch',
+      });
+    } catch (error) {
+      serverLogger.warn({ err: error }, 'OpenSearch search failed in chat tool, falling back to DB');
+      return this.searchChangelogsViaDB({ query, productId, page, limit }, 'public', page, limit);
+    }
+  }
+
+  private async searchChangelogsViaDB(args: SearchChangelogsToolArgs, accessLevel: ChatAccessLevel, page: number, limit: number): Promise<string> {
     const params = {
       productId: args.productId,
       status: accessLevel === 'admin' ? args.status : undefined,
-      page: args.page || 1,
-      limit: args.limit || 20,
+      page,
+      limit,
     };
 
     const result = accessLevel === 'admin' ? await this.changelogService.findAll(params) : await this.changelogService.findPublished(params);
@@ -84,6 +135,7 @@ export class ChatToolExecutorService {
       page: result.page,
       pageSize: result.pageSize,
       totalPages: result.totalPages,
+      searchMethod: 'database',
     });
   }
 

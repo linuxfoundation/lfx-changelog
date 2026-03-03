@@ -83,6 +83,7 @@ export type ChatMessageUI = z.infer<typeof ChatMessageUISchema>;
 // --- Tool argument schemas ---
 
 export const SearchChangelogsToolArgsSchema = z.object({
+  query: z.string().optional(),
   productId: z.string().optional(),
   status: z.string().optional(),
   page: z.number().optional(),
