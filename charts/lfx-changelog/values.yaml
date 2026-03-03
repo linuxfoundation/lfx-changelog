@@ -180,3 +180,7 @@ environment:
 
   GITHUB_PRIVATE_KEY:
     value:
+
+  # OpenSearch configuration
+  OPENSEARCH_URL:
+    value:
