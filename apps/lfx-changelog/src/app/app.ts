@@ -6,6 +6,7 @@ import { RouterOutlet } from '@angular/router';
 import type { AuthContext } from '@lfx-changelog/shared';
 
 import { AuthService } from '@services/auth/auth.service';
+import { DataDogRumService } from '@services/datadog-rum/datadog-rum.service';
 
 @Component({
   selector: 'lfx-root',
@@ -15,6 +16,7 @@ import { AuthService } from '@services/auth/auth.service';
 })
 export class App {
   private readonly authService = inject(AuthService);
+  private readonly dataDogRumService = inject(DataDogRumService);
   private readonly transferState = inject(TransferState);
   private readonly authKey = makeStateKey<AuthContext>('auth');
 
@@ -35,6 +37,7 @@ export class App {
       this.authService.authenticated.set(true);
       this.authService.user.set(auth.user);
       this.authService.dbUser.set(auth.dbUser);
+      this.dataDogRumService.setUser(auth.user);
     }
   }
 }

@@ -52,7 +52,14 @@
             "ssr": {
               "entry": "src/server.ts"
             },
-            "allowedCommonJsDependencies": ["compression", "cors", "swagger-ui-express"],
+            "allowedCommonJsDependencies": [
+              "compression",
+              "cors",
+              "swagger-ui-express",
+              "@datadog/browser-rum",
+              "@datadog/browser-core",
+              "@datadog/browser-rum-core"
+            ],
             "externalDependencies": [
               "@prisma/client",
               "@prisma/adapter-pg",
@@ -61,7 +68,8 @@
               "swagger-ui-express",
               "@lfx-changelog/mcp-server",
               "@modelcontextprotocol/sdk",
-              "@opensearch-project/opensearch"
+              "@opensearch-project/opensearch",
+              "dd-trace"
             ]
           },
           "configurations": {

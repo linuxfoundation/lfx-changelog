@@ -7,6 +7,8 @@ import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions, 
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
 import { authenticationInterceptor } from '@shared/interceptors/authentication.interceptor';
+import { provideDataDogRum } from '@shared/providers/datadog-rum/datadog-rum.provider';
+import { provideRuntimeConfig } from '@shared/providers/runtime-config/runtime-config.provider';
 
 import { routes } from './app.routes';
 
@@ -17,5 +19,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideClientHydration(withEventReplay(), withIncrementalHydration(), withHttpTransferCacheOptions({ includeHeaders: ['Authorization'] })),
     provideHttpClient(withFetch(), withInterceptors([authenticationInterceptor])),
+    provideRuntimeConfig(),
+    provideDataDogRum(),
   ],
 };

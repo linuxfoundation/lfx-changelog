@@ -4,4 +4,9 @@
 export const environment = {
   production: true,
   apiUrl: 'https://changelog.lfx.dev',
+  datadog: {
+    site: 'datadoghq.com',
+    service: 'lfx-changelog',
+    env: 'prod',
+  },
 };
