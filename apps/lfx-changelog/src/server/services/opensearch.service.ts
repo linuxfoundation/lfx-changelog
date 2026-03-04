@@ -46,38 +46,47 @@ export class OpenSearchService {
       return;
     }
 
-    const exists = await os.indices.exists({ index: CHANGELOGS_INDEX });
-    if (exists.body) {
-      serverLogger.info(`OpenSearch index "${CHANGELOGS_INDEX}" already exists`);
-      return;
-    }
+    try {
+      const exists = await os.indices.exists({ index: CHANGELOGS_INDEX });
+      if (exists.body) {
+        serverLogger.info(`OpenSearch index "${CHANGELOGS_INDEX}" already exists`);
+        return;
+      }
 
-    await os.indices.create({
-      index: CHANGELOGS_INDEX,
-      body: {
-        settings: {
-          number_of_shards: 1,
-          number_of_replicas: 0,
-        },
-        mappings: {
-          properties: {
-            id: { type: 'keyword' },
-            title: { type: 'text', boost: 3 },
-            description: { type: 'text' },
-            version: { type: 'keyword' },
-            status: { type: 'keyword' },
-            publishedAt: { type: 'date' },
-            createdAt: { type: 'date' },
-            productId: { type: 'keyword' },
-            productName: { type: 'text', fields: { keyword: { type: 'keyword' } } },
-            productSlug: { type: 'keyword' },
-            productFaIcon: { type: 'keyword' },
+      await os.indices.create({
+        index: CHANGELOGS_INDEX,
+        body: {
+          settings: {
+            number_of_shards: 1,
+            number_of_replicas: 0,
+          },
+          mappings: {
+            properties: {
+              id: { type: 'keyword' },
+              slug: { type: 'keyword' },
+              title: { type: 'text', boost: 3 },
+              description: { type: 'text' },
+              version: { type: 'keyword' },
+              status: { type: 'keyword' },
+              publishedAt: { type: 'date' },
+              createdAt: { type: 'date' },
+              productId: { type: 'keyword' },
+              productName: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+              productSlug: { type: 'keyword' },
+              productFaIcon: { type: 'keyword' },
+            },
           },
         },
-      },
-    });
+      });
 
-    serverLogger.info(`Created OpenSearch index: ${CHANGELOGS_INDEX}`);
+      serverLogger.info(`Created OpenSearch index: ${CHANGELOGS_INDEX}`);
+    } catch (error) {
+      // Reset client so the connection pool doesn't retain dead nodes.
+      // This allows subsequent requests to establish a fresh connection
+      // (e.g. when OpenSearch becomes available after server startup).
+      await this.disconnect();
+      throw error;
+    }
   }
 
   /**

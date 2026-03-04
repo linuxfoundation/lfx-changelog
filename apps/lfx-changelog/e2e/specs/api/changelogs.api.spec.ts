@@ -160,6 +160,93 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
     });
   });
 
+  test.describe('Slug', () => {
+    let productId: string;
+
+    test.beforeAll(async () => {
+      const productsRes = await superAdminApi.get('/api/products');
+      const products = (await productsRes.json()).data;
+      productId = products.find((p: any) => p.slug === 'e2e-easycla').id;
+    });
+
+    test('create with slug stores slug correctly', async () => {
+      const slug = `e2e-slug-test-${Date.now()}`;
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Slug Test', description: 'Test', version: '1.0.0', status: 'draft', slug },
+      });
+      expect(createRes.status()).toBe(201);
+      const created = (await createRes.json()).data;
+      expect(created.slug).toBe(slug);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${created.id}`);
+    });
+
+    test('create with duplicate slug returns 409', async () => {
+      const slug = `e2e-dup-slug-${Date.now()}`;
+
+      const first = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'First', description: 'Test', version: '1.0.0', status: 'draft', slug },
+      });
+      expect(first.status()).toBe(201);
+      const firstId = (await first.json()).data.id;
+
+      const second = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Second', description: 'Test', version: '1.0.0', status: 'draft', slug },
+      });
+      expect(second.status()).toBe(409);
+      const body = await second.json();
+      expect(body.code).toBe('CONFLICT');
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${firstId}`);
+    });
+
+    test('create with invalid slug format returns 400', async () => {
+      const res = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Bad Slug', description: 'Test', version: '1.0.0', status: 'draft', slug: 'UPPERCASE-Not-Valid' },
+      });
+      expect(res.status()).toBe(400);
+      const body = await res.json();
+      expect(body.code).toBe('VALIDATION_ERROR');
+    });
+
+    test('update slug to a duplicate returns 409', async () => {
+      const slugA = `e2e-slug-a-${Date.now()}`;
+      const slugB = `e2e-slug-b-${Date.now()}`;
+
+      const a = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Entry A', description: 'Test', version: '1.0.0', status: 'draft', slug: slugA },
+      });
+      const b = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Entry B', description: 'Test', version: '1.0.0', status: 'draft', slug: slugB },
+      });
+      const idA = (await a.json()).data.id;
+      const idB = (await b.json()).data.id;
+
+      const updateRes = await superAdminApi.put(`/api/changelogs/${idB}`, { data: { slug: slugA } });
+      expect(updateRes.status()).toBe(409);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${idA}`);
+      await superAdminApi.delete(`/api/changelogs/${idB}`);
+    });
+
+    test('update slug with invalid format returns 400', async () => {
+      const slug = `e2e-valid-slug-${Date.now()}`;
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Valid Entry', description: 'Test', version: '1.0.0', status: 'draft', slug },
+      });
+      const id = (await createRes.json()).data.id;
+
+      const updateRes = await superAdminApi.put(`/api/changelogs/${id}`, { data: { slug: 'Has Spaces And CAPS!' } });
+      expect(updateRes.status()).toBe(400);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${id}`);
+    });
+  });
+
   test.describe('Validation', () => {
     test('POST with missing required fields returns 400', async () => {
       const res = await superAdminApi.post('/api/changelogs', {

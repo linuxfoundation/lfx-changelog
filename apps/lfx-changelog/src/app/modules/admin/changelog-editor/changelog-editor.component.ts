@@ -25,6 +25,7 @@ import { catchError, combineLatest, distinctUntilChanged, filter, map, of, pairw
 import type { ChangelogEntryWithRelations, Product, ProductRepository } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 import type { LoadingState } from '@shared/interfaces/loading-state.interface';
+import type { Observable } from 'rxjs';
 
 @Component({
   selector: 'lfx-changelog-editor',
@@ -64,6 +65,7 @@ export class ChangelogEditorComponent {
   protected readonly additionalContextControl = new FormControl('', { nonNullable: true });
 
   private slugManuallyEdited = false;
+  private settingSlugProgrammatically = false;
 
   protected readonly saving = signal(false);
   protected readonly publishing = signal(false);
@@ -90,7 +92,7 @@ export class ChangelogEditorComponent {
   protected readonly repoState: Signal<LoadingState<ProductRepository[]>> = this.initRepoState();
   protected readonly hasGitHubRepos = computed(() => this.repoState().data.length > 0);
   protected readonly loadingRepos = computed(() => this.repoState().loading);
-  protected readonly hasSlug = computed(() => !!this.slugValue());
+  protected readonly hasSlug = computed(() => !!this.slugValue()?.trim());
 
   protected readonly releaseCountOptions: SelectOption[] = Array.from({ length: 50 }, (_, i) => ({
     label: `${i + 1}`,
@@ -135,25 +137,7 @@ export class ChangelogEditorComponent {
 
   protected save(): void {
     this.saving.set(true);
-    const existing = this.existingEntry();
-
-    const request$ = existing
-      ? this.changelogService.update(existing.id, {
-          slug: this.slugControl.value,
-          title: this.titleControl.value,
-          description: this.descriptionControl.value,
-          version: this.versionControl.value,
-        })
-      : this.changelogService.create({
-          slug: this.slugControl.value,
-          title: this.titleControl.value,
-          description: this.descriptionControl.value,
-          version: this.versionControl.value,
-          productId: this.productIdControl.value,
-          status: ChangelogStatus.DRAFT,
-        });
-
-    request$.subscribe({
+    this.buildSaveRequest$().subscribe({
       next: () => {
         this.saving.set(false);
         this.router.navigate(['/admin/changelogs']);
@@ -166,9 +150,22 @@ export class ChangelogEditorComponent {
 
   protected publish(): void {
     this.publishing.set(true);
-    const existing = this.existingEntry();
+    this.buildSaveRequest$()
+      .pipe(switchMap((entry) => this.changelogService.publish(entry.id)))
+      .subscribe({
+        next: () => {
+          this.publishing.set(false);
+          this.router.navigate(['/admin/changelogs']);
+        },
+        error: () => {
+          this.publishing.set(false);
+        },
+      });
+  }
 
-    const save$ = existing
+  private buildSaveRequest$(): Observable<ChangelogEntryWithRelations> {
+    const existing = this.existingEntry();
+    return existing
       ? this.changelogService.update(existing.id, {
           slug: this.slugControl.value,
           title: this.titleControl.value,
@@ -183,16 +180,6 @@ export class ChangelogEditorComponent {
           productId: this.productIdControl.value,
           status: ChangelogStatus.DRAFT,
         });
-
-    save$.pipe(switchMap((entry) => this.changelogService.publish(entry.id))).subscribe({
-      next: () => {
-        this.publishing.set(false);
-        this.router.navigate(['/admin/changelogs']);
-      },
-      error: () => {
-        this.publishing.set(false);
-      },
-    });
   }
 
   private initAiStateWatcher(): void {
@@ -239,7 +226,7 @@ export class ChangelogEditorComponent {
     return computed(() => ({
       id: this.existingEntry()?.id ?? 'preview',
       productId: this.productIdValue(),
-      slug: this.slugValue() || 'untitled-entry',
+      slug: this.slugValue() || null,
       title: this.titleValue() || 'Untitled Entry',
       description: this.descriptionValue(),
       version: this.versionValue() || '0.0.0',
@@ -268,11 +255,17 @@ export class ChangelogEditorComponent {
         distinctUntilChanged(),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((slug) => this.slugControl.setValue(slug));
+      .subscribe((slug) => {
+        this.settingSlugProgrammatically = true;
+        this.slugControl.setValue(slug);
+        this.settingSlugProgrammatically = false;
+      });
 
-    // Detect manual slug edits
+    // Detect manual slug edits (ignore programmatic updates)
     this.slugControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.slugManuallyEdited = true;
+      if (!this.settingSlugProgrammatically) {
+        this.slugManuallyEdited = true;
+      }
     });
   }
 

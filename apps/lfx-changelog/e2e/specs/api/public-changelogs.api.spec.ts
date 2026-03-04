@@ -87,9 +87,8 @@ test.describe('Public Changelogs API', () => {
     });
   });
 
-  test.describe('GET /public/api/changelogs/:id', () => {
-    test('should return a single published entry by ID', async () => {
-      // Get list first to discover an ID
+  test.describe('GET /public/api/changelogs/:identifier', () => {
+    test('should return a single published entry by UUID', async () => {
       const listRes = await api.get('/public/api/changelogs');
       const listBody = await listRes.json();
       const entryId = listBody.data[0].id;
@@ -104,13 +103,48 @@ test.describe('Public Changelogs API', () => {
       expect(body.data.author).toBeDefined();
     });
 
-    test('should return 404 for non-existent ID', async () => {
+    test('should return a single published entry by slug', async () => {
+      const res = await api.get('/public/api/changelogs/e2e-easycla-cla-signature-flow');
+      expect(res.status()).toBe(200);
+
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.slug).toBe('e2e-easycla-cla-signature-flow');
+      expect(body.data.title).toContain('CLA signature flow');
+    });
+
+    test('should resolve slug case-insensitively', async () => {
+      const res = await api.get('/public/api/changelogs/E2E-EASYCLA-CLA-SIGNATURE-FLOW');
+      expect(res.status()).toBe(200);
+
+      const body = await res.json();
+      expect(body.data.slug).toBe('e2e-easycla-cla-signature-flow');
+    });
+
+    test('should return 404 for non-existent slug', async () => {
+      const res = await api.get('/public/api/changelogs/this-slug-does-not-exist');
+      expect(res.status()).toBe(404);
+
+      const body = await res.json();
+      expect(body.code).toBe('NOT_FOUND');
+    });
+
+    test('should return 404 for non-existent UUID', async () => {
       const fakeId = '00000000-0000-0000-0000-000000000000';
       const res = await api.get(`/public/api/changelogs/${fakeId}`);
       expect(res.status()).toBe(404);
 
       const body = await res.json();
       expect(body.code).toBe('NOT_FOUND');
+    });
+
+    test('should include slug field in list response', async () => {
+      const res = await api.get('/public/api/changelogs');
+      const body = await res.json();
+
+      const entryWithSlug = body.data.find((e: any) => e.slug === 'e2e-easycla-cla-signature-flow');
+      expect(entryWithSlug).toBeDefined();
+      expect(entryWithSlug.slug).toBe('e2e-easycla-cla-signature-flow');
     });
   });
 

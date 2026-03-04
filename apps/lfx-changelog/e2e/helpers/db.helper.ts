@@ -99,6 +99,7 @@ export async function seedTestDatabase(): Promise<void> {
     await client.changelogEntry.create({
       data: {
         productId: product.id,
+        slug: entry.slug ?? null,
         title: entry.title,
         description: entry.description,
         version: entry.version,
@@ -124,6 +125,7 @@ export async function seedTestOpenSearch(): Promise<void> {
       mappings: {
         properties: {
           id: { type: 'keyword' },
+          slug: { type: 'keyword' },
           title: { type: 'text', boost: 3 },
           description: { type: 'text' },
           version: { type: 'keyword' },
@@ -157,6 +159,7 @@ export async function seedTestOpenSearch(): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: entry.id,
+        slug: entry.slug,
         title: entry.title,
         description: entry.description,
         version: entry.version,

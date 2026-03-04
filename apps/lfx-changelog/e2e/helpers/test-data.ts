@@ -16,6 +16,7 @@ const TestRoleAssignmentSchema = UserRoleAssignmentSchema.pick({ role: true }).e
 });
 
 const TestChangelogSchema = CreateChangelogEntryRequestSchema.pick({ title: true, description: true, version: true, status: true }).extend({
+  slug: z.string().optional(),
   productSlug: z.string(),
   authorIndex: z.number(),
   publishedAt: z.date().optional(),
@@ -81,6 +82,7 @@ export const TEST_ROLE_ASSIGNMENTS: TestRoleAssignment[] = [
 export const TEST_CHANGELOGS: TestChangelog[] = [
   {
     title: 'E2E: Added new CLA signature flow',
+    slug: 'e2e-easycla-cla-signature-flow',
     description:
       '## New Feature\n\nAdded a streamlined CLA signature flow for contributors.\n\n- One-click signing\n- GitHub integration\n- Email notifications',
     version: '2.1.0',
@@ -91,6 +93,7 @@ export const TEST_CHANGELOGS: TestChangelog[] = [
   },
   {
     title: 'E2E: Security vulnerability scanning improvements',
+    slug: 'e2e-security-vulnerability-scanning',
     description:
       '## Improvement\n\nEnhanced vulnerability scanning with faster detection and reduced false positives.\n\n- Improved SAST rules\n- New dependency check engine',
     version: '3.0.1',
@@ -101,6 +104,7 @@ export const TEST_CHANGELOGS: TestChangelog[] = [
   },
   {
     title: 'E2E: Insights dashboard redesign',
+    slug: 'e2e-insights-dashboard-redesign',
     description:
       '## Redesign\n\nCompletely revamped the Insights dashboard with new charts and filters.\n\n- Interactive time-series charts\n- Custom date ranges\n- Export to CSV',
     version: '1.5.0',

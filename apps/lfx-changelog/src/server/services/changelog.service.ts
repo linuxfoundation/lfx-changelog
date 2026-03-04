@@ -4,7 +4,7 @@
 import { ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
 import { type ChangelogStatus, Prisma, type ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
 
-import { NotFoundError } from '../errors';
+import { ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 
 import { getOpenSearchService } from './opensearch.service';
@@ -15,8 +15,6 @@ import type { ChangelogDocument, ChangelogQueryParams, PaginatedResponse, Public
 type PaginatedResult<T> = Omit<PaginatedResponse<T>, 'success'>;
 
 export class ChangelogService {
-  private static readonly uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
   public async findPublished(params: ChangelogQueryParams): Promise<PaginatedResult<PublicChangelogEntry>> {
     const prisma = getPrismaClient();
     const { page, limit, skip } = this.sanitizePagination(params);
@@ -101,9 +99,9 @@ export class ChangelogService {
 
   public async findPublishedByIdentifier(identifier: string): Promise<PublicChangelogEntry> {
     const prisma = getPrismaClient();
-    const isUuid = ChangelogService.uuidRegex.test(identifier);
+    const normalizedSlug = identifier.toLowerCase();
     const entry = await prisma.changelogEntry.findFirst({
-      where: { ...(isUuid ? { id: identifier } : { slug: identifier }), status: 'published', product: { isActive: true } },
+      where: { OR: [{ id: identifier }, { slug: normalizedSlug }], status: 'published', product: { isActive: true } },
       select: {
         id: true,
         slug: true,
@@ -133,20 +131,24 @@ export class ChangelogService {
     createdBy: string;
   }): Promise<PrismaChangelogEntry> {
     const prisma = getPrismaClient();
-    const entry = await prisma.changelogEntry.create({
-      data: {
-        productId: data.productId,
-        slug: data.slug || null,
-        title: data.title,
-        description: data.description,
-        version: data.version,
-        status: (Object.values(ChangelogStatusEnum) as string[]).includes(data.status || '') ? (data.status as ChangelogStatus) : 'draft',
-        createdBy: data.createdBy,
-      },
-      include: { product: true, author: true },
-    });
-    this.syncToOpenSearch(entry);
-    return entry;
+    try {
+      const entry = await prisma.changelogEntry.create({
+        data: {
+          productId: data.productId,
+          slug: data.slug || null,
+          title: data.title,
+          description: data.description,
+          version: data.version,
+          status: (Object.values(ChangelogStatusEnum) as string[]).includes(data.status || '') ? (data.status as ChangelogStatus) : 'draft',
+          createdBy: data.createdBy,
+        },
+        include: { product: true, author: true },
+      });
+      this.syncToOpenSearch(entry);
+      return entry;
+    } catch (error) {
+      throw this.handleUniqueConstraint(error, data.slug) ?? error;
+    }
   }
 
   public async update(
@@ -164,11 +166,16 @@ export class ChangelogService {
     if (!existing) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'update', service: 'changelog' });
     }
-    const updated = await prisma.changelogEntry.update({
-      where: { id },
-      data: data as Prisma.ChangelogEntryUpdateInput,
-      include: { product: true, author: true },
-    });
+    let updated: PrismaChangelogEntry;
+    try {
+      updated = await prisma.changelogEntry.update({
+        where: { id },
+        data: data as Prisma.ChangelogEntryUpdateInput,
+        include: { product: true, author: true },
+      });
+    } catch (error) {
+      throw this.handleUniqueConstraint(error, data.slug) ?? error;
+    }
 
     // If status changed away from published, remove from search index
     if (existing.status === 'published' && data.status && data.status !== 'published') {
@@ -241,6 +248,13 @@ export class ChangelogService {
     getOpenSearchService()
       .index(doc)
       .catch((err) => serverLogger.warn({ err, id: entry.id }, 'Failed to sync changelog to OpenSearch'));
+  }
+
+  private handleUniqueConstraint(error: unknown, slug?: string): ConflictError | null {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return new ConflictError(`A changelog entry with slug "${slug}" already exists`, { operation: 'create', service: 'changelog' });
+    }
+    return null;
   }
 
   private sanitizePagination(params: ChangelogQueryParams): { page: number; limit: number; skip: number } {
