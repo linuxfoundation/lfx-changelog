@@ -23,14 +23,19 @@ export class SlackService {
   }
 
   private get webhookStateSecret(): string {
-    return process.env['WEBHOOK_STATE_SECRET'] || process.env['AUTH0_SECRET'] || '';
+    const secret = process.env['WEBHOOK_STATE_SECRET'];
+    if (!secret) {
+      throw new Error('WEBHOOK_STATE_SECRET must be set for OAuth state signing');
+    }
+    return secret;
   }
 
   private get baseUrl(): string {
-    return process.env['BASE_URL'] || 'https://localhost:4204';
+    return process.env['BASE_URL'] || 'http://localhost:4204';
   }
   private readonly slackUserScopes = 'chat:write,channels:read,groups:read';
   private readonly tokenRefreshBufferMs = 5 * 60 * 1000; // Refresh 5 minutes before expiry
+  private readonly stateTtlMs = 10 * 60 * 1000; // OAuth state expires after 10 minutes
 
   /**
    * Generate the Slack OAuth URL for the user to authorize.
@@ -119,7 +124,7 @@ export class SlackService {
   /**
    * Get all integrations for a user (with channels).
    */
-  public async getIntegrations(userId: string): Promise<PrismaSlackIntegration[]> {
+  public async getIntegrations(userId: string): Promise<(PrismaSlackIntegration & { channels: PrismaSlackChannel[] })[]> {
     const prisma = getPrismaClient();
     return prisma.slackIntegration.findMany({
       where: { userId },
@@ -133,7 +138,13 @@ export class SlackService {
    * Uses the user token so only channels the user can access are returned.
    * Paginates up to 10 pages (999 per page) to cover large workspaces.
    */
-  public async getChannels(integrationId: string): Promise<{ id: string; name: string; isPrivate: boolean }[]> {
+  public async getChannels(userId: string, integrationId: string): Promise<{ id: string; name: string; isPrivate: boolean }[]> {
+    const prisma = getPrismaClient();
+    const integration = await prisma.slackIntegration.findFirst({ where: { id: integrationId, userId } });
+    if (!integration) {
+      throw new Error('Slack integration not found');
+    }
+
     const token = await this.getFreshToken(integrationId);
     const maxPages = 10;
     const channels: { id: string; name: string; isPrivate: boolean }[] = [];
@@ -173,8 +184,12 @@ export class SlackService {
   /**
    * Save a channel as the default for an integration.
    */
-  public async saveChannel(integrationId: string, channelId: string, channelName: string): Promise<PrismaSlackChannel> {
+  public async saveChannel(userId: string, integrationId: string, channelId: string, channelName: string): Promise<PrismaSlackChannel> {
     const prisma = getPrismaClient();
+    const integration = await prisma.slackIntegration.findFirst({ where: { id: integrationId, userId } });
+    if (!integration) {
+      throw new Error('Slack integration not found');
+    }
 
     await prisma.slackChannel.updateMany({
       where: { slackIntegrationId: integrationId, isDefault: true },
@@ -201,16 +216,23 @@ export class SlackService {
    */
   public async postChangelog(userId: string, channelId: string, changelogEntry: PostChangelogEntry): Promise<PostToSlackResponse> {
     const prisma = getPrismaClient();
-    const slackChannel = await prisma.slackChannel.findFirst({
-      where: { channelId, slackIntegration: { userId, status: 'active' } },
-      include: { slackIntegration: true },
-    });
 
-    if (!slackChannel) {
-      throw new Error('No active Slack integration found for this channel');
+    // Find the user's active integration directly (no saved SlackChannel row required)
+    const integration = await prisma.slackIntegration.findFirst({
+      where: { userId, status: 'active' },
+    });
+    if (!integration) {
+      throw new Error('No active Slack integration found — please connect Slack in Settings');
     }
 
-    const token = await this.getFreshToken(slackChannel.slackIntegrationId);
+    // Upsert a SlackChannel row so we can track notifications
+    const slackChannel = await prisma.slackChannel.upsert({
+      where: { slackIntegrationId_channelId: { slackIntegrationId: integration.id, channelId } },
+      create: { slackIntegrationId: integration.id, channelId, channelName: channelId, isDefault: false },
+      update: {},
+    });
+
+    const token = await this.getFreshToken(integration.id);
     const entryUrl = `${this.baseUrl}/entry/${changelogEntry.slug || changelogEntry.id}`;
     const descriptionPreview = changelogEntry.description.length > 500 ? `${changelogEntry.description.slice(0, 497)}...` : changelogEntry.description;
 
@@ -239,7 +261,7 @@ export class SlackService {
         },
       });
 
-      await this.handleSlackError(slackChannel.slackIntegrationId, res.error);
+      await this.handleSlackError(integration.id, res.error);
       throw new Error(`Failed to post to Slack: ${res.error}`);
     }
 
@@ -412,11 +434,10 @@ export class SlackService {
   // ── Token encryption (AES-256-GCM) ────────────────────────────────────────
 
   private getEncryptionKey(): Buffer {
-    if (this.encryptionKeyHex.length === 64) {
-      return Buffer.from(this.encryptionKeyHex, 'hex');
+    if (this.encryptionKeyHex.length !== 64) {
+      throw new Error('SLACK_TOKEN_ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
     }
-    const secret = process.env['AUTH0_SECRET'] || 'default-dev-key';
-    return crypto.createHash('sha256').update(secret).digest();
+    return Buffer.from(this.encryptionKeyHex, 'hex');
   }
 
   private encrypt(plaintext: string): string {
@@ -458,7 +479,16 @@ export class SlackService {
       if (!crypto.timingSafeEqual(Buffer.from(outer.s, 'hex'), Buffer.from(expectedHmac, 'hex'))) {
         return null;
       }
-      return JSON.parse(outer.d) as Record<string, unknown>;
+      const payload = JSON.parse(outer.d) as Record<string, unknown>;
+
+      // Reject expired states
+      const ts = payload['ts'] as number | undefined;
+      if (ts && Date.now() - ts > this.stateTtlMs) {
+        serverLogger.warn({ ts, ageMs: Date.now() - ts }, 'OAuth state expired');
+        return null;
+      }
+
+      return payload;
     } catch {
       return null;
     }

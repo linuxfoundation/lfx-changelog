@@ -3,6 +3,7 @@
 
 import { Component, computed, ElementRef, inject, input, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
 export type { SelectOption };
@@ -30,6 +31,7 @@ export class SelectComponent implements ControlValueAccessor {
   protected readonly isOpen = signal(false);
   protected readonly focusedIndex = signal(-1);
   protected readonly searchQuery = signal('');
+  protected readonly triggerWidth = signal(0);
 
   protected readonly selectedLabel = computed(() => {
     const selected = this.options().find((o) => o.value === this.value());
@@ -65,6 +67,7 @@ export class SelectComponent implements ControlValueAccessor {
       this.searchQuery.set('');
       const currentIndex = this.filteredOptions().findIndex((o) => o.value === this.value());
       this.focusedIndex.set(currentIndex);
+      this.updateDropdownPosition();
     }
   }
 
@@ -80,6 +83,10 @@ export class SelectComponent implements ControlValueAccessor {
     switch (event.key) {
       case 'Enter':
       case ' ':
+        // Allow space in search input
+        if (event.key === ' ' && event.target instanceof HTMLInputElement) {
+          return;
+        }
         event.preventDefault();
         if (this.isOpen()) {
           const idx = this.focusedIndex();
@@ -125,6 +132,12 @@ export class SelectComponent implements ControlValueAccessor {
         this.onTouched();
       }
     }
+  }
+
+  private updateDropdownPosition(): void {
+    const trigger = this.elRef.nativeElement.querySelector('button');
+    if (!trigger) return;
+    this.triggerWidth.set(trigger.getBoundingClientRect().width);
   }
 
   private onChange: (value: string) => void = () => {

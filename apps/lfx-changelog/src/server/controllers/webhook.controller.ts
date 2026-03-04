@@ -7,13 +7,15 @@ import crypto from 'node:crypto';
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from '../services/prisma.service';
 import { ReleaseService } from '../services/release.service';
+import { SlackService } from '../services/slack.service';
 
 import type { GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
 
-const WEBHOOK_STATE_SECRET = process.env['WEBHOOK_STATE_SECRET'] || process.env['AUTH0_SECRET'] || '';
+const WEBHOOK_STATE_SECRET = process.env['WEBHOOK_STATE_SECRET'] || '';
 
 export class WebhookController {
   private readonly releaseService = new ReleaseService();
+  private readonly slackService = new SlackService();
   /**
    * Signs a state payload for GitHub App install redirects.
    * Called when generating the install URL to embed a verifiable signature.
@@ -116,5 +118,32 @@ export class WebhookController {
     }
 
     res.status(200).json({ ok: true });
+  }
+
+  /**
+   * GET /webhooks/slack-callback — Slack OAuth callback (unauthenticated).
+   */
+  public async slackOAuthCallback(req: Request, res: Response): Promise<void> {
+    const code = req.query['code'] as string | undefined;
+    const state = req.query['state'] as string | undefined;
+    const error = req.query['error'] as string | undefined;
+
+    if (error) {
+      res.redirect('/admin/settings?slack_error=access_denied');
+      return;
+    }
+
+    if (!code || !state) {
+      res.redirect('/admin/settings?slack_error=missing_params');
+      return;
+    }
+
+    try {
+      await this.slackService.handleOAuthCallback(code, state);
+      res.redirect('/admin/settings?slack_connected=true');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      res.redirect(`/admin/settings?slack_error=${encodeURIComponent(message)}`);
+    }
   }
 }

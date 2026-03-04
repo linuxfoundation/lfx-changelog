@@ -121,15 +121,17 @@ test.describe('Slack API (/api/slack)', () => {
 test.describe('Slack Share API (/api/changelogs/:id/share/slack)', () => {
   let unauthApi: APIRequestContext;
   let superAdminApi: APIRequestContext;
+  let userApi: APIRequestContext;
 
   test.beforeAll(async ({}, testInfo) => {
     const baseURL = testInfo.project.use.baseURL as string;
     unauthApi = await createUnauthenticatedContext(baseURL);
     superAdminApi = await createAuthenticatedContext('super_admin', baseURL);
+    userApi = await createAuthenticatedContext('user', baseURL);
   });
 
   test.afterAll(async () => {
-    await Promise.all([unauthApi.dispose(), superAdminApi.dispose()]);
+    await Promise.all([unauthApi.dispose(), superAdminApi.dispose(), userApi.dispose()]);
   });
 
   test('returns 401 without auth', async () => {
@@ -137,6 +139,20 @@ test.describe('Slack Share API (/api/changelogs/:id/share/slack)', () => {
       data: { channelId: 'C123' },
     });
     expect(res.status()).toBe(401);
+  });
+
+  test('returns 403 for user without editor role', async () => {
+    const listRes = await superAdminApi.get('/api/changelogs');
+    const entries = (await listRes.json()).data;
+    const entryId = entries[0]?.id;
+    if (!entryId) return;
+
+    const res = await userApi.post(`/api/changelogs/${entryId}/share/slack`, {
+      data: { channelId: 'C123' },
+    });
+    expect(res.status()).toBe(403);
+    const body = await res.json();
+    expect(body.code).toBe('AUTHORIZATION_REQUIRED');
   });
 
   test('returns 400 with missing channelId', async () => {

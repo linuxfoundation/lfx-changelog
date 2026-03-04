@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, inject, Signal, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -34,9 +34,10 @@ export class UserSettingsComponent {
 
   protected readonly channelControl = new FormControl('', { nonNullable: true });
 
-  // OAuth callback query params
-  protected readonly slackConnected = computed(() => this.route.snapshot.queryParamMap.get('slack_connected') === 'true');
-  protected readonly slackError = computed(() => this.route.snapshot.queryParamMap.get('slack_error'));
+  // OAuth callback query params (reactive via observable, not snapshot)
+  private readonly queryParams = toSignal(this.route.queryParamMap, { requireSync: true });
+  protected readonly slackConnected = computed(() => this.queryParams().get('slack_connected') === 'true');
+  protected readonly slackError = computed(() => this.queryParams().get('slack_error'));
 
   // Integrations data
   protected readonly integrations = toSignal(
@@ -51,7 +52,8 @@ export class UserSettingsComponent {
   protected readonly hasIntegration = computed(() => this.integrations().length > 0);
   protected readonly activeIntegration = computed(() => this.integrations().find((i) => i.status === 'active'));
 
-  // Channel picker — auto-loads when active integration is available
+  // Channel picker — loaded on demand via "Change Channel" button
+  protected readonly showChannelPicker = signal(false);
   protected readonly channels: Signal<SlackChannelOption[]> = this.initChannels();
   protected readonly channelOptions = computed<SelectOption[]>(() =>
     this.channels().map((ch) => ({
@@ -59,6 +61,12 @@ export class UserSettingsComponent {
       value: ch.id,
     }))
   );
+
+  protected readonly defaultChannelName = computed(() => {
+    const integration = this.activeIntegration();
+    const defaultCh = integration?.channels?.find((ch) => ch.isDefault);
+    return defaultCh?.channelName ?? null;
+  });
 
   // Disconnect dialog
   protected readonly disconnectDialogVisible = signal(false);
@@ -85,6 +93,10 @@ export class UserSettingsComponent {
     });
   }
 
+  protected openChannelPicker(): void {
+    this.showChannelPicker.set(true);
+  }
+
   protected openDisconnectDialog(): void {
     this.disconnectDialogVisible.set(true);
   }
@@ -107,10 +119,14 @@ export class UserSettingsComponent {
 
   private initChannels(): Signal<SlackChannelOption[]> {
     return toSignal(
-      toObservable(this.activeIntegration).pipe(
-        filter((integration): integration is SlackIntegration => !!integration),
+      toObservable(this.showChannelPicker).pipe(
+        filter((show) => show),
         tap(() => this.channelsLoading.set(true)),
-        switchMap((integration) => this.slackService.getChannels(integration.id).pipe(catchError(() => of([] as SlackChannelOption[])))),
+        switchMap(() => {
+          const integration = this.activeIntegration();
+          if (!integration) return of([] as SlackChannelOption[]);
+          return this.slackService.getChannels(integration.id).pipe(catchError(() => of([] as SlackChannelOption[])));
+        }),
         tap(() => this.channelsLoading.set(false))
       ),
       { initialValue: [] as SlackChannelOption[] }

@@ -37,8 +37,11 @@ router.delete('/:id', authorize({ scope: ApiKeyScope.CHANGELOGS_WRITE, productRo
 );
 
 // Share to Slack — OAuth only (no API key), EDITOR role with resolved product
-router.post('/:id/share/slack', authorize({ oauthOnly: true }), validate({ body: PostToSlackRequestSchema }), (req, res, next) =>
-  changelogController.shareToSlack(req, res, next)
+router.post(
+  '/:id/share/slack',
+  authorize({ oauthOnly: true, productRole: UserRole.EDITOR, resolveProductId: true }),
+  validate({ body: PostToSlackRequestSchema }),
+  (req, res, next) => changelogController.shareToSlack(req, res, next)
 );
 
 export default router;

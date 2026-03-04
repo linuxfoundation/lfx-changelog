@@ -191,3 +191,17 @@ environment:
   # OpenSearch configuration
   OPENSEARCH_URL:
     value:
+
+  # Slack OAuth (token rotation enabled)
+  SLACK_CLIENT_ID:
+    value:
+
+  SLACK_CLIENT_SECRET:
+    value:
+
+  SLACK_TOKEN_ENCRYPTION_KEY:
+    value:
+
+  # Webhook state signing (used by GitHub App and Slack OAuth callbacks)
+  WEBHOOK_STATE_SECRET:
+    value:

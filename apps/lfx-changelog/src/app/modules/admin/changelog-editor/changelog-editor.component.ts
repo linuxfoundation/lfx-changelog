@@ -160,9 +160,8 @@ export class ChangelogEditorComponent {
         next: (entry) => {
           this.publishing.set(false);
           this.justPublished.set(true);
-          // Update the existing entry signal to reflect the published state
+          // For new entries, navigate to edit URL so post-to-slack dialog has the entry ID
           if (!this.route.snapshot.paramMap.get('id')) {
-            // New entry — navigate to edit URL so the dialog has the entry ID
             this.router.navigate(['/admin/changelogs', entry.id, 'edit'], { replaceUrl: true });
           }
         },

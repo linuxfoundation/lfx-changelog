@@ -28,13 +28,24 @@ export class SlackController {
     try {
       const userId = req.dbUser!.id;
       const integrations = await this.slackService.getIntegrations(userId);
-      // Strip encrypted tokens from response
-      const safe = integrations.map((integration) => {
-        const { accessToken, refreshToken, ...rest } = integration;
-        void accessToken;
-        void refreshToken;
-        return rest;
-      });
+      // Map to shared schema shape — never expose tokens or internal fields
+      const safe = integrations.map((integration) => ({
+        id: integration.id,
+        teamId: integration.teamId,
+        teamName: integration.teamName,
+        slackUserId: integration.slackUserId,
+        scope: integration.scope,
+        status: integration.status,
+        tokenExpiresAt: integration.tokenExpiresAt.toISOString(),
+        connectedAt: integration.connectedAt.toISOString(),
+        channels: integration.channels.map((ch) => ({
+          id: ch.id,
+          channelId: ch.channelId,
+          channelName: ch.channelName,
+          isDefault: ch.isDefault,
+          createdAt: ch.createdAt.toISOString(),
+        })),
+      }));
       res.json({ success: true, data: safe });
     } catch (error) {
       next(error);
@@ -46,7 +57,7 @@ export class SlackController {
    */
   public async getChannels(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const channels = await this.slackService.getChannels(req.params['id'] as string);
+      const channels = await this.slackService.getChannels(req.dbUser!.id, req.params['id'] as string);
       res.json({ success: true, data: channels });
     } catch (error) {
       next(error);
@@ -59,7 +70,7 @@ export class SlackController {
   public async saveChannel(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { channelId, channelName } = req.body as { channelId: string; channelName: string };
-      const channel = await this.slackService.saveChannel(req.params['id'] as string, channelId, channelName);
+      const channel = await this.slackService.saveChannel(req.dbUser!.id, req.params['id'] as string, channelId, channelName);
       res.json({ success: true, data: channel });
     } catch (error) {
       next(error);
@@ -76,33 +87,6 @@ export class SlackController {
       res.status(204).end();
     } catch (error) {
       next(error);
-    }
-  }
-
-  /**
-   * GET /webhooks/slack-callback — OAuth callback (unauthenticated).
-   */
-  public async oauthCallback(req: Request, res: Response): Promise<void> {
-    const code = req.query['code'] as string | undefined;
-    const state = req.query['state'] as string | undefined;
-    const error = req.query['error'] as string | undefined;
-
-    if (error) {
-      res.redirect('/admin/settings?slack_error=access_denied');
-      return;
-    }
-
-    if (!code || !state) {
-      res.redirect('/admin/settings?slack_error=missing_params');
-      return;
-    }
-
-    try {
-      await this.slackService.handleOAuthCallback(code, state);
-      res.redirect('/admin/settings?slack_connected=true');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      res.redirect(`/admin/settings?slack_error=${encodeURIComponent(message)}`);
     }
   }
 }

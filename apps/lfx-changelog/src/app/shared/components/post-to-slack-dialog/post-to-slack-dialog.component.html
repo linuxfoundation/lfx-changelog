@@ -37,7 +37,32 @@
           </p>
         }
 
-        <lfx-select label="Channel" [options]="channelOptions()" [formControl]="channelControl" [searchable]="true" placeholder="Select a channel..." />
+        <!-- Default channel display + change button -->
+        <div class="flex items-center gap-3 text-sm">
+          @if (defaultChannelName(); as channelName) {
+            <div class="flex items-center gap-1.5">
+              <span class="text-text-muted">Channel:</span>
+              <span class="text-text-primary font-medium">#{{ channelName }}</span>
+            </div>
+          }
+          @if (!showChannelPicker()) {
+            <button (click)="openChannelPicker()" class="text-brand-600 hover:text-brand-700 text-xs font-medium">
+              {{ defaultChannelName() ? 'Change' : 'Select Channel' }}
+            </button>
+          }
+        </div>
+
+        <!-- Channel picker — deferred until user clicks "Change" -->
+        @defer (when showChannelPicker()) {
+          @if (channelsLoading()) {
+            <div class="text-text-muted flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+              Loading channels...
+            </div>
+          } @else {
+            <lfx-select label="Channel" [options]="channelOptions()" [formControl]="channelControl" [searchable]="true" placeholder="Select a channel..." />
+          }
+        }
 
         @if (error()) {
           <div

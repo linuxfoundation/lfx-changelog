@@ -77,38 +77,44 @@
                 </div>
               </div>
 
-              <!-- Default channel -->
-              @if (integration.channels?.length) {
-                <div class="text-sm">
-                  <span class="text-text-muted">Default channel:</span>
-                  @for (ch of integration.channels; track ch.id) {
-                    @if (ch.isDefault) {
-                      <span class="text-text-primary ml-1 font-medium">#{{ ch.channelName }}</span>
-                    }
-                  }
-                </div>
-              }
-
-              <!-- Channel picker -->
-              @if (channelsLoading()) {
-                <div class="text-text-muted flex items-center gap-2 text-sm">
-                  <i class="fa-solid fa-spinner fa-spin text-xs"></i>
-                  Loading channels...
-                </div>
-              } @else {
-                <div class="flex items-end gap-3">
-                  <div class="w-64">
-                    <lfx-select
-                      label="Select channel"
-                      [options]="channelOptions()"
-                      [formControl]="channelControl"
-                      [searchable]="true"
-                      placeholder="Choose a channel..." />
+              <!-- Default channel + change button -->
+              <div class="flex items-center gap-3 text-sm">
+                @if (defaultChannelName(); as channelName) {
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-text-muted">Default channel:</span>
+                    <span class="text-text-primary font-medium">#{{ channelName }}</span>
                   </div>
-                  @if (channelControl.value) {
-                    <lfx-button variant="primary" size="sm" [loading]="savingChannel()" (clicked)="saveChannel()"> Save Channel </lfx-button>
-                  }
-                </div>
+                }
+                @if (!showChannelPicker()) {
+                  <lfx-button variant="secondary" size="sm" (clicked)="openChannelPicker()">
+                    <i class="fa-solid fa-pen text-xs"></i>
+                    {{ defaultChannelName() ? 'Change Channel' : 'Set Channel' }}
+                  </lfx-button>
+                }
+              </div>
+
+              <!-- Channel picker — deferred until user clicks "Change Channel" -->
+              @defer (when showChannelPicker()) {
+                @if (channelsLoading()) {
+                  <div class="text-text-muted flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+                    Loading channels...
+                  </div>
+                } @else {
+                  <div class="flex items-end gap-3">
+                    <div class="w-64">
+                      <lfx-select
+                        label="Select channel"
+                        [options]="channelOptions()"
+                        [formControl]="channelControl"
+                        [searchable]="true"
+                        placeholder="Choose a channel..." />
+                    </div>
+                    @if (channelControl.value) {
+                      <lfx-button variant="primary" size="sm" [loading]="savingChannel()" (clicked)="saveChannel()"> Save Channel </lfx-button>
+                    }
+                  </div>
+                }
               }
 
               <!-- Disconnect button -->
