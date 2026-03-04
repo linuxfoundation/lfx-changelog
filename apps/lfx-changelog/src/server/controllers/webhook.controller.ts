@@ -12,7 +12,7 @@ import { getPrismaClient } from '../services/prisma.service';
 import { ReleaseService } from '../services/release.service';
 import { SlackService } from '../services/slack.service';
 
-import { BOT_EMAIL, BOT_NAME, DEFAULT_LOOKBACK_DAYS } from '@lfx-changelog/shared';
+import { BOT_EMAIL, BOT_NAME, DEFAULT_LOOKBACK_DAYS, STALE_LOCK_MS } from '@lfx-changelog/shared';
 
 import type { GitHubCommit, GitHubPullRequest, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
 
@@ -24,9 +24,6 @@ export class WebhookController {
   private readonly changelogService = new ChangelogService();
   private readonly aiService = new AiService();
   private readonly githubService = new GitHubService();
-
-  /** In-memory concurrency guard — one auto-changelog generation at a time per product */
-  private readonly autoChangelogInProgress = new Map<string, Promise<void>>();
   /**
    * Signs a state payload for GitHub App install redirects.
    * Called when generating the install URL to embed a verifiable signature.
@@ -116,6 +113,8 @@ export class WebhookController {
       return;
     }
 
+    serverLogger.info({ event, action: body.action, repoFullName, productCount: productRepos.length }, 'Processing GitHub webhook event');
+
     // Handle release upsert/delete synchronously (fast, idempotent)
     if (event === 'release' && body.release) {
       const releasePayload = body.release as GitHubWebhookReleasePayload;
@@ -124,9 +123,13 @@ export class WebhookController {
           await prisma.gitHubRelease.deleteMany({
             where: { repositoryId: productRepo.id, githubId: releasePayload.id },
           });
-          serverLogger.info({ repoFullName, tag: releasePayload.tag_name }, 'Deleted release via webhook');
+          serverLogger.info({ repoFullName, tag: releasePayload.tag_name, productId: productRepo.productId }, 'Deleted release via webhook');
         } else {
           await this.releaseService.upsertFromWebhook(productRepo.id, releasePayload);
+          serverLogger.info(
+            { repoFullName, tag: releasePayload.tag_name, action: body.action, productId: productRepo.productId },
+            'Upserted release via webhook'
+          );
         }
 
         await prisma.productRepository.update({
@@ -142,7 +145,10 @@ export class WebhookController {
     // Deduplicate product IDs and fire async auto-changelog generation
     const productIds = [...new Set(productRepos.map((r) => r.productId))];
     for (const productId of productIds) {
-      this.generateAutoChangelog(productId).catch((err) => serverLogger.error({ err, productId }, 'Auto-changelog generation failed'));
+      serverLogger.info({ productId, event, action: body.action, repoFullName }, 'Triggering auto-changelog generation');
+      this.generateAutoChangelog(productId).catch((err) =>
+        serverLogger.error({ err, productId, event, action: body.action, repoFullName }, 'Auto-changelog generation failed')
+      );
     }
   }
 
@@ -201,20 +207,89 @@ export class WebhookController {
 
   /**
    * Generates or updates an automated draft changelog for a product.
-   * Guarded by an in-memory concurrency map — skips if already in progress.
+   * Uses a DB-based lock (auto_changelog_locks table) for distributed concurrency
+   * control across multiple replicas. If a lock already exists and is not stale,
+   * marks it as pending_rerun so one additional generation fires after the current
+   * one finishes. Stale locks (> STALE_LOCK_MS) are reclaimed.
    */
   private async generateAutoChangelog(productId: string): Promise<void> {
-    if (this.autoChangelogInProgress.has(productId)) {
-      serverLogger.info({ productId }, 'Auto-changelog generation already in progress — skipping');
+    const prisma = getPrismaClient();
+    const now = new Date();
+
+    // 1. Try to acquire the lock
+    const existingLock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
+
+    if (existingLock) {
+      const lockAge = now.getTime() - existingLock.lockedAt.getTime();
+      if (lockAge < STALE_LOCK_MS) {
+        // Lock is active — mark pending rerun and return
+        await prisma.autoChangelogLock.update({
+          where: { productId },
+          data: { status: 'pending_rerun' },
+        });
+        serverLogger.info(
+          { productId, lockAge, lockedAt: existingLock.lockedAt.toISOString(), currentStatus: existingLock.status },
+          'Auto-changelog generation already in progress — marking pending rerun'
+        );
+        return;
+      }
+      // Lock is stale — reclaim it below
+      serverLogger.warn(
+        { productId, lockAge, lockedAt: existingLock.lockedAt.toISOString(), staleLockMs: STALE_LOCK_MS },
+        'Reclaiming stale auto-changelog lock'
+      );
+    }
+
+    // 2. Upsert lock — handles both fresh acquire and stale reclaim
+    try {
+      await prisma.autoChangelogLock.upsert({
+        where: { productId },
+        update: { status: 'in_progress', lockedAt: now },
+        create: { productId, status: 'in_progress', lockedAt: now },
+      });
+    } catch (upsertErr) {
+      // Race condition: another replica inserted first — mark pending and return
+      serverLogger.warn({ err: upsertErr, productId }, 'Lock upsert failed — another replica likely acquired it');
+      try {
+        await prisma.autoChangelogLock.update({
+          where: { productId },
+          data: { status: 'pending_rerun' },
+        });
+      } catch (updateErr) {
+        serverLogger.warn({ err: updateErr, productId }, 'Failed to mark pending rerun — lock may have been deleted');
+      }
+      serverLogger.info({ productId }, 'Lost lock race — marked pending rerun');
       return;
     }
 
-    const promise = this.doGenerateAutoChangelog(productId).finally(() => {
-      this.autoChangelogInProgress.delete(productId);
-    });
+    serverLogger.info({ productId }, 'Acquired auto-changelog lock — starting generation');
 
-    this.autoChangelogInProgress.set(productId, promise);
-    return promise;
+    // 3. Run generation with lock held
+    try {
+      await this.doGenerateAutoChangelog(productId);
+    } finally {
+      // 4. Release lock — check if a rerun was requested
+      const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
+      if (lock?.status === 'pending_rerun') {
+        // Reset to in_progress and rerun once
+        await prisma.autoChangelogLock.update({
+          where: { productId },
+          data: { status: 'in_progress', lockedAt: new Date() },
+        });
+        serverLogger.info({ productId }, 'Pending rerun detected — running one more generation');
+        try {
+          await this.doGenerateAutoChangelog(productId);
+        } finally {
+          await prisma.autoChangelogLock
+            .delete({ where: { productId } })
+            .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after rerun'));
+        }
+      } else {
+        await prisma.autoChangelogLock
+          .delete({ where: { productId } })
+          .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock'));
+      }
+    }
   }
 
   private async doGenerateAutoChangelog(productId: string): Promise<void> {
@@ -243,9 +318,14 @@ export class WebhookController {
       sinceDate = fallback.toISOString();
     }
 
+    serverLogger.info({ productId, sinceDate }, 'Fetching GitHub activity for auto-changelog');
+
     // 3. Fetch all repos linked to this product
     const repos = await prisma.productRepository.findMany({ where: { productId } });
-    if (repos.length === 0) return;
+    if (repos.length === 0) {
+      serverLogger.info({ productId }, 'No repositories linked to product — skipping auto-generation');
+      return;
+    }
 
     // 4. Gather GitHub activity across all repos
     const allCommits: GitHubCommit[] = [];
@@ -271,8 +351,13 @@ export class WebhookController {
       orderBy: { publishedAt: 'desc' },
     });
 
+    serverLogger.info(
+      { productId, commits: allCommits.length, mergedPRs: allMergedPRs.length, releases: storedReleases.length, repoCount: repos.length },
+      'Gathered GitHub activity for auto-changelog'
+    );
+
     if (allCommits.length === 0 && allMergedPRs.length === 0 && storedReleases.length === 0) {
-      serverLogger.info({ productId }, 'No new activity since last changelog — skipping auto-generation');
+      serverLogger.info({ productId, sinceDate }, 'No new activity since last changelog — skipping auto-generation');
       return;
     }
 
@@ -294,7 +379,10 @@ export class WebhookController {
         description,
         version: metadata.version,
       });
-      serverLogger.info({ productId, entryId: existingDraft.id }, 'Updated existing automated draft changelog');
+      serverLogger.info(
+        { productId, entryId: existingDraft.id, title: metadata.title, version: metadata.version },
+        'Updated existing automated draft changelog'
+      );
     } else {
       const entry = await this.changelogService.create({
         productId,
@@ -304,7 +392,7 @@ export class WebhookController {
         source: 'automated',
         createdBy: botUser.id,
       });
-      serverLogger.info({ productId, entryId: entry.id }, 'Created new automated draft changelog');
+      serverLogger.info({ productId, entryId: entry.id, title: metadata.title, version: metadata.version }, 'Created new automated draft changelog');
     }
   }
 
