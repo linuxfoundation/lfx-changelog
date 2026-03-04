@@ -208,70 +208,48 @@ export class WebhookController {
   /**
    * Generates or updates an automated draft changelog for a product.
    * Uses a DB-based lock (auto_changelog_locks table) for distributed concurrency
-   * control across multiple replicas. If a lock already exists and is not stale,
-   * marks it as pending_rerun so one additional generation fires after the current
-   * one finishes. Stale locks (> STALE_LOCK_MS) are reclaimed.
+   * control across multiple replicas. Lock acquisition is atomic via raw SQL
+   * INSERT ... ON CONFLICT to avoid TOCTOU races between replicas.
+   * Stale locks (> STALE_LOCK_MS) are reclaimed automatically.
    */
   private async generateAutoChangelog(productId: string): Promise<void> {
     const prisma = getPrismaClient();
     const now = new Date();
+    const staleThreshold = new Date(now.getTime() - STALE_LOCK_MS);
 
-    // 1. Try to acquire the lock
-    const existingLock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
+    // Atomic lock acquisition: insert if absent, or reclaim if stale.
+    // If the lock exists and is not stale, mark it as pending_rerun instead.
+    // Returns the rows affected — 1 means we acquired the lock, 0 means it was held by another replica.
+    const acquired = await prisma.$executeRaw`
+      INSERT INTO "auto_changelog_locks" ("product_id", "status", "locked_at", "updated_at")
+      VALUES (${productId}, 'in_progress', ${now}, ${now})
+      ON CONFLICT ("product_id") DO UPDATE
+        SET "status" = 'in_progress', "locked_at" = ${now}, "updated_at" = ${now}
+        WHERE "auto_changelog_locks"."locked_at" < ${staleThreshold}
+    `;
 
-    if (existingLock) {
-      const lockAge = now.getTime() - existingLock.lockedAt.getTime();
-      if (lockAge < STALE_LOCK_MS) {
-        // Lock is active — mark pending rerun and return
-        await prisma.autoChangelogLock.update({
-          where: { productId },
-          data: { status: 'pending_rerun' },
-        });
-        serverLogger.info(
-          { productId, lockAge, lockedAt: existingLock.lockedAt.toISOString(), currentStatus: existingLock.status },
-          'Auto-changelog generation already in progress — marking pending rerun'
-        );
-        return;
-      }
-      // Lock is stale — reclaim it below
-      serverLogger.warn(
-        { productId, lockAge, lockedAt: existingLock.lockedAt.toISOString(), staleLockMs: STALE_LOCK_MS },
-        'Reclaiming stale auto-changelog lock'
-      );
-    }
-
-    // 2. Upsert lock — handles both fresh acquire and stale reclaim
-    try {
-      await prisma.autoChangelogLock.upsert({
+    if (acquired === 0) {
+      // Lock is held by another replica — mark pending rerun
+      await prisma.autoChangelogLock.update({
         where: { productId },
-        update: { status: 'in_progress', lockedAt: now },
-        create: { productId, status: 'in_progress', lockedAt: now },
+        data: { status: 'pending_rerun' },
       });
-    } catch (upsertErr) {
-      // Race condition: another replica inserted first — mark pending and return
-      serverLogger.warn({ err: upsertErr, productId }, 'Lock upsert failed — another replica likely acquired it');
-      try {
-        await prisma.autoChangelogLock.update({
-          where: { productId },
-          data: { status: 'pending_rerun' },
-        });
-      } catch (updateErr) {
-        serverLogger.warn({ err: updateErr, productId }, 'Failed to mark pending rerun — lock may have been deleted');
-      }
-      serverLogger.info({ productId }, 'Lost lock race — marked pending rerun');
+      serverLogger.info({ productId }, 'Auto-changelog generation already in progress — marking pending rerun');
       return;
     }
 
     serverLogger.info({ productId }, 'Acquired auto-changelog lock — starting generation');
 
-    // 3. Run generation with lock held
+    // Run generation with lock held
     try {
       await this.doGenerateAutoChangelog(productId);
     } finally {
-      // 4. Release lock — check if a rerun was requested
+      // Release lock — check if a rerun was requested
       const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
       if (lock?.status === 'pending_rerun') {
-        // Reset to in_progress and rerun once
+        // Reset to in_progress and rerun once.
+        // NOTE: Webhooks arriving during this rerun are NOT re-queued — they will be
+        // picked up by the next webhook event. This is intentional to prevent infinite loops.
         await prisma.autoChangelogLock.update({
           where: { productId },
           data: { status: 'in_progress', lockedAt: new Date() },

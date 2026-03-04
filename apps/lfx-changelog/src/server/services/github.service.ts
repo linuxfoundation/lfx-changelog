@@ -284,16 +284,27 @@ export class GitHubService {
 
       const prs = (await response.json()) as (GitHubPullRequest & { merged_at?: string | null })[];
 
-      // Stop paginating if we've gone past our date window
+      // Stop paginating based on updated_at (the sort key) — not merged_at,
+      // because updated_at ordering doesn't guarantee merged_at is monotonic.
       let reachedEnd = false;
       for (const pr of prs) {
-        if (!pr.merged_at) continue;
-        const mergedAt = new Date(pr.merged_at);
-        if (mergedAt < sinceDate) {
+        const updatedAt = pr.updated_at ? new Date(pr.updated_at as string) : null;
+        if (updatedAt && updatedAt < sinceDate) {
           reachedEnd = true;
           break;
         }
+
+        if (!pr.merged_at) continue;
+
+        const mergedAt = new Date(pr.merged_at);
+        if (mergedAt < sinceDate) continue;
+
         merged.push({ ...pr, merged_at: pr.merged_at, repoFullName });
+
+        if (merged.length >= maxResults) {
+          reachedEnd = true;
+          break;
+        }
       }
 
       if (reachedEnd || prs.length < 100) break;

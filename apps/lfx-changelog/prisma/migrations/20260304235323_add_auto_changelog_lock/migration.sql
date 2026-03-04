@@ -1,10 +1,13 @@
 -- Copyright The Linux Foundation and each contributor to LFX.
 -- SPDX-License-Identifier: MIT
 
+-- CreateEnum
+CREATE TYPE "AutoChangelogLockStatus" AS ENUM ('in_progress', 'pending_rerun');
+
 -- CreateTable
 CREATE TABLE "auto_changelog_locks" (
     "product_id" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'in_progress',
+    "status" "AutoChangelogLockStatus" NOT NULL DEFAULT 'in_progress',
     "locked_at" TIMESTAMP(3) NOT NULL,
     "updated_at" TIMESTAMP(3) NOT NULL,
 

@@ -29,6 +29,11 @@ enum ChangelogSource {
   automated
 }
 
+enum AutoChangelogLockStatus {
+  in_progress
+  pending_rerun
+}
+
 enum ChatAccessLevel {
   public
   admin
@@ -106,7 +111,7 @@ model ChangelogEntry {
   title       String
   description String
   version     String?
-  source      ChangelogSource   @default(manual)
+  source      ChangelogSource   @default(manual) @map("source")
   status      ChangelogStatus   @default(draft)
   publishedAt DateTime?         @map("published_at")
   createdBy   String            @map("created_by")
@@ -259,10 +264,10 @@ model SlackNotification {
 }
 
 model AutoChangelogLock {
-  productId String   @id @map("product_id")
-  status    String   @default("in_progress")
-  lockedAt  DateTime @map("locked_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  productId String                   @id @map("product_id")
+  status    AutoChangelogLockStatus  @default(in_progress)
+  lockedAt  DateTime                 @map("locked_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
