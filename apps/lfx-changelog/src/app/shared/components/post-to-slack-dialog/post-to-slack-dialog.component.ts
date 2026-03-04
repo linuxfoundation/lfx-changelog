@@ -62,10 +62,13 @@ export class PostToSlackDialogComponent {
     const channelId = this.channelControl.value;
     if (!channelId) return;
 
+    // Resolve channel name from loaded channels or saved default
+    const channelName = this.resolveChannelName(channelId);
+
     this.posting.set(true);
     this.error.set('');
 
-    this.slackService.postToSlack(this.changelogId(), channelId).subscribe({
+    this.slackService.postToSlack(this.changelogId(), channelId, channelName).subscribe({
       next: (res) => {
         this.posting.set(false);
         this.success.set(true);
@@ -76,6 +79,19 @@ export class PostToSlackDialogComponent {
         this.error.set('Failed to post to Slack. Please try again.');
       },
     });
+  }
+
+  private resolveChannelName(channelId: string): string {
+    // Try loaded channels first (from picker)
+    const fromPicker = this.channels().find((ch) => ch.id === channelId);
+    if (fromPicker) return fromPicker.name;
+
+    // Fall back to saved channel name from integration data
+    const integration = this.state().integration;
+    const saved = integration?.channels?.find((ch) => ch.channelId === channelId);
+    if (saved) return saved.channelName;
+
+    return channelId;
   }
 
   private initState() {

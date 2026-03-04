@@ -142,8 +142,16 @@ export class WebhookController {
       await this.slackService.handleOAuthCallback(code, state);
       res.redirect('/admin/settings?slack_connected=true');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      res.redirect(`/admin/settings?slack_error=${encodeURIComponent(message)}`);
+      serverLogger.error({ err }, 'Slack OAuth callback failed');
+      const errorCode = this.classifyOAuthError(err);
+      res.redirect(`/admin/settings?slack_error=${errorCode}`);
     }
+  }
+
+  private classifyOAuthError(err: unknown): string {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('expired')) return 'state_expired';
+    if (msg.includes('Invalid')) return 'invalid_state';
+    return 'oauth_failed';
   }
 }

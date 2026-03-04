@@ -13,6 +13,8 @@ export type { SelectOption };
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: SelectComponent, multi: true }],
   host: {
     '(document:click)': 'onDocumentClick($event)',
+    '(window:scroll)': 'onScrollOrResize()',
+    '(window:resize)': 'onScrollOrResize()',
   },
   templateUrl: './select.component.html',
   styleUrl: './select.component.css',
@@ -131,6 +133,12 @@ export class SelectComponent implements ControlValueAccessor {
         this.isOpen.set(false);
         this.onTouched();
       }
+    }
+  }
+
+  protected onScrollOrResize(): void {
+    if (this.isOpen()) {
+      this.isOpen.set(false);
     }
   }
 

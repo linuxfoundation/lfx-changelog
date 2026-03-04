@@ -99,7 +99,7 @@ export class ChangelogController {
   public async shareToSlack(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const entry = await this.changelogService.findByIdForSlack(req.params['id'] as string);
-      const { channelId } = req.body as { channelId: string };
+      const { channelId, channelName } = req.body as { channelId: string; channelName: string };
 
       const mapped: PostChangelogEntry = {
         id: entry.id,
@@ -111,7 +111,7 @@ export class ChangelogController {
         author: entry.author,
       };
 
-      const result = await this.slackService.postChangelog(req.dbUser!.id, channelId, mapped);
+      const result = await this.slackService.postChangelog(req.dbUser!.id, channelId, channelName, mapped);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

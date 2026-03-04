@@ -44,6 +44,7 @@ export type SlackChannelOption = z.infer<typeof SlackChannelOptionSchema>;
 export const PostToSlackRequestSchema = z
   .object({
     channelId: z.string().min(1),
+    channelName: z.string().min(1),
   })
   .openapi('PostToSlackRequest');
 

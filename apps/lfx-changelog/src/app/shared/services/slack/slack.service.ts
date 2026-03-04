@@ -31,8 +31,8 @@ export class SlackService {
     return this.http.delete<void>(`/api/slack/integrations/${integrationId}`).pipe(take(1));
   }
 
-  public postToSlack(changelogId: string, channelId: string): Observable<PostToSlackResponse> {
-    return this.http.post<ApiResponse<PostToSlackResponse>>(`/api/changelogs/${changelogId}/share/slack`, { channelId }).pipe(
+  public postToSlack(changelogId: string, channelId: string, channelName: string): Observable<PostToSlackResponse> {
+    return this.http.post<ApiResponse<PostToSlackResponse>>(`/api/changelogs/${changelogId}/share/slack`, { channelId, channelName }).pipe(
       map((res) => res.data),
       take(1)
     );

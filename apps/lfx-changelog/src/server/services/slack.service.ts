@@ -41,6 +41,9 @@ export class SlackService {
    * Generate the Slack OAuth URL for the user to authorize.
    */
   public getOAuthUrl(userId: string): string {
+    if (!this.slackClientId || !this.slackClientSecret) {
+      throw new Error('Slack OAuth is not configured — SLACK_CLIENT_ID and SLACK_CLIENT_SECRET must be set');
+    }
     const state = this.signState({ userId, ts: Date.now() });
     const redirectUri = `${this.baseUrl}/webhooks/slack-callback`;
     const params = new URLSearchParams({
@@ -214,7 +217,7 @@ export class SlackService {
   /**
    * Post a changelog entry to Slack as the user.
    */
-  public async postChangelog(userId: string, channelId: string, changelogEntry: PostChangelogEntry): Promise<PostToSlackResponse> {
+  public async postChangelog(userId: string, channelId: string, channelName: string, changelogEntry: PostChangelogEntry): Promise<PostToSlackResponse> {
     const prisma = getPrismaClient();
 
     // Find the user's active integration directly (no saved SlackChannel row required)
@@ -228,8 +231,8 @@ export class SlackService {
     // Upsert a SlackChannel row so we can track notifications
     const slackChannel = await prisma.slackChannel.upsert({
       where: { slackIntegrationId_channelId: { slackIntegrationId: integration.id, channelId } },
-      create: { slackIntegrationId: integration.id, channelId, channelName: channelId, isDefault: false },
-      update: {},
+      create: { slackIntegrationId: integration.id, channelId, channelName, isDefault: false },
+      update: { channelName },
     });
 
     const token = await this.getFreshToken(integration.id);
