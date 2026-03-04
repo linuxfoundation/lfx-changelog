@@ -23,7 +23,7 @@ export class ChangelogController {
 
   public async getPublishedById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const entry = await this.changelogService.findPublishedById(req.params['id'] as string);
+      const entry = await this.changelogService.findPublishedByIdentifier(req.params['id'] as string);
       res.json({ success: true, data: entry });
     } catch (error) {
       next(error);

@@ -43,6 +43,7 @@ export type SearchHighlights = z.infer<typeof SearchHighlightsSchema>;
 export const ChangelogDocumentSchema = z
   .object({
     id: z.string().openapi({ description: 'Changelog entry ID' }),
+    slug: z.string().nullable().openapi({ description: 'Changelog entry slug for pretty URLs' }),
     title: z.string().openapi({ description: 'Changelog title' }),
     description: z.string().openapi({ description: 'Changelog description (markdown)' }),
     version: z.string().nullable().openapi({ description: 'Version string' }),

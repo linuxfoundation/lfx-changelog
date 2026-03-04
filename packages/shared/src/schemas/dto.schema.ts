@@ -9,6 +9,10 @@ import { UserRole } from '../enums/user-role.enum.js';
 export const CreateChangelogEntryRequestSchema = z
   .object({
     productId: z.string(),
+    slug: z
+      .string()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens (e.g. "my-changelog-entry")')
+      .optional(),
     title: z.string(),
     description: z.string(),
     version: z.string(),
@@ -20,6 +24,10 @@ export type CreateChangelogEntryRequest = z.infer<typeof CreateChangelogEntryReq
 
 export const UpdateChangelogEntryRequestSchema = z
   .object({
+    slug: z
+      .string()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens (e.g. "my-changelog-entry")')
+      .optional(),
     title: z.string().optional(),
     description: z.string().optional(),
     version: z.string().optional(),

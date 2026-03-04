@@ -27,7 +27,7 @@ export class ChangelogFeedPage {
   }
 
   public async goto() {
-    await this.page.goto('/');
+    await this.page.goto('/', { waitUntil: 'networkidle' });
   }
 
   public getFilterChip(productId: string): Locator {

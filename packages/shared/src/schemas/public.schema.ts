@@ -30,6 +30,7 @@ export type PublicAuthor = z.infer<typeof PublicAuthorSchema>;
 export const PublicChangelogEntrySchema = z
   .object({
     id: z.string(),
+    slug: z.string().nullable(),
     title: z.string(),
     description: z.string(),
     version: z.string().nullable(),
