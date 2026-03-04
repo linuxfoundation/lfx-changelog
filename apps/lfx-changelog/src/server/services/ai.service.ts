@@ -103,6 +103,36 @@ export class AiService {
     }
   }
 
+  /**
+   * Non-streaming version of description generation — collects the full response in one call.
+   * Used for background auto-changelog generation where SSE is not needed.
+   */
+  public async generateChangelogDescription(releaseContext: string): Promise<string> {
+    if (!this.apiKey) {
+      throw new AiServiceError('LITELLM_API_KEY is not configured', { operation: 'generateChangelogDescription' });
+    }
+
+    const messages: OpenAIChatMessage[] = [
+      { role: 'system', content: AI_CHANGELOG_DESCRIPTION_SYSTEM_PROMPT },
+      { role: 'user', content: releaseContext },
+    ];
+
+    const request: OpenAIChatRequest = {
+      model: AI_MODEL,
+      messages,
+      max_tokens: AI_CHANGELOG_CONFIG.DESCRIPTION_MAX_TOKENS,
+      temperature: AI_CHANGELOG_CONFIG.TEMPERATURE,
+    };
+
+    const response = await this.makeAiRequest(request);
+    const content = response.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new AiServiceError('LiteLLM returned an empty description response', { operation: 'generateChangelogDescription' });
+    }
+
+    return content;
+  }
+
   public async *streamChangelogDescription(releaseContext: string, additionalContext?: string, abortSignal?: AbortSignal): AsyncGenerator<string> {
     if (!this.apiKey) {
       throw new AiServiceError('LITELLM_API_KEY is not configured', { operation: 'streamChangelogDescription' });

@@ -24,6 +24,16 @@ enum ApiKeyScope {
   products_write
 }
 
+enum ChangelogSource {
+  manual
+  automated
+}
+
+enum AutoChangelogLockStatus {
+  in_progress
+  pending_rerun
+}
+
 enum ChatAccessLevel {
   public
   admin
@@ -44,6 +54,7 @@ model Product {
   changelogEntries    ChangelogEntry[]
   userRoleAssignments UserRoleAssignment[]
   repositories        ProductRepository[]
+  autoChangelogLock   AutoChangelogLock?
 
   @@map("products")
 }
@@ -100,6 +111,7 @@ model ChangelogEntry {
   title       String
   description String
   version     String?
+  source      ChangelogSource   @default(manual) @map("source")
   status      ChangelogStatus   @default(draft)
   publishedAt DateTime?         @map("published_at")
   createdBy   String            @map("created_by")
@@ -249,4 +261,15 @@ model SlackNotification {
 
   @@unique([slackChannelId, changelogEntryId])
   @@map("slack_notifications")
+}
+
+model AutoChangelogLock {
+  productId String                   @id @map("product_id")
+  status    AutoChangelogLockStatus  @default(in_progress)
+  lockedAt  DateTime                 @map("locked_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("auto_changelog_locks")
 }

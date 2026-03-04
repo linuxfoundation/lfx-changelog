@@ -3,6 +3,7 @@
 
 import { z } from 'zod';
 
+import { ChangelogSource } from '../enums/changelog-source.enum.js';
 import { ChangelogStatus } from '../enums/changelog-status.enum.js';
 import { ProductSchema } from './product.schema.js';
 import { UserSchema } from './user.schema.js';
@@ -15,6 +16,7 @@ export const ChangelogEntrySchema = z
     title: z.string(),
     description: z.string(),
     version: z.string().nullable(),
+    source: z.nativeEnum(ChangelogSource).optional(),
     status: z.nativeEnum(ChangelogStatus),
     publishedAt: z.string().nullable(),
     createdBy: z.string(),

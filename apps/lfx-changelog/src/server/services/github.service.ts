@@ -205,6 +205,115 @@ export class GitHubService {
     return releases.map((release) => ({ ...release, repoFullName }));
   }
 
+  /**
+   * Fetches commits on the default branch since a given ISO date string, paginated up to maxResults.
+   */
+  public async getCommitsSince(
+    installationId: number,
+    owner: string,
+    repo: string,
+    since: string,
+    repoFullName: string,
+    maxResults = 500
+  ): Promise<GitHubCommit[]> {
+    this.validateInstallationId(installationId);
+    const token = await this.getInstallationToken(installationId);
+    const commits: GitHubCommit[] = [];
+    let page = 1;
+
+    while (commits.length < maxResults) {
+      const perPage = Math.min(100, maxResults - commits.length);
+      const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits?since=${encodeURIComponent(since)}&per_page=${perPage}&page=${page}`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        serverLogger.error({ status: response.status, body }, 'Failed to get commits since date');
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const data = (await response.json()) as GitHubCommit[];
+      commits.push(...data.map((c) => ({ ...c, repoFullName })));
+
+      if (data.length < perPage) break;
+      page++;
+    }
+
+    return commits;
+  }
+
+  /**
+   * Fetches merged pull requests since a given ISO date string, paginated up to maxResults.
+   * Uses the "closed" state filter then client-side filters by merged_at >= since.
+   */
+  public async getMergedPullRequestsSince(
+    installationId: number,
+    owner: string,
+    repo: string,
+    since: string,
+    repoFullName: string,
+    maxResults = 500
+  ): Promise<GitHubPullRequest[]> {
+    this.validateInstallationId(installationId);
+    const token = await this.getInstallationToken(installationId);
+    const sinceDate = new Date(since);
+    const merged: GitHubPullRequest[] = [];
+    let page = 1;
+
+    while (merged.length < maxResults) {
+      const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=${page}`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        serverLogger.error({ status: response.status, body }, 'Failed to get merged pull requests since date');
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const prs = (await response.json()) as (GitHubPullRequest & { merged_at?: string | null })[];
+
+      // Stop paginating based on updated_at (the sort key) — not merged_at,
+      // because updated_at ordering doesn't guarantee merged_at is monotonic.
+      let reachedEnd = false;
+      for (const pr of prs) {
+        const updatedAt = pr.updated_at ? new Date(pr.updated_at as string) : null;
+        if (updatedAt && updatedAt < sinceDate) {
+          reachedEnd = true;
+          break;
+        }
+
+        if (!pr.merged_at) continue;
+
+        const mergedAt = new Date(pr.merged_at);
+        if (mergedAt < sinceDate) continue;
+
+        merged.push({ ...pr, merged_at: pr.merged_at, repoFullName });
+
+        if (merged.length >= maxResults) {
+          reachedEnd = true;
+          break;
+        }
+      }
+
+      if (reachedEnd || prs.length < 100) break;
+      page++;
+    }
+
+    return merged.slice(0, maxResults);
+  }
+
   private validateInstallationId(installationId: number): void {
     if (!Number.isInteger(installationId) || installationId <= 0) {
       throw new Error('Invalid installation ID');
