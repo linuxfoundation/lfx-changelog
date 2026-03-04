@@ -5,8 +5,8 @@ apiVersion: v2
 name: lfx-changelog
 description: A Helm chart for LFX Changelog - Angular SSR application with Express backend
 type: application
-version: 0.1.1
-appVersion: "latest"
+version: 0.1.2
+appVersion: 'latest'
 keywords:
   - lfx
   - changelog
