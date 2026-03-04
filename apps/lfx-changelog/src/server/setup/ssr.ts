@@ -6,7 +6,7 @@ import { AngularNodeAppEngine, writeResponseToNodeResponse } from '@angular/ssr/
 import { serverLogger } from '../server-logger';
 import { UserService } from '../services/user.service';
 
-import type { AuthContext } from '@lfx-changelog/shared';
+import type { AuthContext, RuntimeConfig } from '@lfx-changelog/shared';
 import type { Express, NextFunction, Request, Response } from 'express';
 
 const angularApp = new AngularNodeAppEngine();
@@ -60,8 +60,13 @@ export function setupSsr(app: Express): void {
       }
     }
 
+    const runtimeConfig: RuntimeConfig = {
+      dataDogRumClientId: process.env['DD_RUM_CLIENT_ID'] || '',
+      dataDogRumApplicationId: process.env['DD_RUM_APPLICATION_ID'] || '',
+    };
+
     angularApp
-      .handle(req, { auth: authContext })
+      .handle(req, { auth: authContext, runtimeConfig })
       .then((response) => {
         if (response) {
           return writeResponseToNodeResponse(response, res);

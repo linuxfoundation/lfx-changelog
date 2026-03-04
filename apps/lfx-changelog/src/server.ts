@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import './server/setup/tracer';
+
 import { createNodeRequestHandler, isMainModule } from '@angular/ssr/node';
 import dotenv from 'dotenv';
 import express from 'express';

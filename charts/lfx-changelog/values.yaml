@@ -181,6 +181,13 @@ environment:
   GITHUB_PRIVATE_KEY:
     value:
 
+  # Datadog RUM configuration
+  DD_RUM_CLIENT_ID:
+    value:
+
+  DD_RUM_APPLICATION_ID:
+    value:
+
   # OpenSearch configuration
   OPENSEARCH_URL:
     value:

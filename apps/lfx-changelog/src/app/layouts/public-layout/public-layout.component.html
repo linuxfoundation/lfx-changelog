@@ -68,16 +68,12 @@
   </header>
 
   <!-- Main content: chat route gets full-bleed flex, other routes get constrained content -->
-  @if (isChatRoute()) {
-    <main class="flex min-h-0 flex-1 flex-col">
-      <router-outlet />
-    </main>
-  } @else {
-    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-      <router-outlet />
-    </main>
+  <main [class]="isChatRoute() ? 'flex min-h-0 flex-1 flex-col' : 'mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8'">
+    <router-outlet />
+  </main>
 
-    <!-- Footer (hidden on chat route) -->
+  <!-- Footer (hidden on chat route) -->
+  @if (!isChatRoute()) {
     <footer class="border-border bg-surface border-t py-8">
       <div class="text-text-muted mx-auto max-w-7xl px-4 text-center text-sm sm:px-6 lg:px-8">
         &copy; {{ currentYear }} The Linux Foundation. All rights reserved.
