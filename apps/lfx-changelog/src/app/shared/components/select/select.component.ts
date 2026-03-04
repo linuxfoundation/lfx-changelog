@@ -23,15 +23,23 @@ export class SelectComponent implements ControlValueAccessor {
   public readonly options = input<SelectOption[]>([]);
   public readonly error = input<string>('');
   public readonly placeholder = input<string>('Select...');
+  public readonly searchable = input(false);
 
   protected readonly value = signal('');
   protected readonly disabled = signal(false);
   protected readonly isOpen = signal(false);
   protected readonly focusedIndex = signal(-1);
+  protected readonly searchQuery = signal('');
 
   protected readonly selectedLabel = computed(() => {
     const selected = this.options().find((o) => o.value === this.value());
     return selected?.label ?? '';
+  });
+
+  protected readonly filteredOptions = computed(() => {
+    const query = this.searchQuery().toLowerCase();
+    if (!query) return this.options();
+    return this.options().filter((o) => o.label.toLowerCase().includes(query));
   });
 
   public writeValue(value: string): void {
@@ -54,7 +62,8 @@ export class SelectComponent implements ControlValueAccessor {
     if (this.disabled()) return;
     this.isOpen.update((v) => !v);
     if (this.isOpen()) {
-      const currentIndex = this.options().findIndex((o) => o.value === this.value());
+      this.searchQuery.set('');
+      const currentIndex = this.filteredOptions().findIndex((o) => o.value === this.value());
       this.focusedIndex.set(currentIndex);
     }
   }
@@ -74,7 +83,7 @@ export class SelectComponent implements ControlValueAccessor {
         event.preventDefault();
         if (this.isOpen()) {
           const idx = this.focusedIndex();
-          const opts = this.options();
+          const opts = this.filteredOptions();
           if (idx >= 0 && idx < opts.length) {
             this.selectOption(opts[idx]!);
           }
@@ -87,7 +96,7 @@ export class SelectComponent implements ControlValueAccessor {
         if (!this.isOpen()) {
           this.toggle();
         } else {
-          this.focusedIndex.update((i) => Math.min(i + 1, this.options().length - 1));
+          this.focusedIndex.update((i) => Math.min(i + 1, this.filteredOptions().length - 1));
         }
         break;
       case 'ArrowUp':
@@ -101,6 +110,12 @@ export class SelectComponent implements ControlValueAccessor {
         this.isOpen.set(false);
         break;
     }
+  }
+
+  protected onSearchInput(event: Event): void {
+    const val = (event.target as HTMLInputElement).value;
+    this.searchQuery.set(val);
+    this.focusedIndex.set(0);
   }
 
   protected onDocumentClick(event: MouseEvent): void {

@@ -3,15 +3,20 @@
 
 import { Router } from 'express';
 
+import { SlackController } from '../controllers/slack.controller';
 import { WebhookController } from '../controllers/webhook.controller';
 import { verifyGitHubWebhook } from '../middleware/github-webhook.middleware';
 
 const router = Router();
 const webhookController = new WebhookController();
+const slackController = new SlackController();
 
 router.get('/github-app-callback', (req, res) => webhookController.githubAppCallback(req, res));
 
 // GitHub webhook — signature verified by middleware
 router.post('/github', ...verifyGitHubWebhook, (req, res) => webhookController.githubWebhook(req, res));
+
+// Slack OAuth callback (unauthenticated — validates signed state)
+router.get('/slack-callback', (req, res) => slackController.oauthCallback(req, res));
 
 export default router;

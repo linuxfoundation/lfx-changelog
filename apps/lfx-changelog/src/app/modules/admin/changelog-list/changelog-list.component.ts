@@ -6,6 +6,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
+import { PostToSlackDialogComponent } from '@components/post-to-slack-dialog/post-to-slack-dialog.component';
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
@@ -33,6 +34,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
     TableColumnDirective,
     DateFormatPipe,
     ProductNamePipe,
+    PostToSlackDialogComponent,
   ],
   templateUrl: './changelog-list.component.html',
   styleUrl: './changelog-list.component.css',
@@ -54,6 +56,12 @@ export class ChangelogListComponent {
   protected readonly reindexing = signal(false);
   protected readonly reindexResult = signal<{ indexed: number; errors: number } | null>(null);
   protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
+
+  // Slack dialog state
+  protected readonly slackDialogVisible = signal(false);
+  protected readonly slackChangelogId = signal('');
+  protected readonly slackChangelogTitle = signal('');
+  protected readonly slackPostSuccess = signal('');
 
   protected readonly productOptions: Signal<SelectOption[]> = this.initProductOptions();
   protected readonly statusOptions: SelectOption[] = [
@@ -78,6 +86,17 @@ export class ChangelogListComponent {
 
   protected onPageChange(page: number): void {
     this.page$.next(page);
+  }
+
+  protected openSlackDialog(entry: ChangelogEntryWithRelations): void {
+    this.slackChangelogId.set(entry.id);
+    this.slackChangelogTitle.set(entry.title);
+    this.slackPostSuccess.set('');
+    this.slackDialogVisible.set(true);
+  }
+
+  protected onSlackPosted(channelName: string): void {
+    this.slackPostSuccess.set(channelName);
   }
 
   protected reindex(): void {

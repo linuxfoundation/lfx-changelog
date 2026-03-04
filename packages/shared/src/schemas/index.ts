@@ -85,6 +85,17 @@ export {
   SearchQueryParamsSchema,
   SearchResponseSchema,
 } from './search.schema.js';
+export {
+  PostChangelogEntrySchema,
+  PostToSlackRequestSchema,
+  PostToSlackResponseSchema,
+  SaveSlackChannelRequestSchema,
+  SlackApiResponseSchema,
+  SlackBlockSchema,
+  SlackChannelOptionSchema,
+  SlackChannelSchema,
+  SlackIntegrationSchema,
+} from './slack.schema.js';
 export { UserRoleAssignmentSchema, UserSchema } from './user.schema.js';
 
 export type {
@@ -174,4 +185,15 @@ export type {
   SearchQueryParamsInput,
   SearchResponse,
 } from './search.schema.js';
+export type {
+  PostChangelogEntry,
+  PostToSlackRequest,
+  PostToSlackResponse,
+  SaveSlackChannelRequest,
+  SlackApiResponse,
+  SlackBlock,
+  SlackChannel,
+  SlackChannelOption,
+  SlackIntegration,
+} from './slack.schema.js';
 export type { User, UserRoleAssignment } from './user.schema.js';

@@ -73,6 +73,10 @@ export const routes: Routes = [
         loadComponent: () => import('@modules/admin/api-keys/api-keys.component').then((m) => m.ApiKeysComponent),
       },
       {
+        path: 'settings',
+        loadComponent: () => import('@modules/admin/user-settings/user-settings.component').then((m) => m.UserSettingsComponent),
+      },
+      {
         path: 'chat',
         loadComponent: () => import('@modules/admin/admin-chat/admin-chat.component').then((m) => m.AdminChatComponent),
       },

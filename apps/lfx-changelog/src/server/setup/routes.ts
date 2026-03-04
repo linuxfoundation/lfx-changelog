@@ -18,6 +18,7 @@ import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
 import publicSearchRouter from '../routes/public-search.route';
 import releaseRouter from '../routes/release.route';
+import slackRouter from '../routes/slack.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
 import { getOpenSearchService } from '../services/opensearch.service';
@@ -96,6 +97,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/github', githubRouter);
   app.use('/api/opensearch', opensearchRouter);
   app.use('/api/releases', releaseRouter);
+  app.use('/api/slack', slackRouter);
 
   // ── API error handlers ────────────────────────────────────────────────
   app.use('/api', apiErrorHandler);

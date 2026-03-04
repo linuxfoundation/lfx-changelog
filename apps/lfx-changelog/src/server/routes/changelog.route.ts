@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ApiKeyScope, CreateChangelogEntryRequestSchema, UpdateChangelogEntryRequestSchema, UserRole } from '@lfx-changelog/shared';
+import { ApiKeyScope, CreateChangelogEntryRequestSchema, PostToSlackRequestSchema, UpdateChangelogEntryRequestSchema, UserRole } from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { ChangelogController } from '../controllers/changelog.controller';
@@ -34,6 +34,11 @@ router.patch('/:id/publish', authorize({ scope: ApiKeyScope.CHANGELOGS_WRITE, pr
 );
 router.delete('/:id', authorize({ scope: ApiKeyScope.CHANGELOGS_WRITE, productRole: UserRole.PRODUCT_ADMIN, resolveProductId: true }), (req, res, next) =>
   changelogController.delete(req, res, next)
+);
+
+// Share to Slack — OAuth only (no API key), EDITOR role with resolved product
+router.post('/:id/share/slack', authorize({ oauthOnly: true }), validate({ body: PostToSlackRequestSchema }), (req, res, next) =>
+  changelogController.shareToSlack(req, res, next)
 );
 
 export default router;

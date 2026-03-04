@@ -13,6 +13,7 @@ export class ChangelogDetailPage {
   public readonly author: Locator;
   public readonly loading: Locator;
   public readonly notFound: Locator;
+  public readonly slackBtn: Locator;
 
   public constructor(public readonly page: Page) {
     this.backLink = page.locator('[data-testid="changelog-detail-back-link"]');
@@ -24,6 +25,7 @@ export class ChangelogDetailPage {
     this.author = page.locator('[data-testid="changelog-detail-author"]');
     this.loading = page.locator('[data-testid="changelog-detail-loading"]');
     this.notFound = page.locator('[data-testid="changelog-detail-not-found"]');
+    this.slackBtn = page.locator('[data-testid="changelog-detail-slack-btn"]');
   }
 
   public async goto(id: string) {

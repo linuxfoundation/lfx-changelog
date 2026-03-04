@@ -106,8 +106,9 @@ model ChangelogEntry {
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
 
-  product Product @relation(fields: [productId], references: [id])
-  author  User    @relation(fields: [createdBy], references: [id])
+  product            Product              @relation(fields: [productId], references: [id])
+  author             User                 @relation(fields: [createdBy], references: [id])
+  slackNotifications SlackNotification[]
 
   @@index([productId, status, publishedAt])
   @@map("changelog_entries")
@@ -126,6 +127,7 @@ model User {
   userRoleAssignments UserRoleAssignment[]
   apiKeys             ApiKey[]
   chatConversations   ChatConversation[]
+  slackIntegrations   SlackIntegration[]
 
   @@map("users")
 }
@@ -193,4 +195,58 @@ model ChatMessage {
 
   @@index([conversationId, createdAt])
   @@map("chat_messages")
+}
+
+model SlackIntegration {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  teamId         String   @map("team_id")
+  teamName       String   @map("team_name")
+  slackUserId    String   @map("slack_user_id")
+  accessToken    String   @map("access_token")
+  refreshToken   String   @map("refresh_token")
+  tokenExpiresAt DateTime @map("token_expires_at")
+  scope          String
+  status         String   @default("active")
+  connectedAt    DateTime @default(now()) @map("connected_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channels SlackChannel[]
+
+  @@unique([userId, teamId])
+  @@map("slack_integrations")
+}
+
+model SlackChannel {
+  id                 String   @id @default(uuid())
+  slackIntegrationId String   @map("slack_integration_id")
+  channelId          String   @map("channel_id")
+  channelName        String   @map("channel_name")
+  isDefault          Boolean  @default(false) @map("is_default")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  slackIntegration SlackIntegration  @relation(fields: [slackIntegrationId], references: [id], onDelete: Cascade)
+  notifications    SlackNotification[]
+
+  @@unique([slackIntegrationId, channelId])
+  @@map("slack_channels")
+}
+
+model SlackNotification {
+  id               String    @id @default(uuid())
+  slackChannelId   String    @map("slack_channel_id")
+  changelogEntryId String    @map("changelog_entry_id")
+  messageTs        String?   @map("message_ts")
+  status           String    @default("sent")
+  errorMessage     String?   @map("error_message")
+  sentAt           DateTime? @map("sent_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  slackChannel   SlackChannel   @relation(fields: [slackChannelId], references: [id], onDelete: Cascade)
+  changelogEntry ChangelogEntry @relation(fields: [changelogEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([slackChannelId, changelogEntryId])
+  @@map("slack_notifications")
 }

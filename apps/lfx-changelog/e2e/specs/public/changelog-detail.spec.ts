@@ -90,6 +90,18 @@ test.describe('Changelog Detail', () => {
     await expect(detailPage.notFound).toBeVisible();
   });
 
+  test('should NOT show Post to Slack button for unauthenticated users', async ({ page }) => {
+    const feedPage = new ChangelogFeedPage(page);
+    await feedPage.goto();
+
+    const firstCard = feedPage.getEntryCards().first();
+    await firstCard.locator('a').click();
+    await page.waitForURL(/\/entry\//);
+
+    await expect(detailPage.title).toBeVisible();
+    await expect(detailPage.slackBtn).not.toBeVisible();
+  });
+
   test('should display published date in sidebar', async ({ page }) => {
     const feedPage = new ChangelogFeedPage(page);
     await feedPage.goto();

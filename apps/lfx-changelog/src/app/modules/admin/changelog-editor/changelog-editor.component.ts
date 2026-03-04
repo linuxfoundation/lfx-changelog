@@ -11,6 +11,7 @@ import { ChangelogCardComponent } from '@components/changelog-card/changelog-car
 import { InputComponent } from '@components/input/input.component';
 import { MarkdownEditorComponent } from '@components/markdown-editor/markdown-editor.component';
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
+import { PostToSlackDialogComponent } from '@components/post-to-slack-dialog/post-to-slack-dialog.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
@@ -42,6 +43,7 @@ import type { Observable } from 'rxjs';
     StatusBadgeComponent,
     TextareaComponent,
     RouterLink,
+    PostToSlackDialogComponent,
   ],
   templateUrl: './changelog-editor.component.html',
   styleUrl: './changelog-editor.component.css',
@@ -71,6 +73,8 @@ export class ChangelogEditorComponent {
   protected readonly publishing = signal(false);
   protected readonly loading = signal(false);
   protected readonly showAiPanel = signal(false);
+  protected readonly justPublished = signal(false);
+  protected readonly slackDialogVisible = signal(false);
 
   protected readonly existingEntry: Signal<ChangelogEntryWithRelations | undefined> = this.initExistingEntry();
   protected readonly isEditing = computed(() => !!this.existingEntry());
@@ -151,16 +155,29 @@ export class ChangelogEditorComponent {
   protected publish(): void {
     this.publishing.set(true);
     this.buildSaveRequest$()
-      .pipe(switchMap((entry) => this.changelogService.publish(entry.id)))
+      .pipe(switchMap((entry) => this.changelogService.publish(entry.id).pipe(map(() => entry))))
       .subscribe({
-        next: () => {
+        next: (entry) => {
           this.publishing.set(false);
-          this.router.navigate(['/admin/changelogs']);
+          this.justPublished.set(true);
+          // Update the existing entry signal to reflect the published state
+          if (!this.route.snapshot.paramMap.get('id')) {
+            // New entry — navigate to edit URL so the dialog has the entry ID
+            this.router.navigate(['/admin/changelogs', entry.id, 'edit'], { replaceUrl: true });
+          }
         },
         error: () => {
           this.publishing.set(false);
         },
       });
+  }
+
+  protected openSlackDialog(): void {
+    this.slackDialogVisible.set(true);
+  }
+
+  protected goToList(): void {
+    this.router.navigate(['/admin/changelogs']);
   }
 
   private buildSaveRequest$(): Observable<ChangelogEntryWithRelations> {
