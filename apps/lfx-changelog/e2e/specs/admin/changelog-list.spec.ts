@@ -88,4 +88,11 @@ test.describe('Changelog List', () => {
     await expect(listPage.resyncResult).toBeVisible({ timeout: 30_000 });
     await expect(listPage.resyncResult).toContainText('indexed');
   });
+
+  test('should show Slack button on published entries', async () => {
+    const rows = listPage.getRows();
+    await expect(rows.first()).toBeVisible();
+    // At least one published entry should have a Slack button
+    await expect(listPage.slackBtn.first()).toBeVisible();
+  });
 });

@@ -1,0 +1,159 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left">
+    <h1 data-testid="user-settings-heading" class="font-display text-text-primary text-2xl font-bold">Settings</h1>
+    <p class="text-text-secondary mt-1">Manage your account and integrations.</p>
+  </div>
+
+  <!-- OAuth callback messages -->
+  @if (slackConnected()) {
+    <div
+      class="animate-fade-in flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
+      <i class="fa-solid fa-circle-check"></i>
+      Slack connected successfully! Select a default channel below.
+    </div>
+  }
+  @if (slackError(); as error) {
+    <div
+      class="animate-fade-in flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      Failed to connect Slack: {{ error }}
+    </div>
+  }
+
+  <!-- Integrations section -->
+  <div class="animate-fade-in-up [animation-delay:100ms]">
+    <h2 data-testid="user-settings-integrations-heading" class="text-text-primary mb-4 text-lg font-semibold">Integrations</h2>
+
+    <lfx-card>
+      <div class="flex items-start gap-4">
+        <!-- Slack icon -->
+        <div class="bg-surface-alt flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+          <img src="/slack.svg" alt="Slack" width="28" height="28" />
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-text-primary text-base font-semibold">Slack</h3>
+              <p class="text-text-secondary mt-0.5 text-sm">Post changelog updates to your Slack workspace.</p>
+            </div>
+
+            @if (!activeIntegration()) {
+              <lfx-button data-testid="user-settings-connect-slack-btn" variant="primary" [loading]="loading()" (clicked)="connectSlack()">
+                <img src="/slack.svg" alt="Slack" width="14" height="14" class="inline-block" />
+                Connect to Slack
+              </lfx-button>
+            }
+          </div>
+
+          @if (loading()) {
+            <div class="text-text-muted mt-4 flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+              Loading integrations...
+            </div>
+          }
+
+          @if (activeIntegration(); as integration) {
+            <div class="border-border mt-4 space-y-4 border-t pt-4">
+              <!-- Connected workspace info -->
+              <div class="flex flex-wrap items-center gap-4 text-sm">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-text-muted">Workspace:</span>
+                  <span class="text-text-primary font-medium">{{ integration.teamName }}</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-text-muted">Connected:</span>
+                  <span class="text-text-primary">{{ integration.connectedAt | date: 'MMM d, yyyy' }}</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <i class="fa-solid fa-circle text-[6px]"></i>
+                    Active
+                  </span>
+                </div>
+              </div>
+
+              <!-- Default channel + change button -->
+              <div class="flex items-center gap-3 text-sm">
+                @if (defaultChannelName(); as channelName) {
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-text-muted">Default channel:</span>
+                    <span class="text-text-primary font-medium">#{{ channelName }}</span>
+                  </div>
+                }
+                @if (!showChannelPicker()) {
+                  <lfx-button variant="secondary" size="sm" (clicked)="openChannelPicker()">
+                    <i class="fa-solid fa-pen text-xs"></i>
+                    {{ defaultChannelName() ? 'Change Channel' : 'Set Channel' }}
+                  </lfx-button>
+                }
+              </div>
+
+              <!-- Channel picker — deferred until user clicks "Change Channel" -->
+              @defer (when showChannelPicker()) {
+                @if (channelsLoading()) {
+                  <div class="text-text-muted flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+                    Loading channels...
+                  </div>
+                } @else {
+                  <div class="flex items-end gap-3">
+                    <div class="w-64">
+                      <lfx-select
+                        label="Select channel"
+                        [options]="channelOptions()"
+                        [formControl]="channelControl"
+                        [searchable]="true"
+                        placeholder="Choose a channel..." />
+                    </div>
+                    @if (channelControl.value) {
+                      <lfx-button variant="primary" size="sm" [loading]="savingChannel()" (clicked)="saveChannel()"> Save Channel </lfx-button>
+                    }
+                  </div>
+                }
+              }
+
+              <!-- Disconnect button -->
+              <div class="border-border border-t pt-4">
+                <button
+                  (click)="openDisconnectDialog()"
+                  class="text-sm text-red-600 transition-colors hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                  <i class="fa-solid fa-link-slash mr-1 text-xs"></i>
+                  Disconnect Slack
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- Revoked state -->
+          @for (integration of integrations(); track integration.id) {
+            @if (integration.status === 'revoked') {
+              <div class="border-border mt-4 border-t pt-4">
+                <div
+                  class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                  Your Slack connection to <strong>{{ integration.teamName }}</strong> was revoked. Please reconnect.
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </lfx-card>
+  </div>
+</div>
+
+<!-- Disconnect confirmation dialog -->
+<lfx-dialog [(visible)]="disconnectDialogVisible" title="Disconnect Slack" size="sm">
+  <p class="text-text-secondary text-sm">
+    Are you sure you want to disconnect your Slack integration? You will no longer be able to post changelogs to Slack until you reconnect.
+  </p>
+  <div class="mt-4 flex justify-end gap-3">
+    <lfx-button variant="secondary" (clicked)="disconnectDialogVisible.set(false)">Cancel</lfx-button>
+    <lfx-button variant="primary" [loading]="disconnecting()" (clicked)="confirmDisconnect()"> Disconnect </lfx-button>
+  </div>
+</lfx-dialog>

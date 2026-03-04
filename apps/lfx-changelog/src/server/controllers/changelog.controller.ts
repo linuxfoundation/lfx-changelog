@@ -4,9 +4,13 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { ChangelogService } from '../services/changelog.service';
+import { SlackService } from '../services/slack.service';
+
+import type { PostChangelogEntry } from '@lfx-changelog/shared';
 
 export class ChangelogController {
   private readonly changelogService = new ChangelogService();
+  private readonly slackService = new SlackService();
 
   public async listPublished(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -87,6 +91,28 @@ export class ChangelogController {
     try {
       await this.changelogService.delete(req.params['id'] as string);
       res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async shareToSlack(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const entry = await this.changelogService.findByIdForSlack(req.params['id'] as string);
+      const { channelId, channelName } = req.body as { channelId: string; channelName: string };
+
+      const mapped: PostChangelogEntry = {
+        id: entry.id,
+        slug: entry.slug,
+        title: entry.title,
+        description: entry.description,
+        version: entry.version,
+        product: entry.product,
+        author: entry.author,
+      };
+
+      const result = await this.slackService.postChangelog(req.dbUser!.id, channelId, channelName, mapped);
+      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

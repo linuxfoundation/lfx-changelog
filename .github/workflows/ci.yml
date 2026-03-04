@@ -93,6 +93,12 @@ jobs:
           echo "SKIP_RATE_LIMIT=true" >> "$GITHUB_ENV"
           echo "CI=true" >> "$GITHUB_ENV"
 
+          # Slack OAuth (random values for e2e — tests verify auth/validation, not real Slack calls)
+          echo "SLACK_CLIENT_ID=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          echo "SLACK_CLIENT_SECRET=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+          echo "SLACK_TOKEN_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "WEBHOOK_STATE_SECRET=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+
       - name: Generate Prisma client
         run: yarn workspace lfx-changelog prisma generate
 

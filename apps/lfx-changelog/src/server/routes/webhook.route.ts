@@ -14,4 +14,7 @@ router.get('/github-app-callback', (req, res) => webhookController.githubAppCall
 // GitHub webhook — signature verified by middleware
 router.post('/github', ...verifyGitHubWebhook, (req, res) => webhookController.githubWebhook(req, res));
 
+// Slack OAuth callback (unauthenticated — validates signed state)
+router.get('/slack-callback', (req, res) => webhookController.slackOAuthCallback(req, res));
+
 export default router;

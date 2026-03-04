@@ -12,6 +12,7 @@ export class ChangelogListPage {
   public readonly empty: Locator;
   public readonly resyncBtn: Locator;
   public readonly resyncResult: Locator;
+  public readonly slackBtn: Locator;
 
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="changelog-list-heading"]');
@@ -22,6 +23,7 @@ export class ChangelogListPage {
     this.empty = page.locator('[data-testid="changelog-list-empty"]');
     this.resyncBtn = page.locator('[data-testid="changelog-list-resync-btn"]');
     this.resyncResult = page.locator('[data-testid="changelog-list-resync-result"]');
+    this.slackBtn = page.locator('[data-testid="changelog-list-slack-btn"]');
   }
 
   public async goto() {

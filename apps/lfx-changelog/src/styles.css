@@ -88,6 +88,7 @@
   --animate-rise-in: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-shimmer-in: shimmer-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-dropdown-in: dropdown-in 150ms ease-out both;
+  --animate-select-dropdown-in: select-dropdown-in 150ms ease-out both;
   --animate-gentle-float: gentle-float 3s ease-in-out infinite;
   --animate-spin-in: spin-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-status-pulse: status-pulse 1.5s ease-in-out infinite;
@@ -333,6 +334,16 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Opacity-only variant for position:fixed dropdowns (transform breaks fixed positioning) */
+@keyframes select-dropdown-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

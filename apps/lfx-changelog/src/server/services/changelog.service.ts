@@ -227,6 +227,23 @@ export class ChangelogService {
     return entry;
   }
 
+  public async findByIdForSlack(
+    id: string
+  ): Promise<PrismaChangelogEntry & { product: { name: string; faIcon: string | null } | null; author: { name: string } | null }> {
+    const prisma = getPrismaClient();
+    const entry = await prisma.changelogEntry.findUnique({
+      where: { id },
+      include: {
+        product: { select: { name: true, faIcon: true } },
+        author: { select: { name: true } },
+      },
+    });
+    if (!entry) {
+      throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'findByIdForSlack', service: 'changelog' });
+    }
+    return entry;
+  }
+
   private syncToOpenSearch(entry: PrismaChangelogEntry & { product?: { name: string; slug: string; faIcon: string | null } | null }): void {
     if (entry.status !== 'published' || !entry.product) return;
 

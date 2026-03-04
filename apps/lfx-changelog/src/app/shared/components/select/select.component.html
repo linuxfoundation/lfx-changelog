@@ -5,7 +5,7 @@
   @if (label()) {
     <label class="text-text-primary text-sm font-medium">{{ label() }}</label>
   }
-  <div class="relative">
+  <div>
     <!-- Trigger -->
     <button
       type="button"
@@ -17,19 +17,31 @@
       role="combobox"
       [attr.aria-expanded]="isOpen()"
       aria-haspopup="listbox">
-      <span [class]="selectedLabel() ? 'text-text-primary' : 'text-text-muted'">
+      <span class="truncate" [class]="selectedLabel() ? 'text-text-primary' : 'text-text-muted'">
         {{ selectedLabel() || placeholder() }}
       </span>
       <i class="fa-solid fa-chevron-down text-text-muted text-[10px] transition-transform duration-200" [class.rotate-180]="isOpen()"></i>
     </button>
 
-    <!-- Dropdown -->
+    <!-- Dropdown (fixed to escape overflow containers) -->
     @if (isOpen()) {
       <div
-        class="border-border bg-surface animate-dropdown-in absolute z-50 mt-1 w-full overflow-hidden rounded-lg border shadow-lg shadow-black/8"
+        class="border-border bg-surface animate-select-dropdown-in fixed z-50 mt-1 overflow-hidden rounded-lg border shadow-lg shadow-black/8"
+        [style.width.px]="triggerWidth()"
         role="listbox">
+        @if (searchable()) {
+          <div class="border-border border-b px-3 py-2">
+            <input
+              type="text"
+              class="bg-surface text-text-primary placeholder:text-text-muted w-full text-sm outline-none"
+              placeholder="Search..."
+              [value]="searchQuery()"
+              (input)="onSearchInput($event)"
+              (keydown)="onKeydown($event)" />
+          </div>
+        }
         <div class="max-h-60 overflow-y-auto py-1">
-          @for (opt of options(); track opt.value; let i = $index) {
+          @for (opt of filteredOptions(); track opt.value; let i = $index) {
             <button
               type="button"
               (click)="selectOption(opt)"
@@ -44,11 +56,14 @@
               "
               role="option"
               [attr.aria-selected]="value() === opt.value">
-              {{ opt.label }}
+              <span class="truncate">{{ opt.label }}</span>
               @if (value() === opt.value) {
                 <i class="fa-solid fa-check text-brand-600 text-[10px]"></i>
               }
             </button>
+          }
+          @if (!filteredOptions().length) {
+            <div class="text-text-muted px-3 py-2 text-center text-sm">No results found</div>
           }
         </div>
       </div>

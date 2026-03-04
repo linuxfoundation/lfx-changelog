@@ -61,6 +61,13 @@
             }
           </div>
         </lfx-card>
+
+        @if (isAuthenticated()) {
+          <lfx-button data-testid="changelog-detail-slack-btn" variant="secondary" [fluid]="true" (clicked)="openSlackDialog()">
+            <img src="/slack.svg" alt="Slack" width="14" height="14" class="inline-block" />
+            Post to Slack
+          </lfx-button>
+        }
       </div>
     </div>
   </div>
@@ -78,4 +85,8 @@
       Back to changelog
     </a>
   </div>
+}
+
+@if (isAuthenticated() && entry(); as e) {
+  <lfx-post-to-slack-dialog [(visible)]="slackDialogVisible" [changelogId]="e.id" [changelogTitle]="e.title" />
 }

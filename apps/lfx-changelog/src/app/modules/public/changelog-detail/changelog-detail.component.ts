@@ -4,24 +4,31 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
+import { PostToSlackDialogComponent } from '@components/post-to-slack-dialog/post-to-slack-dialog.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
+import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { format } from 'date-fns';
 import { catchError, of, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-changelog-detail',
-  imports: [MarkdownRendererComponent, ProductPillComponent, CardComponent, RouterLink],
+  imports: [MarkdownRendererComponent, ProductPillComponent, CardComponent, RouterLink, ButtonComponent, PostToSlackDialogComponent],
   templateUrl: './changelog-detail.component.html',
   styleUrl: './changelog-detail.component.css',
 })
 export class ChangelogDetailComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly authService = inject(AuthService);
   private readonly changelogService = inject(ChangelogService);
 
   protected readonly loading = signal(true);
+  protected readonly slackDialogVisible = signal(false);
+
+  protected readonly isAuthenticated = computed(() => this.authService.authenticated());
 
   protected readonly entry = toSignal(
     this.changelogService.getPublishedById(this.route.snapshot.paramMap.get('slug') ?? '').pipe(
@@ -48,4 +55,8 @@ export class ChangelogDetailComponent {
     if (!e) return '';
     return format(new Date(e.createdAt), 'MMMM d, yyyy');
   });
+
+  protected openSlackDialog(): void {
+    this.slackDialogVisible.set(true);
+  }
 }

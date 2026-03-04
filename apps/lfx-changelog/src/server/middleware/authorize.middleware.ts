@@ -60,8 +60,12 @@ export function authorize(options: AuthorizeOptions = {}) {
           }
         }
 
-        next();
-        return;
+        // If no role checks are needed, we're done
+        if (!options.productRole && !options.role) {
+          next();
+          return;
+        }
+        // Otherwise fall through to role checks below
       }
 
       // ── API key scope check ──
