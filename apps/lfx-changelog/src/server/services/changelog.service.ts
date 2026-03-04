@@ -128,6 +128,7 @@ export class ChangelogService {
     description: string;
     version?: string;
     status?: string;
+    source?: string;
     createdBy: string;
   }): Promise<PrismaChangelogEntry> {
     const prisma = getPrismaClient();
@@ -139,6 +140,7 @@ export class ChangelogService {
           title: data.title,
           description: data.description,
           version: data.version,
+          source: data.source === 'automated' ? 'automated' : 'manual',
           status: (Object.values(ChangelogStatusEnum) as string[]).includes(data.status || '') ? (data.status as ChangelogStatus) : 'draft',
           createdBy: data.createdBy,
         },
@@ -159,6 +161,7 @@ export class ChangelogService {
       description?: string;
       version?: string;
       status?: string;
+      createdBy?: string;
     }
   ): Promise<PrismaChangelogEntry> {
     const prisma = getPrismaClient();
@@ -213,6 +216,17 @@ export class ChangelogService {
     getOpenSearchService()
       .delete(id)
       .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+  }
+
+  /**
+   * Finds the most recent automated draft for a product, if one exists.
+   */
+  public async findAutomatedDraft(productId: string): Promise<PrismaChangelogEntry | null> {
+    const prisma = getPrismaClient();
+    return prisma.changelogEntry.findFirst({
+      where: { productId, source: 'automated', status: 'draft' },
+      orderBy: { updatedAt: 'desc' },
+    });
   }
 
   public async findById(id: string): Promise<PrismaChangelogEntry> {

@@ -71,7 +71,10 @@ const products = [
   },
 ];
 
-const users = [{ auth0Id: 'auth0|asitha', email: 'adesilva@linuxfoundation.org', name: 'Asitha de Silva', avatarUrl: null }];
+const users = [
+  { auth0Id: 'auth0|asitha', email: 'adesilva@linuxfoundation.org', name: 'Asitha de Silva', avatarUrl: null },
+  { auth0Id: null, email: 'changelog-bot@linuxfoundation.org', name: 'LFX Changelog Bot', avatarUrl: null },
+];
 
 async function main() {
   console.info('Seeding database...');
@@ -83,8 +86,14 @@ async function main() {
   // Build slug→product lookup
   const productBySlug = Object.fromEntries(createdProducts.map((p) => [p.slug, p]));
 
-  // Create users
-  const createdUsers = await Promise.all(users.map((u) => prisma.user.upsert({ where: { auth0Id: u.auth0Id }, update: u, create: u })));
+  // Create users (upsert by email for bot users with null auth0Id, by auth0Id for normal users)
+  const createdUsers = await Promise.all(
+    users.map((u) =>
+      u.auth0Id
+        ? prisma.user.upsert({ where: { auth0Id: u.auth0Id }, update: u, create: u })
+        : prisma.user.upsert({ where: { email: u.email }, update: { name: u.name, avatarUrl: u.avatarUrl }, create: u })
+    )
+  );
   console.info(`Created ${createdUsers.length} users`);
 
   // Assign super_admin role
