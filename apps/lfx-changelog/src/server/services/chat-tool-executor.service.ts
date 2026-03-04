@@ -142,7 +142,7 @@ export class ChatToolExecutorService {
   }
 
   private async getChangelogDetail(args: GetChangelogDetailToolArgs, accessLevel: ChatAccessLevel): Promise<string> {
-    const entry = accessLevel === 'admin' ? await this.changelogService.findById(args.id) : await this.changelogService.findPublishedById(args.id);
+    const entry = accessLevel === 'admin' ? await this.changelogService.findById(args.id) : await this.changelogService.findPublishedByIdentifier(args.id);
 
     return JSON.stringify({
       id: entry.id,

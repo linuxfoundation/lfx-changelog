@@ -109,6 +109,26 @@
 
       <lfx-input data-testid="changelog-editor-title-input" label="Title" placeholder="Enter entry title..." [formControl]="titleControl" />
 
+      <div class="space-y-1.5">
+        <div class="flex items-end gap-2">
+          <div class="flex-1">
+            <lfx-input data-testid="changelog-editor-slug-input" label="Slug" placeholder="url-friendly-slug" [formControl]="slugControl" />
+          </div>
+          @if (!slugValue()) {
+            <lfx-button variant="secondary" class="mb-1" size="sm" [disabled]="!titleValue()" (clicked)="generateSlugFromTitle()">
+              <i class="fa-solid fa-rotate text-xs"></i>
+              Generate
+            </lfx-button>
+          }
+        </div>
+        @if (!slugValue() && titleValue()) {
+          <p class="text-xs text-amber-600 dark:text-amber-400">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+            Slug is required. Click Generate or enter one manually.
+          </p>
+        }
+      </div>
+
       <lfx-input data-testid="changelog-editor-version-input" label="Version" placeholder="e.g., 2.5.0" [formControl]="versionControl" />
 
       <lfx-markdown-editor
@@ -119,17 +139,22 @@
         [formControl]="descriptionControl" />
 
       <div class="flex gap-3 pt-2">
-        @if (isEditing() && isDraft()) {
-          <lfx-button data-testid="changelog-editor-publish-btn" variant="primary" [loading]="publishing()" [disabled]="saving()" (clicked)="publish()">
+        @if (!isEditing() || isDraft()) {
+          <lfx-button
+            data-testid="changelog-editor-publish-btn"
+            variant="primary"
+            [loading]="publishing()"
+            [disabled]="saving() || !hasSlug()"
+            (clicked)="publish()">
             <i class="fa-duotone fa-paper-plane text-xs"></i>
             Publish
           </lfx-button>
         }
         <lfx-button
           data-testid="changelog-editor-save-btn"
-          [variant]="isEditing() && isDraft() ? 'secondary' : 'primary'"
+          [variant]="!isEditing() || isDraft() ? 'secondary' : 'primary'"
           [loading]="saving()"
-          [disabled]="publishing()"
+          [disabled]="publishing() || !hasSlug()"
           (clicked)="save()">
           {{ isEditing() ? 'Update Entry' : 'Save as Draft' }}
         </lfx-button>

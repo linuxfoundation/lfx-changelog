@@ -24,7 +24,7 @@ export class ChangelogDetailComponent {
   protected readonly loading = signal(true);
 
   protected readonly entry = toSignal(
-    this.changelogService.getPublishedById(this.route.snapshot.paramMap.get('id') ?? '').pipe(
+    this.changelogService.getPublishedById(this.route.snapshot.paramMap.get('slug') ?? '').pipe(
       tap(() => this.loading.set(false)),
       catchError(() => {
         this.loading.set(false);

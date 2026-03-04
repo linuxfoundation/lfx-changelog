@@ -11,6 +11,7 @@ export const ChangelogEntrySchema = z
   .object({
     id: z.string(),
     productId: z.string(),
+    slug: z.string().nullable(),
     title: z.string(),
     description: z.string(),
     version: z.string().nullable(),

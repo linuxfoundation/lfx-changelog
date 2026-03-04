@@ -96,6 +96,7 @@ model GitHubRelease {
 model ChangelogEntry {
   id          String            @id @default(uuid())
   productId   String            @map("product_id")
+  slug        String?           @unique
   title       String
   description String
   version     String?

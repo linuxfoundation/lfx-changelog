@@ -15,6 +15,8 @@ import type { ChangelogDocument, ChangelogQueryParams, PaginatedResponse, Public
 type PaginatedResult<T> = Omit<PaginatedResponse<T>, 'success'>;
 
 export class ChangelogService {
+  private static readonly uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   public async findPublished(params: ChangelogQueryParams): Promise<PaginatedResult<PublicChangelogEntry>> {
     const prisma = getPrismaClient();
     const { page, limit, skip } = this.sanitizePagination(params);
@@ -34,6 +36,7 @@ export class ChangelogService {
           take: limit,
           select: {
             id: true,
+            slug: true,
             title: true,
             description: true,
             version: true,
@@ -96,12 +99,14 @@ export class ChangelogService {
     };
   }
 
-  public async findPublishedById(id: string): Promise<PublicChangelogEntry> {
+  public async findPublishedByIdentifier(identifier: string): Promise<PublicChangelogEntry> {
     const prisma = getPrismaClient();
+    const isUuid = ChangelogService.uuidRegex.test(identifier);
     const entry = await prisma.changelogEntry.findFirst({
-      where: { id, status: 'published', product: { isActive: true } },
+      where: { ...(isUuid ? { id: identifier } : { slug: identifier }), status: 'published', product: { isActive: true } },
       select: {
         id: true,
+        slug: true,
         title: true,
         description: true,
         version: true,
@@ -113,13 +118,14 @@ export class ChangelogService {
       },
     });
     if (!entry) {
-      throw new NotFoundError(`Published changelog entry not found: ${id}`, { operation: 'findPublishedById', service: 'changelog' });
+      throw new NotFoundError(`Published changelog entry not found: ${identifier}`, { operation: 'findPublishedByIdentifier', service: 'changelog' });
     }
     return entry as PublicChangelogEntry;
   }
 
   public async create(data: {
     productId: string;
+    slug?: string;
     title: string;
     description: string;
     version?: string;
@@ -130,6 +136,7 @@ export class ChangelogService {
     const entry = await prisma.changelogEntry.create({
       data: {
         productId: data.productId,
+        slug: data.slug || null,
         title: data.title,
         description: data.description,
         version: data.version,
@@ -145,6 +152,7 @@ export class ChangelogService {
   public async update(
     id: string,
     data: {
+      slug?: string;
       title?: string;
       description?: string;
       version?: string;
@@ -217,6 +225,7 @@ export class ChangelogService {
 
     const doc: ChangelogDocument = {
       id: entry.id,
+      slug: entry.slug,
       title: entry.title,
       description: entry.description,
       version: entry.version,

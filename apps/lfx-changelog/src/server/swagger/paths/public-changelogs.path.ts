@@ -37,11 +37,12 @@ publicChangelogRegistry.registerPath({
   method: 'get',
   path: '/public/api/changelogs/{id}',
   tags: ['Public - Changelogs'],
-  summary: 'Get published changelog by ID',
-  description: 'Returns a single published changelog entry.\n\n**Required privilege:** None — this endpoint is publicly accessible.',
+  summary: 'Get published changelog by ID or slug',
+  description:
+    'Returns a single published changelog entry. Accepts either a UUID or a URL-friendly slug.\n\n**Required privilege:** None — this endpoint is publicly accessible.',
   request: {
     params: z.object({
-      id: z.string().openapi({ description: 'Changelog entry ID' }),
+      id: z.string().openapi({ description: 'Changelog entry ID (UUID) or slug' }),
     }),
   },
   responses: {

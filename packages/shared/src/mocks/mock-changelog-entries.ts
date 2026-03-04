@@ -9,6 +9,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[0]!,
     productId: PRODUCT_IDS.EASYCLA,
+    slug: 'github-app-permission-model-update',
     title: 'GitHub App permission model update',
     description:
       'Updated the GitHub App integration to use fine-grained permissions. This reduces the scope of access required and improves security for organizations using EasyCLA.\n\n- Removed legacy OAuth scope requirements\n- Added support for repository-level permissions\n- Improved error messages for permission issues',
@@ -22,6 +23,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[1]!,
     productId: PRODUCT_IDS.EASYCLA,
+    slug: 'fix-cla-signature-verification-for-forked-repositories',
     title: 'Fix CLA signature verification for forked repositories',
     description:
       'Resolved an issue where CLA signature verification failed for pull requests originating from forked repositories. The check now correctly traces the commit author back to the original CLA signee.',
@@ -35,6 +37,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[2]!,
     productId: PRODUCT_IDS.INSIGHTS,
+    slug: 'new-contributor-growth-dashboard',
     title: 'New contributor growth dashboard',
     description:
       'Introducing a brand-new contributor growth dashboard that provides visibility into how your community is expanding over time.\n\n**Key features:**\n- Monthly active contributor trends\n- New vs returning contributor breakdown\n- Geographic distribution heatmap\n- Organization affiliation tracking',
@@ -48,6 +51,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[3]!,
     productId: PRODUCT_IDS.INSIGHTS,
+    slug: 'deprecate-legacy-csv-export-endpoint',
     title: 'Deprecate legacy CSV export endpoint',
     description:
       'The `/api/v1/export/csv` endpoint has been deprecated and will be removed in v4.0. Please migrate to the new `/api/v2/reports/export` endpoint which supports CSV, JSON, and PDF formats.\n\n**Migration guide:** See our documentation at docs.linuxfoundation.org/insights/migration.',
@@ -61,6 +65,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[4]!,
     productId: PRODUCT_IDS.INSIGHTS,
+    slug: 'performance-improvements-for-large-project-analytics',
     title: 'Performance improvements for large project analytics',
     description:
       'Optimized data aggregation queries for projects with over 10,000 contributors. Dashboard load times reduced by approximately 60% for large-scale projects.',
@@ -74,6 +79,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[5]!,
     productId: PRODUCT_IDS.MENTORSHIP,
+    slug: 'application-review-workflow-redesign',
     title: 'Application review workflow redesign',
     description:
       'Completely redesigned the mentorship application review workflow for program administrators.\n\n- Bulk accept/reject actions\n- Inline applicant profile previews\n- Customizable evaluation criteria\n- Email notification templates',
@@ -87,6 +93,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[6]!,
     productId: PRODUCT_IDS.MENTORSHIP,
+    slug: 'fix-timezone-display-in-program-schedules',
     title: 'Fix timezone display in program schedules',
     description:
       "Fixed an issue where program start and end dates were displayed in UTC instead of the user's local timezone. All date displays now respect the browser timezone setting.",
@@ -100,6 +107,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[7]!,
     productId: PRODUCT_IDS.SECURITY,
+    slug: 'spdx-3-0-sbom-support',
     title: 'SPDX 3.0 SBOM support',
     description:
       'Added support for SPDX 3.0 Software Bill of Materials (SBOM) format. Projects can now generate and import SBOMs in the latest SPDX standard.\n\n- SPDX 3.0 generation and parsing\n- Backward compatibility with SPDX 2.3\n- Improved license expression handling',
@@ -113,6 +121,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[8]!,
     productId: PRODUCT_IDS.SECURITY,
+    slug: 'critical-vulnerability-alert-email-improvements',
     title: 'Critical vulnerability alert email improvements',
     description:
       'Enhanced the critical vulnerability alert emails with clearer severity indicators, direct links to remediation guides, and one-click snooze options for acknowledged vulnerabilities.',
@@ -126,6 +135,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[9]!,
     productId: PRODUCT_IDS.CROWDFUNDING,
+    slug: 'stripe-connect-onboarding-flow-update',
     title: 'Stripe Connect onboarding flow update',
     description:
       'Updated the Stripe Connect onboarding flow to comply with new KYC requirements. Fund recipients may need to re-verify their identity through the updated flow.',
@@ -139,6 +149,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[10]!,
     productId: PRODUCT_IDS.CROWDFUNDING,
+    slug: 'fix-duplicate-donation-receipts',
     title: 'Fix duplicate donation receipts',
     description:
       'Resolved a race condition that caused some donors to receive duplicate email receipts when making contributions. Added idempotency keys to the payment processing pipeline.',
@@ -152,6 +163,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[11]!,
     productId: PRODUCT_IDS.PCC,
+    slug: 'meeting-minutes-auto-generation-with-ai',
     title: 'Meeting minutes auto-generation with AI',
     description:
       'Project Control Center now supports AI-powered meeting minutes generation. After a recorded meeting, PCC will automatically generate a structured summary with action items.\n\n**Note:** This feature requires enabling the AI add-on in project settings.',
@@ -165,6 +177,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[12]!,
     productId: PRODUCT_IDS.PCC,
+    slug: 'committee-role-assignment-bug-fix',
     title: 'Committee role assignment bug fix',
     description:
       'Fixed an issue where removing a user from a committee did not revoke their associated permissions. Committee role changes now propagate correctly across all linked services.',
@@ -178,6 +191,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[13]!,
     productId: PRODUCT_IDS.ORG_DASHBOARD,
+    slug: 'new-member-activity-feed',
     title: 'New member activity feed',
     description:
       'Added a real-time activity feed to the Organization Dashboard showing recent contributions, CLA signatures, and membership changes across all affiliated projects.',
@@ -191,6 +205,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[14]!,
     productId: PRODUCT_IDS.ORG_DASHBOARD,
+    slug: 'fix-sso-login-redirect-loop',
     title: 'Fix SSO login redirect loop',
     description:
       'Resolved an issue where users authenticating via SSO were caught in a redirect loop when their session token expired during an active dashboard session.',
@@ -204,6 +219,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[15]!,
     productId: PRODUCT_IDS.EASYCLA,
+    slug: 'gitlab-integration-support',
     title: 'GitLab integration support',
     description:
       'EasyCLA now supports GitLab as a source code platform in addition to GitHub and Gerrit. Organizations can configure CLA checks for GitLab merge requests.\n\n- GitLab webhook integration\n- Merge request status checks\n- GitLab group-level configuration',
@@ -217,6 +233,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[16]!,
     productId: PRODUCT_IDS.SECURITY,
+    slug: 'remove-support-for-cyclonedx-1-3',
     title: 'Remove support for CycloneDX 1.3',
     description:
       'Support for CycloneDX 1.3 format has been removed. Please update your SBOM tooling to generate CycloneDX 1.4 or later.\n\nCycloneDX 1.4 and 1.5 remain fully supported.',
@@ -230,6 +247,7 @@ export const MOCK_CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
     id: ENTRY_IDS[17]!,
     productId: PRODUCT_IDS.INSIGHTS,
+    slug: 'add-dora-metrics-dashboard',
     title: 'Add DORA metrics dashboard',
     description:
       'New DORA (DevOps Research and Assessment) metrics dashboard providing visibility into deployment frequency, lead time for changes, change failure rate, and time to restore service.',

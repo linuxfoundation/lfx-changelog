@@ -20,7 +20,7 @@ export const routes: Routes = [
         loadComponent: () => import('@modules/public/product-changelog/product-changelog.component').then((m) => m.ProductChangelogComponent),
       },
       {
-        path: 'entry/:id',
+        path: 'entry/:slug',
         loadComponent: () => import('@modules/public/changelog-detail/changelog-detail.component').then((m) => m.ChangelogDetailComponent),
       },
       {

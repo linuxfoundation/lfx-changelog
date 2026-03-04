@@ -144,6 +144,7 @@ export class SearchService {
         if (!entry.product) continue;
         const doc: ChangelogDocument = {
           id: entry.id,
+          slug: entry.slug,
           title: entry.title,
           description: entry.description,
           version: entry.version,

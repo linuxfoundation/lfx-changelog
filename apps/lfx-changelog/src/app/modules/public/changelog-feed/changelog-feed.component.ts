@@ -51,6 +51,7 @@ export class ChangelogFeedComponent {
   private mapSearchHitToEntry(hit: SearchHit): ChangelogEntryWithRelations {
     return {
       id: hit.id,
+      slug: hit.slug,
       title: hit.title,
       description: hit.description,
       version: hit.version,

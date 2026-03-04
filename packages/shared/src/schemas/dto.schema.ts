@@ -9,6 +9,7 @@ import { UserRole } from '../enums/user-role.enum.js';
 export const CreateChangelogEntryRequestSchema = z
   .object({
     productId: z.string(),
+    slug: z.string().optional(),
     title: z.string(),
     description: z.string(),
     version: z.string(),
@@ -20,6 +21,7 @@ export type CreateChangelogEntryRequest = z.infer<typeof CreateChangelogEntryReq
 
 export const UpdateChangelogEntryRequestSchema = z
   .object({
+    slug: z.string().optional(),
     title: z.string().optional(),
     description: z.string().optional(),
     version: z.string().optional(),
