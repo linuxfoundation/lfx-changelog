@@ -152,13 +152,44 @@
 
       <lfx-input data-testid="changelog-editor-version-input" label="Version" placeholder="e.g., 2.5.0" [formControl]="versionControl" />
 
-      @if (isEditing()) {
-        <lfx-select
-          data-testid="changelog-editor-author-select"
-          label="Author"
-          [options]="authorOptions()"
-          [formControl]="authorControl"
-          placeholder="Select author..." />
+      @if (isEditing() && canReassignAuthor()) {
+        <div class="space-y-1.5">
+          <label class="text-text-primary text-sm font-medium">Author</label>
+          <div class="flex items-center gap-3">
+            <span class="text-text-secondary text-sm">{{ existingEntry()?.author?.name ?? 'Unknown' }}</span>
+            @if (isSuperAdmin()) {
+              @if (!showAuthorPicker()) {
+                <lfx-button data-testid="changelog-editor-change-author-btn" variant="ghost" size="sm" (clicked)="openAuthorPicker()">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                  Change
+                </lfx-button>
+              } @else if (authorLoading()) {
+                <span class="text-text-muted flex items-center gap-1.5 text-xs">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  Loading users...
+                </span>
+              } @else {
+                <lfx-select
+                  data-testid="changelog-editor-author-select"
+                  [options]="authorOptions()"
+                  [formControl]="authorControl"
+                  placeholder="Select author..."
+                  class="min-w-48" />
+              }
+            } @else {
+              <lfx-button
+                data-testid="changelog-editor-claim-author-btn"
+                variant="ghost"
+                size="sm"
+                [loading]="claimingAuthorship()"
+                [disabled]="claimingAuthorship()"
+                (clicked)="claimAuthorship()">
+                <i class="fa-solid fa-hand text-xs"></i>
+                Claim authorship
+              </lfx-button>
+            }
+          </div>
+        </div>
       }
 
       <lfx-markdown-editor

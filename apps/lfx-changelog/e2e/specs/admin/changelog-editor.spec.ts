@@ -83,4 +83,36 @@ test.describe('Changelog Editor', () => {
     await editorPage.gotoNew();
     await expect(editorPage.saveBtn).toContainText('Save as Draft');
   });
+
+  test('should not show author section for new entries', async () => {
+    await editorPage.gotoNew();
+    await expect(editorPage.changeAuthorBtn).not.toBeVisible();
+    await expect(editorPage.claimAuthorBtn).not.toBeVisible();
+    await expect(editorPage.authorSelect).not.toBeVisible();
+  });
+
+  test('should show "Change" button for super admin when editing', async ({ page }) => {
+    const listPage = new ChangelogListPage(page);
+    await listPage.goto();
+    const rows = listPage.getRows();
+    await expect(rows.first()).toBeVisible();
+    await rows.first().locator('a').click();
+    await page.waitForURL(/\/admin\/changelogs\/.*\/edit/);
+
+    await expect(editorPage.changeAuthorBtn).toBeVisible();
+    await expect(editorPage.changeAuthorBtn).toContainText('Change');
+  });
+
+  test('should load author dropdown when "Change" button is clicked', async ({ page }) => {
+    const listPage = new ChangelogListPage(page);
+    await listPage.goto();
+    const rows = listPage.getRows();
+    await expect(rows.first()).toBeVisible();
+    await rows.first().locator('a').click();
+    await page.waitForURL(/\/admin\/changelogs\/.*\/edit/);
+
+    await expect(editorPage.authorSelect).not.toBeVisible();
+    await editorPage.changeAuthorBtn.click();
+    await expect(editorPage.authorSelect).toBeVisible({ timeout: 10000 });
+  });
 });

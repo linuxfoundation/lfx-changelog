@@ -3,6 +3,7 @@
 
 import crypto from 'node:crypto';
 
+import { ServiceUnavailableError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 
@@ -25,7 +26,10 @@ export class SlackService {
   private get webhookStateSecret(): string {
     const secret = process.env['WEBHOOK_STATE_SECRET'];
     if (!secret) {
-      throw new Error('WEBHOOK_STATE_SECRET must be set for OAuth state signing');
+      throw new ServiceUnavailableError('WEBHOOK_STATE_SECRET must be set for OAuth state signing', {
+        operation: 'webhookStateSecret',
+        service: 'slack',
+      });
     }
     return secret;
   }
@@ -42,7 +46,10 @@ export class SlackService {
    */
   public getOAuthUrl(userId: string): string {
     if (!this.slackClientId || !this.slackClientSecret) {
-      throw new Error('Slack OAuth is not configured — SLACK_CLIENT_ID and SLACK_CLIENT_SECRET must be set');
+      throw new ServiceUnavailableError('Slack OAuth is not configured — SLACK_CLIENT_ID and SLACK_CLIENT_SECRET must be set', {
+        operation: 'getOAuthUrl',
+        service: 'slack',
+      });
     }
     const state = this.signState({ userId, ts: Date.now() });
     const redirectUri = `${this.baseUrl}/webhooks/slack-callback`;

@@ -16,16 +16,16 @@ import { ProductPillComponent } from '@components/product-pill/product-pill.comp
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { ChangelogStatus, UserRole } from '@lfx-changelog/shared';
+import { ChangelogSource, ChangelogStatus, UserRole } from '@lfx-changelog/shared';
 import { AiService } from '@services/ai/ai.service';
 import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
 import { UserService } from '@services/user/user.service';
 import { slugify } from '@shared/utils/slugify';
-import { catchError, combineLatest, distinctUntilChanged, filter, map, of, pairwise, startWith, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, distinctUntilChanged, filter, finalize, map, of, pairwise, startWith, switchMap, tap } from 'rxjs';
 
-import type { ChangelogEntryWithRelations, Product, ProductRepository, User } from '@lfx-changelog/shared';
+import type { ChangelogEntryWithRelations, Product, ProductRepository } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 import type { Observable } from 'rxjs';
@@ -62,7 +62,6 @@ export class ChangelogEditorComponent {
 
   protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
   protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
-  private readonly allUsers: Signal<User[]> = this.initAllUsers();
 
   protected readonly titleControl = new FormControl('', { nonNullable: true });
   protected readonly slugControl = new FormControl('', { nonNullable: true });
@@ -82,10 +81,15 @@ export class ChangelogEditorComponent {
   protected readonly showAiPanel = signal(false);
   protected readonly justPublished = signal(false);
   protected readonly slackDialogVisible = signal(false);
+  protected readonly showAuthorPicker = signal(false);
+  protected readonly authorLoading = signal(false);
+  protected readonly claimingAuthorship = signal(false);
 
   protected readonly existingEntry: Signal<ChangelogEntryWithRelations | undefined> = this.initExistingEntry();
   protected readonly isEditing = computed(() => !!this.existingEntry());
   protected readonly isDraft = computed(() => this.existingEntry()?.status === ChangelogStatus.DRAFT);
+  protected readonly isAutomatedEntry = computed(() => this.existingEntry()?.source === ChangelogSource.AUTOMATED);
+  protected readonly canReassignAuthor = computed(() => this.isSuperAdmin() || this.isAutomatedEntry());
 
   protected readonly isGenerating = computed(() => this.aiService.state().generating);
   protected readonly generationStatus = computed(() => this.aiService.state().status);
@@ -183,19 +187,45 @@ export class ChangelogEditorComponent {
     this.slackDialogVisible.set(true);
   }
 
+  protected openAuthorPicker(): void {
+    this.showAuthorPicker.set(true);
+  }
+
+  protected claimAuthorship(): void {
+    const entry = this.existingEntry();
+    const currentUserId = this.authService.dbUser()?.id;
+    if (!entry || !currentUserId) return;
+
+    this.claimingAuthorship.set(true);
+    this.changelogService
+      .update(entry.id, { createdBy: currentUserId })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.claimingAuthorship.set(false);
+          this.authorControl.setValue(currentUserId);
+        },
+        error: () => {
+          this.claimingAuthorship.set(false);
+        },
+      });
+  }
+
   protected goToList(): void {
     this.router.navigate(['/admin/changelogs']);
   }
 
   private buildSaveRequest$(): Observable<ChangelogEntryWithRelations> {
     const existing = this.existingEntry();
+    const includeCreatedBy = this.showAuthorPicker() && this.authorControl.value && this.authorControl.value !== existing?.createdBy;
+
     return existing
       ? this.changelogService.update(existing.id, {
           slug: this.slugControl.value,
           title: this.titleControl.value,
           description: this.descriptionControl.value,
           version: this.versionControl.value,
-          createdBy: this.authorControl.value || undefined,
+          ...(includeCreatedBy ? { createdBy: this.authorControl.value } : {}),
         })
       : this.changelogService.create({
           slug: this.slugControl.value,
@@ -315,19 +345,20 @@ export class ChangelogEditorComponent {
     );
   }
 
-  private initAllUsers(): Signal<User[]> {
-    return toSignal(toObservable(this.isSuperAdmin).pipe(switchMap((isSuperAdmin) => (isSuperAdmin ? this.userService.getAll() : of([] as User[])))), {
-      initialValue: [] as User[],
-    });
-  }
-
   private initAuthorOptions(): Signal<SelectOption[]> {
-    return computed(() => {
-      if (this.isSuperAdmin()) {
-        return this.allUsers().map((u) => ({ label: u.name, value: u.id }));
-      }
-      const currentUser = this.authService.dbUser();
-      return currentUser ? [{ label: currentUser.name, value: currentUser.id }] : [];
-    });
+    return toSignal(
+      toObservable(this.showAuthorPicker).pipe(
+        filter(Boolean),
+        tap(() => this.authorLoading.set(true)),
+        switchMap(() =>
+          this.userService.getAll().pipe(
+            catchError(() => of([])),
+            finalize(() => this.authorLoading.set(false))
+          )
+        ),
+        map((users) => users.map((u) => ({ label: u.name, value: u.id })))
+      ),
+      { initialValue: [] as SelectOption[] }
+    );
   }
 }
