@@ -7,6 +7,7 @@ import { Component, input, output } from '@angular/core';
   selector: 'lfx-button',
   host: {
     '[class.block]': 'fluid()',
+    '[class.w-full]': 'fluid()',
   },
   templateUrl: './button.component.html',
   styleUrl: './button.component.css',
