@@ -8,6 +8,7 @@ import swaggerUi from 'swagger-ui-express';
 // Import schemas to trigger .openapi() registration
 import '@lfx-changelog/shared';
 
+import { changelogViewRegistry } from './paths/changelog-views.path';
 import { changelogRegistry } from './paths/changelogs.path';
 import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
@@ -33,7 +34,16 @@ registry.registerComponent('securitySchemes', 'cookieAuth', {
 });
 
 // Merge all path registries
-const allRegistries = [publicProductRegistry, publicChangelogRegistry, searchRegistry, productRegistry, changelogRegistry, releaseRegistry, userRegistry];
+const allRegistries = [
+  publicProductRegistry,
+  publicChangelogRegistry,
+  searchRegistry,
+  productRegistry,
+  changelogRegistry,
+  changelogViewRegistry,
+  releaseRegistry,
+  userRegistry,
+];
 
 // Collect all definitions from all registries
 const allDefinitions = [...registry.definitions, ...allRegistries.flatMap((r) => r.definitions)];
@@ -59,6 +69,7 @@ const document = generator.generateDocument({
 
     { name: 'Products', description: 'Authentication required' },
     { name: 'Changelogs', description: 'Authentication required' },
+    { name: 'Changelog Views', description: 'Track unseen changelog entries per user — authentication required' },
     { name: 'Releases', description: 'Authentication required' },
     { name: 'OpenSearch', description: 'OpenSearch administration — super_admin only' },
     { name: 'Users', description: 'Authentication required' },

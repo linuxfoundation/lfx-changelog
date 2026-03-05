@@ -55,6 +55,7 @@ model Product {
   userRoleAssignments UserRoleAssignment[]
   repositories        ProductRepository[]
   autoChangelogLock   AutoChangelogLock?
+  changelogViews      ChangelogView[]
 
   @@map("products")
 }
@@ -140,6 +141,7 @@ model User {
   apiKeys             ApiKey[]
   chatConversations   ChatConversation[]
   slackIntegrations   SlackIntegration[]
+  changelogViews      ChangelogView[]
 
   @@map("users")
 }
@@ -272,4 +274,20 @@ model AutoChangelogLock {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("auto_changelog_locks")
+}
+
+model ChangelogView {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  productId    String   @map("product_id")
+  lastViewedAt DateTime @default(now()) @map("last_viewed_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("changelog_views")
 }

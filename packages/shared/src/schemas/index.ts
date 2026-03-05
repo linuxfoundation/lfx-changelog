@@ -28,6 +28,7 @@ export { ApiKeySchema, CreateApiKeyRequestSchema, CreateApiKeyResponseSchema } f
 export { createApiResponseSchema, createPaginatedResponseSchema } from './api-response.schema.js';
 export { AuthContextSchema, AuthUserSchema } from './auth.schema.js';
 export { ChangelogEntrySchema, ChangelogEntryWithRelationsSchema } from './changelog-entry.schema.js';
+export { MarkViewedRequestSchema, MarkViewedResponseSchema, UnseenCountSchema, UnseenQuerySchema } from './changelog-view.schema.js';
 export {
   AddChatMessageParamsSchema,
   ChatAccessLevelSchema,
@@ -126,6 +127,7 @@ export type { ApiKey, ApiKeyScopeMetadata, CreateApiKeyRequest, CreateApiKeyResp
 export type { ApiResponse, PaginatedResponse } from './api-response.schema.js';
 export type { AuthContext, AuthUser } from './auth.schema.js';
 export type { ChangelogEntry, ChangelogEntryWithRelations } from './changelog-entry.schema.js';
+export type { MarkViewedRequest, MarkViewedResponse, UnseenCount, UnseenQuery } from './changelog-view.schema.js';
 export type {
   AddChatMessageParams,
   ChatAccessLevel,
