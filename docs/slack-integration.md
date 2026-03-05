@@ -54,9 +54,12 @@ Messages are posted **as the user**, not as a bot. This means the message appear
 
 The OAuth state parameter is signed with HMAC-SHA256 using `WEBHOOK_STATE_SECRET`:
 
-- State format: `productId:userId:timestamp`
-- Signature appended to state
-- TTL: 10 minutes (states older than 10 minutes are rejected)
+1. A JSON payload is created containing the user ID and a timestamp: `{ userId, ts }`
+2. The payload is serialized to a JSON string
+3. An HMAC-SHA256 hex digest is computed over the JSON string
+4. Both are wrapped into `{ d: <json-string>, s: <hmac-hex> }` and base64url-encoded
+
+On callback, the server decodes the state, recomputes the HMAC over `d`, and compares with `s` using `crypto.timingSafeEqual()`. States older than 10 minutes are rejected.
 
 ### Token Rotation
 
@@ -82,17 +85,17 @@ This ensures that even if the database is compromised, Slack tokens cannot be us
 
 ## API Endpoints
 
-| Method | Path                                   | Auth       | Description                      |
-| ------ | -------------------------------------- | ---------- | -------------------------------- |
-| GET    | `/api/slack/connect`                   | OAuth only | Generate Slack OAuth URL         |
-| GET    | `/api/slack/integrations`              | OAuth only | List user's connected workspaces |
-| GET    | `/api/slack/integrations/:id/channels` | OAuth only | Fetch channels for a workspace   |
-| POST   | `/api/slack/integrations/:id/channels` | OAuth only | Save default channel             |
-| DELETE | `/api/slack/integrations/:id`          | OAuth only | Disconnect a workspace           |
-| POST   | `/api/changelogs/:id/share/slack`      | Auth       | Post changelog to a channel      |
-| GET    | `/webhooks/slack-callback`             | None       | OAuth callback handler           |
+| Method | Path                                   | Auth                           | Description                      |
+| ------ | -------------------------------------- | ------------------------------ | -------------------------------- |
+| GET    | `/api/slack/connect`                   | OAuth only                     | Generate Slack OAuth URL         |
+| GET    | `/api/slack/integrations`              | OAuth only                     | List user's connected workspaces |
+| GET    | `/api/slack/integrations/:id/channels` | OAuth only                     | Fetch channels for a workspace   |
+| POST   | `/api/slack/integrations/:id/channels` | OAuth only                     | Save default channel             |
+| DELETE | `/api/slack/integrations/:id`          | OAuth only                     | Disconnect a workspace           |
+| POST   | `/api/changelogs/:id/share/slack`      | OAuth only (editor on product) | Post changelog to a channel      |
+| GET    | `/webhooks/slack-callback`             | None                           | OAuth callback handler           |
 
-All Slack management endpoints (`/api/slack/*`) are **OAuth-only** --- API keys cannot be used to manage Slack integrations.
+All Slack endpoints are **OAuth-only** --- API keys cannot be used.
 
 ## Message Format
 
@@ -116,83 +119,27 @@ Changelog entries are posted as Slack **BlockKit** messages with the following s
 
 The "View Full Changelog" button links to the entry's public URL using its slug (or ID if no slug is set).
 
-## Database Schema
+## Data Model
 
-### SlackIntegration
+The Slack integration uses three database tables (see the Prisma schema for exact field definitions):
 
-Stores the connection between a user and a Slack workspace.
+- **SlackIntegration** --- stores the connection between a user and a Slack workspace. Each record holds the encrypted access and refresh tokens, token expiry, granted scopes, and status (`active` or `revoked`). Unique per user + workspace combination.
 
-```prisma
-model SlackIntegration {
-  id             String   @id @default(uuid())
-  userId         String                          // FK to User
-  teamId         String                          // Slack workspace ID
-  teamName       String                          // Slack workspace name
-  slackUserId    String                          // User's Slack ID
-  accessToken    String                          // AES-256-GCM encrypted
-  refreshToken   String                          // AES-256-GCM encrypted
-  tokenExpiresAt DateTime
-  scope          String                          // e.g., "chat:write,channels:read,groups:read"
-  status         String   @default("active")     // active | revoked
+- **SlackChannel** --- tracks which channels a user has configured for posting within a workspace. One channel per workspace can be marked as the default. Unique per integration + channel ID combination.
 
-  user           User
-  channels       SlackChannel[]
-
-  @@unique([userId, teamId])
-}
-```
-
-### SlackChannel
-
-Tracks which channels a user has configured for posting.
-
-```prisma
-model SlackChannel {
-  id                 String   @id @default(uuid())
-  slackIntegrationId String
-  channelId          String              // Slack channel ID (e.g., C01234ABC)
-  channelName        String
-  isDefault          Boolean  @default(false)
-
-  slackIntegration   SlackIntegration
-  notifications      SlackNotification[]
-
-  @@unique([slackIntegrationId, channelId])
-}
-```
-
-### SlackNotification
-
-Tracks delivery of each changelog post to a channel (one record per changelog per channel).
-
-```prisma
-model SlackNotification {
-  id               String   @id @default(uuid())
-  slackChannelId   String
-  changelogEntryId String
-  messageTs        String?             // Slack message timestamp (for updates)
-  status           String   @default("sent")  // sent | failed
-  errorMessage     String?
-  sentAt           DateTime?
-
-  slackChannel     SlackChannel
-  changelogEntry   ChangelogEntry
-
-  @@unique([slackChannelId, changelogEntryId])
-}
-```
+- **SlackNotification** --- tracks delivery of each changelog post to a channel. Records the Slack message timestamp (for future updates), delivery status (`sent` or `failed`), and any error message. Unique per channel + changelog entry combination to prevent duplicate posts.
 
 ## Error Handling
 
-| Scenario               | Behavior                                                      |
-| ---------------------- | ------------------------------------------------------------- |
-| Token expired          | Auto-refreshed 5 minutes before expiry                        |
-| Refresh token revoked  | Integration marked as `revoked`, user must reconnect          |
-| Invalid auth           | Integration marked as `revoked`                               |
-| Account inactive       | Integration marked as `revoked`                               |
-| Slack API rate limited | Auto-retry up to 3 times with exponential backoff             |
-| Post fails             | `SlackNotification.status` set to `failed` with error message |
-| OAuth state expired    | Callback rejected, user must restart the OAuth flow           |
+| Scenario               | Behavior                                               |
+| ---------------------- | ------------------------------------------------------ |
+| Token expired          | Auto-refreshed 5 minutes before expiry                 |
+| Refresh token revoked  | Integration marked as `revoked`, user must reconnect   |
+| Invalid auth           | Integration marked as `revoked`                        |
+| Account inactive       | Integration marked as `revoked`                        |
+| Slack API rate limited | Auto-retry up to 3 times with exponential backoff      |
+| Post fails             | Notification status set to `failed` with error message |
+| OAuth state expired    | Callback rejected, user must restart the OAuth flow    |
 
 ## Environment Variables
 
@@ -210,11 +157,9 @@ apps/lfx-changelog/src/server/
 ├── controllers/
 │   └── slack.controller.ts        # HTTP handlers for Slack endpoints
 ├── services/
-│   └── slack.service.ts           # OAuth flow, token management, posting
+│   └── slack.service.ts           # OAuth flow, token encryption, posting
 ├── routes/
 │   └── slack.route.ts             # /api/slack/* route definitions
-└── helpers/
-    └── encryption.helper.ts       # AES-256-GCM encrypt/decrypt
 
 apps/lfx-changelog/src/app/
 └── shared/
