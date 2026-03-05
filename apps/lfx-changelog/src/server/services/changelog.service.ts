@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
-import { type ChangelogStatus, Prisma, type ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
+import { ChangelogStatus, Prisma, ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
 
 import { ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
-
 import { getOpenSearchService } from './opensearch.service';
 import { getPrismaClient } from './prisma.service';
 
@@ -204,6 +203,23 @@ export class ChangelogService {
     });
     this.syncToOpenSearch(published);
     return published;
+  }
+
+  public async unpublish(id: string): Promise<PrismaChangelogEntry> {
+    const prisma = getPrismaClient();
+    const entry = await prisma.changelogEntry.findUnique({ where: { id } });
+    if (!entry) {
+      throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'unpublish', service: 'changelog' });
+    }
+    const draft = await prisma.changelogEntry.update({
+      where: { id },
+      data: { status: 'draft', publishedAt: null },
+      include: { product: true, author: true },
+    });
+    getOpenSearchService()
+      .delete(id)
+      .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+    return draft;
   }
 
   public async delete(id: string): Promise<void> {

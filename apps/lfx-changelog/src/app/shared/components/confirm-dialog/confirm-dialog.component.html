@@ -1,0 +1,10 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<p class="text-text-secondary text-sm">{{ message() }}</p>
+<div class="mt-4 flex justify-end gap-3">
+  <lfx-button variant="secondary" (clicked)="dialogService.close()">Cancel</lfx-button>
+  <lfx-button [variant]="danger() ? 'danger' : 'primary'" (clicked)="confirm()">
+    {{ confirmLabel() }}
+  </lfx-button>
+</div>

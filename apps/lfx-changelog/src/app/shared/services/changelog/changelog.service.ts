@@ -56,6 +56,13 @@ export class ChangelogService {
     );
   }
 
+  public unpublish(id: string): Observable<ChangelogEntryWithRelations> {
+    return this.http.patch<ApiResponse<ChangelogEntryWithRelations>>(`/api/changelogs/${id}/unpublish`, {}).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
   public remove(id: string): Observable<HttpResponse<void>> {
     return this.http.delete<void>(`/api/changelogs/${id}`, { observe: 'response' }).pipe(take(1));
   }

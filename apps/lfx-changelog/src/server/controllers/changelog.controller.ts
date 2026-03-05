@@ -113,6 +113,15 @@ export class ChangelogController {
     }
   }
 
+  public async unpublish(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const entry = await this.changelogService.unpublish(req.params['id'] as string);
+      res.json({ success: true, data: entry });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await this.changelogService.delete(req.params['id'] as string);

@@ -101,7 +101,7 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
   });
 
   test.describe('CRUD Lifecycle', () => {
-    test('create → read → update → publish → delete changelog (super_admin)', async () => {
+    test('create → read → update → publish → unpublish → delete changelog (super_admin)', async () => {
       // Discover a product ID from the seeded data
       const productsRes = await superAdminApi.get('/api/products');
       const products = (await productsRes.json()).data;
@@ -150,6 +150,15 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
       expect(published.status).toBe('published');
       expect(published.publishedAt).not.toBeNull();
 
+      // UNPUBLISH
+      const unpublishRes = await superAdminApi.patch(`/api/changelogs/${entryId}/unpublish`);
+      expect(unpublishRes.status()).toBe(200);
+      const unpublished = (await unpublishRes.json()).data;
+      expect(unpublished.status).toBe('draft');
+      expect(unpublished.publishedAt).toBeNull();
+      expect(unpublished.product).toBeDefined();
+      expect(unpublished.author).toBeDefined();
+
       // DELETE
       const deleteRes = await superAdminApi.delete(`/api/changelogs/${entryId}`);
       expect(deleteRes.status()).toBe(204);
@@ -157,6 +166,84 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
       // VERIFY DELETED
       const verifyRes = await superAdminApi.get(`/api/changelogs/${entryId}`);
       expect(verifyRes.status()).toBe(404);
+    });
+  });
+
+  test.describe('Unpublish', () => {
+    let productId: string;
+
+    test.beforeAll(async () => {
+      const productsRes = await superAdminApi.get('/api/products');
+      productId = (await productsRes.json()).data.find((p: any) => p.slug === 'e2e-easycla').id;
+    });
+
+    test('PATCH /api/changelogs/:id/unpublish returns 401 without auth', async () => {
+      const listRes = await superAdminApi.get('/api/changelogs');
+      const entries = (await listRes.json()).data;
+      const id = entries[0].id;
+
+      const res = await unauthApi.patch(`/api/changelogs/${id}/unpublish`);
+      expect(res.status()).toBe(401);
+    });
+
+    test('unpublish reverts published entry to draft', async () => {
+      // Create and publish an entry
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Unpublish Test', description: 'Test', version: '1.0.0', status: 'draft' },
+      });
+      const entryId = (await createRes.json()).data.id;
+      await superAdminApi.patch(`/api/changelogs/${entryId}/publish`);
+
+      // Unpublish
+      const res = await superAdminApi.patch(`/api/changelogs/${entryId}/unpublish`);
+      expect(res.status()).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.status).toBe('draft');
+      expect(body.data.publishedAt).toBeNull();
+
+      // Verify via GET
+      const getRes = await superAdminApi.get(`/api/changelogs/${entryId}`);
+      const fetched = (await getRes.json()).data;
+      expect(fetched.status).toBe('draft');
+      expect(fetched.publishedAt).toBeNull();
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entryId}`);
+    });
+
+    test('unpublish non-existent entry returns 404', async () => {
+      const res = await superAdminApi.patch('/api/changelogs/00000000-0000-0000-0000-000000000000/unpublish');
+      expect(res.status()).toBe(404);
+    });
+
+    test('editor can unpublish entries (has EDITOR role)', async () => {
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Editor Unpublish Test', description: 'Test', version: '1.0.0', status: 'draft' },
+      });
+      const entryId = (await createRes.json()).data.id;
+      await superAdminApi.patch(`/api/changelogs/${entryId}/publish`);
+
+      const res = await editorApi.patch(`/api/changelogs/${entryId}/unpublish`);
+      expect(res.status()).toBe(200);
+      expect((await res.json()).data.status).toBe('draft');
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entryId}`);
+    });
+
+    test('user with no roles gets 403 on unpublish', async () => {
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Forbidden Unpublish Test', description: 'Test', version: '1.0.0', status: 'draft' },
+      });
+      const entryId = (await createRes.json()).data.id;
+      await superAdminApi.patch(`/api/changelogs/${entryId}/publish`);
+
+      const res = await userApi.patch(`/api/changelogs/${entryId}/unpublish`);
+      expect(res.status()).toBe(403);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entryId}`);
     });
   });
 

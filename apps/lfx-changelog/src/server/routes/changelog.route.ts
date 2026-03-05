@@ -32,6 +32,9 @@ router.put(
 router.patch('/:id/publish', authorize({ scope: ApiKeyScope.CHANGELOGS_WRITE, productRole: UserRole.EDITOR, resolveProductId: true }), (req, res, next) =>
   changelogController.publish(req, res, next)
 );
+router.patch('/:id/unpublish', authorize({ scope: ApiKeyScope.CHANGELOGS_WRITE, productRole: UserRole.EDITOR, resolveProductId: true }), (req, res, next) =>
+  changelogController.unpublish(req, res, next)
+);
 router.delete('/:id', authorize({ scope: ApiKeyScope.CHANGELOGS_WRITE, productRole: UserRole.PRODUCT_ADMIN, resolveProductId: true }), (req, res, next) =>
   changelogController.delete(req, res, next)
 );

@@ -89,10 +89,43 @@ test.describe('Changelog List', () => {
     await expect(listPage.resyncResult).toContainText('indexed');
   });
 
-  test('should show Slack button on published entries', async () => {
+  test('should show actions menu with Post to Slack on published entries', async ({ page }) => {
+    // Find a published row specifically (first row may be draft)
+    const publishedRow = listPage.getRows().filter({ has: page.locator('lfx-status-badge:has-text("Published")') });
+    await expect(publishedRow.first()).toBeVisible();
+    const actionsBtn = publishedRow.first().locator('[data-testid="changelog-list-actions-btn"]');
+    await actionsBtn.click();
+    // The dropdown panel is appended to body
+    const slackOption = page.locator('body > div').getByText('Post to Slack');
+    await expect(slackOption).toBeVisible();
+  });
+
+  test('should show actions menu with Delete option', async ({ page }) => {
     const rows = listPage.getRows();
     await expect(rows.first()).toBeVisible();
-    // At least one published entry should have a Slack button
-    await expect(listPage.slackBtn.first()).toBeVisible();
+    await listPage.actionsBtn.first().click();
+    const deleteOption = page.locator('body > div').getByText('Delete');
+    await expect(deleteOption).toBeVisible();
+  });
+
+  test('should show Unpublish option for published entries', async ({ page }) => {
+    // Find a row with a Published status badge
+    const publishedRow = listPage.getRows().filter({ has: page.locator('lfx-status-badge:has-text("Published")') });
+    await expect(publishedRow.first()).toBeVisible();
+    // Click the actions button within the published row
+    const actionsBtn = publishedRow.first().locator('[data-testid="changelog-list-actions-btn"]');
+    await actionsBtn.click();
+    const unpublishOption = page.locator('body > div').getByText('Unpublish');
+    await expect(unpublishOption).toBeVisible();
+  });
+
+  test('should not show Unpublish option for draft entries', async ({ page }) => {
+    // Find a row with a Draft status badge
+    const draftRow = listPage.getRows().filter({ has: page.locator('lfx-status-badge:has-text("Draft")') });
+    await expect(draftRow.first()).toBeVisible();
+    const actionsBtn = draftRow.first().locator('[data-testid="changelog-list-actions-btn"]');
+    await actionsBtn.click();
+    const unpublishOption = page.locator('body > div').getByText('Unpublish');
+    await expect(unpublishOption).not.toBeVisible();
   });
 });

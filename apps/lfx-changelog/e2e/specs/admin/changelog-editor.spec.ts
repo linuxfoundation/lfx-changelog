@@ -115,4 +115,90 @@ test.describe('Changelog Editor', () => {
     await editorPage.changeAuthorBtn.click();
     await expect(editorPage.authorSelect).toBeVisible({ timeout: 10000 });
   });
+
+  test('should show delete button when editing', async ({ page }) => {
+    const listPage = new ChangelogListPage(page);
+    await listPage.goto();
+    const rows = listPage.getRows();
+    await expect(rows.first()).toBeVisible();
+    await rows.first().locator('a').click();
+    await page.waitForURL(/\/admin\/changelogs\/.*\/edit/);
+
+    await expect(editorPage.deleteBtn).toBeVisible();
+    await expect(editorPage.deleteBtn).toContainText('Delete');
+  });
+
+  test('should not show delete button for new entries', async () => {
+    await editorPage.gotoNew();
+    await expect(editorPage.deleteBtn).not.toBeVisible();
+  });
+
+  test('should show unpublish button for published entries', async ({ page }) => {
+    const listPage = new ChangelogListPage(page);
+    await listPage.goto();
+
+    // Find a published entry by locating a row with "Published" status badge
+    const publishedRow = listPage.getRows().filter({ has: page.locator('lfx-status-badge:has-text("Published")') });
+    await expect(publishedRow.first()).toBeVisible();
+    await publishedRow.first().locator('a').click();
+    await page.waitForURL(/\/admin\/changelogs\/.*\/edit/);
+
+    await expect(editorPage.unpublishBtn).toBeVisible();
+    await expect(editorPage.unpublishBtn).toContainText('Unpublish');
+  });
+
+  test('should not show unpublish button for draft entries', async ({ page }) => {
+    const listPage = new ChangelogListPage(page);
+    await listPage.goto();
+
+    // Find a draft entry
+    const draftRow = listPage.getRows().filter({ has: page.locator('lfx-status-badge:has-text("Draft")') });
+    await expect(draftRow.first()).toBeVisible();
+    await draftRow.first().locator('a').click();
+    await page.waitForURL(/\/admin\/changelogs\/.*\/edit/);
+
+    await expect(editorPage.unpublishBtn).not.toBeVisible();
+  });
+
+  test('should show publish button for draft entries', async ({ page }) => {
+    const listPage = new ChangelogListPage(page);
+    await listPage.goto();
+
+    const draftRow = listPage.getRows().filter({ has: page.locator('lfx-status-badge:has-text("Draft")') });
+    await expect(draftRow.first()).toBeVisible();
+    await draftRow.first().locator('a').click();
+    await page.waitForURL(/\/admin\/changelogs\/.*\/edit/);
+
+    await expect(editorPage.publishBtn).toBeVisible();
+  });
+
+  test('should open confirm dialog when clicking delete', async ({ page }) => {
+    const listPage = new ChangelogListPage(page);
+    await listPage.goto();
+    const rows = listPage.getRows();
+    await expect(rows.first()).toBeVisible();
+    await rows.first().locator('a').click();
+    await page.waitForURL(/\/admin\/changelogs\/.*\/edit/);
+
+    await editorPage.deleteBtn.click();
+    // Confirm dialog should appear (rendered at app root via DialogService/dialog-outlet)
+    const dialog = page.locator('[data-testid="dialog-box"]');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('permanently delete');
+  });
+
+  test('should open confirm dialog when clicking unpublish', async ({ page }) => {
+    const listPage = new ChangelogListPage(page);
+    await listPage.goto();
+
+    const publishedRow = listPage.getRows().filter({ has: page.locator('lfx-status-badge:has-text("Published")') });
+    await expect(publishedRow.first()).toBeVisible();
+    await publishedRow.first().locator('a').click();
+    await page.waitForURL(/\/admin\/changelogs\/.*\/edit/);
+
+    await editorPage.unpublishBtn.click();
+    const dialog = page.locator('[data-testid="dialog-box"]');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('revert');
+  });
 });
