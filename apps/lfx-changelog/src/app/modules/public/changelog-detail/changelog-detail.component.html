@@ -86,7 +86,3 @@
     </a>
   </div>
 }
-
-@if (isAuthenticated() && entry(); as e) {
-  <lfx-post-to-slack-dialog [(visible)]="slackDialogVisible" [changelogId]="e.id" [changelogTitle]="e.title" />
-}

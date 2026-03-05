@@ -1,0 +1,31 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-4">
+  <div class="rounded-lg border border-yellow-400/30 bg-yellow-500/10 p-3.5">
+    <div class="flex items-start gap-2.5">
+      <i class="fa-solid fa-triangle-exclamation mt-0.5 text-sm text-yellow-600 dark:text-yellow-400"></i>
+      <div>
+        <p class="text-sm font-medium text-yellow-700 dark:text-yellow-300">Copy this key now</p>
+        <p class="mt-0.5 text-xs text-yellow-600/80 dark:text-yellow-400/70">This is the only time it will be displayed. Store it securely.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-surface-alt border-border rounded-lg border p-4">
+    <code data-testid="api-key-raw-value" class="text-text-primary block font-mono text-sm leading-relaxed break-all">{{ rawKey() }}</code>
+  </div>
+
+  <div class="flex justify-end gap-3">
+    <lfx-button data-testid="api-key-copy-btn" variant="secondary" (clicked)="copyKey()">
+      @if (copied()) {
+        <i class="fa-solid fa-check text-green-500"></i>
+        Copied!
+      } @else {
+        <i class="fa-solid fa-copy"></i>
+        Copy to Clipboard
+      }
+    </lfx-button>
+    <lfx-button variant="primary" (clicked)="dialogService.close()">Done</lfx-button>
+  </div>
+</div>

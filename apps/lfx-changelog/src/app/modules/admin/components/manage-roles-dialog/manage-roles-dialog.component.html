@@ -1,0 +1,41 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div data-testid="user-role-dialog-content" class="space-y-5">
+  <div>
+    <h3 data-testid="user-role-dialog-name" class="text-text-primary text-sm font-medium">{{ user().name }}</h3>
+    <p data-testid="user-role-dialog-email" class="text-text-muted text-xs">{{ user().email }}</p>
+  </div>
+
+  <div>
+    <h4 class="text-text-muted mb-2 text-xs font-medium tracking-wider uppercase">Current Roles</h4>
+    <div data-testid="user-role-dialog-current-roles" class="space-y-2">
+      @for (ra of roles(); track ra.id) {
+        <div data-testid="user-role-dialog-role-item" class="border-border bg-surface-alt flex items-center justify-between rounded-lg border px-3 py-2">
+          <div class="flex items-center gap-2">
+            <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
+            <span class="text-text-secondary text-sm">{{ ra.productId | productName: products() }}</span>
+          </div>
+          <lfx-button data-testid="user-role-dialog-remove-btn" variant="ghost" size="sm" (clicked)="removeRole(ra.id)">Remove</lfx-button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="border-border border-t pt-4">
+    <h4 class="text-text-muted mb-3 text-xs font-medium tracking-wider uppercase">Assign New Role</h4>
+    <lfx-select data-testid="user-role-dialog-role-select" label="Role" [options]="roleOptions" [formControl]="newRoleControl" placeholder="Select role..." />
+    @if (!newRoleIsSuperAdmin()) {
+      <lfx-select
+        data-testid="user-role-dialog-product-select"
+        label="Product"
+        [options]="productOptions()"
+        [formControl]="newProductControl"
+        placeholder="Select product..."
+        class="mt-3 block" />
+    }
+    <div class="mt-3 flex justify-end">
+      <lfx-button data-testid="user-role-dialog-assign-btn" variant="primary" size="sm" (clicked)="assignRole()">Assign Role</lfx-button>
+    </div>
+  </div>
+</div>

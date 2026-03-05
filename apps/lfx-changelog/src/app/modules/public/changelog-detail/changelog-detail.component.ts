@@ -11,12 +11,13 @@ import { PostToSlackDialogComponent } from '@components/post-to-slack-dialog/pos
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
 import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
+import { DialogService } from '@services/dialog/dialog.service';
 import { format } from 'date-fns';
 import { catchError, of, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-changelog-detail',
-  imports: [MarkdownRendererComponent, ProductPillComponent, CardComponent, RouterLink, ButtonComponent, PostToSlackDialogComponent],
+  imports: [MarkdownRendererComponent, ProductPillComponent, CardComponent, RouterLink, ButtonComponent],
   templateUrl: './changelog-detail.component.html',
   styleUrl: './changelog-detail.component.css',
 })
@@ -24,9 +25,9 @@ export class ChangelogDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly changelogService = inject(ChangelogService);
+  private readonly dialogService = inject(DialogService);
 
   protected readonly loading = signal(true);
-  protected readonly slackDialogVisible = signal(false);
 
   protected readonly isAuthenticated = computed(() => this.authService.authenticated());
 
@@ -57,6 +58,14 @@ export class ChangelogDetailComponent {
   });
 
   protected openSlackDialog(): void {
-    this.slackDialogVisible.set(true);
+    const e = this.entry();
+    if (!e) return;
+
+    this.dialogService.open({
+      title: 'Post to Slack',
+      size: 'sm',
+      component: PostToSlackDialogComponent,
+      inputs: { changelogId: e.id, changelogTitle: e.title },
+    });
   }
 }
