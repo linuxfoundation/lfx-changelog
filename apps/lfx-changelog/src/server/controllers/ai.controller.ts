@@ -131,10 +131,11 @@ export class AiController {
         version = bumpPatchVersion(latestVersion);
       }
 
-      // Generate slug from product slug + AI title
+      // Generate slug from product slug + AI title (with uniqueness guarantee)
       const product = await getPrismaClient().product.findUnique({ where: { id: productId }, select: { slug: true } });
       const titleSlug = slugify(metadata.title);
-      const slug = product ? `${product.slug}-${titleSlug}` : titleSlug;
+      const baseSlug = product ? `${product.slug}-${titleSlug}` : titleSlug;
+      const slug = await this.changelogService.ensureUniqueSlug(baseSlug);
 
       sendEvent('title', metadata.title);
       sendEvent('slug', slug);

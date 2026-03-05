@@ -357,10 +357,11 @@ export class WebhookController {
       version = bumpPatchVersion(latestVersion);
     }
 
-    // 9. Generate slug from product slug + title
+    // 9. Generate slug from product slug + title (with uniqueness guarantee)
     const product = await prisma.product.findUnique({ where: { id: productId }, select: { slug: true } });
     const titleSlug = slugify(metadata.title);
-    const slug = product ? `${product.slug}-${titleSlug}` : titleSlug;
+    const baseSlug = product ? `${product.slug}-${titleSlug}` : titleSlug;
+    const slug = await this.changelogService.ensureUniqueSlug(baseSlug);
 
     // 10. Find or create the automated draft via ChangelogService
     const existingDraft = await this.changelogService.findAutomatedDraft(productId);
