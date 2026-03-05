@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changelog`, shared package at `packages/shared` (`@lfx-changelog/shared`), Express 5 backend, PostgreSQL + Prisma ORM, Auth0.
+Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changelog`, shared package at `packages/shared` (`@lfx-changelog/shared`), MCP server at `packages/mcp-server`. Express 5 backend, PostgreSQL + Prisma ORM, Auth0, OpenSearch, Slack OAuth, GitHub App webhooks, Datadog APM/RUM. See `docs/` for feature-level documentation.
 
 ---
 
