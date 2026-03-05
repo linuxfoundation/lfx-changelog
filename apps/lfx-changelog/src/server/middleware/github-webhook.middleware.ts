@@ -18,7 +18,7 @@ const GITHUB_WEBHOOK_SECRET = process.env['GITHUB_WEBHOOK_SECRET'] || '';
  */
 export const verifyGitHubWebhook = [
   // Step 1: Parse body as raw Buffer (overrides the global express.json() parser)
-  express.raw({ type: 'application/json' }),
+  express.raw({ type: 'application/json', limit: '1mb' }),
 
   // Step 2: Verify signature + parse JSON
   (req: Request, res: Response, next: NextFunction): void => {
