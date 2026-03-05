@@ -28,6 +28,7 @@ export type MarkViewedResponse = z.infer<typeof MarkViewedResponseSchema>;
 
 export const MarkViewedRequestSchema = z
   .object({
+    viewerId: z.string().min(1).optional(),
     productId: z.string().uuid().optional(),
     productIds: z.array(z.string().uuid()).optional(),
   })
@@ -40,8 +41,9 @@ export type MarkViewedRequest = z.infer<typeof MarkViewedRequestSchema>;
 
 export const UnseenQuerySchema = z
   .object({
+    viewerId: z.string().min(1).optional(),
     productId: z.string().uuid().optional(),
-    productIds: z.string().optional(),
+    productIds: z.union([z.string(), z.array(z.string())]).optional(),
   })
   .openapi('UnseenQuery');
 

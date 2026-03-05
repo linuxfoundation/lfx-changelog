@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { NotFoundError } from '../errors';
 import { getPrismaClient } from './prisma.service';
 
 import type { UnseenCount } from '@lfx-changelog/shared';
@@ -9,13 +10,13 @@ export class ChangelogViewService {
   /**
    * Returns unseen changelog counts for the given products (or all products if none specified).
    */
-  public async getUnseenCounts(userId: string, productIds?: string[]): Promise<UnseenCount[]> {
+  public async getUnseenCounts(viewerId: string, productIds?: string[]): Promise<UnseenCount[]> {
     const prisma = getPrismaClient();
 
-    // Get the user's view records
+    // Get the viewer's view records
     const views = await prisma.changelogView.findMany({
       where: {
-        userId,
+        viewerId,
         ...(productIds?.length ? { productId: { in: productIds } } : {}),
       },
     });
@@ -61,34 +62,44 @@ export class ChangelogViewService {
 
   /**
    * Marks one or more products' changelogs as viewed by upserting view records.
+   * Wrapped in a transaction so all upserts succeed or none do.
    */
-  public async markViewed(userId: string, productIds: string[]): Promise<{ productId: string; lastViewedAt: string }[]> {
+  public async markViewed(viewerId: string, productIds: string[]): Promise<{ productId: string; lastViewedAt: string }[]> {
     const prisma = getPrismaClient();
 
+    // Pre-validate that all product IDs exist
+    const existingProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true },
+    });
+    const existingIds = new Set(existingProducts.map((p) => p.id));
+    const missing = productIds.filter((id) => !existingIds.has(id));
+    if (missing.length > 0) {
+      throw new NotFoundError(`Products not found: ${missing.join(', ')}`, { operation: 'markViewed', service: 'changelog-view' });
+    }
+
     const now = new Date();
-    const results = await Promise.all(
-      productIds.map(async (productId) => {
-        await prisma.changelogView.upsert({
+    await prisma.$transaction(
+      productIds.map((productId) =>
+        prisma.changelogView.upsert({
           where: {
-            userId_productId: { userId, productId },
+            viewerId_productId: { viewerId, productId },
           },
           create: {
-            userId,
+            viewerId,
             productId,
             lastViewedAt: now,
           },
           update: {
             lastViewedAt: now,
           },
-        });
-
-        return {
-          productId,
-          lastViewedAt: now.toISOString(),
-        };
-      })
+        })
+      )
     );
 
-    return results;
+    return productIds.map((productId) => ({
+      productId,
+      lastViewedAt: now.toISOString(),
+    }));
   }
 }

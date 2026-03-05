@@ -16,14 +16,16 @@ changelogViewRegistry.registerPath({
   tags: ['Changelog Views'],
   summary: 'Get unseen changelog counts',
   description:
-    'Returns the number of published changelogs the authenticated user has not yet seen for the given product(s).\n\n' +
+    'Returns the number of published changelogs a viewer has not yet seen for the given product(s).\n\n' +
+    '- **viewerId** (required) — opaque identifier for the viewer (e.g. Auth0 `sub`)\n' +
     '- **productId** (single) → returns a single object\n' +
     '- **productIds** (comma-separated) → returns an array\n' +
-    '- Neither → returns counts for all active products\n\n' +
-    'The `lastViewedAt` field is `null` if the user has never viewed the product, meaning all published changelogs are unseen.',
+    '- Neither productId/productIds → returns counts for all active products\n\n' +
+    'The `lastViewedAt` field is `null` if the viewer has never viewed the product, meaning all published changelogs are unseen.',
   security: API_KEY_AUTH,
   request: {
     query: z.object({
+      viewerId: z.string().min(1).openapi({ description: 'Opaque viewer identifier (e.g. Auth0 sub claim)' }),
       productId: z.string().uuid().optional().openapi({ description: 'Single product ID to check' }),
       productIds: z.string().optional().openapi({ description: 'Comma-separated product IDs for batch check' }),
     }),
@@ -37,6 +39,7 @@ changelogViewRegistry.registerPath({
         },
       },
     },
+    400: { description: 'Validation failed — viewerId is required' },
     401: { description: 'Unauthorized' },
   },
 });
@@ -47,7 +50,8 @@ changelogViewRegistry.registerPath({
   tags: ['Changelog Views'],
   summary: 'Mark changelogs as viewed',
   description:
-    "Updates the authenticated user's last-viewed timestamp for the given product(s) to the current time.\n\n" +
+    "Updates a viewer's last-viewed timestamp for the given product(s) to the current time.\n\n" +
+    '- **viewerId** (required) — opaque viewer identifier (e.g. Auth0 `sub`)\n' +
     '- **productId** (single) → returns a single object\n' +
     '- **productIds** (array) → returns an array\n\n' +
     'At least one of `productId` or `productIds` must be provided.',
@@ -72,5 +76,6 @@ changelogViewRegistry.registerPath({
     },
     400: { description: 'Validation failed' },
     401: { description: 'Unauthorized' },
+    404: { description: 'One or more product IDs not found' },
   },
 });

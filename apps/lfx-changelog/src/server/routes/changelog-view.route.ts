@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ApiKeyScope, MarkViewedRequestSchema } from '@lfx-changelog/shared';
+import { ApiKeyScope, MarkViewedRequestSchema, UnseenQuerySchema } from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { ChangelogViewController } from '../controllers/changelog-view.controller';
@@ -12,9 +12,12 @@ const router = Router();
 const changelogViewController = new ChangelogViewController();
 
 // Get unseen changelog counts (any authenticated user)
-router.get('/unseen', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), (req, res, next) => changelogViewController.getUnseenCounts(req, res, next));
+router.get('/unseen', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), validate({ query: UnseenQuerySchema }), (req, res, next) =>
+  changelogViewController.getUnseenCounts(req, res, next)
+);
 
-// Mark changelogs as viewed (any authenticated user)
+// Mark changelogs as viewed — uses CHANGELOGS_READ (not WRITE) because view-tracking
+// is a "read receipt", not content modification. Read-only API keys should be able to track views.
 router.post('/mark-viewed', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), validate({ body: MarkViewedRequestSchema }), (req, res, next) =>
   changelogViewController.markViewed(req, res, next)
 );
