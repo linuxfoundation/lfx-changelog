@@ -117,6 +117,7 @@ export const ChangelogGenerationStateSchema = z
     generating: z.boolean(),
     status: z.string(),
     title: z.string(),
+    slug: z.string(),
     version: z.string(),
     description: z.string(),
     error: z.string(),
@@ -126,11 +127,11 @@ export const ChangelogGenerationStateSchema = z
 
 export type ChangelogGenerationState = z.infer<typeof ChangelogGenerationStateSchema>;
 
-export type ChangelogSSEEventType = 'status' | 'title' | 'version' | 'content' | 'done' | 'error';
+export type ChangelogSSEEventType = 'status' | 'title' | 'slug' | 'version' | 'content' | 'done' | 'error';
 
 export const ChangelogSSEEventSchema = z
   .object({
-    type: z.enum(['status', 'title', 'version', 'content', 'done', 'error']),
+    type: z.enum(['status', 'title', 'slug', 'version', 'content', 'done', 'error']),
     data: z.string(),
   })
   .openapi('ChangelogSSEEvent');

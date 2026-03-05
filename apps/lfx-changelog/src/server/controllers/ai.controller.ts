@@ -1,10 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { bumpPatchVersion, slugify } from '@lfx-changelog/shared';
+
 import { serverLogger } from '../server-logger';
 import { AiService } from '../services/ai.service';
 import { ChangelogService } from '../services/changelog.service';
 import { GitHubService } from '../services/github.service';
+import { getPrismaClient } from '../services/prisma.service';
 import { ProductRepositoryService } from '../services/product-repository.service';
 
 import type { ChangelogSSEEventType, GenerateChangelogRequest, GitHubCommit, GitHubRelease } from '@lfx-changelog/shared';
@@ -121,8 +124,22 @@ export class AiController {
       const metadata = await this.aiService.generateChangelogMetadata(releaseContext, additionalContext, abortController.signal);
       if (clientDisconnected) return;
 
+      // If AI couldn't determine version from tags, compute next patch from existing entries
+      let version = metadata.version;
+      if (!version) {
+        const latestVersion = await this.changelogService.getLatestVersion(productId);
+        version = bumpPatchVersion(latestVersion);
+      }
+
+      // Generate slug from product slug + AI title (with uniqueness guarantee)
+      const product = await getPrismaClient().product.findUnique({ where: { id: productId }, select: { slug: true } });
+      const titleSlug = slugify(metadata.title);
+      const baseSlug = product ? `${product.slug}-${titleSlug}` : titleSlug;
+      const slug = await this.changelogService.ensureUniqueSlug(baseSlug);
+
       sendEvent('title', metadata.title);
-      sendEvent('version', metadata.version);
+      sendEvent('slug', slug);
+      sendEvent('version', version);
 
       // 5. Call 2: Stream description
       sendEvent('status', 'Generating changelog description...');

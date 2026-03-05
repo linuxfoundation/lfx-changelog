@@ -235,6 +235,38 @@ export class ChangelogService {
   }
 
   /**
+   * Returns the latest semantic version string for a product, or null if none exist.
+   * Checks all entries (published + draft) ordered by most recent first.
+   */
+  public async getLatestVersion(productId: string): Promise<string | null> {
+    const prisma = getPrismaClient();
+    const entry = await prisma.changelogEntry.findFirst({
+      where: { productId, version: { not: null }, NOT: { version: '' } },
+      orderBy: { createdAt: 'desc' },
+      select: { version: true },
+    });
+    return entry?.version ?? null;
+  }
+
+  /**
+   * Ensures the given slug is unique among changelog entries.
+   * If a collision exists, appends `-2`, `-3`, etc. until a unique slug is found.
+   */
+  public async ensureUniqueSlug(slug: string): Promise<string> {
+    const prisma = getPrismaClient();
+    const existing = await prisma.changelogEntry.findUnique({ where: { slug }, select: { id: true } });
+    if (!existing) return slug;
+
+    let suffix = 2;
+    while (true) {
+      const candidate = `${slug}-${suffix}`;
+      const conflict = await prisma.changelogEntry.findUnique({ where: { slug: candidate }, select: { id: true } });
+      if (!conflict) return candidate;
+      suffix++;
+    }
+  }
+
+  /**
    * Finds the most recent automated draft for a product, if one exists.
    */
   public async findAutomatedDraft(productId: string): Promise<PrismaChangelogEntry | null> {
