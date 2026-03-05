@@ -235,6 +235,20 @@ export class ChangelogService {
   }
 
   /**
+   * Returns the latest semantic version string for a product, or null if none exist.
+   * Checks all entries (published + draft) ordered by most recent first.
+   */
+  public async getLatestVersion(productId: string): Promise<string | null> {
+    const prisma = getPrismaClient();
+    const entry = await prisma.changelogEntry.findFirst({
+      where: { productId, version: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      select: { version: true },
+    });
+    return entry?.version ?? null;
+  }
+
+  /**
    * Finds the most recent automated draft for a product, if one exists.
    */
   public async findAutomatedDraft(productId: string): Promise<PrismaChangelogEntry | null> {

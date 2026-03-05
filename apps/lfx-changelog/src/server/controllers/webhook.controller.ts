@@ -12,7 +12,7 @@ import { getPrismaClient } from '../services/prisma.service';
 import { ReleaseService } from '../services/release.service';
 import { SlackService } from '../services/slack.service';
 
-import { BOT_EMAIL, BOT_NAME, DEFAULT_LOOKBACK_DAYS, STALE_LOCK_MS } from '@lfx-changelog/shared';
+import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 
 import type { GitHubCommit, GitHubPullRequest, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
 
@@ -350,29 +350,40 @@ export class WebhookController {
       this.aiService.generateChangelogDescription(releaseContext),
     ]);
 
-    // 8. Find or create the automated draft via ChangelogService
+    // 8. If AI couldn't determine version from tags, compute next patch from existing entries
+    let version = metadata.version;
+    if (!version) {
+      const latestVersion = await this.changelogService.getLatestVersion(productId);
+      version = bumpPatchVersion(latestVersion);
+    }
+
+    // 9. Generate slug from product slug + title
+    const product = await prisma.product.findUnique({ where: { id: productId }, select: { slug: true } });
+    const titleSlug = slugify(metadata.title);
+    const slug = product ? `${product.slug}-${titleSlug}` : titleSlug;
+
+    // 10. Find or create the automated draft via ChangelogService
     const existingDraft = await this.changelogService.findAutomatedDraft(productId);
 
     if (existingDraft) {
       await this.changelogService.update(existingDraft.id, {
         title: metadata.title,
         description,
-        version: metadata.version,
+        version,
+        slug,
       });
-      serverLogger.info(
-        { productId, entryId: existingDraft.id, title: metadata.title, version: metadata.version },
-        'Updated existing automated draft changelog'
-      );
+      serverLogger.info({ productId, entryId: existingDraft.id, title: metadata.title, version }, 'Updated existing automated draft changelog');
     } else {
       const entry = await this.changelogService.create({
         productId,
+        slug,
         title: metadata.title,
         description,
-        version: metadata.version,
+        version,
         source: 'automated',
         createdBy: botUser.id,
       });
-      serverLogger.info({ productId, entryId: entry.id, title: metadata.title, version: metadata.version }, 'Created new automated draft changelog');
+      serverLogger.info({ productId, entryId: entry.id, title: metadata.title, version }, 'Created new automated draft changelog');
     }
   }
 

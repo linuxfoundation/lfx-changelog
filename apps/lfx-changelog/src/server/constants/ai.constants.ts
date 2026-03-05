@@ -47,7 +47,8 @@ Version rules:
 - Strip any prefixes like "v", "release-", "@scope/pkg@", or similar.
 - If the tag is not semver (e.g., "2024-01-15"), simplify it to just the version-like portion.
 - If multiple repos have different versions, use the highest one.
-- Do NOT include "v" prefix in the version field.`;
+- Do NOT include "v" prefix in the version field.
+- If no release tags are present in the data (e.g., only commits or PRs), return an empty string for the version.`;
 
 /** JSON schema for changelog metadata (title + version). */
 export const AI_CHANGELOG_METADATA_SCHEMA: OpenAIJsonSchemaFormat = {
@@ -66,7 +67,7 @@ export const AI_CHANGELOG_METADATA_SCHEMA: OpenAIJsonSchemaFormat = {
         },
         version: {
           type: 'string',
-          description: 'Clean semantic version (e.g., "2.5.0") without prefixes like "v" or "release-".',
+          description: 'Clean semantic version (e.g., "2.5.0") without prefixes like "v" or "release-". Empty string if no release tags are available.',
         },
       },
     },

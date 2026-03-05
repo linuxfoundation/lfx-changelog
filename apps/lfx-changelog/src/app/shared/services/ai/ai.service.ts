@@ -9,6 +9,7 @@ const INITIAL_STATE: ChangelogGenerationState = {
   generating: false,
   status: '',
   title: '',
+  slug: '',
   version: '',
   description: '',
   error: '',
@@ -128,6 +129,9 @@ export class AiService {
         break;
       case 'title':
         this.state.update((s) => ({ ...s, title: event.data }));
+        break;
+      case 'slug':
+        this.state.update((s) => ({ ...s, slug: event.data }));
         break;
       case 'version':
         this.state.update((s) => ({ ...s, version: event.data }));

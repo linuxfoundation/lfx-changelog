@@ -136,6 +136,12 @@ export class ChangelogEditorComponent {
     this.descriptionControl.setValue('');
     this.versionControl.setValue('');
 
+    // Reset slug so it auto-generates from the AI-produced title
+    this.slugManuallyEdited = false;
+    this.settingSlugProgrammatically = true;
+    this.slugControl.setValue('');
+    this.settingSlugProgrammatically = false;
+
     this.aiService.generateChangelog({ productId, releaseCount, additionalContext });
   }
 
@@ -313,6 +319,11 @@ export class ChangelogEditorComponent {
       .subscribe(([prev, curr]) => {
         if (curr.title && curr.title !== prev.title) {
           this.titleControl.setValue(curr.title);
+        }
+        if (curr.slug && curr.slug !== prev.slug) {
+          this.settingSlugProgrammatically = true;
+          this.slugControl.setValue(curr.slug);
+          this.settingSlugProgrammatically = false;
         }
         if (curr.version && curr.version !== prev.version) {
           this.versionControl.setValue(curr.version);

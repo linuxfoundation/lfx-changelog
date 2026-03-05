@@ -6,8 +6,6 @@ import crypto from 'node:crypto';
 
 import { serverLogger } from '../server-logger';
 
-const GITHUB_WEBHOOK_SECRET = process.env['GITHUB_WEBHOOK_SECRET'] || '';
-
 /**
  * Middleware pipeline that:
  * 1. Parses the raw body (needed for HMAC signature verification)
@@ -23,6 +21,7 @@ export const verifyGitHubWebhook = [
   // Step 2: Verify signature + parse JSON
   (req: Request, res: Response, next: NextFunction): void => {
     const signature = req.headers['x-hub-signature-256'] as string | undefined;
+    const GITHUB_WEBHOOK_SECRET = process.env['GITHUB_WEBHOOK_SECRET'] || '';
 
     if (!GITHUB_WEBHOOK_SECRET) {
       serverLogger.warn('GITHUB_WEBHOOK_SECRET is not configured — rejecting webhook');
