@@ -39,12 +39,26 @@ export const MarkViewedRequestSchema = z
 
 export type MarkViewedRequest = z.infer<typeof MarkViewedRequestSchema>;
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const UnseenQuerySchema = z
   .object({
     viewerId: z.string().min(1).optional(),
     productId: z.string().uuid().optional(),
     productIds: z.union([z.string(), z.array(z.string())]).optional(),
   })
+  .refine(
+    (data) => {
+      if (!data.productIds) return true;
+      const raw = Array.isArray(data.productIds) ? data.productIds.join(',') : data.productIds;
+      return raw
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .every((id) => UUID_REGEX.test(id));
+    },
+    { message: 'Each ID in productIds must be a valid UUID' }
+  )
   .openapi('UnseenQuery');
 
 export type UnseenQuery = z.infer<typeof UnseenQuerySchema>;

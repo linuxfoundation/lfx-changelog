@@ -50,8 +50,9 @@ export class ChangelogViewController {
 
       const results = await this.changelogViewService.markViewed(viewerId, targetIds);
 
-      // Single product → return single object; batch → return array
-      if (targetIds.length === 1) {
+      // Response shape: single object only when productId was the sole field provided;
+      // productIds (even with one element) → array, so clients can rely on a consistent shape.
+      if (productId && !batchIds) {
         res.json({ success: true, data: results[0] });
       } else {
         res.json({ success: true, data: results });
