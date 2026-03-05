@@ -6,16 +6,21 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 
 - **Public changelog feed** --- filterable timeline of published entries across all LFX products
 - **Per-product views** --- dedicated changelog pages for each of the 9 LFX products
+- **Pretty URLs** --- human-readable slugs for changelog entries (e.g., `/entry/security-march-2026-patches`)
+- **Full-text search** --- OpenSearch-powered search with fuzzy matching, field boosting, highlighting, and product faceting
 - **Admin dashboard** --- overview of drafts, published entries, and recent activity
 - **Changelog editor** --- Markdown-based editor with live preview and category tagging
-- **AI-powered generation** --- generate changelog entries from GitHub activity via SSE streaming
-- **GitHub integration** --- connect GitHub App installations to products for repository tracking
+- **AI-powered generation** --- automatically generate draft changelog entries from GitHub commits, merged PRs, and releases
+- **AI chat assistant** --- conversational AI that answers questions about changelog data with streaming responses
+- **GitHub integration** --- GitHub App for repository tracking, release syncing, and webhook-driven changelog generation
+- **Slack integration** --- share published changelogs to Slack channels with rich BlockKit messages
 - **Role-based access** --- super admin, product admin, and editor roles with per-product scoping
 - **Auth0 authentication** --- secure login via OpenID Connect
 - **API key access** --- scoped API keys for programmatic access to protected endpoints (CI/CD, scripts, external tools)
 - **Dark mode** --- light/dark dual-theme with system preference detection
 - **Server-side rendering** --- Angular SSR for fast initial loads and SEO
 - **MCP server** --- AI tool integration via the Model Context Protocol (Claude Desktop, Cursor, etc.)
+- **Observability** --- Datadog APM, RUM with session replay, and structured HTTP request logging
 - **E2E test suite** --- Playwright tests covering public pages, admin flows, RBAC, and API endpoints
 
 ## Tech Stack
@@ -85,27 +90,34 @@ The app runs at `http://localhost:4204`
 
 The server supports two ways to configure the database connection: a single `DATABASE_URL` connection string, or individual `DB_*` variables (which the server assembles at runtime via `buildConnectionString`). Provide one or the other.
 
-| Variable                | Required | Description                                                                                              |
-| ----------------------- | -------- | -------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`          | Yes\*    | PostgreSQL connection string (e.g., `postgresql://changelog:changelog_dev@localhost:5432/lfx_changelog`) |
-| `DB_HOST`               | Yes\*    | Database host (e.g., `localhost`)                                                                        |
-| `DB_PORT`               | No       | Database port (default: `5432`)                                                                          |
-| `DB_NAME`               | Yes\*    | Database name (e.g., `lfx_changelog`)                                                                    |
-| `DB_USER`               | Yes\*    | Database user (e.g., `changelog`)                                                                        |
-| `DB_PASSWORD`           | Yes\*    | Database password                                                                                        |
-| `AUTH0_CLIENT_ID`       | Yes      | Auth0 application client ID                                                                              |
-| `AUTH0_CLIENT_SECRET`   | Yes      | Auth0 application client secret                                                                          |
-| `AUTH0_ISSUER_BASE_URL` | Yes      | Auth0 tenant URL (e.g., `https://your-tenant.auth0.com`)                                                 |
-| `AUTH0_SECRET`          | Yes      | Session encryption secret (min 32 characters)                                                            |
-| `BASE_URL`              | Yes      | Application base URL (e.g., `http://localhost:4204`)                                                     |
-| `GITHUB_APP_ID`         | No       | GitHub App ID for repository integration                                                                 |
-| `GITHUB_PRIVATE_KEY`    | No       | GitHub App RSA private key                                                                               |
-| `GITHUB_WEBHOOK_SECRET` | No       | Secret for verifying GitHub webhook signatures (see [Webhook Testing](docs/webhook-testing.md))          |
-| `LITELLM_API_KEY`       | No       | API key for AI changelog generation                                                                      |
-| `AI_API_URL`            | No       | AI service endpoint URL                                                                                  |
-| `NODE_ENV`              | No       | `development` or `production` (default: `development`)                                                   |
-| `PORT`                  | No       | Server port (default: `4000`)                                                                            |
-| `LOG_LEVEL`             | No       | Logging level: `debug`, `info`, `warn`, `error` (default: `info`)                                        |
+| Variable                     | Required | Description                                                                                              |
+| ---------------------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`               | Yes\*    | PostgreSQL connection string (e.g., `postgresql://changelog:changelog_dev@localhost:5432/lfx_changelog`) |
+| `DB_HOST`                    | Yes\*    | Database host (e.g., `localhost`)                                                                        |
+| `DB_PORT`                    | No       | Database port (default: `5432`)                                                                          |
+| `DB_NAME`                    | Yes\*    | Database name (e.g., `lfx_changelog`)                                                                    |
+| `DB_USER`                    | Yes\*    | Database user (e.g., `changelog`)                                                                        |
+| `DB_PASSWORD`                | Yes\*    | Database password                                                                                        |
+| `AUTH0_CLIENT_ID`            | Yes      | Auth0 application client ID                                                                              |
+| `AUTH0_CLIENT_SECRET`        | Yes      | Auth0 application client secret                                                                          |
+| `AUTH0_ISSUER_BASE_URL`      | Yes      | Auth0 tenant URL (e.g., `https://your-tenant.auth0.com`)                                                 |
+| `AUTH0_SECRET`               | Yes      | Session encryption secret (min 32 characters)                                                            |
+| `BASE_URL`                   | Yes      | Application base URL (e.g., `http://localhost:4204`)                                                     |
+| `GITHUB_APP_ID`              | No       | GitHub App ID for repository integration                                                                 |
+| `GITHUB_PRIVATE_KEY`         | No       | GitHub App RSA private key                                                                               |
+| `GITHUB_WEBHOOK_SECRET`      | No       | Secret for verifying GitHub webhook signatures (see [Webhook Testing](docs/webhook-testing.md))          |
+| `LITELLM_API_KEY`            | No       | API key for AI changelog generation and AI chat                                                          |
+| `AI_API_URL`                 | No       | AI service endpoint URL (LiteLLM proxy)                                                                  |
+| `OPENSEARCH_URL`             | No       | OpenSearch endpoint for full-text search (e.g., `https://search.example.com`)                            |
+| `SLACK_CLIENT_ID`            | No       | Slack OAuth client ID for Slack integration                                                              |
+| `SLACK_CLIENT_SECRET`        | No       | Slack OAuth client secret                                                                                |
+| `SLACK_TOKEN_ENCRYPTION_KEY` | No       | AES-256-GCM key for encrypting Slack tokens at rest (64 hex chars)                                       |
+| `WEBHOOK_STATE_SECRET`       | No       | HMAC secret for OAuth state CSRF protection (Slack + GitHub)                                             |
+| `DATADOG_RUM_APPLICATION_ID` | No       | Datadog RUM application ID (client-side monitoring)                                                      |
+| `DATADOG_RUM_CLIENT_ID`      | No       | Datadog RUM client token                                                                                 |
+| `NODE_ENV`                   | No       | `development` or `production` (default: `development`)                                                   |
+| `PORT`                       | No       | Server port (default: `4000`)                                                                            |
+| `LOG_LEVEL`                  | No       | Logging level: `debug`, `info`, `warn`, `error` (default: `info`)                                        |
 
 \*Provide either `DATABASE_URL` **or** the `DB_HOST`/`DB_NAME`/`DB_USER`/`DB_PASSWORD` group.
 
@@ -206,14 +218,18 @@ API keys are scoped (`changelogs:read`, `changelogs:write`, `products:read`, `pr
 
 ## Database
 
-The PostgreSQL schema is managed by Prisma with six models:
+The PostgreSQL schema is managed by Prisma:
 
 - **Product** --- LFX products with activation status, Font Awesome icons, and optional GitHub App installation
-- **ProductRepository** --- GitHub repositories linked to products for changelog generation
-- **ChangelogEntry** --- individual changelog entries with markdown content, versioning, and status tracking
+- **ProductRepository** --- GitHub repositories linked to products for release syncing and changelog generation
+- **GitHubRelease** --- release metadata synced from GitHub (tag, notes, author, publish date)
+- **ChangelogEntry** --- individual changelog entries with markdown content, versioning, slugs, and source tracking (`manual` or `automated`)
 - **User** --- users synced from Auth0 on first login
 - **UserRoleAssignment** --- maps users to roles, optionally scoped to a product
 - **ApiKey** --- scoped API keys for programmatic access, storing SHA-256 hashes with expiration and revocation tracking
+- **ChatConversation** / **ChatMessage** --- AI chat conversation history with tool call persistence
+- **AutoChangelogLock** --- distributed lock for concurrent auto-changelog generation across replicas
+- **SlackIntegration** / **SlackChannel** / **SlackNotification** --- Slack workspace connections, channel config, and delivery tracking
 
 ### Useful commands
 
@@ -282,17 +298,22 @@ Adding the `deploy-preview` label to a PR builds and pushes a branch-specific im
 
 ## Documentation
 
-| Document                                                 | Description                                          |
-| -------------------------------------------------------- | ---------------------------------------------------- |
-| [API Authentication](docs/api-authentication.md)         | API keys, OAuth sessions, scopes, and usage examples |
-| [Database Migrations](docs/database-migrations.md)       | Automated (CI/CD) and manual migration workflows     |
-| [Remote Database Access](docs/remote-database-access.md) | Connecting to RDS via kubectl port-forward           |
-| [E2E Testing](docs/testing/e2e-testing.md)               | Test architecture, patterns, and how to add tests    |
-| [Webhook Testing](docs/webhook-testing.md)               | Testing GitHub release webhooks locally              |
-| [Contributing](CONTRIBUTING.md)                          | License headers, code style, commit conventions      |
-| [Security](SECURITY.md)                                  | Vulnerability reporting                              |
-| [MCP Server](docs/mcp-server.md)                         | MCP tools, resources, and client setup               |
-| [Roadmap](PLAN.md)                                       | Implementation plan and upcoming phases              |
+| Document                                                 | Description                                                       |
+| -------------------------------------------------------- | ----------------------------------------------------------------- |
+| [AI Chat](docs/ai-chat.md)                               | Agentic chat assistant, SSE streaming, conversation persistence   |
+| [API Authentication](docs/api-authentication.md)         | API keys, OAuth sessions, scopes, and usage examples              |
+| [Database Migrations](docs/database-migrations.md)       | Automated (CI/CD) and manual migration workflows                  |
+| [GitHub Integration](docs/github-integration.md)         | GitHub App, repo tracking, release sync, auto-changelog, webhooks |
+| [MCP Server](docs/mcp-server.md)                         | MCP tools, resources, and client setup                            |
+| [Observability](docs/observability.md)                   | Datadog APM, RUM, session replay, HTTP logging, pretty URLs       |
+| [OpenSearch](docs/opensearch.md)                         | Full-text search, indexing, reindexing, MCP search tools          |
+| [Remote Database Access](docs/remote-database-access.md) | Connecting to RDS via kubectl port-forward                        |
+| [Slack Integration](docs/slack-integration.md)           | OAuth flow, token encryption, posting changelogs to Slack         |
+| [E2E Testing](docs/testing/e2e-testing.md)               | Test architecture, patterns, and how to add tests                 |
+| [Webhook Testing](docs/webhook-testing.md)               | Testing GitHub release webhooks locally                           |
+| [Contributing](CONTRIBUTING.md)                          | License headers, code style, commit conventions                   |
+| [Security](SECURITY.md)                                  | Vulnerability reporting                                           |
+| [Roadmap](PLAN.md)                                       | Implementation plan and upcoming phases                           |
 
 ## Contributing
 

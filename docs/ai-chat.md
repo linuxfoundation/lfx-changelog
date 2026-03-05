@@ -217,30 +217,13 @@ packages/shared/src/schemas/
 └── chat.schema.ts                     # Zod schemas (ChatMessage, ChatConversation, SSE events, etc.)
 ```
 
-### Database Schema
+### Data Model
 
-```prisma
-model ChatConversation {
-  id          String           @id @default(uuid())
-  userId      String?          // null for anonymous public conversations
-  title       String           @default("New conversation")
-  accessLevel ChatAccessLevel  // 'public' or 'admin'
-  createdAt   DateTime
-  updatedAt   DateTime
-  messages    ChatMessage[]
-}
+Chat uses two database tables (see the Prisma schema for exact field definitions):
 
-model ChatMessage {
-  id             String   @id @default(uuid())
-  conversationId String
-  role           String   // 'user' | 'assistant' | 'system' | 'tool'
-  content        String?  // nullable for tool_calls-only messages
-  toolCalls      Json?    // OpenAI tool_call array
-  toolCallId     String?  // for tool result messages
-  toolName       String?  // for tool result messages
-  createdAt      DateTime
-}
-```
+- **ChatConversation** --- conversation metadata including an optional user ID (null for anonymous public conversations), a title (auto-generated from the first message), an access level (`public` or `admin`), and timestamps. Each conversation has many messages.
+
+- **ChatMessage** --- individual messages within a conversation. Each message has a role (`user`, `assistant`, `system`, or `tool`), optional text content (nullable for tool-call-only messages), optional tool call data (OpenAI-compatible tool call array), and optional tool result fields (`toolCallId`, `toolName`) for tool response messages.
 
 ## Configuration
 
