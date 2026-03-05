@@ -32,6 +32,7 @@ export const UpdateChangelogEntryRequestSchema = z
     description: z.string().optional(),
     version: z.string().optional(),
     status: z.nativeEnum(ChangelogStatus).optional(),
+    createdBy: z.string().optional(),
   })
   .openapi('UpdateChangelogEntryRequest');
 

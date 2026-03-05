@@ -198,8 +198,10 @@ export class WebhookController {
     }
 
     if (event === 'pull_request') {
-      const pr = body['pull_request'] as { merged?: boolean } | undefined;
-      return action === 'closed' && pr?.merged === true;
+      const pr = body['pull_request'] as { merged?: boolean; base?: { ref?: string } } | undefined;
+      const repo = body['repository'] as { default_branch?: string } | undefined;
+      const defaultBranch = repo?.default_branch || 'main';
+      return action === 'closed' && pr?.merged === true && pr?.base?.ref === defaultBranch;
     }
 
     return false;

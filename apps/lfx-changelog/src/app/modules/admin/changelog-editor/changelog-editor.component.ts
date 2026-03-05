@@ -16,14 +16,16 @@ import { ProductPillComponent } from '@components/product-pill/product-pill.comp
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { ChangelogStatus } from '@lfx-changelog/shared';
+import { ChangelogStatus, UserRole } from '@lfx-changelog/shared';
 import { AiService } from '@services/ai/ai.service';
+import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
+import { UserService } from '@services/user/user.service';
 import { slugify } from '@shared/utils/slugify';
 import { catchError, combineLatest, distinctUntilChanged, filter, map, of, pairwise, startWith, switchMap, tap } from 'rxjs';
 
-import type { ChangelogEntryWithRelations, Product, ProductRepository } from '@lfx-changelog/shared';
+import type { ChangelogEntryWithRelations, Product, ProductRepository, User } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 import type { Observable } from 'rxjs';
@@ -55,8 +57,12 @@ export class ChangelogEditorComponent {
   private readonly changelogService = inject(ChangelogService);
   private readonly productService = inject(ProductService);
   protected readonly aiService = inject(AiService);
+  private readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
 
   protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
+  protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
+  private readonly allUsers: Signal<User[]> = this.initAllUsers();
 
   protected readonly titleControl = new FormControl('', { nonNullable: true });
   protected readonly slugControl = new FormControl('', { nonNullable: true });
@@ -65,6 +71,7 @@ export class ChangelogEditorComponent {
   protected readonly productIdControl = new FormControl('', { nonNullable: true });
   protected readonly releaseCountControl = new FormControl('1', { nonNullable: true });
   protected readonly additionalContextControl = new FormControl('', { nonNullable: true });
+  protected readonly authorControl = new FormControl('', { nonNullable: true });
 
   private slugManuallyEdited = false;
   private settingSlugProgrammatically = false;
@@ -91,6 +98,7 @@ export class ChangelogEditorComponent {
   private readonly productIdValue = toSignal(this.productIdControl.valueChanges, { initialValue: this.productIdControl.value });
 
   protected readonly productOptions: Signal<SelectOption[]> = this.initProductOptions();
+  protected readonly authorOptions: Signal<SelectOption[]> = this.initAuthorOptions();
   protected readonly previewEntry: Signal<ChangelogEntryWithRelations> = this.initPreviewEntry();
   protected readonly selectedProduct: Signal<Product | undefined> = this.initSelectedProduct();
   protected readonly repoState: Signal<LoadingState<ProductRepository[]>> = this.initRepoState();
@@ -187,6 +195,7 @@ export class ChangelogEditorComponent {
           title: this.titleControl.value,
           description: this.descriptionControl.value,
           version: this.versionControl.value,
+          createdBy: this.authorControl.value || undefined,
         })
       : this.changelogService.create({
           slug: this.slugControl.value,
@@ -228,6 +237,7 @@ export class ChangelogEditorComponent {
           this.descriptionControl.setValue(entry.description);
           this.versionControl.setValue(entry.version ?? '');
           this.productIdControl.setValue(entry.productId);
+          this.authorControl.setValue(entry.createdBy);
           this.loading.set(false);
         })
       )
@@ -303,5 +313,21 @@ export class ChangelogEditorComponent {
       ),
       { initialValue: emptyState }
     );
+  }
+
+  private initAllUsers(): Signal<User[]> {
+    return toSignal(toObservable(this.isSuperAdmin).pipe(switchMap((isSuperAdmin) => (isSuperAdmin ? this.userService.getAll() : of([] as User[])))), {
+      initialValue: [] as User[],
+    });
+  }
+
+  private initAuthorOptions(): Signal<SelectOption[]> {
+    return computed(() => {
+      if (this.isSuperAdmin()) {
+        return this.allUsers().map((u) => ({ label: u.name, value: u.id }));
+      }
+      const currentUser = this.authService.dbUser();
+      return currentUser ? [{ label: currentUser.name, value: currentUser.id }] : [];
+    });
   }
 }

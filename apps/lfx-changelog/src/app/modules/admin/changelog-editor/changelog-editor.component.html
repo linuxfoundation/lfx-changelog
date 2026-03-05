@@ -152,6 +152,15 @@
 
       <lfx-input data-testid="changelog-editor-version-input" label="Version" placeholder="e.g., 2.5.0" [formControl]="versionControl" />
 
+      @if (isEditing()) {
+        <lfx-select
+          data-testid="changelog-editor-author-select"
+          label="Author"
+          [options]="authorOptions()"
+          [formControl]="authorControl"
+          placeholder="Select author..." />
+      }
+
       <lfx-markdown-editor
         data-testid="changelog-editor-description"
         label="Description"
