@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
-import { type ChangelogStatus, Prisma, type ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
+import { ChangelogStatus, Prisma, ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
 
 import { ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
-
 import { getOpenSearchService } from './opensearch.service';
 import { getPrismaClient } from './prisma.service';
 

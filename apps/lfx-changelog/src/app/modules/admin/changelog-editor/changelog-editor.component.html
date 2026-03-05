@@ -205,7 +205,7 @@
             data-testid="changelog-editor-publish-btn"
             variant="primary"
             [loading]="publishing()"
-            [disabled]="saving() || !hasSlug()"
+            [disabled]="saving() || deleting() || !hasSlug()"
             (clicked)="publish()">
             <i class="fa-duotone fa-paper-plane text-xs"></i>
             Publish
@@ -216,7 +216,7 @@
             data-testid="changelog-editor-unpublish-btn"
             variant="secondary"
             [loading]="unpublishing()"
-            [disabled]="saving() || publishing()"
+            [disabled]="saving() || publishing() || deleting()"
             (clicked)="confirmUnpublish()">
             <i class="fa-solid fa-rotate-left text-xs"></i>
             Unpublish
@@ -226,7 +226,7 @@
           data-testid="changelog-editor-save-btn"
           [variant]="!isEditing() || isDraft() ? 'secondary' : 'primary'"
           [loading]="saving()"
-          [disabled]="publishing() || !hasSlug()"
+          [disabled]="publishing() || unpublishing() || deleting() || !hasSlug()"
           (clicked)="save()">
           {{ isEditing() ? 'Update Entry' : 'Save as Draft' }}
         </lfx-button>

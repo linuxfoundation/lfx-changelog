@@ -15,6 +15,9 @@ export class ChangelogEditorPage {
   public readonly preview: Locator;
   public readonly publishBanner: Locator;
   public readonly slackBtn: Locator;
+  public readonly unpublishBtn: Locator;
+  public readonly deleteBtn: Locator;
+  public readonly publishBtn: Locator;
   public readonly changeAuthorBtn: Locator;
   public readonly authorSelect: Locator;
   public readonly claimAuthorBtn: Locator;
@@ -31,6 +34,9 @@ export class ChangelogEditorPage {
     this.preview = page.locator('[data-testid="changelog-editor-preview"]');
     this.publishBanner = page.locator('[data-testid="changelog-editor-publish-banner"]');
     this.slackBtn = page.locator('[data-testid="changelog-editor-slack-btn"]');
+    this.unpublishBtn = page.locator('[data-testid="changelog-editor-unpublish-btn"]');
+    this.deleteBtn = page.locator('[data-testid="changelog-editor-delete-btn"]');
+    this.publishBtn = page.locator('[data-testid="changelog-editor-publish-btn"]');
     this.changeAuthorBtn = page.locator('[data-testid="changelog-editor-change-author-btn"]');
     this.authorSelect = page.locator('[data-testid="changelog-editor-author-select"]');
     this.claimAuthorBtn = page.locator('[data-testid="changelog-editor-claim-author-btn"]');

@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import {
   ChangelogEntrySchema,
+  ChangelogEntryWithRelationsSchema,
   CreateChangelogEntryRequestSchema,
   UpdateChangelogEntryRequestSchema,
   createApiResponseSchema,
@@ -179,7 +180,7 @@ changelogRegistry.registerPath({
       description: 'Changelog entry unpublished',
       content: {
         'application/json': {
-          schema: createApiResponseSchema(ChangelogEntrySchema),
+          schema: createApiResponseSchema(ChangelogEntryWithRelationsSchema),
         },
       },
     },
