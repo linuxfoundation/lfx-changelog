@@ -1,0 +1,76 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@switch (dialogStep()) {
+  @case ('select-installation') {
+    <div class="space-y-4">
+      @if (loadingInstallations()) {
+        <div class="flex items-center justify-center py-8">
+          <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-xl"></i>
+        </div>
+      } @else if (installationOptions().length === 0) {
+        <div class="py-6 text-center">
+          <p class="text-text-muted mb-3 text-sm">No GitHub App installations found.</p>
+          <lfx-button variant="secondary" (clicked)="installOnNewOrg()">
+            <i class="fa-brands fa-github text-sm"></i>
+            Install GitHub App
+          </lfx-button>
+        </div>
+      } @else {
+        <p class="text-text-secondary text-sm">Choose the GitHub organization to browse repositories from.</p>
+        <lfx-select label="Organization" [options]="installationOptions()" placeholder="Select an organization..." [formControl]="installationControl" />
+        <div class="flex justify-end gap-3 pt-2">
+          <lfx-button variant="secondary" (clicked)="dialogService.close()">Cancel</lfx-button>
+          <lfx-button variant="primary" [disabled]="!installationControl.value" (clicked)="goToSelectRepos()">Next</lfx-button>
+        </div>
+      }
+    </div>
+  }
+  @case ('select-repos') {
+    <div class="space-y-4">
+      @if (loadingRepos()) {
+        <div class="flex items-center justify-center py-8">
+          <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-xl"></i>
+        </div>
+      } @else if (availableRepos().length === 0) {
+        <div class="py-6 text-center">
+          <p class="text-text-muted text-sm">No repositories found for this installation.</p>
+        </div>
+      } @else {
+        <p class="text-text-secondary text-sm">Select repositories to link. {{ selectedCount() }} selected.</p>
+        <div class="border-border divide-border divide-y overflow-y-auto rounded-lg border" style="max-height: 360px">
+          @for (repo of availableRepos(); track repo.full_name) {
+            <label class="hover:bg-surface-alt flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors">
+              <input
+                type="checkbox"
+                [checked]="repoSelectionMap() | mapGet: repo.full_name"
+                (change)="toggleRepo(repo.full_name)"
+                class="text-brand-600 focus:ring-brand-500 h-4 w-4 rounded border-gray-300" />
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-text-primary truncate text-sm font-medium">{{ repo.name }}</span>
+                  @if (repo.private) {
+                    <span
+                      class="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                      >Private</span
+                    >
+                  }
+                </div>
+                @if (repo.description) {
+                  <p class="text-text-muted mt-0.5 truncate text-xs">{{ repo.description }}</p>
+                }
+              </div>
+            </label>
+          }
+        </div>
+      }
+      <div class="flex justify-end gap-3 pt-2">
+        <lfx-button variant="ghost" (clicked)="goBackToInstallations()">Back</lfx-button>
+        <lfx-button variant="secondary" (clicked)="dialogService.close()">Cancel</lfx-button>
+        <lfx-button variant="primary" [loading]="saving()" [disabled]="selectedCount() === 0" (clicked)="linkSelected()">
+          Link Selected ({{ selectedCount() }})
+        </lfx-button>
+      </div>
+    </div>
+  }
+}

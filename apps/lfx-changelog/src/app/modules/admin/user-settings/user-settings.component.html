@@ -146,14 +146,3 @@
     </lfx-card>
   </div>
 </div>
-
-<!-- Disconnect confirmation dialog -->
-<lfx-dialog [(visible)]="disconnectDialogVisible" title="Disconnect Slack" size="sm">
-  <p class="text-text-secondary text-sm">
-    Are you sure you want to disconnect your Slack integration? You will no longer be able to post changelogs to Slack until you reconnect.
-  </p>
-  <div class="mt-4 flex justify-end gap-3">
-    <lfx-button variant="secondary" (clicked)="disconnectDialogVisible.set(false)">Cancel</lfx-button>
-    <lfx-button variant="primary" [loading]="disconnecting()" (clicked)="confirmDisconnect()"> Disconnect </lfx-button>
-  </div>
-</lfx-dialog>

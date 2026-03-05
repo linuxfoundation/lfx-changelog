@@ -290,7 +290,3 @@
     </div>
   </div>
 </div>
-
-@if (existingEntry(); as entry) {
-  <lfx-post-to-slack-dialog [(visible)]="slackDialogVisible" [changelogId]="entry.id" [changelogTitle]="entry.title" />
-}

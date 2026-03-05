@@ -3,30 +3,29 @@
 
 import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
-import { DialogComponent } from '@components/dialog/dialog.component';
-import { InputComponent } from '@components/input/input.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
-import { TextareaComponent } from '@components/textarea/textarea.component';
+import { ProductFormDialogComponent } from '@modules/admin/components/product-form-dialog/product-form-dialog.component';
+import { DialogService } from '@services/dialog/dialog.service';
 import { ProductService } from '@services/product/product.service';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
 import type { Product } from '@lfx-changelog/shared';
+
 @Component({
   selector: 'lfx-product-management',
-  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, DialogComponent, InputComponent, TableComponent, TableColumnDirective, TextareaComponent],
+  imports: [RouterLink, ButtonComponent, TableComponent, TableColumnDirective],
   templateUrl: './product-management.component.html',
   styleUrl: './product-management.component.css',
 })
 export class ProductManagementComponent {
   private readonly productService = inject(ProductService);
+  private readonly dialogService = inject(DialogService);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly loading = signal(true);
-  protected readonly saving = signal(false);
 
   protected readonly products = toSignal(
     this.refresh$.pipe(
@@ -37,53 +36,25 @@ export class ProductManagementComponent {
     { initialValue: [] as Product[] }
   );
 
-  protected readonly formNameControl = new FormControl('', { nonNullable: true });
-  protected readonly formSlugControl = new FormControl('', { nonNullable: true });
-  protected readonly formDescriptionControl = new FormControl('', { nonNullable: true });
-  protected readonly formFaIconControl = new FormControl('', { nonNullable: true });
-  protected readonly iconPreview = toSignal(this.formFaIconControl.valueChanges, { initialValue: '' });
-
-  protected readonly dialogVisible = signal(false);
-  protected readonly editingProduct = signal<Product | null>(null);
-
   protected openAdd(): void {
-    this.editingProduct.set(null);
-    this.formNameControl.setValue('');
-    this.formSlugControl.setValue('');
-    this.formDescriptionControl.setValue('');
-    this.formFaIconControl.setValue('');
-    this.dialogVisible.set(true);
+    this.dialogService.open({
+      title: 'Add Product',
+      component: ProductFormDialogComponent,
+      testId: 'product-dialog',
+      onClose: (result) => {
+        if (result === 'saved') this.refresh$.next();
+      },
+    });
   }
 
   protected openEdit(product: Product): void {
-    this.editingProduct.set(product);
-    this.formNameControl.setValue(product.name);
-    this.formSlugControl.setValue(product.slug);
-    this.formDescriptionControl.setValue(product.description ?? '');
-    this.formFaIconControl.setValue(product.faIcon ?? '');
-    this.dialogVisible.set(true);
-  }
-
-  protected saveProduct(): void {
-    this.saving.set(true);
-    const data = {
-      name: this.formNameControl.value,
-      slug: this.formSlugControl.value,
-      description: this.formDescriptionControl.value,
-      faIcon: this.formFaIconControl.value || undefined,
-    };
-
-    const editing = this.editingProduct();
-    const request$ = editing ? this.productService.update(editing.id, data) : this.productService.create(data);
-
-    request$.subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.dialogVisible.set(false);
-        this.refresh$.next();
-      },
-      error: () => {
-        this.saving.set(false);
+    this.dialogService.open({
+      title: 'Edit Product',
+      component: ProductFormDialogComponent,
+      inputs: { product },
+      testId: 'product-dialog',
+      onClose: (result) => {
+        if (result === 'saved') this.refresh$.next();
       },
     });
   }

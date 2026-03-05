@@ -14,6 +14,7 @@ import { TableComponent } from '@components/table/table.component';
 import { ChangelogStatus, UserRole } from '@lfx-changelog/shared';
 import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
+import { DialogService } from '@services/dialog/dialog.service';
 import { ProductService } from '@services/product/product.service';
 import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
 import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
@@ -34,7 +35,6 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
     TableColumnDirective,
     DateFormatPipe,
     ProductNamePipe,
-    PostToSlackDialogComponent,
   ],
   templateUrl: './changelog-list.component.html',
   styleUrl: './changelog-list.component.css',
@@ -43,6 +43,7 @@ export class ChangelogListComponent {
   private readonly authService = inject(AuthService);
   private readonly changelogService = inject(ChangelogService);
   private readonly productService = inject(ProductService);
+  private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly page$ = new BehaviorSubject<number>(1);
@@ -57,10 +58,6 @@ export class ChangelogListComponent {
   protected readonly reindexResult = signal<{ indexed: number; errors: number } | null>(null);
   protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
 
-  // Slack dialog state
-  protected readonly slackDialogVisible = signal(false);
-  protected readonly slackChangelogId = signal('');
-  protected readonly slackChangelogTitle = signal('');
   protected readonly slackPostSuccess = signal('');
 
   protected readonly productOptions: Signal<SelectOption[]> = this.initProductOptions();
@@ -89,14 +86,17 @@ export class ChangelogListComponent {
   }
 
   protected openSlackDialog(entry: ChangelogEntryWithRelations): void {
-    this.slackChangelogId.set(entry.id);
-    this.slackChangelogTitle.set(entry.title);
     this.slackPostSuccess.set('');
-    this.slackDialogVisible.set(true);
-  }
-
-  protected onSlackPosted(channelName: string): void {
-    this.slackPostSuccess.set(channelName);
+    this.dialogService.open({
+      title: 'Post to Slack',
+      size: 'sm',
+      component: PostToSlackDialogComponent,
+      inputs: {
+        changelogId: entry.id,
+        changelogTitle: entry.title,
+        onPosted: (channelName: string) => this.slackPostSuccess.set(channelName),
+      },
+    });
   }
 
   protected reindex(): void {

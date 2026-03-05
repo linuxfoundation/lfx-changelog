@@ -20,6 +20,7 @@ import { ChangelogSource, ChangelogStatus, UserRole } from '@lfx-changelog/share
 import { AiService } from '@services/ai/ai.service';
 import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
+import { DialogService } from '@services/dialog/dialog.service';
 import { ProductService } from '@services/product/product.service';
 import { UserService } from '@services/user/user.service';
 import { slugify } from '@shared/utils/slugify';
@@ -45,7 +46,6 @@ import type { Observable } from 'rxjs';
     StatusBadgeComponent,
     TextareaComponent,
     RouterLink,
-    PostToSlackDialogComponent,
   ],
   templateUrl: './changelog-editor.component.html',
   styleUrl: './changelog-editor.component.css',
@@ -59,6 +59,7 @@ export class ChangelogEditorComponent {
   protected readonly aiService = inject(AiService);
   private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
+  private readonly dialogService = inject(DialogService);
 
   protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
   protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
@@ -80,7 +81,6 @@ export class ChangelogEditorComponent {
   protected readonly loading = signal(false);
   protected readonly showAiPanel = signal(false);
   protected readonly justPublished = signal(false);
-  protected readonly slackDialogVisible = signal(false);
   protected readonly showAuthorPicker = signal(false);
   protected readonly authorLoading = signal(false);
   protected readonly claimingAuthorship = signal(false);
@@ -184,7 +184,15 @@ export class ChangelogEditorComponent {
   }
 
   protected openSlackDialog(): void {
-    this.slackDialogVisible.set(true);
+    const entry = this.existingEntry();
+    if (!entry) return;
+
+    this.dialogService.open({
+      title: 'Post to Slack',
+      size: 'sm',
+      component: PostToSlackDialogComponent,
+      inputs: { changelogId: entry.id, changelogTitle: entry.title },
+    });
   }
 
   protected openAuthorPicker(): void {

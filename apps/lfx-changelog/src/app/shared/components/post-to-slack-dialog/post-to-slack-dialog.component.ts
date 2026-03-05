@@ -1,12 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, model, output, signal, Signal } from '@angular/core';
+import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
-import { DialogComponent } from '@components/dialog/dialog.component';
 import { SelectComponent } from '@components/select/select.component';
+import { DialogService } from '@services/dialog/dialog.service';
 import { SlackService } from '@services/slack/slack.service';
 import { catchError, concat, filter, map, of, switchMap, tap } from 'rxjs';
 
@@ -16,17 +16,17 @@ import type { SlackDialogState } from '@shared/interfaces/slack.interface';
 
 @Component({
   selector: 'lfx-post-to-slack-dialog',
-  imports: [ReactiveFormsModule, ButtonComponent, DialogComponent, SelectComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, SelectComponent],
   templateUrl: './post-to-slack-dialog.component.html',
   styleUrl: './post-to-slack-dialog.component.css',
 })
 export class PostToSlackDialogComponent {
   private readonly slackService = inject(SlackService);
+  protected readonly dialogService = inject(DialogService);
 
   public readonly changelogId = input.required<string>();
   public readonly changelogTitle = input('');
-  public readonly visible = model(false);
-  public readonly posted = output<string>();
+  public readonly onPosted = input<(channelName: string) => void>();
 
   protected readonly channelControl = new FormControl('', { nonNullable: true });
   protected readonly posting = signal(false);
@@ -45,7 +45,6 @@ export class PostToSlackDialogComponent {
     return defaultCh?.channelName ?? null;
   });
 
-  // Channels loaded on demand via "Change" button
   protected readonly channels: Signal<SlackChannelOption[]> = this.initChannels();
   protected readonly channelOptions = computed<SelectOption[]>(() =>
     this.channels().map((ch) => ({
@@ -62,7 +61,6 @@ export class PostToSlackDialogComponent {
     const channelId = this.channelControl.value;
     if (!channelId) return;
 
-    // Resolve channel name from loaded channels or saved default
     const channelName = this.resolveChannelName(channelId);
 
     this.posting.set(true);
@@ -72,7 +70,7 @@ export class PostToSlackDialogComponent {
       next: (res) => {
         this.posting.set(false);
         this.success.set(true);
-        this.posted.emit(res.channelName);
+        this.onPosted()?.(res.channelName);
       },
       error: () => {
         this.posting.set(false);
@@ -82,11 +80,9 @@ export class PostToSlackDialogComponent {
   }
 
   private resolveChannelName(channelId: string): string {
-    // Try loaded channels first (from picker)
     const fromPicker = this.channels().find((ch) => ch.id === channelId);
     if (fromPicker) return fromPicker.name;
 
-    // Fall back to saved channel name from integration data
     const integration = this.state().integration;
     const saved = integration?.channels?.find((ch) => ch.channelId === channelId);
     if (saved) return saved.channelName;
@@ -98,38 +94,27 @@ export class PostToSlackDialogComponent {
     const loadingState: SlackDialogState = { loading: true, integration: null };
     const empty: SlackDialogState = { loading: false, integration: null };
 
+    // Component is created when dialog opens — load immediately
     return toSignal(
-      toObservable(this.visible).pipe(
-        filter((v) => v),
-        tap(() => {
-          this.error.set('');
-          this.success.set(false);
-          this.showChannelPicker.set(false);
-          this.channelControl.setValue('');
-        }),
-        switchMap(() =>
-          concat(
-            of(loadingState),
-            this.slackService.getIntegrations().pipe(
-              map((integrations) => {
-                const active = integrations.find((i) => i.status === 'active') ?? null;
+      concat(
+        of(loadingState),
+        this.slackService.getIntegrations().pipe(
+          map((integrations) => {
+            const active = integrations.find((i) => i.status === 'active') ?? null;
 
-                // Pre-select default channel from saved integration data
-                if (active) {
-                  const defaultChannel = active.channels?.find((ch) => ch.isDefault);
-                  if (defaultChannel) {
-                    this.channelControl.setValue(defaultChannel.channelId);
-                  }
-                }
+            if (active) {
+              const defaultChannel = active.channels?.find((ch) => ch.isDefault);
+              if (defaultChannel) {
+                this.channelControl.setValue(defaultChannel.channelId);
+              }
+            }
 
-                return { loading: false, integration: active } as SlackDialogState;
-              }),
-              catchError(() => of(empty))
-            )
-          )
+            return { loading: false, integration: active } as SlackDialogState;
+          }),
+          catchError(() => of(empty))
         )
       ),
-      { initialValue: empty }
+      { initialValue: loadingState }
     );
   }
 

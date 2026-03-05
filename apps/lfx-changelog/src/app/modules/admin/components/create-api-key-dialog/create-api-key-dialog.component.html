@@ -1,0 +1,36 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-5">
+  <lfx-input data-testid="api-key-name-input" label="Name" placeholder="e.g. CI Pipeline, Slack Bot..." [formControl]="nameControl" />
+
+  <div>
+    <label class="text-text-primary mb-2.5 block text-sm font-medium">Scopes</label>
+    <p class="text-text-muted mb-3 text-xs">Select the permissions this key should have.</p>
+    <div class="border-border divide-border divide-y rounded-lg border">
+      @for (opt of scopeOptions; track opt.scope) {
+        <label class="hover:bg-surface-alt flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors">
+          <input
+            type="checkbox"
+            class="accent-brand-600 h-4 w-4 rounded"
+            [formControl]="scopeControls[opt.scope]"
+            [attr.data-testid]="'api-key-scope-' + opt.scope" />
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-text-primary text-sm font-medium">{{ opt.label }}</span>
+              <lfx-badge [label]="opt.action" [color]="opt.color" size="sm" />
+            </div>
+            <div class="text-text-muted mt-0.5 text-xs">{{ opt.description }}</div>
+          </div>
+        </label>
+      }
+    </div>
+  </div>
+
+  <lfx-select data-testid="api-key-expiration-select" label="Expiration" [options]="expirationOptions" [formControl]="expirationControl" />
+
+  <div class="flex justify-end gap-3 pt-2">
+    <lfx-button variant="secondary" (clicked)="dialogService.close()">Cancel</lfx-button>
+    <lfx-button data-testid="api-key-create-submit" variant="primary" [loading]="saving()" (clicked)="create()">Create Key</lfx-button>
+  </div>
+</div>

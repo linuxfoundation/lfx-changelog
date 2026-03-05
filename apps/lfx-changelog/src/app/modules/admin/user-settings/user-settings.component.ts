@@ -8,8 +8,9 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
-import { DialogComponent } from '@components/dialog/dialog.component';
 import { SelectComponent } from '@components/select/select.component';
+import { DisconnectSlackDialogComponent } from '@modules/admin/components/disconnect-slack-dialog/disconnect-slack-dialog.component';
+import { DialogService } from '@services/dialog/dialog.service';
 import { SlackService } from '@services/slack/slack.service';
 import { BehaviorSubject, catchError, filter, of, switchMap, tap } from 'rxjs';
 
@@ -18,19 +19,19 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
   selector: 'lfx-user-settings',
-  imports: [DatePipe, ReactiveFormsModule, ButtonComponent, CardComponent, DialogComponent, SelectComponent],
+  imports: [DatePipe, ReactiveFormsModule, ButtonComponent, CardComponent, SelectComponent],
   templateUrl: './user-settings.component.html',
   styleUrl: './user-settings.component.css',
 })
 export class UserSettingsComponent {
   private readonly slackService = inject(SlackService);
+  private readonly dialogService = inject(DialogService);
   private readonly route = inject(ActivatedRoute);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly loading = signal(true);
   protected readonly channelsLoading = signal(false);
   protected readonly savingChannel = signal(false);
-  protected readonly disconnecting = signal(false);
 
   protected readonly channelControl = new FormControl('', { nonNullable: true });
 
@@ -68,9 +69,6 @@ export class UserSettingsComponent {
     return defaultCh?.channelName ?? null;
   });
 
-  // Disconnect dialog
-  protected readonly disconnectDialogVisible = signal(false);
-
   protected connectSlack(): void {
     this.slackService.connect();
   }
@@ -98,22 +96,20 @@ export class UserSettingsComponent {
   }
 
   protected openDisconnectDialog(): void {
-    this.disconnectDialogVisible.set(true);
-  }
-
-  protected confirmDisconnect(): void {
     const integration = this.activeIntegration();
     if (!integration) return;
 
-    this.disconnecting.set(true);
-    this.slackService.disconnect(integration.id).subscribe({
-      next: () => {
-        this.disconnecting.set(false);
-        this.disconnectDialogVisible.set(false);
-        this.channelControl.setValue('');
-        this.refresh$.next();
+    this.dialogService.open({
+      title: 'Disconnect Slack',
+      size: 'sm',
+      component: DisconnectSlackDialogComponent,
+      inputs: { integrationId: integration.id },
+      onClose: (result) => {
+        if (result === 'disconnected') {
+          this.channelControl.setValue('');
+          this.refresh$.next();
+        }
       },
-      error: () => this.disconnecting.set(false),
     });
   }
 
