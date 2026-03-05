@@ -91,6 +91,7 @@
       <lfx-dropdown-menu [items]="(entryMenuItems() | mapGet: entry.id) ?? []">
         <button
           data-testid="changelog-list-actions-btn"
+          aria-label="Actions"
           class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
           <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
         </button>
@@ -110,6 +111,8 @@
   <!-- Action toast -->
   @if (actionMessage()) {
     <div
+      role="status"
+      aria-live="polite"
       class="animate-fade-in fixed right-6 bottom-6 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg"
       [class]="
         actionIsError()
