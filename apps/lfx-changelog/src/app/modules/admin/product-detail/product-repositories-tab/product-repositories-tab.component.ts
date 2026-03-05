@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { DOCUMENT } from '@angular/common';
 import { Component, computed, DestroyRef, inject, input, OnInit, Signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
@@ -27,6 +28,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
   private readonly githubService = inject(GitHubService);
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
 
   public readonly productId = input.required<string>();
   public readonly callbackInstallationId = input<string | null>(null);
@@ -67,7 +69,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
       .getInstallUrl(this.productId())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((url) => {
-        const window = document.defaultView;
+        const window = this.document.defaultView;
         if (window) {
           window.location.href = url;
         }

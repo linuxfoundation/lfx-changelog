@@ -6,19 +6,19 @@ import { Component, computed, DestroyRef, inject, input, OnInit, signal, Signal 
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
-import { SelectComponent, SelectOption } from '@components/select/select.component';
+import { SelectComponent } from '@components/select/select.component';
 import { DialogService } from '@services/dialog/dialog.service';
 import { GitHubService } from '@services/github/github.service';
 import { ProductService } from '@services/product/product.service';
-import { MapGetPipe } from '@shared/pipes/map-get/map-get.pipe';
 import { catchError, forkJoin, map, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { GitHubInstallation, GitHubRepository, LinkRepositoryRequest } from '@lfx-changelog/shared';
+import type { SelectOption } from '@shared/interfaces/form.interface';
 import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 
 @Component({
   selector: 'lfx-link-repositories-dialog',
-  imports: [ReactiveFormsModule, ButtonComponent, SelectComponent, MapGetPipe],
+  imports: [ReactiveFormsModule, ButtonComponent, SelectComponent],
   templateUrl: './link-repositories-dialog.component.html',
   styleUrl: './link-repositories-dialog.component.css',
 })
@@ -40,6 +40,7 @@ export class LinkRepositoriesDialogComponent implements OnInit {
   protected readonly dialogStep = signal<'select-installation' | 'select-repos'>('select-installation');
   protected readonly saving = signal(false);
   protected readonly selectedRepos = signal<Set<string>>(new Set());
+  protected readonly repoControls = signal<Record<string, FormControl<boolean>>>({});
 
   private readonly installationsState: Signal<LoadingState<GitHubInstallation[]>> = this.initInstallationsState();
   private readonly availableReposState: Signal<LoadingState<GitHubRepository[]>> = this.initAvailableReposState();
@@ -55,7 +56,6 @@ export class LinkRepositoriesDialogComponent implements OnInit {
       value: String(i.id),
     }))
   );
-  protected readonly repoSelectionMap: Signal<Map<string, boolean>> = this.initRepoSelectionMap();
   protected readonly selectedCount: Signal<number> = computed(() => this.selectedRepos().size);
 
   public ngOnInit(): void {
@@ -95,16 +95,6 @@ export class LinkRepositoriesDialogComponent implements OnInit {
     this.updateDialogTitle();
   }
 
-  protected toggleRepo(fullName: string): void {
-    const current = new Set(this.selectedRepos());
-    if (current.has(fullName)) {
-      current.delete(fullName);
-    } else {
-      current.add(fullName);
-    }
-    this.selectedRepos.set(current);
-  }
-
   protected linkSelected(): void {
     const selected = this.selectedRepos();
     if (selected.size === 0) return;
@@ -136,7 +126,7 @@ export class LinkRepositoriesDialogComponent implements OnInit {
         },
         error: () => {
           this.saving.set(false);
-          this.dialogService.close('linked');
+          this.dialogService.close();
         },
       });
   }
@@ -173,7 +163,10 @@ export class LinkRepositoriesDialogComponent implements OnInit {
       this.fetchRepos$.pipe(
         switchMap((installationId) =>
           this.githubService.getInstallationRepositories(installationId).pipe(
-            map((data) => ({ data, loading: false })),
+            map((data) => {
+              this.setupRepoControls(data);
+              return { data, loading: false };
+            }),
             catchError(() => of({ data: [] as GitHubRepository[], loading: false })),
             startWith({ data: [] as GitHubRepository[], loading: true })
           )
@@ -183,14 +176,21 @@ export class LinkRepositoriesDialogComponent implements OnInit {
     );
   }
 
-  private initRepoSelectionMap(): Signal<Map<string, boolean>> {
-    return computed(() => {
-      const selected = this.selectedRepos();
-      const repoMap = new Map<string, boolean>();
-      for (const repo of this.availableRepos()) {
-        repoMap.set(repo.full_name, selected.has(repo.full_name));
-      }
-      return repoMap;
-    });
+  private setupRepoControls(repos: GitHubRepository[]): void {
+    const controls: Record<string, FormControl<boolean>> = {};
+    for (const repo of repos) {
+      const ctrl = new FormControl(false, { nonNullable: true });
+      ctrl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((checked) => {
+        const current = new Set(this.selectedRepos());
+        if (checked) {
+          current.add(repo.full_name);
+        } else {
+          current.delete(repo.full_name);
+        }
+        this.selectedRepos.set(current);
+      });
+      controls[repo.full_name] = ctrl;
+    }
+    this.repoControls.set(controls);
   }
 }

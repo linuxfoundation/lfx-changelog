@@ -38,13 +38,12 @@
         </div>
       } @else {
         <p class="text-text-secondary text-sm">Select repositories to link. {{ selectedCount() }} selected.</p>
-        <div class="border-border divide-border divide-y overflow-y-auto rounded-lg border" style="max-height: 360px">
+        <div class="border-border divide-border max-h-[360px] divide-y overflow-y-auto rounded-lg border">
           @for (repo of availableRepos(); track repo.full_name) {
             <label class="hover:bg-surface-alt flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors">
               <input
                 type="checkbox"
-                [checked]="repoSelectionMap() | mapGet: repo.full_name"
-                (change)="toggleRepo(repo.full_name)"
+                [formControl]="repoControls()[repo.full_name]"
                 class="text-brand-600 focus:ring-brand-500 h-4 w-4 rounded border-gray-300" />
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">

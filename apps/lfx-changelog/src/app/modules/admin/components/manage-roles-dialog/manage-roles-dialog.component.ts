@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, Signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { BadgeComponent } from '@components/badge/badge.component';
@@ -14,7 +14,7 @@ import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
 import { RoleColorPipe } from '@shared/pipes/role-color/role-color.pipe';
 import { RoleLabelPipe } from '@shared/pipes/role-label/role-label.pipe';
 
-import type { Product, User } from '@lfx-changelog/shared';
+import type { Product, User, UserRoleAssignment } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
@@ -23,7 +23,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
   templateUrl: './manage-roles-dialog.component.html',
   styleUrl: './manage-roles-dialog.component.css',
 })
-export class ManageRolesDialogComponent {
+export class ManageRolesDialogComponent implements OnInit {
   private readonly userService = inject(UserService);
   protected readonly dialogService = inject(DialogService);
 
@@ -32,6 +32,9 @@ export class ManageRolesDialogComponent {
 
   protected readonly newRoleControl = new FormControl('', { nonNullable: true });
   protected readonly newProductControl = new FormControl('', { nonNullable: true });
+
+  protected readonly roles = signal<UserRoleAssignment[]>([]);
+  private modified = false;
 
   protected readonly roleOptions: SelectOption[] = [
     { label: 'Super Admin', value: UserRole.SUPER_ADMIN },
@@ -47,6 +50,10 @@ export class ManageRolesDialogComponent {
     ...this.products().map((p) => ({ label: p.name, value: p.id })),
   ]);
 
+  public ngOnInit(): void {
+    this.roles.set(this.user().roles ?? []);
+  }
+
   protected assignRole(): void {
     const user = this.user();
     if (!user || !this.newRoleControl.value) return;
@@ -59,7 +66,12 @@ export class ManageRolesDialogComponent {
 
   protected removeRole(roleId: string): void {
     this.userService.removeRole(this.user().id, roleId).subscribe(() => {
-      this.dialogService.close('changed');
+      this.modified = true;
+      this.roles.update((r) => r.filter((role) => role.id !== roleId));
     });
+  }
+
+  protected close(): void {
+    this.dialogService.close(this.modified ? 'changed' : undefined);
   }
 }

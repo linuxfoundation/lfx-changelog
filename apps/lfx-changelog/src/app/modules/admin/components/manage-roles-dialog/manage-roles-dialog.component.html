@@ -10,7 +10,7 @@
   <div>
     <h4 class="text-text-muted mb-2 text-xs font-medium tracking-wider uppercase">Current Roles</h4>
     <div data-testid="user-role-dialog-current-roles" class="space-y-2">
-      @for (ra of user().roles; track ra.id) {
+      @for (ra of roles(); track ra.id) {
         <div data-testid="user-role-dialog-role-item" class="border-border bg-surface-alt flex items-center justify-between rounded-lg border px-3 py-2">
           <div class="flex items-center gap-2">
             <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />

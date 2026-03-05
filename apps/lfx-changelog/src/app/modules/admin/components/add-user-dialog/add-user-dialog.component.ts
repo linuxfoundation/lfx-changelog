@@ -57,9 +57,12 @@ export class AddUserDialogComponent {
     const isSuperAdmin = role === UserRole.SUPER_ADMIN;
     const productId = isSuperAdmin ? undefined : this.productControl.value || undefined;
 
-    this.userService.create({ email, name, role: role as any, productId }).subscribe({
+    this.userService.create({ email, name, role, productId }).subscribe({
       next: () => this.dialogService.close('created'),
-      error: (err: any) => this.error.set(err?.error?.error || 'Failed to create user'),
+      error: (err: unknown) => {
+        const message = (err as { error?: { error?: string } })?.error?.error;
+        this.error.set(message || 'Failed to create user');
+      },
     });
   }
 }
