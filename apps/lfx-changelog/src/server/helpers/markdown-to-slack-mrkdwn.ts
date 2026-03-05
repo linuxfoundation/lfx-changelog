@@ -1,6 +1,18 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+/** Escape characters that Slack treats as delimiters inside `<url|label>` */
+function escapeSlackLink(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/>/g, '&gt;').replace(/\|/g, '&#124;');
+}
+
+/** Build a Slack link, falling back to the URL as label when text is empty */
+function slackLink(url: string, label: string): string {
+  const safeUrl = escapeSlackLink(url.trim());
+  const safeLabel = label.trim() ? escapeSlackLink(label) : safeUrl;
+  return `<${safeUrl}|${safeLabel}>`;
+}
+
 /**
  * Convert standard Markdown to Slack mrkdwn format.
  *
@@ -31,10 +43,10 @@ export function markdownToSlackMrkdwn(markdown: string): string {
   text = text.replace(/`[^`\n]+`/g, (match) => placeholder(match));
 
   // ── 2. Images → clickable links ─────────────────────────────────────────
-  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<$2|$1>');
+  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => slackLink(url, alt));
 
   // ── 3. Links ────────────────────────────────────────────────────────────
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<$2|$1>');
+  text = text.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_, label, url) => slackLink(url, label));
 
   // ── 4. Bold+italic (***text*** or ___text___) → placeholder ────────────
   // Must be placeholdered before italic runs, otherwise *_text_* gets re-matched
@@ -78,4 +90,67 @@ export function markdownToSlackMrkdwn(markdown: string): string {
   text = text.replace(/%%CODEBLOCK_(\d+)%%/g, (_, index) => placeholders[parseInt(index, 10)]);
 
   return text.trim();
+}
+
+/**
+ * Truncate Slack mrkdwn to `maxLen` characters without splitting tokens.
+ *
+ * Tracks open delimiters (`<…>`, `*…*`, `_…_`, `~…~`, `` `…` ``, `` ```…``` ``)
+ * and backs up to before the most recent unclosed token if the limit falls inside one.
+ */
+export function truncateSlackMrkdwn(mrkdwn: string, maxLen: number): string {
+  if (mrkdwn.length <= maxLen) return mrkdwn;
+
+  const suffix = '...';
+  const budget = maxLen - suffix.length;
+  if (budget <= 0) return suffix.slice(0, maxLen);
+
+  // Position of the most recent safe cut point (outside any open token)
+  let safeCut = 0;
+  let i = 0;
+
+  while (i < budget) {
+    const ch = mrkdwn[i];
+
+    // Fenced code block ``` ... ```
+    if (ch === '`' && mrkdwn.slice(i, i + 3) === '```') {
+      const closeIdx = mrkdwn.indexOf('```', i + 3);
+      if (closeIdx === -1 || closeIdx + 3 > budget) break; // unclosed or exceeds budget
+      i = closeIdx + 3;
+      safeCut = i;
+      continue;
+    }
+
+    // Inline code ` ... `
+    if (ch === '`') {
+      const closeIdx = mrkdwn.indexOf('`', i + 1);
+      if (closeIdx === -1 || closeIdx + 1 > budget) break;
+      i = closeIdx + 1;
+      safeCut = i;
+      continue;
+    }
+
+    // Slack link <url|label>
+    if (ch === '<') {
+      const closeIdx = mrkdwn.indexOf('>', i + 1);
+      if (closeIdx === -1 || closeIdx + 1 > budget) break;
+      i = closeIdx + 1;
+      safeCut = i;
+      continue;
+    }
+
+    // Paired formatting: *bold*, _italic_, ~strike~
+    if ((ch === '*' || ch === '_' || ch === '~') && i + 1 < mrkdwn.length && mrkdwn[i + 1] !== ch) {
+      const closeIdx = mrkdwn.indexOf(ch, i + 1);
+      if (closeIdx === -1 || closeIdx + 1 > budget) break;
+      i = closeIdx + 1;
+      safeCut = i;
+      continue;
+    }
+
+    i++;
+    safeCut = i;
+  }
+
+  return mrkdwn.slice(0, safeCut).trimEnd() + suffix;
 }

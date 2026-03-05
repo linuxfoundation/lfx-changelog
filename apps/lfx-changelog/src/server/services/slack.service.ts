@@ -4,7 +4,7 @@
 import crypto from 'node:crypto';
 
 import { ServiceUnavailableError } from '../errors';
-import { markdownToSlackMrkdwn } from '../helpers/markdown-to-slack-mrkdwn';
+import { markdownToSlackMrkdwn, truncateSlackMrkdwn } from '../helpers/markdown-to-slack-mrkdwn';
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 
@@ -246,7 +246,7 @@ export class SlackService {
     const token = await this.getFreshToken(integration.id);
     const entryUrl = `${this.baseUrl}/entry/${changelogEntry.slug || changelogEntry.id}`;
     const slackDescription = markdownToSlackMrkdwn(changelogEntry.description);
-    const descriptionPreview = slackDescription.length > 500 ? `${slackDescription.slice(0, 497)}...` : slackDescription;
+    const descriptionPreview = truncateSlackMrkdwn(slackDescription, 500);
 
     const blocks = this.buildBlockKitMessage(changelogEntry, descriptionPreview, entryUrl);
 
