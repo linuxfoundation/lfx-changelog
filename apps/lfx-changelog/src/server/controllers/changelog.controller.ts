@@ -76,8 +76,9 @@ export class ChangelogController {
   public async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { createdBy, ...rest } = req.body;
+      const hasCreatedBy = createdBy !== undefined && typeof createdBy === 'string' && createdBy.trim().length > 0;
 
-      if (createdBy) {
+      if (hasCreatedBy) {
         const userRoles = (req.dbUser?.userRoleAssignments ?? []) as UserRoleAssignment[];
         const isSuperAdmin = userRoles.some((a) => a.role === UserRole.SUPER_ADMIN);
 
@@ -95,7 +96,7 @@ export class ChangelogController {
         }
       }
 
-      const data = createdBy ? { ...rest, createdBy } : rest;
+      const data = hasCreatedBy ? { ...rest, createdBy } : rest;
       const entry = await this.changelogService.update(req.params['id'] as string, data);
       res.json({ success: true, data: entry });
     } catch (error) {

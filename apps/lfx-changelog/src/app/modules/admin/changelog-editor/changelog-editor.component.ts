@@ -23,7 +23,7 @@ import { ChangelogService } from '@services/changelog/changelog.service';
 import { ProductService } from '@services/product/product.service';
 import { UserService } from '@services/user/user.service';
 import { slugify } from '@shared/utils/slugify';
-import { catchError, combineLatest, distinctUntilChanged, filter, map, of, pairwise, startWith, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, distinctUntilChanged, filter, finalize, map, of, pairwise, startWith, switchMap, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, Product, ProductRepository } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
@@ -350,8 +350,12 @@ export class ChangelogEditorComponent {
       toObservable(this.showAuthorPicker).pipe(
         filter(Boolean),
         tap(() => this.authorLoading.set(true)),
-        switchMap(() => this.userService.getAll()),
-        tap(() => this.authorLoading.set(false)),
+        switchMap(() =>
+          this.userService.getAll().pipe(
+            catchError(() => of([])),
+            finalize(() => this.authorLoading.set(false))
+          )
+        ),
         map((users) => users.map((u) => ({ label: u.name, value: u.id })))
       ),
       { initialValue: [] as SelectOption[] }
