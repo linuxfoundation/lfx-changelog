@@ -7,6 +7,7 @@ import { apiErrorHandler } from '../middleware/error-handler.middleware';
 import { sameOriginOnly } from '../middleware/same-origin.middleware';
 import aiRouter from '../routes/ai.route';
 import apiKeyRouter from '../routes/api-key.route';
+import changelogViewRouter from '../routes/changelog-view.route';
 import changelogRouter from '../routes/changelog.route';
 import chatRouter from '../routes/chat.route';
 import githubRouter from '../routes/github.route';
@@ -92,6 +93,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/chat', chatRouter);
   app.use('/api/api-keys', apiKeyRouter);
   app.use('/api/products', productRouter);
+  app.use('/api/changelog-views', changelogViewRouter);
   app.use('/api/changelogs', changelogRouter);
   app.use('/api/users', userRouter);
   app.use('/api/github', githubRouter);

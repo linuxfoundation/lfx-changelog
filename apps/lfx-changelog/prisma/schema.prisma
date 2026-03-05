@@ -55,6 +55,7 @@ model Product {
   userRoleAssignments UserRoleAssignment[]
   repositories        ProductRepository[]
   autoChangelogLock   AutoChangelogLock?
+  changelogViews      ChangelogView[]
 
   @@map("products")
 }
@@ -272,4 +273,19 @@ model AutoChangelogLock {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("auto_changelog_locks")
+}
+
+model ChangelogView {
+  id           String   @id @default(uuid())
+  viewerId     String   @map("viewer_id")
+  productId    String   @map("product_id")
+  lastViewedAt DateTime @default(now()) @map("last_viewed_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([viewerId, productId])
+  @@index([viewerId])
+  @@map("changelog_views")
 }
