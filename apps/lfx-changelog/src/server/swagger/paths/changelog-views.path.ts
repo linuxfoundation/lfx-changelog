@@ -25,7 +25,11 @@ changelogViewRegistry.registerPath({
   security: API_KEY_AUTH,
   request: {
     query: z.object({
-      viewerId: z.string().min(1).openapi({ description: 'Opaque viewer identifier (e.g. Auth0 sub claim)' }),
+      viewerId: z
+        .string()
+        .min(1)
+        .optional()
+        .openapi({ description: 'Opaque viewer identifier (e.g. Auth0 sub claim). Required for API key auth, ignored for OAuth.' }),
       productId: z.string().uuid().optional().openapi({ description: 'Single product ID to check' }),
       productIds: z.string().optional().openapi({ description: 'Comma-separated product IDs for batch check' }),
     }),
