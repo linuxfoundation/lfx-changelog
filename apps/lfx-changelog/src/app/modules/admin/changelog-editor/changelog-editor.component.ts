@@ -8,6 +8,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
+import { ConfirmDialogComponent } from '@components/confirm-dialog/confirm-dialog.component';
 import { InputComponent } from '@components/input/input.component';
 import { MarkdownEditorComponent } from '@components/markdown-editor/markdown-editor.component';
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
@@ -78,6 +79,8 @@ export class ChangelogEditorComponent {
 
   protected readonly saving = signal(false);
   protected readonly publishing = signal(false);
+  protected readonly unpublishing = signal(false);
+  protected readonly deleting = signal(false);
   protected readonly loading = signal(false);
   protected readonly showAiPanel = signal(false);
   protected readonly justPublished = signal(false);
@@ -195,6 +198,37 @@ export class ChangelogEditorComponent {
     });
   }
 
+  protected confirmUnpublish(): void {
+    this.dialogService.open({
+      title: 'Unpublish Entry',
+      size: 'sm',
+      component: ConfirmDialogComponent,
+      inputs: {
+        message: 'This will revert the entry to draft and remove it from public view.',
+        confirmLabel: 'Unpublish',
+      },
+      onClose: (result) => {
+        if (result === 'confirmed') this.unpublish();
+      },
+    });
+  }
+
+  protected confirmDelete(): void {
+    this.dialogService.open({
+      title: 'Delete Entry',
+      size: 'sm',
+      component: ConfirmDialogComponent,
+      inputs: {
+        message: 'This will permanently delete this entry. This action cannot be undone.',
+        confirmLabel: 'Delete',
+        danger: true,
+      },
+      onClose: (result) => {
+        if (result === 'confirmed') this.deleteEntry();
+      },
+    });
+  }
+
   protected openAuthorPicker(): void {
     this.showAuthorPicker.set(true);
   }
@@ -221,6 +255,34 @@ export class ChangelogEditorComponent {
 
   protected goToList(): void {
     this.router.navigate(['/admin/changelogs']);
+  }
+
+  private unpublish(): void {
+    const entry = this.existingEntry();
+    if (!entry) return;
+
+    this.unpublishing.set(true);
+    this.changelogService.unpublish(entry.id).subscribe({
+      next: () => {
+        this.unpublishing.set(false);
+        this.router.navigate(['/admin/changelogs']);
+      },
+      error: () => this.unpublishing.set(false),
+    });
+  }
+
+  private deleteEntry(): void {
+    const entry = this.existingEntry();
+    if (!entry) return;
+
+    this.deleting.set(true);
+    this.changelogService.remove(entry.id).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.router.navigate(['/admin/changelogs']);
+      },
+      error: () => this.deleting.set(false),
+    });
   }
 
   private buildSaveRequest$(): Observable<ChangelogEntryWithRelations> {

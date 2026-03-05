@@ -162,6 +162,34 @@ changelogRegistry.registerPath({
 });
 
 changelogRegistry.registerPath({
+  method: 'patch',
+  path: '/api/changelogs/{id}/unpublish',
+  tags: ['Changelogs'],
+  summary: 'Unpublish changelog entry',
+  description:
+    'Reverts a published changelog entry to draft and removes it from public view.\n\n**Required privilege:** EDITOR role or above for the target product.',
+  security: API_KEY_AUTH,
+  request: {
+    params: z.object({
+      id: z.string().openapi({ description: 'Changelog entry ID' }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Changelog entry unpublished',
+      content: {
+        'application/json': {
+          schema: createApiResponseSchema(ChangelogEntrySchema),
+        },
+      },
+    },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires EDITOR role or above' },
+    404: { description: 'Changelog entry not found' },
+  },
+});
+
+changelogRegistry.registerPath({
   method: 'delete',
   path: '/api/changelogs/{id}',
   tags: ['Changelogs'],

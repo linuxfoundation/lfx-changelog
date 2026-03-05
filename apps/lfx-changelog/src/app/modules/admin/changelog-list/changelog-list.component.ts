@@ -6,6 +6,8 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
+import { ConfirmDialogComponent } from '@components/confirm-dialog/confirm-dialog.component';
+import { DropdownMenuComponent } from '@components/dropdown-menu/dropdown-menu.component';
 import { PostToSlackDialogComponent } from '@components/post-to-slack-dialog/post-to-slack-dialog.component';
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
@@ -21,7 +23,7 @@ import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
 import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, take, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
-import type { SelectOption } from '@shared/interfaces/form.interface';
+import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
   selector: 'lfx-changelog-list',
@@ -29,6 +31,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
     ReactiveFormsModule,
     RouterLink,
     ButtonComponent,
+    DropdownMenuComponent,
     StatusBadgeComponent,
     SelectComponent,
     TableComponent,
@@ -59,6 +62,7 @@ export class ChangelogListComponent {
   protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
 
   protected readonly slackPostSuccess = signal('');
+  protected readonly actionSuccess = signal('');
 
   protected readonly productOptions: Signal<SelectOption[]> = this.initProductOptions();
   protected readonly statusOptions: SelectOption[] = [
@@ -112,6 +116,73 @@ export class ChangelogListComponent {
         },
         error: () => this.reindexing.set(false),
       });
+  }
+
+  protected getMenuItems(entry: ChangelogEntryWithRelations): DropdownMenuItem[] {
+    const items: DropdownMenuItem[] = [];
+
+    if (entry.status === ChangelogStatus.PUBLISHED) {
+      items.push({ label: 'Post to Slack', action: () => this.openSlackDialog(entry) });
+      items.push({ label: 'Unpublish', action: () => this.confirmUnpublish(entry) });
+    }
+
+    items.push({ label: 'Delete', action: () => this.confirmDelete(entry), danger: true });
+
+    return items;
+  }
+
+  private confirmUnpublish(entry: ChangelogEntryWithRelations): void {
+    this.dialogService.open({
+      title: 'Unpublish Entry',
+      size: 'sm',
+      component: ConfirmDialogComponent,
+      inputs: {
+        message: 'This will revert the entry to draft and remove it from public view.',
+        confirmLabel: 'Unpublish',
+      },
+      onClose: (result) => {
+        if (result === 'confirmed') this.unpublishEntry(entry);
+      },
+    });
+  }
+
+  private confirmDelete(entry: ChangelogEntryWithRelations): void {
+    this.dialogService.open({
+      title: 'Delete Entry',
+      size: 'sm',
+      component: ConfirmDialogComponent,
+      inputs: {
+        message: 'This will permanently delete this entry. This action cannot be undone.',
+        confirmLabel: 'Delete',
+        danger: true,
+      },
+      onClose: (result) => {
+        if (result === 'confirmed') this.deleteEntry(entry);
+      },
+    });
+  }
+
+  private unpublishEntry(entry: ChangelogEntryWithRelations): void {
+    this.changelogService.unpublish(entry.id).subscribe(() => {
+      this.showActionSuccess('Entry reverted to draft');
+      this.refreshList();
+    });
+  }
+
+  private deleteEntry(entry: ChangelogEntryWithRelations): void {
+    this.changelogService.remove(entry.id).subscribe(() => {
+      this.showActionSuccess('Entry deleted');
+      this.refreshList();
+    });
+  }
+
+  private showActionSuccess(message: string): void {
+    this.actionSuccess.set(message);
+    setTimeout(() => this.actionSuccess.set(''), 4000);
+  }
+
+  private refreshList(): void {
+    this.page$.next(this.page$.value);
   }
 
   private initProductOptions(): Signal<SelectOption[]> {

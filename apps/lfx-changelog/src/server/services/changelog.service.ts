@@ -206,6 +206,23 @@ export class ChangelogService {
     return published;
   }
 
+  public async unpublish(id: string): Promise<PrismaChangelogEntry> {
+    const prisma = getPrismaClient();
+    const entry = await prisma.changelogEntry.findUnique({ where: { id } });
+    if (!entry) {
+      throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'unpublish', service: 'changelog' });
+    }
+    const draft = await prisma.changelogEntry.update({
+      where: { id },
+      data: { status: 'draft', publishedAt: null },
+      include: { product: true, author: true },
+    });
+    getOpenSearchService()
+      .delete(id)
+      .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+    return draft;
+  }
+
   public async delete(id: string): Promise<void> {
     const prisma = getPrismaClient();
     const entry = await prisma.changelogEntry.findUnique({ where: { id } });

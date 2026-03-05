@@ -88,15 +88,13 @@
     </ng-template>
 
     <ng-template lfxColumn="" let-entry>
-      @if (entry.status === 'published') {
+      <lfx-dropdown-menu [items]="getMenuItems(entry)">
         <button
-          data-testid="changelog-list-slack-btn"
-          (click)="openSlackDialog(entry)"
-          class="cursor-pointer rounded p-1 text-[#4A154B]/80 transition-colors hover:text-[#4A154B]"
-          title="Post to Slack">
-          <img src="/slack.svg" alt="Slack" width="14" height="14" class="inline-block" />
+          data-testid="changelog-list-actions-btn"
+          class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
+          <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
         </button>
-      }
+      </lfx-dropdown-menu>
     </ng-template>
   </lfx-table>
 
@@ -106,6 +104,15 @@
       class="animate-fade-in fixed right-6 bottom-6 z-50 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-lg dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
       <img src="/slack.svg" alt="Slack" width="16" height="16" class="inline-block" />
       Posted to #{{ slackPostSuccess() }}
+    </div>
+  }
+
+  <!-- Action success toast -->
+  @if (actionSuccess()) {
+    <div
+      class="animate-fade-in fixed right-6 bottom-6 z-50 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-lg dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
+      <i class="fa-solid fa-circle-check"></i>
+      {{ actionSuccess() }}
     </div>
   }
 </div>

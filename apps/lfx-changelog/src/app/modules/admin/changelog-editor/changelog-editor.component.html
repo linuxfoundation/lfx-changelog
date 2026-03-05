@@ -199,7 +199,7 @@
         placeholder="Write markdown content..."
         [formControl]="descriptionControl" />
 
-      <div class="flex gap-3 pt-2">
+      <div class="flex items-center gap-3 pt-2">
         @if (!isEditing() || isDraft()) {
           <lfx-button
             data-testid="changelog-editor-publish-btn"
@@ -209,6 +209,17 @@
             (clicked)="publish()">
             <i class="fa-duotone fa-paper-plane text-xs"></i>
             Publish
+          </lfx-button>
+        }
+        @if (isEditing() && !isDraft()) {
+          <lfx-button
+            data-testid="changelog-editor-unpublish-btn"
+            variant="secondary"
+            [loading]="unpublishing()"
+            [disabled]="saving() || publishing()"
+            (clicked)="confirmUnpublish()">
+            <i class="fa-solid fa-rotate-left text-xs"></i>
+            Unpublish
           </lfx-button>
         }
         <lfx-button
@@ -222,6 +233,19 @@
         <a data-testid="changelog-editor-cancel-btn" routerLink="/admin/changelogs">
           <lfx-button variant="secondary">Cancel</lfx-button>
         </a>
+        @if (isEditing()) {
+          <div class="ml-auto">
+            <lfx-button
+              data-testid="changelog-editor-delete-btn"
+              variant="danger"
+              [loading]="deleting()"
+              [disabled]="saving() || publishing() || unpublishing()"
+              (clicked)="confirmDelete()">
+              <i class="fa-solid fa-trash text-xs"></i>
+              Delete
+            </lfx-button>
+          </div>
+        }
       </div>
     </div>
 
