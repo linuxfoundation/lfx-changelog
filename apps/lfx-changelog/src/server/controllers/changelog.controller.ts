@@ -1,12 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { UserRole } from '@lfx-changelog/shared';
 import { NextFunction, Request, Response } from 'express';
 
+import { AuthorizationError, NotFoundError } from '../errors';
 import { ChangelogService } from '../services/changelog.service';
+import { getPrismaClient } from '../services/prisma.service';
 import { SlackService } from '../services/slack.service';
 
 import type { PostChangelogEntry } from '@lfx-changelog/shared';
+import type { UserRoleAssignment } from '@prisma/client';
 
 export class ChangelogController {
   private readonly changelogService = new ChangelogService();
@@ -71,7 +75,28 @@ export class ChangelogController {
 
   public async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const entry = await this.changelogService.update(req.params['id'] as string, req.body);
+      const { createdBy, ...rest } = req.body;
+
+      if (createdBy) {
+        const userRoles = (req.dbUser?.userRoleAssignments ?? []) as UserRoleAssignment[];
+        const isSuperAdmin = userRoles.some((a) => a.role === UserRole.SUPER_ADMIN);
+
+        if (!isSuperAdmin && createdBy !== req.dbUser!.id) {
+          throw new AuthorizationError('Only super admins can reassign authorship to another user', {
+            operation: 'update',
+            service: 'changelog',
+          });
+        }
+
+        const prisma = getPrismaClient();
+        const targetUser = await prisma.user.findUnique({ where: { id: createdBy } });
+        if (!targetUser) {
+          throw new NotFoundError(`Target author not found: ${createdBy}`, { operation: 'update', service: 'changelog' });
+        }
+      }
+
+      const data = createdBy ? { ...rest, createdBy } : rest;
+      const entry = await this.changelogService.update(req.params['id'] as string, data);
       res.json({ success: true, data: entry });
     } catch (error) {
       next(error);

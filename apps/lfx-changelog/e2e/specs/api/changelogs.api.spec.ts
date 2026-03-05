@@ -260,4 +260,107 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
       expect(body.details.length).toBeGreaterThan(0);
     });
   });
+
+  test.describe('Author Reassignment', () => {
+    let productId: string;
+    let superAdminUserId: string;
+    let editorUserId: string;
+
+    test.beforeAll(async () => {
+      const productsRes = await superAdminApi.get('/api/products');
+      productId = (await productsRes.json()).data.find((p: any) => p.slug === 'e2e-easycla').id;
+
+      const superAdminMeRes = await superAdminApi.get('/api/users/me');
+      superAdminUserId = (await superAdminMeRes.json()).data.id;
+
+      const editorMeRes = await editorApi.get('/api/users/me');
+      editorUserId = (await editorMeRes.json()).data.id;
+    });
+
+    test('super_admin can reassign createdBy to another user', async () => {
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Reassign Test', description: 'Test', version: '1.0.0', status: 'draft' },
+      });
+      const entryId = (await createRes.json()).data.id;
+
+      const updateRes = await superAdminApi.put(`/api/changelogs/${entryId}`, {
+        data: { createdBy: editorUserId },
+      });
+      expect(updateRes.status()).toBe(200);
+      const updated = (await updateRes.json()).data;
+      expect(updated.createdBy).toBe(editorUserId);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entryId}`);
+    });
+
+    test('editor can self-claim createdBy (own user ID)', async () => {
+      // Super admin creates an entry
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Self-Claim Test', description: 'Test', version: '1.0.0', status: 'draft' },
+      });
+      const entryId = (await createRes.json()).data.id;
+
+      // Editor self-claims
+      const updateRes = await editorApi.put(`/api/changelogs/${entryId}`, {
+        data: { createdBy: editorUserId },
+      });
+      expect(updateRes.status()).toBe(200);
+      const updated = (await updateRes.json()).data;
+      expect(updated.createdBy).toBe(editorUserId);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entryId}`);
+    });
+
+    test('editor cannot reassign createdBy to another user (403)', async () => {
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Forbidden Reassign Test', description: 'Test', version: '1.0.0', status: 'draft' },
+      });
+      const entryId = (await createRes.json()).data.id;
+
+      // Editor tries to reassign to super admin
+      const updateRes = await editorApi.put(`/api/changelogs/${entryId}`, {
+        data: { createdBy: superAdminUserId },
+      });
+      expect(updateRes.status()).toBe(403);
+      const body = await updateRes.json();
+      expect(body.code).toBe('AUTHORIZATION_REQUIRED');
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entryId}`);
+    });
+
+    test('update with invalid createdBy returns 404', async () => {
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'Invalid Author Test', description: 'Test', version: '1.0.0', status: 'draft' },
+      });
+      const entryId = (await createRes.json()).data.id;
+
+      const updateRes = await superAdminApi.put(`/api/changelogs/${entryId}`, {
+        data: { createdBy: '00000000-0000-0000-0000-000000000000' },
+      });
+      expect(updateRes.status()).toBe(404);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entryId}`);
+    });
+
+    test('update without createdBy does not change author', async () => {
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'No Author Change Test', description: 'Test', version: '1.0.0', status: 'draft' },
+      });
+      const created = (await createRes.json()).data;
+
+      const updateRes = await superAdminApi.put(`/api/changelogs/${created.id}`, {
+        data: { title: 'Updated Title Only' },
+      });
+      expect(updateRes.status()).toBe(200);
+      const updated = (await updateRes.json()).data;
+      expect(updated.createdBy).toBe(created.createdBy);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${created.id}`);
+    });
+  });
 });

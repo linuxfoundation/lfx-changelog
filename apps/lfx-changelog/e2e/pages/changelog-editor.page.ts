@@ -15,6 +15,9 @@ export class ChangelogEditorPage {
   public readonly preview: Locator;
   public readonly publishBanner: Locator;
   public readonly slackBtn: Locator;
+  public readonly changeAuthorBtn: Locator;
+  public readonly authorSelect: Locator;
+  public readonly claimAuthorBtn: Locator;
 
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="changelog-editor-heading"]');
@@ -28,6 +31,9 @@ export class ChangelogEditorPage {
     this.preview = page.locator('[data-testid="changelog-editor-preview"]');
     this.publishBanner = page.locator('[data-testid="changelog-editor-publish-banner"]');
     this.slackBtn = page.locator('[data-testid="changelog-editor-slack-btn"]');
+    this.changeAuthorBtn = page.locator('[data-testid="changelog-editor-change-author-btn"]');
+    this.authorSelect = page.locator('[data-testid="changelog-editor-author-select"]');
+    this.claimAuthorBtn = page.locator('[data-testid="changelog-editor-claim-author-btn"]');
   }
 
   public async gotoNew() {

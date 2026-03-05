@@ -48,7 +48,15 @@ test.describe('Slack API (/api/slack)', () => {
   });
 
   test.describe('GET /api/slack/connect', () => {
-    test('returns OAuth URL for authenticated user', async () => {
+    let slackConfigured: boolean;
+
+    test.beforeAll(async () => {
+      const res = await superAdminApi.get('/api/slack/connect');
+      slackConfigured = res.status() === 200;
+    });
+
+    test('returns OAuth URL when Slack is configured', async () => {
+      test.skip(!slackConfigured, 'Slack OAuth not configured in this environment');
       const res = await superAdminApi.get('/api/slack/connect');
       expect(res.status()).toBe(200);
       const body = await res.json();
@@ -60,12 +68,18 @@ test.describe('Slack API (/api/slack)', () => {
       expect(body.data.url).toContain('state');
     });
 
-    test('editor can also get OAuth URL', async () => {
-      const res = await editorApi.get('/api/slack/connect');
-      expect(res.status()).toBe(200);
+    test('returns 503 when Slack is not configured', async () => {
+      test.skip(slackConfigured, 'Slack OAuth is configured in this environment');
+      const res = await superAdminApi.get('/api/slack/connect');
+      expect(res.status()).toBe(503);
       const body = await res.json();
-      expect(body.success).toBe(true);
-      expect(body.data.url).toBeDefined();
+      expect(body.code).toBe('SERVICE_UNAVAILABLE');
+    });
+
+    test('editor can also access connect endpoint', async () => {
+      const res = await editorApi.get('/api/slack/connect');
+      // 200 if Slack configured, 503 if not — either way, not 401/403
+      expect([200, 503]).toContain(res.status());
     });
   });
 
