@@ -93,6 +93,7 @@
   --animate-spin-in: spin-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-status-pulse: status-pulse 1.5s ease-in-out infinite;
   --animate-typing-bounce: typing-bounce 1.2s ease-in-out infinite;
+  --animate-slide-out-right: slide-out-right 0.3s ease-in both;
 }
 
 /* ═══════════════════════════════════════════════
@@ -344,6 +345,17 @@ body {
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(16px);
   }
 }
 

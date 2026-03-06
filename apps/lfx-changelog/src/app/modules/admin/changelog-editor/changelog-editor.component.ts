@@ -12,7 +12,6 @@ import { ConfirmDialogComponent } from '@components/confirm-dialog/confirm-dialo
 import { InputComponent } from '@components/input/input.component';
 import { MarkdownEditorComponent } from '@components/markdown-editor/markdown-editor.component';
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
-import { PostToSlackDialogComponent } from '@components/post-to-slack-dialog/post-to-slack-dialog.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
@@ -23,6 +22,7 @@ import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { DialogService } from '@services/dialog/dialog.service';
 import { ProductService } from '@services/product/product.service';
+import { ToastService } from '@services/toast/toast.service';
 import { UserService } from '@services/user/user.service';
 import { slugify } from '@shared/utils/slugify';
 import { catchError, combineLatest, distinctUntilChanged, filter, finalize, map, of, pairwise, startWith, switchMap, tap } from 'rxjs';
@@ -61,6 +61,7 @@ export class ChangelogEditorComponent {
   private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly dialogService = inject(DialogService);
+  private readonly toastService = inject(ToastService);
 
   protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
   protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
@@ -83,7 +84,6 @@ export class ChangelogEditorComponent {
   protected readonly deleting = signal(false);
   protected readonly loading = signal(false);
   protected readonly showAiPanel = signal(false);
-  protected readonly justPublished = signal(false);
   protected readonly showAuthorPicker = signal(false);
   protected readonly authorLoading = signal(false);
   protected readonly claimingAuthorship = signal(false);
@@ -165,10 +165,12 @@ export class ChangelogEditorComponent {
     this.buildSaveRequest$().subscribe({
       next: () => {
         this.saving.set(false);
+        this.toastService.success('Entry saved');
         this.router.navigate(['/admin/changelogs']);
       },
       error: () => {
         this.saving.set(false);
+        this.toastService.error('Failed to save entry');
       },
     });
   }
@@ -180,28 +182,14 @@ export class ChangelogEditorComponent {
       .subscribe({
         next: (entry) => {
           this.publishing.set(false);
-          this.justPublished.set(true);
-          // For new entries, navigate to edit URL so post-to-slack dialog has the entry ID
-          if (!this.route.snapshot.paramMap.get('id')) {
-            this.router.navigate(['/admin/changelogs', entry.id, 'edit'], { replaceUrl: true });
-          }
+          this.toastService.success('Entry published!');
+          this.router.navigate(['/entry', entry.slug]);
         },
         error: () => {
           this.publishing.set(false);
+          this.toastService.error('Failed to publish entry');
         },
       });
-  }
-
-  protected openSlackDialog(): void {
-    const entry = this.existingEntry();
-    if (!entry) return;
-
-    this.dialogService.open({
-      title: 'Post to Slack',
-      size: 'sm',
-      component: PostToSlackDialogComponent,
-      inputs: { changelogId: entry.id, changelogTitle: entry.title },
-    });
   }
 
   protected confirmUnpublish(): void {
@@ -252,15 +240,13 @@ export class ChangelogEditorComponent {
         next: () => {
           this.claimingAuthorship.set(false);
           this.authorControl.setValue(currentUserId);
+          this.toastService.success('Authorship claimed');
         },
         error: () => {
           this.claimingAuthorship.set(false);
+          this.toastService.error('Failed to claim authorship');
         },
       });
-  }
-
-  protected goToList(): void {
-    this.router.navigate(['/admin/changelogs']);
   }
 
   private unpublish(): void {
@@ -271,9 +257,13 @@ export class ChangelogEditorComponent {
     this.changelogService.unpublish(entry.id).subscribe({
       next: () => {
         this.unpublishing.set(false);
+        this.toastService.success('Entry unpublished');
         this.router.navigate(['/admin/changelogs']);
       },
-      error: () => this.unpublishing.set(false),
+      error: () => {
+        this.unpublishing.set(false);
+        this.toastService.error('Failed to unpublish entry');
+      },
     });
   }
 
@@ -285,9 +275,13 @@ export class ChangelogEditorComponent {
     this.changelogService.remove(entry.id).subscribe({
       next: () => {
         this.deleting.set(false);
+        this.toastService.success('Entry deleted');
         this.router.navigate(['/admin/changelogs']);
       },
-      error: () => this.deleting.set(false),
+      error: () => {
+        this.deleting.set(false);
+        this.toastService.error('Failed to delete entry');
+      },
     });
   }
 

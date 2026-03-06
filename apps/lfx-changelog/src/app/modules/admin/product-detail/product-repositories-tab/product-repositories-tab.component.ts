@@ -12,6 +12,7 @@ import { LinkRepositoriesDialogComponent } from '@modules/admin/components/link-
 import { DialogService } from '@services/dialog/dialog.service';
 import { GitHubService } from '@services/github/github.service';
 import { ProductService } from '@services/product/product.service';
+import { ToastService } from '@services/toast/toast.service';
 import { catchError, map, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { ProductRepository } from '@lfx-changelog/shared';
@@ -27,6 +28,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
   private readonly productService = inject(ProductService);
   private readonly githubService = inject(GitHubService);
   private readonly dialogService = inject(DialogService);
+  private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
 
@@ -80,7 +82,13 @@ export class ProductRepositoriesTabComponent implements OnInit {
     this.productService
       .unlinkRepository(this.productId(), repo.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.refresh$.next());
+      .subscribe({
+        next: () => {
+          this.toastService.success('Repository unlinked');
+          this.refresh$.next();
+        },
+        error: () => this.toastService.error('Failed to unlink repository'),
+      });
   }
 
   private initLinkedReposState(): Signal<LoadingState<ProductRepository[]>> {

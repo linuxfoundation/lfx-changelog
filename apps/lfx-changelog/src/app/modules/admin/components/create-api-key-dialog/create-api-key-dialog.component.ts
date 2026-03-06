@@ -10,6 +10,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { API_KEY_EXPIRATION_OPTIONS, API_KEY_SCOPES } from '@lfx-changelog/shared';
 import { ApiKeyService } from '@services/api-key/api-key.service';
 import { DialogService } from '@services/dialog/dialog.service';
+import { ToastService } from '@services/toast/toast.service';
 
 import type { ApiKeyScope } from '@lfx-changelog/shared';
 
@@ -21,6 +22,7 @@ import type { ApiKeyScope } from '@lfx-changelog/shared';
 })
 export class CreateApiKeyDialogComponent {
   private readonly apiKeyService = inject(ApiKeyService);
+  private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
   protected readonly scopeOptions = API_KEY_SCOPES;
@@ -54,9 +56,13 @@ export class CreateApiKeyDialogComponent {
       .subscribe({
         next: (result) => {
           this.saving.set(false);
+          this.toastService.success('API key created');
           this.dialogService.close({ action: 'created', rawKey: result.rawKey });
         },
-        error: () => this.saving.set(false),
+        error: () => {
+          this.saving.set(false);
+          this.toastService.error('Failed to create API key');
+        },
       });
   }
 }

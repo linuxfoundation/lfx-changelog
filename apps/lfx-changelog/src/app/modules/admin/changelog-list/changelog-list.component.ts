@@ -18,6 +18,7 @@ import { AuthService } from '@services/auth/auth.service';
 import { ChangelogService } from '@services/changelog/changelog.service';
 import { DialogService } from '@services/dialog/dialog.service';
 import { ProductService } from '@services/product/product.service';
+import { ToastService } from '@services/toast/toast.service';
 import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
 import { MapGetPipe } from '@shared/pipes/map-get/map-get.pipe';
 import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
@@ -49,6 +50,7 @@ export class ChangelogListComponent {
   private readonly changelogService = inject(ChangelogService);
   private readonly productService = inject(ProductService);
   private readonly dialogService = inject(DialogService);
+  private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly page$ = new BehaviorSubject<number>(1);
@@ -62,12 +64,6 @@ export class ChangelogListComponent {
   protected readonly reindexing = signal(false);
   protected readonly reindexResult = signal<{ indexed: number; errors: number } | null>(null);
   protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
-
-  private actionSuccessTimer: ReturnType<typeof setTimeout> | null = null;
-
-  protected readonly slackPostSuccess = signal('');
-  protected readonly actionMessage = signal('');
-  protected readonly actionIsError = signal(false);
 
   protected readonly productOptions: Signal<SelectOption[]> = this.initProductOptions();
   protected readonly statusOptions: SelectOption[] = [
@@ -96,7 +92,6 @@ export class ChangelogListComponent {
   }
 
   protected openSlackDialog(entry: ChangelogEntryWithRelations): void {
-    this.slackPostSuccess.set('');
     this.dialogService.open({
       title: 'Post to Slack',
       size: 'sm',
@@ -104,7 +99,7 @@ export class ChangelogListComponent {
       inputs: {
         changelogId: entry.id,
         changelogTitle: entry.title,
-        onPosted: (channelName: string) => this.slackPostSuccess.set(channelName),
+        onPosted: (channelName: string) => this.toastService.success(`Posted to #${channelName}`),
       },
     });
   }
@@ -158,28 +153,21 @@ export class ChangelogListComponent {
   private unpublishEntry(entry: ChangelogEntryWithRelations): void {
     this.changelogService.unpublish(entry.id).subscribe({
       next: () => {
-        this.showActionMessage('Entry reverted to draft');
+        this.toastService.success('Entry reverted to draft');
         this.refreshList();
       },
-      error: () => this.showActionMessage('Failed to unpublish entry', true),
+      error: () => this.toastService.error('Failed to unpublish entry'),
     });
   }
 
   private deleteEntry(entry: ChangelogEntryWithRelations): void {
     this.changelogService.remove(entry.id).subscribe({
       next: () => {
-        this.showActionMessage('Entry deleted');
+        this.toastService.success('Entry deleted');
         this.refreshList();
       },
-      error: () => this.showActionMessage('Failed to delete entry', true),
+      error: () => this.toastService.error('Failed to delete entry'),
     });
-  }
-
-  private showActionMessage(message: string, isError = false): void {
-    if (this.actionSuccessTimer) clearTimeout(this.actionSuccessTimer);
-    this.actionMessage.set(message);
-    this.actionIsError.set(isError);
-    this.actionSuccessTimer = setTimeout(() => this.actionMessage.set(''), 4000);
   }
 
   private refreshList(): void {

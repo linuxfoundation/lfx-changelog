@@ -13,8 +13,9 @@ import { TableComponent } from '@components/table/table.component';
 import { ProductFormDialogComponent } from '@modules/admin/components/product-form-dialog/product-form-dialog.component';
 import { DialogService } from '@services/dialog/dialog.service';
 import { ProductService } from '@services/product/product.service';
+import { ToastService } from '@services/toast/toast.service';
 import { MapGetPipe } from '@shared/pipes/map-get/map-get.pipe';
-import { BehaviorSubject, catchError, concat, map, of, Subject, switchMap, tap, timer } from 'rxjs';
+import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
 import type { Product } from '@lfx-changelog/shared';
 import type { DropdownMenuItem } from '@shared/interfaces/form.interface';
@@ -28,20 +29,10 @@ import type { DropdownMenuItem } from '@shared/interfaces/form.interface';
 export class ProductManagementComponent {
   private readonly productService = inject(ProductService);
   private readonly dialogService = inject(DialogService);
+  private readonly toastService = inject(ToastService);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
-  private readonly actionTrigger$ = new Subject<{ message: string; isError: boolean }>();
 
   protected readonly loading = signal(true);
-
-  private readonly actionState = toSignal(
-    this.actionTrigger$.pipe(
-      switchMap(({ message, isError }) => concat(of({ message, isError }), timer(4000).pipe(map(() => ({ message: '', isError: false })))))
-    ),
-    { initialValue: { message: '', isError: false } }
-  );
-
-  protected readonly actionMessage = computed(() => this.actionState().message);
-  protected readonly actionIsError = computed(() => this.actionState().isError);
 
   protected readonly products = toSignal(
     this.refresh$.pipe(
@@ -84,10 +75,10 @@ export class ProductManagementComponent {
     const doUpdate = (): void => {
       this.productService.update(product.id, { isActive: newActive }).subscribe({
         next: () => {
-          this.showActionMessage(`${product.name} ${label}`);
+          this.toastService.success(`${product.name} ${label}`);
           this.refresh$.next();
         },
-        error: () => this.showActionMessage(`Failed to ${newActive ? 'enable' : 'disable'} ${product.name}`, true),
+        error: () => this.toastService.error(`Failed to ${newActive ? 'enable' : 'disable'} ${product.name}`),
       });
     };
 
@@ -124,18 +115,14 @@ export class ProductManagementComponent {
         if (result === 'confirmed') {
           this.productService.delete(product.id).subscribe({
             next: () => {
-              this.showActionMessage(`${product.name} deleted`);
+              this.toastService.success(`${product.name} deleted`);
               this.refresh$.next();
             },
-            error: () => this.showActionMessage(`Failed to delete ${product.name}`, true),
+            error: () => this.toastService.error(`Failed to delete ${product.name}`),
           });
         }
       },
     });
-  }
-
-  private showActionMessage(message: string, isError = false): void {
-    this.actionTrigger$.next({ message, isError });
   }
 
   private initProductMenuItems(): Signal<Map<string, DropdownMenuItem[]>> {

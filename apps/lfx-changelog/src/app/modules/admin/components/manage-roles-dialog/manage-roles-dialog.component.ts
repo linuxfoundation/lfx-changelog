@@ -9,6 +9,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
 import { UserRole } from '@lfx-changelog/shared';
 import { DialogService } from '@services/dialog/dialog.service';
+import { ToastService } from '@services/toast/toast.service';
 import { UserService } from '@services/user/user.service';
 import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
 import { RoleColorPipe } from '@shared/pipes/role-color/role-color.pipe';
@@ -25,6 +26,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
 })
 export class ManageRolesDialogComponent implements OnInit {
   private readonly userService = inject(UserService);
+  private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly user = input.required<User>();
@@ -59,15 +61,23 @@ export class ManageRolesDialogComponent implements OnInit {
     if (!user || !this.newRoleControl.value) return;
 
     const productId = this.newRoleControl.value === UserRole.SUPER_ADMIN ? null : this.newProductControl.value || null;
-    this.userService.assignRole(user.id, this.newRoleControl.value, productId).subscribe(() => {
-      this.dialogService.close('changed');
+    this.userService.assignRole(user.id, this.newRoleControl.value, productId).subscribe({
+      next: () => {
+        this.toastService.success('Role assigned');
+        this.dialogService.close('changed');
+      },
+      error: () => this.toastService.error('Failed to assign role'),
     });
   }
 
   protected removeRole(roleId: string): void {
-    this.userService.removeRole(this.user().id, roleId).subscribe(() => {
-      this.modified = true;
-      this.roles.update((r) => r.filter((role) => role.id !== roleId));
+    this.userService.removeRole(this.user().id, roleId).subscribe({
+      next: () => {
+        this.modified = true;
+        this.roles.update((r) => r.filter((role) => role.id !== roleId));
+        this.toastService.success('Role removed');
+      },
+      error: () => this.toastService.error('Failed to remove role'),
     });
   }
 

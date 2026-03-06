@@ -17,27 +17,6 @@
     </a>
   </div>
 
-  <!-- Post-publish success banner -->
-  @if (justPublished()) {
-    <div
-      data-testid="changelog-editor-publish-banner"
-      class="animate-fade-in rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/30">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
-          <i class="fa-solid fa-circle-check"></i>
-          <span class="font-medium">Published successfully!</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <lfx-button data-testid="changelog-editor-slack-btn" variant="secondary" size="sm" (clicked)="openSlackDialog()">
-            <img src="/slack.svg" alt="Slack" width="14" height="14" class="inline-block" />
-            Post to Slack
-          </lfx-button>
-          <lfx-button variant="ghost" size="sm" (clicked)="goToList()"> Back to Changelogs </lfx-button>
-        </div>
-      </div>
-    </div>
-  }
-
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <!-- Form -->
     <div class="animate-slide-in-left relative z-10 space-y-5 [animation-delay:150ms]">

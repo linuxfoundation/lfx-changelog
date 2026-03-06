@@ -98,29 +98,4 @@
       </lfx-dropdown-menu>
     </ng-template>
   </lfx-table>
-
-  <!-- Slack success toast -->
-  @if (slackPostSuccess()) {
-    <div
-      class="animate-fade-in fixed right-6 bottom-6 z-50 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-lg dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
-      <img src="/slack.svg" alt="Slack" width="16" height="16" class="inline-block" />
-      Posted to #{{ slackPostSuccess() }}
-    </div>
-  }
-
-  <!-- Action toast -->
-  @if (actionMessage()) {
-    <div
-      role="status"
-      aria-live="polite"
-      class="animate-fade-in fixed right-6 bottom-6 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg"
-      [class]="
-        actionIsError()
-          ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400'
-          : 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400'
-      ">
-      <i [class]="actionIsError() ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check'"></i>
-      {{ actionMessage() }}
-    </div>
-  }
 </div>
