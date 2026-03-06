@@ -4,6 +4,7 @@
 import { Component, computed, DestroyRef, inject, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TabsComponent } from '@components/tabs/tabs.component';
 import { ProductService } from '@services/product/product.service';
@@ -23,7 +24,7 @@ const TABS: Tab[] = [
 
 @Component({
   selector: 'lfx-product-detail',
-  imports: [ButtonComponent, TabsComponent, ProductOverviewTabComponent, ProductRepositoriesTabComponent],
+  imports: [BadgeComponent, ButtonComponent, TabsComponent, ProductOverviewTabComponent, ProductRepositoriesTabComponent],
   templateUrl: './product-detail.component.html',
   styleUrl: './product-detail.component.css',
 })

@@ -17,7 +17,14 @@
           <i [class]="product.faIcon" class="text-brand-600 text-2xl"></i>
         }
         <div>
-          <h1 data-testid="product-detail-heading" class="font-display text-text-primary text-2xl font-bold">{{ product.name }}</h1>
+          <div class="flex items-center gap-2">
+            <h1 data-testid="product-detail-heading" class="font-display text-text-primary text-2xl font-bold">{{ product.name }}</h1>
+            @if (product.isActive) {
+              <lfx-badge label="Enabled" color="#22C55E" size="sm" />
+            } @else {
+              <lfx-badge label="Disabled" color="#EF4444" size="sm" />
+            }
+          </div>
           <p data-testid="product-detail-slug" class="text-text-muted font-mono text-sm">{{ product.slug }}</p>
         </div>
       </div>

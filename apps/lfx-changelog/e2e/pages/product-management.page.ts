@@ -7,6 +7,7 @@ export class ProductManagementPage {
   public readonly heading: Locator;
   public readonly addBtn: Locator;
   public readonly table: Locator;
+  public readonly actionsBtn: Locator;
   public readonly dialog: Locator;
   public readonly dialogNameInput: Locator;
   public readonly dialogSlugInput: Locator;
@@ -17,6 +18,7 @@ export class ProductManagementPage {
     this.heading = page.locator('[data-testid="product-management-heading"]');
     this.addBtn = page.locator('[data-testid="product-management-add-btn"]');
     this.table = page.locator('[data-testid="product-management-table"]');
+    this.actionsBtn = page.locator('[data-testid="product-management-actions-btn"]');
     this.dialog = page.locator('[data-testid="product-dialog"]');
     this.dialogNameInput = page.locator('[data-testid="product-dialog-name-input"]');
     this.dialogSlugInput = page.locator('[data-testid="product-dialog-slug-input"]');
