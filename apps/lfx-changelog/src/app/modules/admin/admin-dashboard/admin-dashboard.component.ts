@@ -55,7 +55,7 @@ export class AdminDashboardComponent {
   protected readonly totalEntries = computed(() => this.dashboardData()?.all.total ?? 0);
   protected readonly draftCount = computed(() => this.dashboardData()?.drafts.total ?? 0);
   protected readonly publishedCount = computed(() => this.dashboardData()?.published.total ?? 0);
-  protected readonly productCount = computed(() => this.dashboardData()?.products.length ?? 0);
+  protected readonly productCount = computed(() => this.dashboardData()?.products.filter((p) => p.isActive).length ?? 0);
   protected readonly recentEntries = computed(() => this.dashboardData()?.recent.data ?? []);
   protected readonly products = computed(() => this.dashboardData()?.products ?? []);
 }

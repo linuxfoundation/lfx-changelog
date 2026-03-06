@@ -350,7 +350,11 @@ export class ChangelogEditorComponent {
   }
 
   private initProductOptions(): Signal<SelectOption[]> {
-    return computed(() => this.products().map((p) => ({ label: p.name, value: p.id })));
+    return computed(() =>
+      this.products()
+        .filter((p) => p.isActive)
+        .map((p) => ({ label: p.name, value: p.id }))
+    );
   }
 
   private initPreviewEntry(): Signal<ChangelogEntryWithRelations> {

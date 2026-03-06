@@ -196,7 +196,12 @@ export class ChangelogListComponent {
   }
 
   private initProductOptions(): Signal<SelectOption[]> {
-    return computed(() => [{ label: 'All Products', value: '' }, ...this.products().map((p) => ({ label: p.name, value: p.id }))]);
+    return computed(() => [
+      { label: 'All Products', value: '' },
+      ...this.products()
+        .filter((p) => p.isActive)
+        .map((p) => ({ label: p.name, value: p.id })),
+    ]);
   }
 
   private initPageState() {

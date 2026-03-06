@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { BadgeComponent } from '@components/badge/badge.component';
@@ -44,12 +44,13 @@ export class UserManagementComponent {
   );
 
   protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
+  private readonly activeProducts = computed(() => this.products().filter((p) => p.isActive));
 
   protected openAddUserDialog(): void {
     this.dialogService.open({
       title: 'Add User',
       component: AddUserDialogComponent,
-      inputs: { products: this.products() },
+      inputs: { products: this.activeProducts() },
       testId: 'add-user-dialog',
       onClose: (result) => {
         if (result === 'created') this.refreshUsers$.next();
@@ -61,7 +62,7 @@ export class UserManagementComponent {
     this.dialogService.open({
       title: 'Manage Roles',
       component: ManageRolesDialogComponent,
-      inputs: { user, products: this.products() },
+      inputs: { user, products: this.activeProducts() },
       testId: 'user-role-dialog',
       onClose: (result) => {
         if (result === 'changed') this.refreshUsers$.next();
