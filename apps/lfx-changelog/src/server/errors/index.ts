@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+export { AgentServiceError } from './agent.error';
 export { AiServiceError } from './ai.error';
 export { AuthenticationError } from './authentication.error';
 export { AuthorizationError } from './authorization.error';

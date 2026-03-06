@@ -4,8 +4,10 @@
 import { Request, Response } from 'express';
 import crypto from 'node:crypto';
 
+import { buildActivityContext } from '../helpers/activity-context.helper';
 import { serverLogger } from '../server-logger';
 import { AiService } from '../services/ai.service';
+import { ChangelogAgentService } from '../services/changelog-agent.service';
 import { ChangelogService } from '../services/changelog.service';
 import { GitHubService } from '../services/github.service';
 import { getPrismaClient } from '../services/prisma.service';
@@ -15,6 +17,7 @@ import { SlackService } from '../services/slack.service';
 import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 
 import type { GitHubCommit, GitHubPullRequest, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
+import type { AgentJobTrigger } from '@lfx-changelog/shared';
 
 const WEBHOOK_STATE_SECRET = process.env['WEBHOOK_STATE_SECRET'] || '';
 
@@ -24,6 +27,7 @@ export class WebhookController {
   private readonly changelogService = new ChangelogService();
   private readonly aiService = new AiService();
   private readonly githubService = new GitHubService();
+  private readonly changelogAgentService = new ChangelogAgentService();
   /**
    * Signs a state payload for GitHub App install redirects.
    * Called when generating the install URL to embed a verifiable signature.
@@ -142,13 +146,28 @@ export class WebhookController {
     // Respond 200 immediately — AI generation runs async in the background
     res.status(200).json({ ok: true });
 
+    // Derive trigger type for agent jobs
+    const triggerMap: Record<string, AgentJobTrigger> = {
+      push: 'webhook_push',
+      release: 'webhook_release',
+      pull_request: 'webhook_pull_request',
+    };
+    const triggerType = triggerMap[event] || 'webhook_push';
+
     // Deduplicate product IDs and fire async auto-changelog generation
     const productIds = [...new Set(productRepos.map((r) => r.productId))];
     for (const productId of productIds) {
       serverLogger.info({ productId, event, action: body.action, repoFullName }, 'Triggering auto-changelog generation');
-      this.generateAutoChangelog(productId).catch((err) =>
-        serverLogger.error({ err, productId, event, action: body.action, repoFullName }, 'Auto-changelog generation failed')
-      );
+
+      if (process.env['USE_AGENT_PIPELINE'] === 'true') {
+        this.changelogAgentService.runAgentForProduct(productId, triggerType).catch((err) =>
+          serverLogger.error({ err, productId, event, action: body.action, repoFullName }, 'Agent changelog generation failed')
+        );
+      } else {
+        this.generateAutoChangelog(productId).catch((err) =>
+          serverLogger.error({ err, productId, event, action: body.action, repoFullName }, 'Auto-changelog generation failed')
+        );
+      }
     }
   }
 
@@ -342,7 +361,7 @@ export class WebhookController {
     }
 
     // 6. Build context string for AI
-    const releaseContext = this.buildActivityContext(allCommits, allMergedPRs, storedReleases);
+    const releaseContext = buildActivityContext(allCommits, allMergedPRs, storedReleases);
 
     // 7. Generate title + version and description in parallel
     const [metadata, description] = await Promise.all([
@@ -386,71 +405,6 @@ export class WebhookController {
       });
       serverLogger.info({ productId, entryId: entry.id, title: metadata.title, version }, 'Created new automated draft changelog');
     }
-  }
-
-  /**
-   * Builds a context string for AI from commits, merged PRs, and stored releases.
-   */
-  private buildActivityContext(
-    commits: GitHubCommit[],
-    mergedPRs: GitHubPullRequest[],
-    storedReleases: { tagName: string; name: string | null; body: string | null; repository: { fullName: string } }[]
-  ): string {
-    const sections: string[] = [];
-
-    if (storedReleases.length > 0) {
-      const releasesByRepo = new Map<string, typeof storedReleases>();
-      for (const release of storedReleases) {
-        const repoName = release.repository.fullName;
-        const existing = releasesByRepo.get(repoName) || [];
-        existing.push(release);
-        releasesByRepo.set(repoName, existing);
-      }
-      for (const [repoName, repoReleases] of releasesByRepo) {
-        const lines = repoReleases
-          .map((r) => {
-            const name = r.name || r.tagName;
-            const body = r.body ? `\n${r.body.slice(0, 1000)}` : '';
-            return `### ${name} (${r.tagName})${body}`;
-          })
-          .join('\n\n');
-        sections.push(`## Releases: ${repoName}\n\n${lines}`);
-      }
-    }
-
-    if (mergedPRs.length > 0) {
-      const prsByRepo = new Map<string, GitHubPullRequest[]>();
-      for (const pr of mergedPRs) {
-        const existing = prsByRepo.get(pr.repoFullName) || [];
-        existing.push(pr);
-        prsByRepo.set(pr.repoFullName, existing);
-      }
-      for (const [repoName, repoPRs] of prsByRepo) {
-        const lines = repoPRs
-          .slice(0, 50)
-          .map((pr) => `- #${pr.number}: ${pr.title} (by @${pr.user.login})`)
-          .join('\n');
-        sections.push(`## Merged Pull Requests: ${repoName}\n\n${lines}`);
-      }
-    }
-
-    if (commits.length > 0) {
-      const commitsByRepo = new Map<string, GitHubCommit[]>();
-      for (const commit of commits) {
-        const existing = commitsByRepo.get(commit.repoFullName) || [];
-        existing.push(commit);
-        commitsByRepo.set(commit.repoFullName, existing);
-      }
-      for (const [repoName, repoCommits] of commitsByRepo) {
-        const lines = repoCommits
-          .slice(0, 50)
-          .map((c) => `- ${c.commit.message.split('\n')[0]}`)
-          .join('\n');
-        sections.push(`## Commits: ${repoName}\n\n${lines}`);
-      }
-    }
-
-    return `# GitHub Activity Summary\n\n${sections.join('\n\n')}`;
   }
 
   private classifyOAuthError(err: unknown): string {
