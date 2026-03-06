@@ -31,8 +31,39 @@
       <span class="text-text-secondary max-w-xs truncate text-sm">{{ product.description || '—' }}</span>
     </ng-template>
 
-    <ng-template lfxColumn="Actions" let-product>
-      <lfx-button data-testid="product-management-edit-btn" variant="ghost" size="sm" (clicked)="openEdit(product)">Edit</lfx-button>
+    <ng-template lfxColumn="Status" let-product>
+      @if (product.isActive) {
+        <lfx-badge label="Enabled" color="#22C55E" size="sm" />
+      } @else {
+        <lfx-badge label="Disabled" color="#EF4444" size="sm" />
+      }
+    </ng-template>
+
+    <ng-template lfxColumn="" let-product>
+      <lfx-dropdown-menu [items]="(productMenuItems() | mapGet: product.id) ?? []">
+        <button
+          data-testid="product-management-actions-btn"
+          aria-label="Actions"
+          class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
+          <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+        </button>
+      </lfx-dropdown-menu>
     </ng-template>
   </lfx-table>
+
+  <!-- Action toast -->
+  @if (actionMessage()) {
+    <div
+      role="status"
+      aria-live="polite"
+      class="animate-fade-in fixed right-6 bottom-6 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg"
+      [class]="
+        actionIsError()
+          ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400'
+          : 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400'
+      ">
+      <i [class]="actionIsError() ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check'"></i>
+      {{ actionMessage() }}
+    </div>
+  }
 </div>
