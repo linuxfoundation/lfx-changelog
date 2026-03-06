@@ -7,11 +7,13 @@ export class ProductDetailPage {
   public readonly backBtn: Locator;
   public readonly heading: Locator;
   public readonly tabs: Locator;
+  public readonly statusBadge: Locator;
 
   public constructor(public readonly page: Page) {
     this.backBtn = page.locator('[data-testid="product-detail-back-btn"]');
     this.heading = page.locator('[data-testid="product-detail-heading"]');
     this.tabs = page.locator('[data-testid="product-detail-tabs"]');
+    this.statusBadge = page.locator('[data-testid="product-detail"] lfx-badge');
   }
 
   public async goto(id: string) {

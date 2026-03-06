@@ -14,7 +14,7 @@ import { ProductFormDialogComponent } from '@modules/admin/components/product-fo
 import { DialogService } from '@services/dialog/dialog.service';
 import { ProductService } from '@services/product/product.service';
 import { MapGetPipe } from '@shared/pipes/map-get/map-get.pipe';
-import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, concat, map, of, Subject, switchMap, tap, timer } from 'rxjs';
 
 import type { Product } from '@lfx-changelog/shared';
 import type { DropdownMenuItem } from '@shared/interfaces/form.interface';
@@ -29,12 +29,19 @@ export class ProductManagementComponent {
   private readonly productService = inject(ProductService);
   private readonly dialogService = inject(DialogService);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
+  private readonly actionTrigger$ = new Subject<{ message: string; isError: boolean }>();
 
   protected readonly loading = signal(true);
-  protected readonly actionMessage = signal('');
-  protected readonly actionIsError = signal(false);
 
-  private actionSuccessTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly actionState = toSignal(
+    this.actionTrigger$.pipe(
+      switchMap(({ message, isError }) => concat(of({ message, isError }), timer(4000).pipe(map(() => ({ message: '', isError: false })))))
+    ),
+    { initialValue: { message: '', isError: false } }
+  );
+
+  protected readonly actionMessage = computed(() => this.actionState().message);
+  protected readonly actionIsError = computed(() => this.actionState().isError);
 
   protected readonly products = toSignal(
     this.refresh$.pipe(
@@ -128,10 +135,7 @@ export class ProductManagementComponent {
   }
 
   private showActionMessage(message: string, isError = false): void {
-    if (this.actionSuccessTimer) clearTimeout(this.actionSuccessTimer);
-    this.actionMessage.set(message);
-    this.actionIsError.set(isError);
-    this.actionSuccessTimer = setTimeout(() => this.actionMessage.set(''), 4000);
+    this.actionTrigger$.next({ message, isError });
   }
 
   private initProductMenuItems(): Signal<Map<string, DropdownMenuItem[]>> {

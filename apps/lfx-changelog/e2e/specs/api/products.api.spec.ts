@@ -162,4 +162,55 @@ test.describe('Protected Products API (/api/products)', () => {
       expect(body.details.length).toBeGreaterThan(0);
     });
   });
+
+  test.describe('Toggle isActive', () => {
+    test('should toggle isActive via PUT', async () => {
+      // Create a product for this test
+      const createRes = await superAdminApi.post('/api/products', {
+        data: {
+          name: 'Toggle Test Product',
+          slug: 'toggle-test-product',
+          description: 'Product for toggle isActive test',
+          faIcon: 'fa-duotone fa-flask',
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      const created = (await createRes.json()).data;
+      const productId = created.id;
+
+      try {
+        // Disable
+        const disableRes = await superAdminApi.put(`/api/products/${productId}`, {
+          data: { isActive: false },
+        });
+        expect(disableRes.status()).toBe(200);
+
+        const getDisabledRes = await superAdminApi.get(`/api/products/${productId}`);
+        const disabled = (await getDisabledRes.json()).data;
+        expect(disabled.isActive).toBe(false);
+
+        // Re-enable
+        const enableRes = await superAdminApi.put(`/api/products/${productId}`, {
+          data: { isActive: true },
+        });
+        expect(enableRes.status()).toBe(200);
+
+        const getEnabledRes = await superAdminApi.get(`/api/products/${productId}`);
+        const enabled = (await getEnabledRes.json()).data;
+        expect(enabled.isActive).toBe(true);
+      } finally {
+        await superAdminApi.delete(`/api/products/${productId}`);
+      }
+    });
+
+    test('should include isActive field in product response', async () => {
+      const res = await superAdminApi.get('/api/products');
+      expect(res.status()).toBe(200);
+
+      const body = await res.json();
+      expect(body.data.length).toBeGreaterThan(0);
+      expect(body.data[0]).toHaveProperty('isActive');
+      expect(typeof body.data[0].isActive).toBe('boolean');
+    });
+  });
 });

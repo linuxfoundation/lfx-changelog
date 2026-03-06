@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { expect, test } from '@playwright/test';
+import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
+import { TEST_PRODUCTS } from '../../helpers/test-data.js';
 import { ProductDetailPage } from '../../pages/product-detail.page.js';
 import { ProductManagementPage } from '../../pages/product-management.page.js';
 
@@ -83,5 +85,36 @@ test.describe('Product Detail', () => {
 
     const icon = page.locator('i[class*="fa-duotone"]').first();
     await expect(icon).toBeVisible();
+  });
+
+  test('should display Enabled badge for active product', async ({ page }) => {
+    const mgmtPage = new ProductManagementPage(page);
+    await mgmtPage.goto();
+    const rows = mgmtPage.getRows();
+    await expect(rows.first()).toBeVisible();
+    await rows.first().locator('a').first().click();
+    await page.waitForURL(/\/admin\/products\//);
+
+    await expect(detailPage.statusBadge).toBeVisible();
+    await expect(detailPage.statusBadge).toContainText('Enabled');
+  });
+
+  test('should display Disabled badge for inactive product', async ({ page }) => {
+    const targetSlug = TEST_PRODUCTS[0]!.slug;
+    await deactivateProduct(targetSlug);
+
+    try {
+      const mgmtPage = new ProductManagementPage(page);
+      await mgmtPage.goto();
+      const rows = mgmtPage.getRows();
+      await expect(rows.first()).toBeVisible();
+      await rows.first().locator('a').first().click();
+      await page.waitForURL(/\/admin\/products\//);
+
+      await expect(detailPage.statusBadge).toBeVisible();
+      await expect(detailPage.statusBadge).toContainText('Disabled');
+    } finally {
+      await activateProduct(targetSlug);
+    }
   });
 });
