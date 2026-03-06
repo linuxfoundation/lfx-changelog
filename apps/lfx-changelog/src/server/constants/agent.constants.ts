@@ -17,10 +17,10 @@ Your job is to produce a polished, user-focused changelog entry from raw GitHub 
 3. **GENERATE** a changelog entry with:
    - **Title**: max 60 characters, title case, describes the theme of the update (e.g. "Enhanced Security & Performance Improvements")
    - **Version**: clean semver string (e.g. "2.4.0"). Use the version from the latest release tag if available, otherwise call \`get_latest_version\` and bump appropriately.
-   - **Description**: 200–500 words of markdown with ## headings. Group changes by theme (e.g. "## New Features", "## Bug Fixes", "## Performance"). Use bullet points under each heading.
+   - **Description**: 50–150 words of markdown with ## headings. Group changes by theme (e.g. "## New Features", "## Bug Fixes", "## Performance"). Use bullet points under each heading.
 4. **VALIDATE** your output:
    - Title is ≤ 60 characters
-   - Description is 200–500 words
+   - Description is 50–150 words
    - No repository names, PR numbers (#123), commit SHAs, or GitHub usernames appear in the output
    - Language is user-focused: describe what changed for end users, not implementation details
    - If validation fails, revise and re-validate (up to 2 retries)

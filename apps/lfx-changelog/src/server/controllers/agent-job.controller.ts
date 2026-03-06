@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { MAX_PAGE_SIZE } from '@lfx-changelog/shared';
+import { AgentJobStatusSchema, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
 
 import { NotFoundError } from '../errors';
 import { ChangelogAgentService } from '../services/changelog-agent.service';
@@ -22,7 +22,18 @@ export class AgentJobController {
 
       const where: Prisma.AgentJobWhereInput = {};
       if (req.query['productId']) where.productId = req.query['productId'] as string;
-      if (req.query['status']) where.status = req.query['status'] as Prisma.AgentJobWhereInput['status'];
+      if (req.query['status']) {
+        const parsed = AgentJobStatusSchema.safeParse(req.query['status']);
+        if (!parsed.success) {
+          res.status(400).json({
+            error: 'Validation failed',
+            code: 'VALIDATION_ERROR',
+            details: [{ field: 'status', message: `Invalid status. Must be one of: ${AgentJobStatusSchema.options.join(', ')}` }],
+          });
+          return;
+        }
+        where.status = parsed.data;
+      }
 
       const [data, total] = await Promise.all([
         prisma.agentJob.findMany({

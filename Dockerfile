@@ -44,7 +44,8 @@ LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.source="https://github.com/linuxfoundation/lfx-changelog"
 
 # Install Claude Code CLI (required by @anthropic-ai/claude-agent-sdk for agent subprocess)
-RUN npm install -g @anthropic-ai/claude-code
+# Pin to a specific version for reproducible builds
+RUN npm install -g @anthropic-ai/claude-code@2.1.70
 
 # Run as non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

@@ -27,6 +27,17 @@ export class ChangelogAgentService {
   public async runAgentForProduct(productId: string, trigger: AgentJobTrigger): Promise<string> {
     const prisma = getPrismaClient();
 
+    // Guard: skip if there's already a pending or running job for this product
+    const existingJob = await prisma.agentJob.findFirst({
+      where: { productId, status: { in: ['pending', 'running'] } },
+      select: { id: true, status: true },
+    });
+
+    if (existingJob) {
+      serverLogger.info({ productId, trigger, existingJobId: existingJob.id, existingStatus: existingJob.status }, 'Skipping agent run — job already in progress');
+      return existingJob.id;
+    }
+
     // 1. Create job record
     const job = await prisma.agentJob.create({
       data: { productId, trigger, status: 'pending', progressLog: [] },
@@ -136,8 +147,8 @@ export class ChangelogAgentService {
         activityContext,
       });
 
-      // 8. Create MCP tools
-      const mcpServer = this.createMcpTools(productId, botUser.id, product?.slug || 'unknown');
+      // 8. Create MCP tools (pass jobId for precise linking)
+      const mcpServer = this.createMcpTools(jobId, productId, botUser.id, product?.slug || 'unknown');
 
       // 9. Derive Agent SDK env vars from existing LiteLLM config
       const aiApiUrl = process.env['AI_API_URL'] || '';
@@ -283,7 +294,7 @@ export class ChangelogAgentService {
     return lines.join('\n');
   }
 
-  private createMcpTools(productId: string, botUserId: string, productSlug: string) {
+  private createMcpTools(jobId: string, productId: string, botUserId: string, productSlug: string) {
     const changelogService = this.changelogService;
 
     const searchPastChangelogs = tool(
@@ -330,10 +341,10 @@ export class ChangelogAgentService {
 
         serverLogger.info({ entryId: entry.id, title: args.title, productId }, 'Agent created changelog draft');
 
-        // Link the changelog to any running agent job
+        // Link the changelog to this specific agent job
         const prisma = getPrismaClient();
-        await prisma.agentJob.updateMany({
-          where: { productId, status: 'running', changelogId: null },
+        await prisma.agentJob.update({
+          where: { id: jobId },
           data: { changelogId: entry.id },
         });
 
@@ -366,10 +377,10 @@ export class ChangelogAgentService {
 
         serverLogger.info({ entryId: entry.id, title: entry.title, productId }, 'Agent updated changelog draft');
 
-        // Link the changelog to any running agent job
+        // Link the changelog to this specific agent job
         const prisma = getPrismaClient();
-        await prisma.agentJob.updateMany({
-          where: { productId, status: 'running', changelogId: null },
+        await prisma.agentJob.update({
+          where: { id: jobId },
           data: { changelogId: entry.id },
         });
 
