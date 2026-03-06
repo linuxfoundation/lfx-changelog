@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { expect, test } from '@playwright/test';
-import { TEST_USERS } from '../../helpers/test-data.js';
+import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
+import { TEST_PRODUCTS, TEST_USERS } from '../../helpers/test-data.js';
 import { UserManagementPage } from '../../pages/user-management.page.js';
 
 test.describe('User Management', () => {
@@ -110,5 +111,47 @@ test.describe('User Management', () => {
 
     await expect(userPage.addUserError).toBeVisible();
     await expect(userPage.addUserDialog).toBeVisible();
+  });
+
+  test('should not show disabled product in add user dialog product select', async () => {
+    const targetProduct = TEST_PRODUCTS[1]!;
+    await deactivateProduct(targetProduct.slug);
+    try {
+      await userPage.openAddUserDialog();
+      await expect(userPage.addUserDialog).toBeVisible();
+      await userPage.selectOption(userPage.addUserRoleSelect, 'Editor');
+
+      await userPage.addUserProductSelect.locator('button[role="combobox"]').click();
+
+      const disabledOption = userPage.addUserProductSelect.locator('button[role="option"]', { hasText: targetProduct.name });
+      await expect(disabledOption).not.toBeVisible();
+
+      const activeOption = userPage.addUserProductSelect.locator('button[role="option"]', { hasText: TEST_PRODUCTS[0]!.name });
+      await expect(activeOption).toBeVisible();
+    } finally {
+      await activateProduct(targetProduct.slug);
+    }
+  });
+
+  test('should not show disabled product in manage roles dialog product select', async ({ page }) => {
+    const targetProduct = TEST_PRODUCTS[1]!;
+    await deactivateProduct(targetProduct.slug);
+    try {
+      const manageButtons = page.locator('[data-testid^="user-management-manage-roles-"]');
+      await expect(manageButtons.first()).toBeVisible();
+      await manageButtons.first().click();
+      await expect(userPage.roleDialog).toBeVisible();
+
+      await userPage.selectOption(userPage.roleSelect, 'Editor');
+      await userPage.productSelect.locator('button[role="combobox"]').click();
+
+      const disabledOption = userPage.productSelect.locator('button[role="option"]', { hasText: targetProduct.name });
+      await expect(disabledOption).not.toBeVisible();
+
+      const activeOption = userPage.productSelect.locator('button[role="option"]', { hasText: TEST_PRODUCTS[0]!.name });
+      await expect(activeOption).toBeVisible();
+    } finally {
+      await activateProduct(targetProduct.slug);
+    }
   });
 });

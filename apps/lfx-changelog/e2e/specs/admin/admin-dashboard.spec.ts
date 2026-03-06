@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { expect, test } from '@playwright/test';
+import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
+import { TEST_PRODUCTS } from '../../helpers/test-data.js';
 import { AdminDashboardPage } from '../../pages/admin-dashboard.page.js';
 import { AdminLayoutPage } from '../../pages/admin-layout.page.js';
 
@@ -68,5 +70,25 @@ test.describe('Admin Dashboard', () => {
 
   test('should show Users link in sidebar for super admin', async () => {
     await expect(layoutPage.navUsers).toBeVisible();
+  });
+
+  test('should not count disabled products in products stat', async () => {
+    const targetProduct = TEST_PRODUCTS[1]!;
+
+    // Get count with all products active
+    await expect(dashboardPage.statProducts).toBeVisible();
+    const allActiveCount = Number(await dashboardPage.getStatValue('products'));
+
+    await deactivateProduct(targetProduct.slug);
+    try {
+      // Reload to pick up the change
+      await dashboardPage.goto();
+      await expect(dashboardPage.statProducts).toBeVisible();
+      const afterDisableCount = Number(await dashboardPage.getStatValue('products'));
+
+      expect(afterDisableCount).toBe(allActiveCount - 1);
+    } finally {
+      await activateProduct(targetProduct.slug);
+    }
   });
 });

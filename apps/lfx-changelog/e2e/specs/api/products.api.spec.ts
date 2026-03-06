@@ -3,6 +3,7 @@
 
 import { expect, test } from '@playwright/test';
 import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
+import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
 import { TEST_PRODUCTS } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
@@ -211,6 +212,22 @@ test.describe('Protected Products API (/api/products)', () => {
       expect(body.data.length).toBeGreaterThan(0);
       expect(body.data[0]).toHaveProperty('isActive');
       expect(typeof body.data[0].isActive).toBe('boolean');
+    });
+
+    test('GET /api/products should still include deactivated products', async () => {
+      const targetSlug = TEST_PRODUCTS[1]!.slug;
+      await deactivateProduct(targetSlug);
+      try {
+        const res = await superAdminApi.get('/api/products');
+        expect(res.status()).toBe(200);
+
+        const body = await res.json();
+        const product = body.data.find((p: any) => p.slug === targetSlug);
+        expect(product).toBeDefined();
+        expect(product.isActive).toBe(false);
+      } finally {
+        await activateProduct(targetSlug);
+      }
     });
   });
 });

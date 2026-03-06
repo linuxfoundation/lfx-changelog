@@ -49,7 +49,9 @@ export class ManageRolesDialogComponent implements OnInit {
 
   protected readonly productOptions: Signal<SelectOption[]> = computed(() => [
     { label: 'Global (all products)', value: '' },
-    ...this.products().map((p) => ({ label: p.name, value: p.id })),
+    ...this.products()
+      .filter((p) => p.isActive)
+      .map((p) => ({ label: p.name, value: p.id })),
   ]);
 
   public ngOnInit(): void {
