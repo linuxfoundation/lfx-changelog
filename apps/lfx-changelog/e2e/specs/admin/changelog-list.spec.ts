@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { expect, test } from '@playwright/test';
+import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
+import { TEST_PRODUCTS } from '../../helpers/test-data.js';
 import { ChangelogListPage } from '../../pages/changelog-list.page.js';
 
 test.describe('Changelog List', () => {
@@ -127,5 +129,22 @@ test.describe('Changelog List', () => {
     await actionsBtn.click();
     const unpublishOption = page.locator('body > div').getByText('Unpublish');
     await expect(unpublishOption).not.toBeVisible();
+  });
+
+  test('should not show disabled product in product filter dropdown', async () => {
+    const targetProduct = TEST_PRODUCTS[1]!;
+    await deactivateProduct(targetProduct.slug);
+    try {
+      await listPage.goto();
+      await listPage.productFilter.locator('button[role="combobox"]').click();
+
+      const disabledOption = listPage.productFilter.locator('button[role="option"]', { hasText: targetProduct.name });
+      await expect(disabledOption).not.toBeVisible();
+
+      const allOption = listPage.productFilter.locator('button[role="option"]', { hasText: 'All Products' });
+      await expect(allOption).toBeVisible();
+    } finally {
+      await activateProduct(targetProduct.slug);
+    }
   });
 });
