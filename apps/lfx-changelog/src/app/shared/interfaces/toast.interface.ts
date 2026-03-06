@@ -3,4 +3,4 @@
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
-export type Toast = { id: number; type: ToastType; message: string };
+export type Toast = { id: number; type: ToastType; message: string; dismissing?: boolean };

@@ -36,7 +36,7 @@ export class ToastService {
       clearTimeout(timer);
       this.timers.delete(id);
     }
-    this.toasts.update((list) => list.filter((t) => t.id !== id));
+    this.animateOut(id);
   }
 
   private show(type: ToastType, message: string): void {
@@ -46,9 +46,14 @@ export class ToastService {
     if (isPlatformBrowser(this.platformId)) {
       const timer = setTimeout(() => {
         this.timers.delete(id);
-        this.toasts.update((list) => list.filter((t) => t.id !== id));
+        this.animateOut(id);
       }, 4000);
       this.timers.set(id, timer);
     }
+  }
+
+  private animateOut(id: number): void {
+    this.toasts.update((list) => list.map((t) => (t.id === id ? { ...t, dismissing: true } : t)));
+    setTimeout(() => this.toasts.update((list) => list.filter((t) => t.id !== id)), 300);
   }
 }

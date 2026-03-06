@@ -6,8 +6,8 @@
     <div
       data-testid="toast"
       [attr.data-toast-type]="toast.type"
-      class="animate-slide-in-right flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg"
-      [class]="toast.type | toastColor">
+      class="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg"
+      [ngClass]="[toast.type | toastColor, toast.dismissing ? 'animate-slide-out-right' : 'animate-slide-in-right']">
       <i [class]="toast.type | toastIcon"></i>
       <span data-testid="toast-message" class="flex-1">{{ toast.message }}</span>
       <button

@@ -27,9 +27,9 @@ export async function expectToast(page: Page, message: string, type?: 'success' 
   await expect(toast.first()).toBeVisible({ timeout: 10_000 });
 }
 
-/** Assert that no toasts are currently visible. */
+/** Assert that no toasts are currently visible (waits for dismiss animation). */
 export async function expectNoToast(page: Page): Promise<void> {
-  await expect(getToasts(page)).toHaveCount(0);
+  await expect(getToasts(page)).toHaveCount(0, { timeout: 5_000 });
 }
 
 /** Dismiss the first visible toast and wait for it to disappear. */
