@@ -79,7 +79,7 @@ export class ChangelogService {
     const [data, total] = await Promise.all([
       prisma.changelogEntry.findMany({
         where,
-        orderBy: { updatedAt: 'desc' },
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
         skip,
         take: limit,
         include: { product: true, author: true },
