@@ -55,7 +55,7 @@ export class ApiKeysPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin/api-keys');
+    await this.page.goto('/admin/settings');
   }
 
   public async openCreateDialog() {
