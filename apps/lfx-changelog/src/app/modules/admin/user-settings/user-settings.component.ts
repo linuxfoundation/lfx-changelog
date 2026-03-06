@@ -9,6 +9,7 @@ import { ActivatedRoute } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { SelectComponent } from '@components/select/select.component';
+import { ApiKeysComponent } from '@modules/admin/api-keys/api-keys.component';
 import { DisconnectSlackDialogComponent } from '@modules/admin/components/disconnect-slack-dialog/disconnect-slack-dialog.component';
 import { DialogService } from '@services/dialog/dialog.service';
 import { SlackService } from '@services/slack/slack.service';
@@ -20,7 +21,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
   selector: 'lfx-user-settings',
-  imports: [DatePipe, ReactiveFormsModule, ButtonComponent, CardComponent, SelectComponent],
+  imports: [DatePipe, ReactiveFormsModule, ButtonComponent, CardComponent, SelectComponent, ApiKeysComponent],
   templateUrl: './user-settings.component.html',
   styleUrl: './user-settings.component.css',
 })
