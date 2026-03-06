@@ -12,6 +12,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { DisconnectSlackDialogComponent } from '@modules/admin/components/disconnect-slack-dialog/disconnect-slack-dialog.component';
 import { DialogService } from '@services/dialog/dialog.service';
 import { SlackService } from '@services/slack/slack.service';
+import { ToastService } from '@services/toast/toast.service';
 import { BehaviorSubject, catchError, filter, of, switchMap, tap } from 'rxjs';
 
 import type { SlackChannelOption, SlackIntegration } from '@lfx-changelog/shared';
@@ -25,6 +26,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
 })
 export class UserSettingsComponent {
   private readonly slackService = inject(SlackService);
+  private readonly toastService = inject(ToastService);
   private readonly dialogService = inject(DialogService);
   private readonly route = inject(ActivatedRoute);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
@@ -85,9 +87,13 @@ export class UserSettingsComponent {
     this.slackService.saveChannel(integration.id, channelId, channel.name).subscribe({
       next: () => {
         this.savingChannel.set(false);
+        this.toastService.success('Default channel saved');
         this.refresh$.next();
       },
-      error: () => this.savingChannel.set(false),
+      error: () => {
+        this.savingChannel.set(false);
+        this.toastService.error('Failed to save channel');
+      },
     });
   }
 

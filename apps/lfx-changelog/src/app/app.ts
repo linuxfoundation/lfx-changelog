@@ -4,14 +4,15 @@
 import { Component, inject, makeStateKey, REQUEST_CONTEXT, TransferState } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { DialogOutletComponent } from '@components/dialog-outlet/dialog-outlet.component';
-import type { AuthContext } from '@lfx-changelog/shared';
-
+import { ToastOutletComponent } from '@components/toast-outlet/toast-outlet.component';
 import { AuthService } from '@services/auth/auth.service';
 import { DataDogRumService } from '@services/datadog-rum/datadog-rum.service';
 
+import type { AuthContext } from '@lfx-changelog/shared';
+
 @Component({
   selector: 'lfx-root',
-  imports: [RouterOutlet, DialogOutletComponent],
+  imports: [RouterOutlet, DialogOutletComponent, ToastOutletComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

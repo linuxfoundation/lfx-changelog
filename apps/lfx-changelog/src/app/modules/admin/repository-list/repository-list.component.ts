@@ -5,6 +5,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { RepositoryService } from '@services/repository/repository.service';
+import { ToastService } from '@services/toast/toast.service';
 import { SetIncludesPipe } from '@shared/pipes/set-includes/set-includes.pipe';
 import { TimeAgoPipe } from '@shared/pipes/time-ago/time-ago.pipe';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
@@ -20,6 +21,7 @@ import type { ProductGroup } from '@shared/interfaces/repository.interface';
 })
 export class RepositoryListComponent {
   private readonly repositoryService = inject(RepositoryService);
+  private readonly toastService = inject(ToastService);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly loading = signal(true);
@@ -60,6 +62,7 @@ export class RepositoryListComponent {
           next.delete(productId);
           return next;
         });
+        this.toastService.success('Product synced');
         this.refresh$.next();
       },
       error: () => {
@@ -68,6 +71,7 @@ export class RepositoryListComponent {
           next.delete(productId);
           return next;
         });
+        this.toastService.error('Failed to sync product');
       },
     });
   }
@@ -82,6 +86,7 @@ export class RepositoryListComponent {
           next.delete(repoId);
           return next;
         });
+        this.toastService.success('Repository synced');
         this.refresh$.next();
       },
       error: () => {
@@ -90,6 +95,7 @@ export class RepositoryListComponent {
           next.delete(repoId);
           return next;
         });
+        this.toastService.error('Failed to sync repository');
       },
     });
   }

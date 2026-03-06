@@ -9,6 +9,7 @@ import { InputComponent } from '@components/input/input.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { DialogService } from '@services/dialog/dialog.service';
 import { ProductService } from '@services/product/product.service';
+import { ToastService } from '@services/toast/toast.service';
 
 import type { Product } from '@lfx-changelog/shared';
 
@@ -20,6 +21,7 @@ import type { Product } from '@lfx-changelog/shared';
 })
 export class ProductFormDialogComponent implements OnInit {
   private readonly productService = inject(ProductService);
+  private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly product = input<Product | null>(null);
@@ -57,9 +59,13 @@ export class ProductFormDialogComponent implements OnInit {
     request$.subscribe({
       next: () => {
         this.saving.set(false);
+        this.toastService.success(editing ? 'Product updated' : 'Product created');
         this.dialogService.close('saved');
       },
-      error: () => this.saving.set(false),
+      error: () => {
+        this.saving.set(false);
+        this.toastService.error('Failed to save product');
+      },
     });
   }
 }

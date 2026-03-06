@@ -10,6 +10,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { DialogService } from '@services/dialog/dialog.service';
 import { GitHubService } from '@services/github/github.service';
 import { ProductService } from '@services/product/product.service';
+import { ToastService } from '@services/toast/toast.service';
 import { catchError, forkJoin, map, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { GitHubInstallation, GitHubRepository, LinkRepositoryRequest } from '@lfx-changelog/shared';
@@ -27,6 +28,7 @@ export class LinkRepositoriesDialogComponent implements OnInit {
   private readonly githubService = inject(GitHubService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
+  private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly productId = input.required<string>();
@@ -122,10 +124,12 @@ export class LinkRepositoriesDialogComponent implements OnInit {
       .subscribe({
         next: () => {
           this.saving.set(false);
+          this.toastService.success('Repositories linked');
           this.dialogService.close('linked');
         },
         error: () => {
           this.saving.set(false);
+          this.toastService.error('Failed to link repositories');
           this.dialogService.close();
         },
       });

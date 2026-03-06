@@ -5,6 +5,7 @@ import { Component, inject, input } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { ApiKeyService } from '@services/api-key/api-key.service';
 import { DialogService } from '@services/dialog/dialog.service';
+import { ToastService } from '@services/toast/toast.service';
 
 import type { ApiKey } from '@lfx-changelog/shared';
 
@@ -16,13 +17,18 @@ import type { ApiKey } from '@lfx-changelog/shared';
 })
 export class RevokeApiKeyDialogComponent {
   private readonly apiKeyService = inject(ApiKeyService);
+  private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly key = input.required<ApiKey>();
 
   protected confirm(): void {
     this.apiKeyService.revoke(this.key().id).subscribe({
-      next: () => this.dialogService.close('revoked'),
+      next: () => {
+        this.toastService.success('API key revoked');
+        this.dialogService.close('revoked');
+      },
+      error: () => this.toastService.error('Failed to revoke API key'),
     });
   }
 }

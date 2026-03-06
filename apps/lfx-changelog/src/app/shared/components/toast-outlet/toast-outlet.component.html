@@ -1,0 +1,22 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div data-testid="toast-container" class="fixed right-6 bottom-6 z-50 flex flex-col gap-2" role="status" aria-live="polite">
+  @for (toast of toastService.toasts(); track toast.id) {
+    <div
+      data-testid="toast"
+      [attr.data-toast-type]="toast.type"
+      class="animate-slide-in-right flex items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg"
+      [class]="toast.type | toastColor">
+      <i [class]="toast.type | toastIcon"></i>
+      <span data-testid="toast-message" class="flex-1">{{ toast.message }}</span>
+      <button
+        data-testid="toast-dismiss"
+        (click)="toastService.dismiss(toast.id)"
+        class="ml-2 cursor-pointer opacity-60 transition-opacity hover:opacity-100"
+        aria-label="Dismiss">
+        <i class="fa-solid fa-xmark text-xs"></i>
+      </button>
+    </div>
+  }
+</div>

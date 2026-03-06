@@ -8,6 +8,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
 import { DialogService } from '@services/dialog/dialog.service';
 import { SlackService } from '@services/slack/slack.service';
+import { ToastService } from '@services/toast/toast.service';
 import { catchError, concat, filter, map, of, switchMap, tap } from 'rxjs';
 
 import type { SlackChannelOption } from '@lfx-changelog/shared';
@@ -22,6 +23,7 @@ import type { SlackDialogState } from '@shared/interfaces/slack.interface';
 })
 export class PostToSlackDialogComponent {
   private readonly slackService = inject(SlackService);
+  private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly changelogId = input.required<string>();
@@ -70,6 +72,7 @@ export class PostToSlackDialogComponent {
       next: (res) => {
         this.posting.set(false);
         this.success.set(true);
+        this.toastService.success('Posted to Slack');
         this.onPosted()?.(res.channelName);
       },
       error: () => {

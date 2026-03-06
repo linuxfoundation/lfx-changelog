@@ -5,6 +5,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { Component, inject, input, signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { DialogService } from '@services/dialog/dialog.service';
+import { ToastService } from '@services/toast/toast.service';
 
 @Component({
   selector: 'lfx-api-key-created-dialog',
@@ -14,6 +15,7 @@ import { DialogService } from '@services/dialog/dialog.service';
 })
 export class ApiKeyCreatedDialogComponent {
   private readonly clipboard = inject(Clipboard);
+  private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly rawKey = input.required<string>();
@@ -24,6 +26,7 @@ export class ApiKeyCreatedDialogComponent {
     const success = this.clipboard.copy(this.rawKey());
     if (success) {
       this.copied.set(true);
+      this.toastService.success('API key copied to clipboard');
     }
   }
 }

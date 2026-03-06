@@ -9,6 +9,7 @@ import { InputComponent } from '@components/input/input.component';
 import { SelectComponent } from '@components/select/select.component';
 import { UserRole } from '@lfx-changelog/shared';
 import { DialogService } from '@services/dialog/dialog.service';
+import { ToastService } from '@services/toast/toast.service';
 import { UserService } from '@services/user/user.service';
 
 import type { Product } from '@lfx-changelog/shared';
@@ -22,6 +23,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
 })
 export class AddUserDialogComponent {
   private readonly userService = inject(UserService);
+  private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly products = input.required<Product[]>();
@@ -58,7 +60,10 @@ export class AddUserDialogComponent {
     const productId = isSuperAdmin ? undefined : this.productControl.value || undefined;
 
     this.userService.create({ email, name, role, productId }).subscribe({
-      next: () => this.dialogService.close('created'),
+      next: () => {
+        this.toastService.success('User added');
+        this.dialogService.close('created');
+      },
       error: (err: unknown) => {
         const message = (err as { error?: { error?: string } })?.error?.error;
         this.error.set(message || 'Failed to create user');
