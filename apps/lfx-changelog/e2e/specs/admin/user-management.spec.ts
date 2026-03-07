@@ -137,6 +137,7 @@ test.describe('User Management', () => {
     const targetProduct = TEST_PRODUCTS[1]!;
     await deactivateProduct(targetProduct.slug);
     try {
+      await userPage.goto();
       const manageButtons = page.locator('[data-testid^="user-management-manage-roles-"]');
       await expect(manageButtons.first()).toBeVisible();
       await manageButtons.first().click();

@@ -62,7 +62,7 @@ export class UserManagementComponent {
     this.dialogService.open({
       title: 'Manage Roles',
       component: ManageRolesDialogComponent,
-      inputs: { user, products: this.products() },
+      inputs: { user, products: this.activeProducts() },
       testId: 'user-role-dialog',
       onClose: (result) => {
         if (result === 'changed') this.refreshUsers$.next();
