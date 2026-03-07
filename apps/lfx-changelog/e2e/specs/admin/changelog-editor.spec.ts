@@ -208,11 +208,10 @@ test.describe('Changelog Editor', () => {
     const targetProduct = TEST_PRODUCTS[1]!;
     await deactivateProduct(targetProduct.slug);
     try {
-      const productsLoaded = editorPage.page.waitForResponse((res) => res.url().includes('/api/products') && res.status() === 200);
       await editorPage.gotoNew();
-      await productsLoaded;
+      await expect(editorPage.productSelect.locator('button[role="combobox"]')).toBeVisible();
       await editorPage.productSelect.locator('button[role="combobox"]').click();
-      await editorPage.productSelect.locator('button[role="option"]').first().waitFor({ state: 'visible' });
+      await editorPage.productSelect.locator('button[role="option"]').first().waitFor({ state: 'visible', timeout: 10_000 });
 
       const disabledOption = editorPage.productSelect.locator('button[role="option"]', { hasText: targetProduct.name });
       await expect(disabledOption).not.toBeVisible();
