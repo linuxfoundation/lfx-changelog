@@ -19,6 +19,14 @@ import { validate } from '../middleware/validate.middleware';
 const router = Router();
 const changelogController = new ChangelogController();
 
+// ── View tracking (must be before /:id to avoid param capture) ───
+router.get('/views/unseen', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), validate({ query: UnseenQuerySchema }), (req, res, next) =>
+  changelogController.getUnseenCounts(req, res, next)
+);
+router.post('/views/mark-viewed', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), validate({ body: MarkViewedRequestSchema }), (req, res, next) =>
+  changelogController.markViewed(req, res, next)
+);
+
 router.get('/', authorize({ scope: ApiKeyScope.CHANGELOGS_READ, productRole: UserRole.EDITOR }), (req, res, next) =>
   changelogController.listAll(req, res, next)
 );
@@ -53,14 +61,6 @@ router.post(
   authorize({ oauthOnly: true, productRole: UserRole.EDITOR, resolveProductId: true }),
   validate({ body: PostToSlackRequestSchema }),
   (req, res, next) => changelogController.shareToSlack(req, res, next)
-);
-
-// ── View tracking ───────────────────────────
-router.get('/views/unseen', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), validate({ query: UnseenQuerySchema }), (req, res, next) =>
-  changelogController.getUnseenCounts(req, res, next)
-);
-router.post('/views/mark-viewed', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), validate({ body: MarkViewedRequestSchema }), (req, res, next) =>
-  changelogController.markViewed(req, res, next)
 );
 
 export default router;
