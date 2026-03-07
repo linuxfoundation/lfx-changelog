@@ -144,6 +144,7 @@ test.describe('User Management', () => {
 
       await userPage.selectOption(userPage.roleSelect, 'Editor');
       await userPage.productSelect.locator('button[role="combobox"]').click();
+      await userPage.productSelect.locator('button[role="option"]').first().waitFor({ state: 'visible' });
 
       const disabledOption = userPage.productSelect.locator('button[role="option"]', { hasText: targetProduct.name });
       await expect(disabledOption).not.toBeVisible();
