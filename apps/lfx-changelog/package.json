@@ -30,6 +30,7 @@
     "@angular/platform-server": "^20.3.0",
     "@angular/router": "^20.3.0",
     "@angular/ssr": "^20.3.14",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.70",
     "@asteasolutions/zod-to-openapi": "^8.4.1",
     "@datadog/browser-rum": "6.25.4",
     "@lfx-changelog/mcp-server": "workspace:*",

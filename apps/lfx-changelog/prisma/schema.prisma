@@ -39,6 +39,20 @@ enum ChatAccessLevel {
   admin
 }
 
+enum AgentJobStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+enum AgentJobTrigger {
+  webhook_push
+  webhook_release
+  webhook_pull_request
+  manual
+}
+
 model Product {
   id                    String   @id @default(uuid())
   name                  String   @unique
@@ -56,6 +70,7 @@ model Product {
   repositories        ProductRepository[]
   autoChangelogLock   AutoChangelogLock?
   changelogViews      ChangelogView[]
+  agentJobs           AgentJob[]
 
   @@map("products")
 }
@@ -122,6 +137,7 @@ model ChangelogEntry {
   product            Product              @relation(fields: [productId], references: [id])
   author             User                 @relation(fields: [createdBy], references: [id])
   slackNotifications SlackNotification[]
+  agentJobs          AgentJob[]
 
   @@index([productId, status, publishedAt])
   @@map("changelog_entries")
@@ -288,4 +304,29 @@ model ChangelogView {
   @@unique([viewerId, productId])
   @@index([viewerId])
   @@map("changelog_views")
+}
+
+model AgentJob {
+  id           String          @id @default(uuid())
+  productId    String          @map("product_id")
+  trigger      AgentJobTrigger
+  status       AgentJobStatus  @default(pending)
+  changelogId  String?         @map("changelog_entry_id")
+  promptTokens Int?            @map("prompt_tokens")
+  outputTokens Int?            @map("output_tokens")
+  durationMs   Int?            @map("duration_ms")
+  numTurns     Int?            @map("num_turns")
+  progressLog  Json            @default("[]") @map("progress_log")
+  errorMessage String?         @map("error_message")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  startedAt    DateTime?       @map("started_at")
+  completedAt  DateTime?       @map("completed_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  changelogEntry ChangelogEntry? @relation(fields: [changelogId], references: [id], onDelete: SetNull)
+
+  @@index([productId, status])
+  @@index([createdAt])
+  @@map("agent_jobs")
 }

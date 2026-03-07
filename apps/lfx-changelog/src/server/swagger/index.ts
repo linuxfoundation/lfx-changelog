@@ -8,6 +8,7 @@ import swaggerUi from 'swagger-ui-express';
 // Import schemas to trigger .openapi() registration
 import '@lfx-changelog/shared';
 
+import { agentJobRegistry } from './paths/agent-jobs.path';
 import { changelogViewRegistry } from './paths/changelog-views.path';
 import { changelogRegistry } from './paths/changelogs.path';
 import { productRegistry } from './paths/products.path';
@@ -43,6 +44,7 @@ const allRegistries = [
   changelogViewRegistry,
   releaseRegistry,
   userRegistry,
+  agentJobRegistry,
 ];
 
 // Collect all definitions from all registries
@@ -73,6 +75,7 @@ const document = generator.generateDocument({
     { name: 'Releases', description: 'Authentication required' },
     { name: 'OpenSearch', description: 'OpenSearch administration — super_admin only' },
     { name: 'Users', description: 'Authentication required' },
+    { name: 'Agent Jobs', description: 'Changelog agent job management — super_admin only' },
   ],
 });
 

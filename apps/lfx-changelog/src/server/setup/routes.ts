@@ -5,6 +5,7 @@ import { hybridAuthMiddleware } from '../middleware/api-key-auth.middleware';
 import { noCacheMiddleware } from '../middleware/cache.middleware';
 import { apiErrorHandler } from '../middleware/error-handler.middleware';
 import { sameOriginOnly } from '../middleware/same-origin.middleware';
+import agentJobRouter from '../routes/agent-job.route';
 import aiRouter from '../routes/ai.route';
 import apiKeyRouter from '../routes/api-key.route';
 import changelogViewRouter from '../routes/changelog-view.route';
@@ -80,6 +81,7 @@ export function setupRoutes(app: Express): void {
   }
 
   // ── Protected API routes ──────────────────────────────────────────────
+  app.use('/api/agent-jobs', agentJobRouter);
   app.use('/api/ai', aiRouter);
 
   // Chat is UI-only — same-origin + session auth only (no API key, no cross-origin)

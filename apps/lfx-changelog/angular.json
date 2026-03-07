@@ -61,6 +61,7 @@
               "@datadog/browser-rum-core"
             ],
             "externalDependencies": [
+              "@anthropic-ai/claude-agent-sdk",
               "@prisma/client",
               "@prisma/adapter-pg",
               "pg",

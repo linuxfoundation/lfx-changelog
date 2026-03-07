@@ -5,25 +5,19 @@ import { Request, Response } from 'express';
 import crypto from 'node:crypto';
 
 import { serverLogger } from '../server-logger';
-import { AiService } from '../services/ai.service';
-import { ChangelogService } from '../services/changelog.service';
-import { GitHubService } from '../services/github.service';
+import { ChangelogAgentService } from '../services/changelog-agent.service';
 import { getPrismaClient } from '../services/prisma.service';
 import { ReleaseService } from '../services/release.service';
 import { SlackService } from '../services/slack.service';
 
-import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
-
-import type { GitHubCommit, GitHubPullRequest, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
+import type { AgentJobTrigger, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
 
 const WEBHOOK_STATE_SECRET = process.env['WEBHOOK_STATE_SECRET'] || '';
 
 export class WebhookController {
   private readonly releaseService = new ReleaseService();
   private readonly slackService = new SlackService();
-  private readonly changelogService = new ChangelogService();
-  private readonly aiService = new AiService();
-  private readonly githubService = new GitHubService();
+  private readonly changelogAgentService = new ChangelogAgentService();
   /**
    * Signs a state payload for GitHub App install redirects.
    * Called when generating the install URL to embed a verifiable signature.
@@ -142,12 +136,21 @@ export class WebhookController {
     // Respond 200 immediately — AI generation runs async in the background
     res.status(200).json({ ok: true });
 
+    // Derive trigger type for agent jobs
+    const triggerMap: Record<string, AgentJobTrigger> = {
+      push: 'webhook_push',
+      release: 'webhook_release',
+      pull_request: 'webhook_pull_request',
+    };
+    const triggerType = triggerMap[event] || 'webhook_push';
+
     // Deduplicate product IDs and fire async auto-changelog generation
     const productIds = [...new Set(productRepos.map((r) => r.productId))];
     for (const productId of productIds) {
       serverLogger.info({ productId, event, action: body.action, repoFullName }, 'Triggering auto-changelog generation');
-      this.generateAutoChangelog(productId).catch((err) =>
-        serverLogger.error({ err, productId, event, action: body.action, repoFullName }, 'Auto-changelog generation failed')
+
+      this.changelogAgentService.runAgentForProduct(productId, triggerType).catch((err) =>
+        serverLogger.error({ err, productId, event, action: body.action, repoFullName }, 'Agent changelog generation failed')
       );
     }
   }
@@ -205,252 +208,6 @@ export class WebhookController {
     }
 
     return false;
-  }
-
-  /**
-   * Generates or updates an automated draft changelog for a product.
-   * Uses a DB-based lock (auto_changelog_locks table) for distributed concurrency
-   * control across multiple replicas. Lock acquisition is atomic via raw SQL
-   * INSERT ... ON CONFLICT to avoid TOCTOU races between replicas.
-   * Stale locks (> STALE_LOCK_MS) are reclaimed automatically.
-   */
-  private async generateAutoChangelog(productId: string): Promise<void> {
-    const prisma = getPrismaClient();
-    const now = new Date();
-    const staleThreshold = new Date(now.getTime() - STALE_LOCK_MS);
-
-    // Atomic lock acquisition: insert if absent, or reclaim if stale.
-    // If the lock exists and is not stale, mark it as pending_rerun instead.
-    // Returns the rows affected — 1 means we acquired the lock, 0 means it was held by another replica.
-    const acquired = await prisma.$executeRaw`
-      INSERT INTO "auto_changelog_locks" ("product_id", "status", "locked_at", "updated_at")
-      VALUES (${productId}, 'in_progress', ${now}, ${now})
-      ON CONFLICT ("product_id") DO UPDATE
-        SET "status" = 'in_progress', "locked_at" = ${now}, "updated_at" = ${now}
-        WHERE "auto_changelog_locks"."locked_at" < ${staleThreshold}
-    `;
-
-    if (acquired === 0) {
-      // Lock is held by another replica — mark pending rerun
-      await prisma.autoChangelogLock.update({
-        where: { productId },
-        data: { status: 'pending_rerun' },
-      });
-      serverLogger.info({ productId }, 'Auto-changelog generation already in progress — marking pending rerun');
-      return;
-    }
-
-    serverLogger.info({ productId }, 'Acquired auto-changelog lock — starting generation');
-
-    // Run generation with lock held
-    try {
-      await this.doGenerateAutoChangelog(productId);
-    } finally {
-      // Release lock — check if a rerun was requested
-      const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
-      if (lock?.status === 'pending_rerun') {
-        // Reset to in_progress and rerun once.
-        // NOTE: Webhooks arriving during this rerun are NOT re-queued — they will be
-        // picked up by the next webhook event. This is intentional to prevent infinite loops.
-        await prisma.autoChangelogLock.update({
-          where: { productId },
-          data: { status: 'in_progress', lockedAt: new Date() },
-        });
-        serverLogger.info({ productId }, 'Pending rerun detected — running one more generation');
-        try {
-          await this.doGenerateAutoChangelog(productId);
-        } finally {
-          await prisma.autoChangelogLock
-            .delete({ where: { productId } })
-            .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after rerun'));
-        }
-      } else {
-        await prisma.autoChangelogLock
-          .delete({ where: { productId } })
-          .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock'));
-      }
-    }
-  }
-
-  private async doGenerateAutoChangelog(productId: string): Promise<void> {
-    const prisma = getPrismaClient();
-
-    // 1. Ensure bot user exists
-    const botUser = await prisma.user.upsert({
-      where: { email: BOT_EMAIL },
-      update: {},
-      create: { email: BOT_EMAIL, name: BOT_NAME, auth0Id: null, avatarUrl: null },
-      select: { id: true },
-    });
-
-    // 2. Determine "since" date — last published changelog or 30 days ago
-    const lastPublished = await prisma.changelogEntry.findFirst({
-      where: { productId, status: 'published' },
-      orderBy: { publishedAt: 'desc' },
-      select: { publishedAt: true, createdAt: true },
-    });
-    let sinceDate: string;
-    if (lastPublished) {
-      sinceDate = (lastPublished.publishedAt || lastPublished.createdAt).toISOString();
-    } else {
-      const fallback = new Date();
-      fallback.setDate(fallback.getDate() - DEFAULT_LOOKBACK_DAYS);
-      sinceDate = fallback.toISOString();
-    }
-
-    serverLogger.info({ productId, sinceDate }, 'Fetching GitHub activity for auto-changelog');
-
-    // 3. Fetch all repos linked to this product
-    const repos = await prisma.productRepository.findMany({ where: { productId } });
-    if (repos.length === 0) {
-      serverLogger.info({ productId }, 'No repositories linked to product — skipping auto-generation');
-      return;
-    }
-
-    // 4. Gather GitHub activity across all repos
-    const allCommits: GitHubCommit[] = [];
-    const allMergedPRs: GitHubPullRequest[] = [];
-
-    for (const repo of repos) {
-      try {
-        const [commits, prs] = await Promise.all([
-          this.githubService.getCommitsSince(repo.githubInstallationId, repo.owner, repo.name, sinceDate, repo.fullName),
-          this.githubService.getMergedPullRequestsSince(repo.githubInstallationId, repo.owner, repo.name, sinceDate, repo.fullName),
-        ]);
-        allCommits.push(...commits);
-        allMergedPRs.push(...prs);
-      } catch (err) {
-        serverLogger.warn({ err, repo: repo.fullName }, 'Failed to fetch GitHub activity for repo — continuing with others');
-      }
-    }
-
-    // 5. Fetch stored releases since date
-    const storedReleases = await prisma.gitHubRelease.findMany({
-      where: { repository: { productId }, publishedAt: { gte: new Date(sinceDate) } },
-      include: { repository: true },
-      orderBy: { publishedAt: 'desc' },
-    });
-
-    serverLogger.info(
-      { productId, commits: allCommits.length, mergedPRs: allMergedPRs.length, releases: storedReleases.length, repoCount: repos.length },
-      'Gathered GitHub activity for auto-changelog'
-    );
-
-    if (allCommits.length === 0 && allMergedPRs.length === 0 && storedReleases.length === 0) {
-      serverLogger.info({ productId, sinceDate }, 'No new activity since last changelog — skipping auto-generation');
-      return;
-    }
-
-    // 6. Build context string for AI
-    const releaseContext = this.buildActivityContext(allCommits, allMergedPRs, storedReleases);
-
-    // 7. Generate title + version and description in parallel
-    const [metadata, description] = await Promise.all([
-      this.aiService.generateChangelogMetadata(releaseContext),
-      this.aiService.generateChangelogDescription(releaseContext),
-    ]);
-
-    // 8. If AI couldn't determine version from tags, compute next patch from existing entries
-    let version = metadata.version;
-    if (!version) {
-      const latestVersion = await this.changelogService.getLatestVersion(productId);
-      version = bumpPatchVersion(latestVersion);
-    }
-
-    // 9. Generate slug from product slug + title (with uniqueness guarantee)
-    const product = await prisma.product.findUnique({ where: { id: productId }, select: { slug: true } });
-    const titleSlug = slugify(metadata.title);
-    const baseSlug = product ? `${product.slug}-${titleSlug}` : titleSlug;
-    const slug = await this.changelogService.ensureUniqueSlug(baseSlug);
-
-    // 10. Find or create the automated draft via ChangelogService
-    const existingDraft = await this.changelogService.findAutomatedDraft(productId);
-
-    if (existingDraft) {
-      await this.changelogService.update(existingDraft.id, {
-        title: metadata.title,
-        description,
-        version,
-        slug,
-      });
-      serverLogger.info({ productId, entryId: existingDraft.id, title: metadata.title, version }, 'Updated existing automated draft changelog');
-    } else {
-      const entry = await this.changelogService.create({
-        productId,
-        slug,
-        title: metadata.title,
-        description,
-        version,
-        source: 'automated',
-        createdBy: botUser.id,
-      });
-      serverLogger.info({ productId, entryId: entry.id, title: metadata.title, version }, 'Created new automated draft changelog');
-    }
-  }
-
-  /**
-   * Builds a context string for AI from commits, merged PRs, and stored releases.
-   */
-  private buildActivityContext(
-    commits: GitHubCommit[],
-    mergedPRs: GitHubPullRequest[],
-    storedReleases: { tagName: string; name: string | null; body: string | null; repository: { fullName: string } }[]
-  ): string {
-    const sections: string[] = [];
-
-    if (storedReleases.length > 0) {
-      const releasesByRepo = new Map<string, typeof storedReleases>();
-      for (const release of storedReleases) {
-        const repoName = release.repository.fullName;
-        const existing = releasesByRepo.get(repoName) || [];
-        existing.push(release);
-        releasesByRepo.set(repoName, existing);
-      }
-      for (const [repoName, repoReleases] of releasesByRepo) {
-        const lines = repoReleases
-          .map((r) => {
-            const name = r.name || r.tagName;
-            const body = r.body ? `\n${r.body.slice(0, 1000)}` : '';
-            return `### ${name} (${r.tagName})${body}`;
-          })
-          .join('\n\n');
-        sections.push(`## Releases: ${repoName}\n\n${lines}`);
-      }
-    }
-
-    if (mergedPRs.length > 0) {
-      const prsByRepo = new Map<string, GitHubPullRequest[]>();
-      for (const pr of mergedPRs) {
-        const existing = prsByRepo.get(pr.repoFullName) || [];
-        existing.push(pr);
-        prsByRepo.set(pr.repoFullName, existing);
-      }
-      for (const [repoName, repoPRs] of prsByRepo) {
-        const lines = repoPRs
-          .slice(0, 50)
-          .map((pr) => `- #${pr.number}: ${pr.title} (by @${pr.user.login})`)
-          .join('\n');
-        sections.push(`## Merged Pull Requests: ${repoName}\n\n${lines}`);
-      }
-    }
-
-    if (commits.length > 0) {
-      const commitsByRepo = new Map<string, GitHubCommit[]>();
-      for (const commit of commits) {
-        const existing = commitsByRepo.get(commit.repoFullName) || [];
-        existing.push(commit);
-        commitsByRepo.set(commit.repoFullName, existing);
-      }
-      for (const [repoName, repoCommits] of commitsByRepo) {
-        const lines = repoCommits
-          .slice(0, 50)
-          .map((c) => `- ${c.commit.message.split('\n')[0]}`)
-          .join('\n');
-        sections.push(`## Commits: ${repoName}\n\n${lines}`);
-      }
-    }
-
-    return `# GitHub Activity Summary\n\n${sections.join('\n\n')}`;
   }
 
   private classifyOAuthError(err: unknown): string {
