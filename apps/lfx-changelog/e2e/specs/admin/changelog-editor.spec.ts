@@ -209,6 +209,7 @@ test.describe('Changelog Editor', () => {
     await deactivateProduct(targetProduct.slug);
     try {
       await editorPage.gotoNew();
+      await editorPage.page.waitForResponse((res) => res.url().includes('/api/products') && res.status() === 200);
       await editorPage.productSelect.locator('button[role="combobox"]').click();
       await editorPage.productSelect.locator('button[role="option"]').first().waitFor({ state: 'visible' });
 
