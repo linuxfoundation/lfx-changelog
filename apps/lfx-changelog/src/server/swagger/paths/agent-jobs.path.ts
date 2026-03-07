@@ -4,7 +4,7 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-import { AgentJobSchema, AgentJobStatusSchema, createApiResponseSchema, createPaginatedResponseSchema } from '@lfx-changelog/shared';
+import { AgentJobQueryParamsSchema, AgentJobSchema, createApiResponseSchema, createPaginatedResponseSchema } from '@lfx-changelog/shared';
 
 import { API_KEY_AUTH } from '../constants';
 
@@ -18,12 +18,7 @@ agentJobRegistry.registerPath({
   description: 'Returns all agent jobs with optional filters.\n\n**Required privilege:** SUPER_ADMIN role.',
   security: API_KEY_AUTH,
   request: {
-    query: z.object({
-      productId: z.string().uuid().optional().openapi({ description: 'Filter by product ID' }),
-      status: AgentJobStatusSchema.optional().openapi({ description: 'Filter by status' }),
-      page: z.coerce.number().optional().openapi({ description: 'Page number (default: 1)' }),
-      limit: z.coerce.number().optional().openapi({ description: 'Items per page (default: 20, max: 100)' }),
-    }),
+    query: AgentJobQueryParamsSchema.openapi('AgentJobQueryParams'),
   },
   responses: {
     200: {

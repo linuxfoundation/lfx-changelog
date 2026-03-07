@@ -52,7 +52,12 @@ export class ChangelogAgentService {
         where: { productId, status: { in: ['pending', 'running'] } },
         select: { id: true },
       });
-      return existingJob?.id || '';
+      if (!existingJob) {
+        throw new AgentServiceError('Agent job is already in progress but no active job record was found', {
+          operation: 'runAgentForProduct',
+        });
+      }
+      return existingJob.id;
     }
 
     serverLogger.info({ productId, trigger }, 'Acquired auto-changelog lock');

@@ -6,8 +6,8 @@ import type { GitHubCommit, GitHubPullRequest } from '@lfx-changelog/shared';
 type StoredRelease = { tagName: string; name: string | null; body: string | null; repository: { fullName: string } };
 
 /**
- * Builds a context string for AI from commits, merged PRs, and stored releases.
- * Shared between the legacy AI pipeline and the agent pipeline.
+ * Builds a markdown context string from commits, merged PRs, and stored releases.
+ * Used by the changelog agent pipeline to provide GitHub activity data to the agent.
  */
 export function buildActivityContext(
   commits: GitHubCommit[],
