@@ -4,10 +4,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
-import { RepositoryService } from '@services/repository/repository.service';
-import { ToastService } from '@services/toast/toast.service';
-import { SetIncludesPipe } from '@shared/pipes/set-includes/set-includes.pipe';
-import { TimeAgoPipe } from '@shared/pipes/time-ago/time-ago.pipe';
+import { ReleaseService } from '@services/release.service';
+import { ToastService } from '@services/toast.service';
+import { SetIncludesPipe } from '@shared/pipes/set-includes.pipe';
+import { TimeAgoPipe } from '@shared/pipes/time-ago.pipe';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
 import type { RepositoryWithCounts } from '@lfx-changelog/shared';
@@ -20,7 +20,7 @@ import type { ProductGroup } from '@shared/interfaces/repository.interface';
   styleUrl: './repository-list.component.css',
 })
 export class RepositoryListComponent {
-  private readonly repositoryService = inject(RepositoryService);
+  private readonly releaseService = inject(ReleaseService);
   private readonly toastService = inject(ToastService);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
@@ -32,7 +32,7 @@ export class RepositoryListComponent {
   protected readonly repositories = toSignal(
     this.refresh$.pipe(
       tap(() => this.loading.set(true)),
-      switchMap(() => this.repositoryService.getAll().pipe(catchError(() => of([] as RepositoryWithCounts[])))),
+      switchMap(() => this.releaseService.getRepositories().pipe(catchError(() => of([] as RepositoryWithCounts[])))),
       tap(() => this.loading.set(false))
     ),
     { initialValue: [] as RepositoryWithCounts[] }
@@ -55,7 +55,7 @@ export class RepositoryListComponent {
   protected syncProduct(productId: string): void {
     this.syncingProduct.update((set) => new Set(set).add(productId));
 
-    this.repositoryService.syncProduct(productId).subscribe({
+    this.releaseService.syncProduct(productId).subscribe({
       next: () => {
         this.syncingProduct.update((set) => {
           const next = new Set(set);
@@ -79,7 +79,7 @@ export class RepositoryListComponent {
   protected syncRepository(repoId: string): void {
     this.syncingRepo.update((set) => new Set(set).add(repoId));
 
-    this.repositoryService.syncRepository(repoId).subscribe({
+    this.releaseService.syncRepository(repoId).subscribe({
       next: () => {
         this.syncingRepo.update((set) => {
           const next = new Set(set);

@@ -16,4 +16,15 @@ router.get('/installations/:installationId/repositories', authorize({ role: User
   githubController.listInstallationRepositories(req, res, next)
 );
 
+// ── Release routes (mounted at /api/releases) ───────────────────────────
+const releaseRouter = Router();
+
+releaseRouter.get('/', authorize({ role: UserRole.EDITOR }), (req, res, next) => githubController.listPublicReleases(req, res, next));
+releaseRouter.get('/repositories', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.listRepositoriesWithCounts(req, res, next));
+releaseRouter.post('/sync/:productId', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.syncReleases(req, res, next));
+releaseRouter.post('/sync/repo/:repoId', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) =>
+  githubController.syncRepositoryReleases(req, res, next)
+);
+
+export { releaseRouter };
 export default router;

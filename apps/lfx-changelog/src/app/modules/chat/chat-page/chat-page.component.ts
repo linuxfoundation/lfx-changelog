@@ -9,8 +9,8 @@ import { map } from 'rxjs';
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
 
 import { ADMIN_COPY, PUBLIC_COPY } from '@app/shared/constants/chat.constants';
-import { AuthService } from '@services/auth/auth.service';
-import { ChatService } from '@services/chat/chat.service';
+import { AuthService } from '@services/auth.service';
+import { ChatService } from '@services/chat.service';
 
 import type { Signal } from '@angular/core';
 import type { ChatCopy } from '@app/shared/interfaces/chat.interface';

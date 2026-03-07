@@ -8,9 +8,9 @@ import { ButtonComponent } from '@components/button/button.component';
 import { InputComponent } from '@components/input/input.component';
 import { SelectComponent } from '@components/select/select.component';
 import { UserRole } from '@lfx-changelog/shared';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ToastService } from '@services/toast/toast.service';
-import { UserService } from '@services/user/user.service';
+import { DialogService } from '@services/dialog.service';
+import { ToastService } from '@services/toast.service';
+import { UserService } from '@services/user.service';
 
 import type { Product } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';

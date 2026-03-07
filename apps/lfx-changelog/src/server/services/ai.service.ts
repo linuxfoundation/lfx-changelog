@@ -12,20 +12,38 @@ import {
   AI_SUMMARY_RESPONSE_SCHEMA,
   AI_SUMMARY_SYSTEM_PROMPT,
 } from '../constants/ai.constants';
+import { CHAT_TOOLS_ADMIN, CHAT_TOOLS_PUBLIC } from '../constants/chat-tools.constants';
+import { CHAT_CONFIG, CHAT_SYSTEM_PROMPT_ADMIN, CHAT_SYSTEM_PROMPT_PUBLIC } from '../constants/chat.constants';
 import { AiServiceError } from '../errors';
 import { serverLogger } from '../server-logger';
+import { ChangelogService } from './changelog.service';
+import { ProductService } from './product.service';
+import { SearchService } from './search.service';
 
 import type {
   AiChangelogMetadata,
   AiSummaryResponse,
+  ChatAccessLevel,
+  ChatSSEEvent,
+  GetChangelogDetailToolArgs,
   OpenAIChatMessage,
   OpenAIChatRequest,
   OpenAIChatResponse,
+  OpenAIFunctionTool,
   OpenAIStreamChunk,
+  OpenAIToolCall,
+  OpenAIToolChatMessage,
   PublicChangelogEntry,
+  SearchChangelogsToolArgs,
+  StreamDeltaChunk,
 } from '@lfx-changelog/shared';
+import type { StreamResult } from '../interfaces/chat.interface';
 
 export class AiService {
+  private readonly productService = new ProductService();
+  private readonly changelogService = new ChangelogService();
+  private readonly searchService = new SearchService();
+
   private get apiUrl(): string {
     return process.env['AI_API_URL'] || AI_ENDPOINTS.LITE_LLM_CHAT;
   }
@@ -33,6 +51,8 @@ export class AiService {
   private get apiKey(): string {
     return process.env['LITELLM_API_KEY'] || '';
   }
+
+  // ── Summary & changelog generation ───────────────────────────
 
   public async generateSummary(entries: PublicChangelogEntry[]): Promise<AiSummaryResponse> {
     if (entries.length === 0) {
@@ -126,7 +146,6 @@ export class AiService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), AI_CHANGELOG_CONFIG.STREAM_TIMEOUT_MS);
 
-    // Cascade external abort signal to our controller
     if (abortSignal) {
       abortSignal.addEventListener('abort', () => controller.abort(), { once: true });
     }
@@ -200,11 +219,103 @@ export class AiService {
     }
   }
 
+  // ── Chat (agentic tool-calling loop) ───────────────────────────
+
+  public async *streamChatWithPersistence(
+    conversationMessages: OpenAIToolChatMessage[],
+    accessLevel: ChatAccessLevel,
+    abortSignal?: AbortSignal
+  ): AsyncGenerator<ChatSSEEvent & { _newMessages?: OpenAIToolChatMessage[] }> {
+    if (!this.apiKey) {
+      throw new AiServiceError('LITELLM_API_KEY is not configured', { operation: 'streamChatWithPersistence' });
+    }
+
+    const systemPrompt = accessLevel === 'admin' ? CHAT_SYSTEM_PROMPT_ADMIN : CHAT_SYSTEM_PROMPT_PUBLIC;
+    const tools = accessLevel === 'admin' ? CHAT_TOOLS_ADMIN : CHAT_TOOLS_PUBLIC;
+
+    const messages: OpenAIToolChatMessage[] = [{ role: 'system', content: systemPrompt }, ...conversationMessages];
+    const newMessages: OpenAIToolChatMessage[] = [];
+
+    for (let iteration = 0; iteration < CHAT_CONFIG.MAX_TOOL_ITERATIONS; iteration++) {
+      const result: StreamResult = { content: '', toolCalls: [], finishReason: null };
+
+      for await (const event of this.streamChatRequest(messages, tools, result, abortSignal)) {
+        yield event;
+      }
+
+      if (result.toolCalls.length > 0) {
+        const assistantMsg: OpenAIToolChatMessage = {
+          role: 'assistant',
+          content: result.content || null,
+          tool_calls: result.toolCalls,
+        };
+        messages.push(assistantMsg);
+        newMessages.push(assistantMsg);
+
+        for (const toolCall of result.toolCalls) {
+          yield { type: 'tool_call', data: toolCall.function.name };
+
+          const toolResult = await this.executeChatTool(toolCall, accessLevel);
+
+          const toolMsg: OpenAIToolChatMessage = {
+            role: 'tool',
+            content: toolResult,
+            tool_call_id: toolCall.id,
+            name: toolCall.function.name,
+          };
+          messages.push(toolMsg);
+          newMessages.push(toolMsg);
+        }
+
+        continue;
+      }
+
+      newMessages.push({ role: 'assistant', content: result.content });
+      yield { type: 'done', data: '', _newMessages: newMessages };
+      return;
+    }
+
+    serverLogger.warn({ iterations: CHAT_CONFIG.MAX_TOOL_ITERATIONS }, 'Chat exceeded max tool iterations');
+    yield { type: 'done', data: '', _newMessages: newMessages };
+  }
+
+  // ── Chat tool execution ───────────────────────────
+
+  private async executeChatTool(toolCall: OpenAIToolCall, accessLevel: ChatAccessLevel): Promise<string> {
+    const { name, arguments: argsString } = toolCall.function;
+
+    let parsedArgs: SearchChangelogsToolArgs | GetChangelogDetailToolArgs | Record<string, never> = {};
+    try {
+      parsedArgs = JSON.parse(argsString) as typeof parsedArgs;
+    } catch {
+      return JSON.stringify({ error: `Invalid JSON arguments for tool ${name}` });
+    }
+
+    serverLogger.info({ tool: name, args: parsedArgs, accessLevel }, 'Executing chat tool');
+
+    try {
+      switch (name) {
+        case 'list_products':
+          return await this.chatListProducts(accessLevel);
+        case 'search_changelogs':
+          return await this.chatSearchChangelogs(parsedArgs as SearchChangelogsToolArgs, accessLevel);
+        case 'get_changelog_detail':
+          return await this.chatGetChangelogDetail(parsedArgs as GetChangelogDetailToolArgs, accessLevel);
+        default:
+          return JSON.stringify({ error: `Unknown tool: ${name}` });
+      }
+    } catch (error) {
+      serverLogger.error({ err: error, tool: name }, 'Chat tool execution failed');
+      return JSON.stringify({ error: `Tool ${name} failed: ${(error as Error).message}` });
+    }
+  }
+
+  // ── Private helpers ───────────────────────────
+
   private async makeAiRequest(request: OpenAIChatRequest, externalSignal?: AbortSignal): Promise<OpenAIChatResponse> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), AI_REQUEST_CONFIG.TIMEOUT_MS);
 
-    // Cascade external abort signal (e.g., client disconnect) to our controller
     if (externalSignal) {
       externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
     }
@@ -237,7 +348,6 @@ export class AiService {
         throw error;
       }
       if (error instanceof DOMException && error.name === 'AbortError') {
-        // Distinguish between timeout and external cancellation
         const reason = externalSignal?.aborted ? 'Request was cancelled' : `LiteLLM request timed out after ${AI_REQUEST_CONFIG.TIMEOUT_MS}ms`;
         throw new AiServiceError(reason, {
           operation: 'makeAiRequest',
@@ -276,5 +386,245 @@ export class AiService {
         products: [],
       };
     }
+  }
+
+  private async *streamChatRequest(
+    messages: OpenAIToolChatMessage[],
+    tools: OpenAIFunctionTool[],
+    result: StreamResult,
+    abortSignal?: AbortSignal
+  ): AsyncGenerator<ChatSSEEvent> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CHAT_CONFIG.STREAM_TIMEOUT_MS);
+
+    if (abortSignal) {
+      abortSignal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+
+    try {
+      serverLogger.info({ model: AI_MODEL, messageCount: messages.length }, 'Chat: sending streaming request to LiteLLM');
+
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: AI_MODEL,
+          messages,
+          max_tokens: CHAT_CONFIG.MAX_TOKENS,
+          temperature: CHAT_CONFIG.TEMPERATURE,
+          tools,
+          stream: true,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => 'Unable to read error body');
+        throw new AiServiceError(`LiteLLM returned ${response.status}: ${errorBody}`, {
+          operation: 'streamChatRequest',
+          metadata: { status: response.status },
+        });
+      }
+
+      if (!response.body) {
+        throw new AiServiceError('LiteLLM returned no response body for stream', { operation: 'streamChatRequest' });
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const toolCallMap = new Map<number, OpenAIToolCall>();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+          const data = trimmed.slice(6);
+          if (data === '[DONE]') {
+            result.toolCalls = [...toolCallMap.values()];
+            return;
+          }
+
+          try {
+            const chunk = JSON.parse(data) as StreamDeltaChunk;
+
+            const choice = chunk.choices?.[0];
+            if (!choice) continue;
+
+            const delta = choice.delta;
+
+            if (choice.finish_reason) {
+              result.finishReason = choice.finish_reason;
+            }
+
+            if (!delta) continue;
+
+            if (delta.content) {
+              result.content += delta.content;
+              yield { type: 'content', data: delta.content };
+            }
+
+            if (delta.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                const existing = toolCallMap.get(tc.index);
+                if (existing) {
+                  if (tc.function?.arguments) {
+                    existing.function.arguments += tc.function.arguments;
+                  }
+                  if (tc.function?.name) {
+                    existing.function.name = tc.function.name;
+                  }
+                } else {
+                  toolCallMap.set(tc.index, {
+                    id: tc.id || '',
+                    type: 'function',
+                    function: {
+                      name: tc.function?.name || '',
+                      arguments: tc.function?.arguments || '',
+                    },
+                  });
+                }
+              }
+            }
+          } catch {
+            // Skip malformed chunks
+          }
+        }
+      }
+
+      result.toolCalls = [...toolCallMap.values()];
+    } catch (error) {
+      if (error instanceof AiServiceError) throw error;
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        serverLogger.info('Chat streaming request was aborted');
+        return;
+      }
+      throw new AiServiceError(`Streaming LiteLLM request failed: ${(error as Error).message}`, {
+        operation: 'streamChatRequest',
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private async chatListProducts(accessLevel: ChatAccessLevel): Promise<string> {
+    const products = accessLevel === 'admin' ? await this.productService.findAll() : await this.productService.findAllPublic();
+
+    const summary = products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+    }));
+
+    return JSON.stringify({ products: summary, count: summary.length });
+  }
+
+  private async chatSearchChangelogs(args: SearchChangelogsToolArgs, accessLevel: ChatAccessLevel): Promise<string> {
+    const limit = args.limit || 10;
+    const page = args.page || 1;
+
+    if (args.query && accessLevel === 'public' && this.searchService.getClient()) {
+      return this.chatSearchChangelogsViaOpenSearch(args.query, args.productId, page, limit);
+    }
+
+    return this.chatSearchChangelogsViaDB(args, accessLevel, page, limit);
+  }
+
+  private async chatSearchChangelogsViaOpenSearch(query: string, productId: string | undefined, page: number, limit: number): Promise<string> {
+    try {
+      const result = await this.searchService.search({ q: query, productId, page, limit });
+
+      const entries = result.hits.map((hit) => ({
+        id: hit.id,
+        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit.title,
+        description: hit.description
+          ? hit.description.slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) + (hit.description.length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
+          : null,
+        version: hit.version,
+        status: hit.status,
+        publishedAt: hit.publishedAt,
+        productName: hit.productName,
+        productSlug: hit.productSlug,
+        score: hit.score,
+      }));
+
+      return JSON.stringify({
+        entries,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+        totalPages: result.totalPages,
+        searchMethod: 'opensearch',
+      });
+    } catch (error) {
+      serverLogger.warn({ err: error }, 'OpenSearch search failed in chat tool, falling back to DB');
+      return this.chatSearchChangelogsViaDB({ query, productId, page, limit }, 'public', page, limit);
+    }
+  }
+
+  private async chatSearchChangelogsViaDB(args: SearchChangelogsToolArgs, accessLevel: ChatAccessLevel, page: number, limit: number): Promise<string> {
+    const params = {
+      productId: args.productId,
+      status: accessLevel === 'admin' ? args.status : undefined,
+      query: args.query,
+      page,
+      limit,
+    };
+
+    const result = accessLevel === 'admin' ? await this.changelogService.findAll(params) : await this.changelogService.findPublished(params);
+
+    const truncatedData = result.data.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      description: entry.description
+        ? entry.description.slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) +
+          (entry.description.length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
+        : null,
+      version: entry.version,
+      status: entry.status,
+      publishedAt: entry.publishedAt,
+      createdAt: entry.createdAt,
+      product: 'product' in entry ? entry.product : undefined,
+    }));
+
+    return JSON.stringify({
+      entries: truncatedData,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+      searchMethod: 'database',
+    });
+  }
+
+  private stripHighlightTags(text: string | undefined): string | undefined {
+    return text?.replace(/<\/?mark>/g, '');
+  }
+
+  private async chatGetChangelogDetail(args: GetChangelogDetailToolArgs, accessLevel: ChatAccessLevel): Promise<string> {
+    const entry = accessLevel === 'admin' ? await this.changelogService.findById(args.id) : await this.changelogService.findPublishedByIdentifier(args.id);
+
+    return JSON.stringify({
+      id: entry.id,
+      title: entry.title,
+      description: entry.description,
+      version: entry.version,
+      status: entry.status,
+      publishedAt: entry.publishedAt,
+      createdAt: entry.createdAt,
+      product: 'product' in entry ? entry.product : undefined,
+    });
   }
 }

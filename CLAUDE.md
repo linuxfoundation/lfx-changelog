@@ -11,7 +11,8 @@ Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changel
 ### File Structure
 
 - **NEVER inline templates or CSS** — always use separate `.html` and `.css` files (`templateUrl` / `styleUrl`), never `template:` or `styles:` in the component decorator
-- **Every component/service/directive in its own subfolder** — e.g. `shared/components/button/button.component.ts`
+- **Components/directives in own subfolder** — e.g. `shared/components/button/button.component.ts`
+- **Services and pipes are flat files** — e.g. `shared/services/auth.service.ts`, `shared/pipes/date-format.pipe.ts` (no subdirectory per file)
 - File naming: 2016 convention (`button.component.ts`, `button.component.html`, `button.component.css`)
 - Prefix: `lfx`
 - Use Angular 20 patterns: standalone components, signal-based inputs/outputs (`input()`, `output()`, `model()`), `computed()`, zoneless

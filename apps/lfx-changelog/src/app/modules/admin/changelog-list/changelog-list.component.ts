@@ -14,14 +14,14 @@ import { StatusBadgeComponent } from '@components/status-badge/status-badge.comp
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
 import { ChangelogStatus, UserRole } from '@lfx-changelog/shared';
-import { AuthService } from '@services/auth/auth.service';
-import { ChangelogService } from '@services/changelog/changelog.service';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ProductService } from '@services/product/product.service';
-import { ToastService } from '@services/toast/toast.service';
-import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
-import { MapGetPipe } from '@shared/pipes/map-get/map-get.pipe';
-import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
+import { AuthService } from '@services/auth.service';
+import { ChangelogService } from '@services/changelog.service';
+import { DialogService } from '@services/dialog.service';
+import { ProductService } from '@services/product.service';
+import { ToastService } from '@services/toast.service';
+import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
+import { MapGetPipe } from '@shared/pipes/map-get.pipe';
+import { ProductNamePipe } from '@shared/pipes/product-name.pipe';
 import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, take, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';

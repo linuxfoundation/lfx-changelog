@@ -4,8 +4,8 @@
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Component, inject, input, signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ToastService } from '@services/toast/toast.service';
+import { DialogService } from '@services/dialog.service';
+import { ToastService } from '@services/toast.service';
 
 @Component({
   selector: 'lfx-api-key-created-dialog',

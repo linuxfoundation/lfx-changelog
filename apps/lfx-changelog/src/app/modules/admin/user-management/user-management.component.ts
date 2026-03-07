@@ -10,12 +10,12 @@ import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
 import { AddUserDialogComponent } from '@modules/admin/components/add-user-dialog/add-user-dialog.component';
 import { ManageRolesDialogComponent } from '@modules/admin/components/manage-roles-dialog/manage-roles-dialog.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ProductService } from '@services/product/product.service';
-import { UserService } from '@services/user/user.service';
-import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
-import { RoleColorPipe } from '@shared/pipes/role-color/role-color.pipe';
-import { RoleLabelPipe } from '@shared/pipes/role-label/role-label.pipe';
+import { DialogService } from '@services/dialog.service';
+import { ProductService } from '@services/product.service';
+import { UserService } from '@services/user.service';
+import { ProductNamePipe } from '@shared/pipes/product-name.pipe';
+import { RoleColorPipe } from '@shared/pipes/role-color.pipe';
+import { RoleLabelPipe } from '@shared/pipes/role-label.pipe';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
 import type { Product, User } from '@lfx-changelog/shared';

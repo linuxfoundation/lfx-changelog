@@ -4,7 +4,7 @@
 import { UserRole } from '@lfx-changelog/shared';
 import { NextFunction, Request, Response } from 'express';
 
-import { AuthorizationError, NotFoundError } from '../errors';
+import { AuthenticationError, AuthorizationError, NotFoundError } from '../errors';
 import { ChangelogService } from '../services/changelog.service';
 import { getPrismaClient } from '../services/prisma.service';
 import { SlackService } from '../services/slack.service';
@@ -151,5 +151,70 @@ export class ChangelogController {
     } catch (error) {
       next(error);
     }
+  }
+
+  // ── View tracking ───────────────────────────
+
+  public async getUnseenCounts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const viewerId = this.resolveViewerId(req, req.query['viewerId'] as string | undefined);
+      const productId = req.query['productId'] as string | undefined;
+      const productIdsRaw = req.query['productIds'];
+
+      let productIds: string[] | undefined;
+      if (productId) {
+        productIds = [productId];
+      } else if (productIdsRaw) {
+        const flat = Array.isArray(productIdsRaw) ? productIdsRaw.join(',') : (productIdsRaw as string);
+        productIds = flat
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean);
+      }
+
+      const results = await this.changelogService.getUnseenCounts(viewerId, productIds);
+
+      if (productId) {
+        res.json({ success: true, data: results[0] ?? { productId, unseenCount: 0, lastViewedAt: null } });
+      } else {
+        res.json({ success: true, data: results });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async markViewed(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const viewerId = this.resolveViewerId(req, req.body.viewerId);
+      const { productId, productIds: batchIds } = req.body;
+
+      const targetIds: string[] = [...new Set([...(batchIds ?? []), ...(productId ? [productId] : [])])];
+
+      const results = await this.changelogService.markViewed(viewerId, targetIds);
+
+      if (productId && !batchIds) {
+        res.json({ success: true, data: results[0] });
+      } else {
+        res.json({ success: true, data: results });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  private resolveViewerId(req: Request, requestViewerId?: string): string {
+    if (req.authMethod === 'oauth') {
+      const sub = req.oidc?.user?.['sub'] as string | undefined;
+      if (!sub) {
+        throw new AuthenticationError('Missing Auth0 sub claim', { path: req.path });
+      }
+      return sub;
+    }
+
+    if (!requestViewerId) {
+      throw new AuthenticationError('viewerId is required for API key authentication', { path: req.path });
+    }
+    return requestViewerId;
   }
 }

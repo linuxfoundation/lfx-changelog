@@ -9,6 +9,7 @@ import { Directive, inject, input, TemplateRef } from '@angular/core';
 export class TableColumnDirective {
   public readonly lfxColumn = input.required<string>();
   public readonly lfxColumnHeaderClass = input('');
+  public readonly lfxColumnHeaderTitle = input('');
   public readonly lfxColumnCellClass = input('');
 
   public readonly templateRef = inject(TemplateRef);

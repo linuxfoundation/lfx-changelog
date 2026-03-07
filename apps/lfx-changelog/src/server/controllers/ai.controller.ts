@@ -8,7 +8,7 @@ import { AiService } from '../services/ai.service';
 import { ChangelogService } from '../services/changelog.service';
 import { GitHubService } from '../services/github.service';
 import { getPrismaClient } from '../services/prisma.service';
-import { ProductRepositoryService } from '../services/product-repository.service';
+import { ProductService } from '../services/product.service';
 
 import type { ChangelogSSEEventType, GenerateChangelogRequest, GitHubCommit, GitHubRelease } from '@lfx-changelog/shared';
 import type { NextFunction, Request, Response } from 'express';
@@ -17,7 +17,7 @@ export class AiController {
   private readonly aiService = new AiService();
   private readonly changelogService = new ChangelogService();
   private readonly githubService = new GitHubService();
-  private readonly productRepositoryService = new ProductRepositoryService();
+  private readonly productService = new ProductService();
 
   public async summarizeChanges(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -70,7 +70,7 @@ export class AiController {
     try {
       // 1. Fetch linked repositories
       sendEvent('status', 'Fetching linked repositories...');
-      const repos = await this.productRepositoryService.findByProductId(productId);
+      const repos = await this.productService.findRepositoriesByProductId(productId);
 
       if (repos.length === 0) {
         sendEvent('error', 'No GitHub repositories linked to this product.');

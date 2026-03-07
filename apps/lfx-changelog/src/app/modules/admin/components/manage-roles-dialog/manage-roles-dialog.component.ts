@@ -8,12 +8,12 @@ import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
 import { UserRole } from '@lfx-changelog/shared';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ToastService } from '@services/toast/toast.service';
-import { UserService } from '@services/user/user.service';
-import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
-import { RoleColorPipe } from '@shared/pipes/role-color/role-color.pipe';
-import { RoleLabelPipe } from '@shared/pipes/role-label/role-label.pipe';
+import { DialogService } from '@services/dialog.service';
+import { ToastService } from '@services/toast.service';
+import { UserService } from '@services/user.service';
+import { ProductNamePipe } from '@shared/pipes/product-name.pipe';
+import { RoleColorPipe } from '@shared/pipes/role-color.pipe';
+import { RoleLabelPipe } from '@shared/pipes/role-label.pipe';
 
 import type { Product, User, UserRoleAssignment } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';

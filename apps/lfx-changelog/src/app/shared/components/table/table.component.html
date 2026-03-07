@@ -7,7 +7,10 @@
       <thead>
         <tr class="border-border bg-surface-alt border-b text-left">
           @for (col of columns(); track col.lfxColumn()) {
-            <th class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase" [class]="col.lfxColumnHeaderClass()">
+            <th
+              class="text-text-muted px-5 py-3 text-xs font-medium tracking-wider uppercase"
+              [class]="col.lfxColumnHeaderClass()"
+              [attr.title]="col.lfxColumnHeaderTitle() || null">
               {{ col.lfxColumn() }}
             </th>
           }

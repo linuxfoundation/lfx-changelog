@@ -7,9 +7,9 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputComponent } from '@components/input/input.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ProductService } from '@services/product/product.service';
-import { ToastService } from '@services/toast/toast.service';
+import { DialogService } from '@services/dialog.service';
+import { ProductService } from '@services/product.service';
+import { ToastService } from '@services/toast.service';
 
 import type { Product } from '@lfx-changelog/shared';
 

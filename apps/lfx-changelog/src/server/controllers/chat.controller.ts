@@ -5,7 +5,7 @@ import { UserRole } from '@lfx-changelog/shared';
 
 import { CHAT_CONFIG } from '../constants/chat.constants';
 import { serverLogger } from '../server-logger';
-import { ChatAiService } from '../services/chat-ai.service';
+import { AiService } from '../services/ai.service';
 import { ChatConversationService } from '../services/chat-conversation.service';
 
 import type { ChatAccessLevel, ChatSSEEventType, OpenAIToolCall, OpenAIToolChatMessage, SendChatMessageRequest } from '@lfx-changelog/shared';
@@ -14,7 +14,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type { FlushableResponse } from '../interfaces/chat.interface';
 
 export class ChatController {
-  private readonly chatAiService = new ChatAiService();
+  private readonly aiService = new AiService();
   private readonly conversationService = new ChatConversationService();
 
   public async sendMessage(req: Request, res: Response): Promise<void> {
@@ -152,7 +152,7 @@ export class ChatController {
       const conversationMessages = this.buildAiMessages(fullConversation.messages);
 
       // Run the agentic loop and stream results
-      for await (const event of this.chatAiService.streamChatWithPersistence(conversationMessages, accessLevel, abortController.signal)) {
+      for await (const event of this.aiService.streamChatWithPersistence(conversationMessages, accessLevel, abortController.signal)) {
         if (clientDisconnected) return;
 
         if (event.type === 'done' && event._newMessages) {

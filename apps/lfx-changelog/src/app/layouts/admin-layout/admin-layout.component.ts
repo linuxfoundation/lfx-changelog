@@ -4,8 +4,8 @@
 import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { UserRole } from '@lfx-changelog/shared';
-import { AuthService } from '@services/auth/auth.service';
-import { ThemeService } from '@services/theme/theme.service';
+import { AuthService } from '@services/auth.service';
+import { ThemeService } from '@services/theme.service';
 
 @Component({
   selector: 'lfx-admin-layout',

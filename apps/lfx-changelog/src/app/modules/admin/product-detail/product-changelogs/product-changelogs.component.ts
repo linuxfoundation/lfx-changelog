@@ -6,7 +6,7 @@ import { Component, computed, inject, input, OnInit, Signal } from '@angular/cor
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
-import { ChangelogService } from '@services/changelog/changelog.service';
+import { ChangelogService } from '@services/changelog.service';
 import { catchError, map, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations } from '@lfx-changelog/shared';

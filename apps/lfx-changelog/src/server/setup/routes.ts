@@ -8,10 +8,9 @@ import { sameOriginOnly } from '../middleware/same-origin.middleware';
 import agentJobRouter from '../routes/agent-job.route';
 import aiRouter from '../routes/ai.route';
 import apiKeyRouter from '../routes/api-key.route';
-import changelogViewRouter from '../routes/changelog-view.route';
 import changelogRouter from '../routes/changelog.route';
 import chatRouter from '../routes/chat.route';
-import githubRouter from '../routes/github.route';
+import githubRouter, { releaseRouter } from '../routes/github.route';
 import mcpRouter from '../routes/mcp.route';
 import opensearchRouter from '../routes/opensearch.route';
 import productRouter from '../routes/product.route';
@@ -19,11 +18,10 @@ import publicChangelogRouter from '../routes/public-changelog.route';
 import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
 import publicSearchRouter from '../routes/public-search.route';
-import releaseRouter from '../routes/release.route';
 import slackRouter from '../routes/slack.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
-import { getOpenSearchService } from '../services/opensearch.service';
+import { SearchService } from '../services/search.service';
 import { setupSwagger } from '../swagger';
 import { createApiKeyRateLimiter } from './rate-limit';
 
@@ -38,7 +36,7 @@ export function setupRoutes(app: Express): void {
   app.get('/health', async (_req: Request, res: Response) => {
     let opensearchStatus: 'connected' | 'unavailable' | 'not_configured' = 'not_configured';
     if (process.env['OPENSEARCH_URL']) {
-      const opensearchUp = await Promise.race([getOpenSearchService().ping(), new Promise<false>((resolve) => setTimeout(() => resolve(false), 1_000))]);
+      const opensearchUp = await Promise.race([new SearchService().ping(), new Promise<false>((resolve) => setTimeout(() => resolve(false), 1_000))]);
       opensearchStatus = opensearchUp ? 'connected' : 'unavailable';
     }
     res.json({
@@ -95,7 +93,6 @@ export function setupRoutes(app: Express): void {
   app.use('/api/chat', chatRouter);
   app.use('/api/api-keys', apiKeyRouter);
   app.use('/api/products', productRouter);
-  app.use('/api/changelog-views', changelogViewRouter);
   app.use('/api/changelogs', changelogRouter);
   app.use('/api/users', userRouter);
   app.use('/api/github', githubRouter);

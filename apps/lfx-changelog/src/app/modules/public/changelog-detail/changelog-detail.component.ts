@@ -9,9 +9,9 @@ import { CardComponent } from '@components/card/card.component';
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
 import { PostToSlackDialogComponent } from '@components/post-to-slack-dialog/post-to-slack-dialog.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
-import { AuthService } from '@services/auth/auth.service';
-import { ChangelogService } from '@services/changelog/changelog.service';
-import { DialogService } from '@services/dialog/dialog.service';
+import { AuthService } from '@services/auth.service';
+import { ChangelogService } from '@services/changelog.service';
+import { DialogService } from '@services/dialog.service';
 import { format } from 'date-fns';
 import { catchError, of, tap } from 'rxjs';
 
