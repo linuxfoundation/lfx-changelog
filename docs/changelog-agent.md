@@ -26,6 +26,8 @@ GitHub Webhook
   │
   └─ ASYNC: ChangelogAgentService.runAgentForProduct(productId, trigger)
        │
+       ├─ 0. Acquire distributed lock (AutoChangelogLock)
+       │     └─ If locked: mark pending_rerun, return existing job ID
        ├─ 1. Create AgentJob record (status: pending)
        ├─ 2. Ensure bot user exists (changelog-bot@linuxfoundation.org)
        ├─ 3. Determine "since" date (last published changelog or 30-day fallback)
@@ -43,6 +45,10 @@ GitHub Webhook
              ├─ Agent generates title + description
              ├─ Agent calls create_changelog_draft or update_changelog_draft
              └─ Job marked completed with metrics (tokens, turns, duration)
+       │
+       └─ Check AutoChangelogLock for pending_rerun
+             ├─ If pending_rerun: create new job, run once more with fresh data
+             └─ Release lock
 ```
 
 ## MCP Tools
@@ -177,9 +183,21 @@ All automated changelogs are attributed to a dedicated bot user:
 - **Name:** LFX Changelog Bot
 - Created on-demand via `upsert` if it doesn't exist
 
-## Distributed Lock
+## Concurrency (Rerun-Once)
 
-The `AutoChangelogLock` table prevents duplicate generation when multiple server replicas receive webhooks simultaneously. See [GitHub Integration — Distributed Lock](github-integration.md#distributed-lock) for details.
+The `AutoChangelogLock` table prevents duplicate agent runs and ensures no webhook activity is missed. When a webhook arrives while an agent job is already running for the same product, the system marks the lock as `pending_rerun` instead of starting a second concurrent job.
+
+| Scenario               | Action                                                                |
+| ---------------------- | --------------------------------------------------------------------- |
+| No lock exists         | Acquire lock, create job, run agent                                   |
+| Lock exists (< 10 min) | Mark `pending_rerun` — agent will re-run after current job finishes   |
+| Lock exists (> 10 min) | Reclaim stale lock (crashed replica recovery)                         |
+
+After an agent job completes, the service checks the lock:
+- If `pending_rerun` is set, it creates a **new** job and runs once more with fresh GitHub data
+- If not, it releases the lock
+
+This guarantees that bursty webhooks (e.g., multiple pushes in quick succession) result in at most **two** agent runs — the original plus one follow-up that captures all activity that arrived during the first run.
 
 ## File Structure
 

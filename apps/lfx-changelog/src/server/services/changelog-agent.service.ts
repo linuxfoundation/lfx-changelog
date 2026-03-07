@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
-import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify } from '@lfx-changelog/shared';
+import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 import { z } from 'zod';
 
 import { AGENT_CONFIG, AGENT_SYSTEM_PROMPT } from '../constants/agent.constants';
@@ -26,19 +26,38 @@ export class ChangelogAgentService {
    */
   public async runAgentForProduct(productId: string, trigger: AgentJobTrigger): Promise<string> {
     const prisma = getPrismaClient();
+    const now = new Date();
+    const staleThreshold = new Date(now.getTime() - STALE_LOCK_MS);
 
-    // Guard: skip if there's already a pending or running job for this product
-    const existingJob = await prisma.agentJob.findFirst({
-      where: { productId, status: { in: ['pending', 'running'] } },
-      select: { id: true, status: true },
-    });
+    // Atomic lock acquisition: insert if absent, or reclaim if stale.
+    // If the lock exists and is not stale, mark it as pending_rerun instead.
+    const acquired = await prisma.$executeRaw`
+      INSERT INTO "auto_changelog_locks" ("product_id", "status", "locked_at", "updated_at")
+      VALUES (${productId}, 'in_progress', ${now}, ${now})
+      ON CONFLICT ("product_id") DO UPDATE
+        SET "status" = 'in_progress', "locked_at" = ${now}, "updated_at" = ${now}
+        WHERE "auto_changelog_locks"."locked_at" < ${staleThreshold}
+    `;
 
-    if (existingJob) {
-      serverLogger.info({ productId, trigger, existingJobId: existingJob.id, existingStatus: existingJob.status }, 'Skipping agent run — job already in progress');
-      return existingJob.id;
+    if (acquired === 0) {
+      // Lock is held by another job — mark pending rerun so it re-runs after completion
+      await prisma.autoChangelogLock.update({
+        where: { productId },
+        data: { status: 'pending_rerun' },
+      });
+      serverLogger.info({ productId, trigger }, 'Agent job already in progress — marking pending rerun');
+
+      // Return the existing running job ID
+      const existingJob = await prisma.agentJob.findFirst({
+        where: { productId, status: { in: ['pending', 'running'] } },
+        select: { id: true },
+      });
+      return existingJob?.id || '';
     }
 
-    // 1. Create job record
+    serverLogger.info({ productId, trigger }, 'Acquired auto-changelog lock');
+
+    // Create job record
     const job = await prisma.agentJob.create({
       data: { productId, trigger, status: 'pending', progressLog: [] },
     });
@@ -46,11 +65,51 @@ export class ChangelogAgentService {
     serverLogger.info({ jobId: job.id, productId, trigger }, 'Created agent job');
 
     // Run async — don't block the caller
-    this.executeJob(job.id, productId).catch((err) => {
+    this.runWithRerun(job.id, productId, trigger).catch((err) => {
       serverLogger.error({ err, jobId: job.id, productId }, 'Agent job execution failed unexpectedly');
     });
 
     return job.id;
+  }
+
+  /**
+   * Executes the job, then checks if a rerun was requested (pending_rerun).
+   * If so, runs once more with fresh data. Finally releases the lock.
+   */
+  private async runWithRerun(jobId: string, productId: string, trigger: AgentJobTrigger): Promise<void> {
+    const prisma = getPrismaClient();
+
+    try {
+      await this.executeJob(jobId, productId);
+    } finally {
+      // Check if a rerun was requested while we were running
+      const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
+
+      if (lock?.status === 'pending_rerun') {
+        // Reset to in_progress and run once more with fresh data
+        await prisma.autoChangelogLock.update({
+          where: { productId },
+          data: { status: 'in_progress', lockedAt: new Date() },
+        });
+        serverLogger.info({ productId }, 'Pending rerun detected — running one more agent job');
+
+        const rerunJob = await prisma.agentJob.create({
+          data: { productId, trigger, status: 'pending', progressLog: [] },
+        });
+
+        try {
+          await this.executeJob(rerunJob.id, productId);
+        } finally {
+          await prisma.autoChangelogLock
+            .delete({ where: { productId } })
+            .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after rerun'));
+        }
+      } else {
+        await prisma.autoChangelogLock
+          .delete({ where: { productId } })
+          .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock'));
+      }
+    }
   }
 
   private async executeJob(jobId: string, productId: string): Promise<void> {
