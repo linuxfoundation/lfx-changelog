@@ -9,10 +9,10 @@ import { ButtonComponent } from '@components/button/button.component';
 import { ApiKeyCreatedDialogComponent } from '@modules/admin/components/api-key-created-dialog/api-key-created-dialog.component';
 import { CreateApiKeyDialogComponent } from '@modules/admin/components/create-api-key-dialog/create-api-key-dialog.component';
 import { RevokeApiKeyDialogComponent } from '@modules/admin/components/revoke-api-key-dialog/revoke-api-key-dialog.component';
-import { ApiKeyService } from '@services/api-key/api-key.service';
-import { DialogService } from '@services/dialog/dialog.service';
-import { KeyStatusPipe } from '@shared/pipes/key-status/key-status.pipe';
-import { ScopeColorPipe } from '@shared/pipes/scope-color/scope-color.pipe';
+import { ApiKeyService } from '@services/api-key.service';
+import { DialogService } from '@services/dialog.service';
+import { KeyStatusPipe } from '@shared/pipes/key-status.pipe';
+import { ScopeColorPipe } from '@shared/pipes/scope-color.pipe';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
 import type { ApiKey } from '@lfx-changelog/shared';

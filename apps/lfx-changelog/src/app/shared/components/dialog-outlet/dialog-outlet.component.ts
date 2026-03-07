@@ -3,7 +3,7 @@
 
 import { NgComponentOutlet } from '@angular/common';
 import { Component, computed, HostListener, inject } from '@angular/core';
-import { DialogService } from '@services/dialog/dialog.service';
+import { DialogService } from '@services/dialog.service';
 
 @Component({
   selector: 'lfx-dialog-outlet',

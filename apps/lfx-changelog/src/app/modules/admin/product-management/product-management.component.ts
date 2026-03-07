@@ -11,10 +11,10 @@ import { DropdownMenuComponent } from '@components/dropdown-menu/dropdown-menu.c
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
 import { ProductFormDialogComponent } from '@modules/admin/components/product-form-dialog/product-form-dialog.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ProductService } from '@services/product/product.service';
-import { ToastService } from '@services/toast/toast.service';
-import { MapGetPipe } from '@shared/pipes/map-get/map-get.pipe';
+import { DialogService } from '@services/dialog.service';
+import { ProductService } from '@services/product.service';
+import { ToastService } from '@services/toast.service';
+import { MapGetPipe } from '@shared/pipes/map-get.pipe';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
 import type { Product } from '@lfx-changelog/shared';

@@ -9,7 +9,6 @@ import swaggerUi from 'swagger-ui-express';
 import '@lfx-changelog/shared';
 
 import { agentJobRegistry } from './paths/agent-jobs.path';
-import { changelogViewRegistry } from './paths/changelog-views.path';
 import { changelogRegistry } from './paths/changelogs.path';
 import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
@@ -41,7 +40,6 @@ const allRegistries = [
   searchRegistry,
   productRegistry,
   changelogRegistry,
-  changelogViewRegistry,
   releaseRegistry,
   userRegistry,
   agentJobRegistry,

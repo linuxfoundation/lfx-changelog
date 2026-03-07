@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 
 import { serverLogger } from './server/server-logger';
-import { getOpenSearchService } from './server/services/opensearch.service';
+import { SearchService } from './server/services/search.service';
 import { setupAuth } from './server/setup/auth';
 import { setupCors } from './server/setup/cors';
 import { setupGlobalMiddleware } from './server/setup/global-middleware';
@@ -31,7 +31,7 @@ setupRateLimiting(app); // IP-based rate limiting (API-key limiter is in routes,
 setupLogger(app); // Pino HTTP request logging
 setupAuth(app); // Auth0 OIDC + login/logout routes
 setupRoutes(app); // Health, docs, webhooks, public API, MCP, protected API
-getOpenSearchService()
+new SearchService()
   .ensureIndex()
   .catch((err) => serverLogger.warn({ err }, 'OpenSearch index setup failed — search will be unavailable'));
 setupSsr(app); // Angular SSR catch-all + global error handler

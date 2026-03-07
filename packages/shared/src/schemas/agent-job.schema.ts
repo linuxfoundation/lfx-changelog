@@ -45,8 +45,36 @@ export const AgentJobQueryParamsSchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
 });
 
+// Relation types matching backend Prisma includes
+export const AgentJobProductSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    slug: z.string(),
+  })
+  .openapi('AgentJobProduct');
+
+export const AgentJobChangelogSchema = z
+  .object({
+    id: z.string().uuid(),
+    title: z.string(),
+    status: z.string(),
+  })
+  .openapi('AgentJobChangelog');
+
+export const AgentJobWithProductSchema = AgentJobSchema.extend({
+  product: AgentJobProductSchema,
+}).openapi('AgentJobWithProduct');
+
+export const AgentJobDetailSchema = AgentJobSchema.extend({
+  product: AgentJobProductSchema,
+  changelogEntry: AgentJobChangelogSchema.nullable(),
+}).openapi('AgentJobDetail');
+
 export type AgentJobStatus = z.infer<typeof AgentJobStatusSchema>;
 export type AgentJobTrigger = z.infer<typeof AgentJobTriggerSchema>;
 export type ProgressLogEntry = z.infer<typeof ProgressLogEntrySchema>;
 export type AgentJob = z.infer<typeof AgentJobSchema>;
 export type AgentJobQueryParams = z.infer<typeof AgentJobQueryParamsSchema>;
+export type AgentJobWithProduct = z.infer<typeof AgentJobWithProductSchema>;
+export type AgentJobDetail = z.infer<typeof AgentJobDetailSchema>;

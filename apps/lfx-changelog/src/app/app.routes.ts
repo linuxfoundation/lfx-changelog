@@ -69,6 +69,16 @@ export const routes: Routes = [
         loadComponent: () => import('@modules/admin/user-management/user-management.component').then((m) => m.UserManagementComponent),
       },
       {
+        path: 'agent-jobs',
+        canActivate: [superAdminGuard],
+        loadComponent: () => import('@modules/admin/agent-job-list/agent-job-list.component').then((m) => m.AgentJobListComponent),
+      },
+      {
+        path: 'agent-jobs/:id',
+        canActivate: [superAdminGuard],
+        loadComponent: () => import('@modules/admin/agent-job-detail/agent-job-detail.component').then((m) => m.AgentJobDetailComponent),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('@modules/admin/user-settings/user-settings.component').then((m) => m.UserSettingsComponent),
       },

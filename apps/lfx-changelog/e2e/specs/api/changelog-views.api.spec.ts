@@ -6,7 +6,7 @@ import { createAuthenticatedContext, createUnauthenticatedContext } from '../../
 
 import type { APIRequestContext } from '@playwright/test';
 
-test.describe('Changelog Views API (/api/changelog-views)', () => {
+test.describe('Changelog Views API (/api/changelogs/views)', () => {
   let unauthApi: APIRequestContext;
   let superAdminApi: APIRequestContext;
   let editorApi: APIRequestContext;
@@ -34,13 +34,13 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
   });
 
   test.describe('Authentication (401)', () => {
-    test('GET /api/changelog-views/unseen returns 401 without auth', async () => {
-      const res = await unauthApi.get('/api/changelog-views/unseen');
+    test('GET /api/changelogs/views/unseen returns 401 without auth', async () => {
+      const res = await unauthApi.get('/api/changelogs/views/unseen');
       expect(res.status()).toBe(401);
     });
 
-    test('POST /api/changelog-views/mark-viewed returns 401 without auth', async () => {
-      const res = await unauthApi.post('/api/changelog-views/mark-viewed', {
+    test('POST /api/changelogs/views/mark-viewed returns 401 without auth', async () => {
+      const res = await unauthApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: easyclaProductId },
       });
       expect(res.status()).toBe(401);
@@ -49,7 +49,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
 
   test.describe('OAuth Auth (viewerId from session)', () => {
     test('GET /unseen works without viewerId for OAuth users', async () => {
-      const res = await superAdminApi.get('/api/changelog-views/unseen');
+      const res = await superAdminApi.get('/api/changelogs/views/unseen');
       expect(res.status()).toBe(200);
 
       const body = await res.json();
@@ -58,7 +58,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
 
     test('POST /mark-viewed works without viewerId for OAuth users', async () => {
-      const res = await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      const res = await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: easyclaProductId },
       });
       expect(res.status()).toBe(200);
@@ -70,7 +70,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
 
     test('OAuth viewerId is ignored even if provided', async () => {
       // Pass a fake viewerId — OAuth should use Auth0 sub instead
-      const res = await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      const res = await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: { viewerId: 'should-be-ignored', productId: securityProductId },
       });
       expect(res.status()).toBe(200);
@@ -79,7 +79,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
 
   test.describe('Validation', () => {
     test('POST with empty body returns 400', async () => {
-      const res = await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      const res = await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: {},
       });
       expect(res.status()).toBe(400);
@@ -88,7 +88,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
 
     test('POST with invalid UUID returns 400', async () => {
-      const res = await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      const res = await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: 'not-a-uuid' },
       });
       expect(res.status()).toBe(400);
@@ -97,7 +97,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
 
     test('POST with invalid productIds array returns 400', async () => {
-      const res = await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      const res = await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: { productIds: ['not-a-uuid'] },
       });
       expect(res.status()).toBe(400);
@@ -106,7 +106,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
 
     test('POST with non-existent product UUID returns 404', async () => {
-      const res = await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      const res = await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: '00000000-0000-0000-0000-000000000000' },
       });
       expect(res.status()).toBe(404);
@@ -114,28 +114,28 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
 
     test('batch mark-viewed with one invalid ID fails entirely (no partial writes)', async () => {
       // Mark viewed first to get a known state
-      await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: insightsProductId },
       });
-      const beforeRes = await superAdminApi.get(`/api/changelog-views/unseen?productId=${insightsProductId}`);
+      const beforeRes = await superAdminApi.get(`/api/changelogs/views/unseen?productId=${insightsProductId}`);
       const beforeViewedAt = (await beforeRes.json()).data.lastViewedAt;
 
       // Attempt batch with one valid + one non-existent ID — should fail
-      const res = await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      const res = await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: { productIds: [insightsProductId, '00000000-0000-0000-0000-000000000000'] },
       });
       expect(res.status()).toBe(404);
 
       // Verify the valid product's lastViewedAt was NOT updated (transaction rolled back)
-      const afterRes = await superAdminApi.get(`/api/changelog-views/unseen?productId=${insightsProductId}`);
+      const afterRes = await superAdminApi.get(`/api/changelogs/views/unseen?productId=${insightsProductId}`);
       const afterViewedAt = (await afterRes.json()).data.lastViewedAt;
       expect(afterViewedAt).toBe(beforeViewedAt);
     });
   });
 
-  test.describe('GET /api/changelog-views/unseen', () => {
+  test.describe('GET /api/changelogs/views/unseen', () => {
     test('returns counts for all products when no product filter specified', async () => {
-      const res = await superAdminApi.get('/api/changelog-views/unseen');
+      const res = await superAdminApi.get('/api/changelogs/views/unseen');
       expect(res.status()).toBe(200);
 
       const body = await res.json();
@@ -153,7 +153,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
 
     test('returns single object when productId is specified', async () => {
-      const res = await superAdminApi.get(`/api/changelog-views/unseen?productId=${easyclaProductId}`);
+      const res = await superAdminApi.get(`/api/changelogs/views/unseen?productId=${easyclaProductId}`);
       expect(res.status()).toBe(200);
 
       const body = await res.json();
@@ -164,7 +164,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
 
     test('returns array when productIds is specified', async () => {
-      const res = await superAdminApi.get(`/api/changelog-views/unseen?productIds=${easyclaProductId},${securityProductId}`);
+      const res = await superAdminApi.get(`/api/changelogs/views/unseen?productIds=${easyclaProductId},${securityProductId}`);
       expect(res.status()).toBe(200);
 
       const body = await res.json();
@@ -178,9 +178,9 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
   });
 
-  test.describe('POST /api/changelog-views/mark-viewed', () => {
+  test.describe('POST /api/changelogs/views/mark-viewed', () => {
     test('marks a single product as viewed with productId', async () => {
-      const res = await editorApi.post('/api/changelog-views/mark-viewed', {
+      const res = await editorApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: easyclaProductId },
       });
       expect(res.status()).toBe(200);
@@ -193,7 +193,7 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
 
     test('marks multiple products as viewed with productIds', async () => {
-      const res = await editorApi.post('/api/changelog-views/mark-viewed', {
+      const res = await editorApi.post('/api/changelogs/views/mark-viewed', {
         data: { productIds: [easyclaProductId, securityProductId] },
       });
       expect(res.status()).toBe(200);
@@ -210,23 +210,23 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
     });
 
     test('after marking viewed, unseen count drops to 0', async () => {
-      await editorApi.post('/api/changelog-views/mark-viewed', {
+      await editorApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: securityProductId },
       });
 
-      const res = await editorApi.get(`/api/changelog-views/unseen?productId=${securityProductId}`);
+      const res = await editorApi.get(`/api/changelogs/views/unseen?productId=${securityProductId}`);
       const body = await res.json();
       expect(body.data.unseenCount).toBe(0);
       expect(body.data.lastViewedAt).not.toBeNull();
     });
 
     test('mark-viewed is idempotent (calling twice succeeds)', async () => {
-      const first = await editorApi.post('/api/changelog-views/mark-viewed', {
+      const first = await editorApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: insightsProductId },
       });
       expect(first.status()).toBe(200);
 
-      const second = await editorApi.post('/api/changelog-views/mark-viewed', {
+      const second = await editorApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: insightsProductId },
       });
       expect(second.status()).toBe(200);
@@ -238,13 +238,13 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
 
     test('different OAuth users have independent view state', async () => {
       // Super admin marks viewed
-      await superAdminApi.post('/api/changelog-views/mark-viewed', {
+      await superAdminApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: easyclaProductId },
       });
 
       // Editor should still see unseen entries (different Auth0 sub)
       // First reset editor's view state by checking unseen before any mark
-      const res = await editorApi.get(`/api/changelog-views/unseen?productId=${insightsProductId}`);
+      const res = await editorApi.get(`/api/changelogs/views/unseen?productId=${insightsProductId}`);
       const body = await res.json();
       // Editor's state is independent of super admin's
       expect(body.data).toHaveProperty('unseenCount');
@@ -254,12 +254,12 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
   test.describe('Full Lifecycle', () => {
     test('unseen count increases when a new changelog is published', async () => {
       // Mark viewed to reset count
-      await editorApi.post('/api/changelog-views/mark-viewed', {
+      await editorApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: easyclaProductId },
       });
 
       // Verify count is 0
-      const beforeRes = await editorApi.get(`/api/changelog-views/unseen?productId=${easyclaProductId}`);
+      const beforeRes = await editorApi.get(`/api/changelogs/views/unseen?productId=${easyclaProductId}`);
       expect((await beforeRes.json()).data.unseenCount).toBe(0);
 
       // Create and publish a new changelog
@@ -276,16 +276,16 @@ test.describe('Changelog Views API (/api/changelog-views)', () => {
       await superAdminApi.patch(`/api/changelogs/${entryId}/publish`);
 
       // Verify unseen count increased
-      const afterRes = await editorApi.get(`/api/changelog-views/unseen?productId=${easyclaProductId}`);
+      const afterRes = await editorApi.get(`/api/changelogs/views/unseen?productId=${easyclaProductId}`);
       expect((await afterRes.json()).data.unseenCount).toBeGreaterThanOrEqual(1);
 
       // Mark viewed again
-      await editorApi.post('/api/changelog-views/mark-viewed', {
+      await editorApi.post('/api/changelogs/views/mark-viewed', {
         data: { productId: easyclaProductId },
       });
 
       // Verify count is back to 0
-      const finalRes = await editorApi.get(`/api/changelog-views/unseen?productId=${easyclaProductId}`);
+      const finalRes = await editorApi.get(`/api/changelogs/views/unseen?productId=${easyclaProductId}`);
       expect((await finalRes.json()).data.unseenCount).toBe(0);
 
       // Cleanup

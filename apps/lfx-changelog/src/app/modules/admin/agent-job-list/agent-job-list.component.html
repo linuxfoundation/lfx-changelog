@@ -1,0 +1,86 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left flex items-center justify-between">
+    <div>
+      <h1 data-testid="agent-job-list-heading" class="font-display text-text-primary text-2xl font-bold">Agent Jobs</h1>
+      <p class="text-text-secondary mt-1">Monitor and manage changelog agent runs.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      @if (hasActiveJobs()) {
+        <span class="text-text-muted flex items-center gap-1.5 text-xs">
+          <i class="fa-duotone fa-spinner-third fa-spin"></i>
+          Live
+        </span>
+      }
+      <lfx-button data-testid="agent-job-trigger-btn" variant="primary" (clicked)="openTriggerDialog()">
+        <i class="fa-duotone fa-robot text-xs"></i>
+        Run Agent
+      </lfx-button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="animate-fade-in-up relative z-10 grid grid-cols-1 gap-4 [animation-delay:100ms] sm:grid-cols-2">
+    <lfx-select
+      data-testid="agent-job-product-filter"
+      label="Product"
+      [options]="productOptions()"
+      [formControl]="productFilterControl"
+      placeholder="All Products" />
+    <lfx-select data-testid="agent-job-status-filter" label="Status" [options]="statusOptions" [formControl]="statusFilterControl" placeholder="All Statuses" />
+  </div>
+
+  <!-- Table -->
+  <lfx-table
+    class="animate-rise-in block [animation-delay:200ms]"
+    [data]="jobs()"
+    [loading]="loading()"
+    testId="agent-job-list-table"
+    emptyMessage="No agent jobs found."
+    [currentPage]="currentPage()"
+    [totalPages]="totalPages()"
+    [totalItems]="totalItems()"
+    [pageSize]="pageSize()"
+    (pageChange)="onPageChange($event)">
+    <ng-template lfxColumn="Product" let-job>
+      <span class="text-text-primary text-sm font-medium">{{ job.product.name }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Trigger" let-job>
+      <span class="text-text-secondary text-sm">{{ job.trigger | agentTriggerLabel }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Status" let-job>
+      <div class="flex items-center gap-1.5">
+        @if (job.status === 'pending' || job.status === 'running') {
+          <i class="fa-duotone fa-spinner-third fa-spin text-xs" [style.color]="job.status | agentStatusColor"></i>
+        }
+        <lfx-badge [label]="job.status | agentStatusLabel" [color]="job.status | agentStatusColor" size="sm" />
+      </div>
+    </ng-template>
+
+    <ng-template lfxColumn="Duration" let-job>
+      <span class="text-text-secondary text-sm">{{ job.durationMs | duration }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Turns" let-job>
+      <span class="text-text-secondary text-sm">{{ job.numTurns ?? '--' }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Tokens" lfxColumnHeaderTitle="Prompt / Output tokens" let-job>
+      <span class="text-text-muted text-xs"> {{ job.promptTokens | formatTokens }} / {{ job.outputTokens | formatTokens }} </span>
+    </ng-template>
+
+    <ng-template lfxColumn="Created" let-job>
+      <span class="text-text-muted text-sm">{{ job.createdAt | dateFormat }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="" let-job>
+      <a [routerLink]="['/admin/agent-jobs', job.id]" data-testid="agent-job-view-btn" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
+        View
+      </a>
+    </ng-template>
+  </lfx-table>
+</div>

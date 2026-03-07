@@ -6,7 +6,7 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { inject, PLATFORM_ID } from '@angular/core';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
-import { AuthService } from '@services/auth/auth.service';
+import { AuthService } from '@services/auth.service';
 
 /**
  * Adds credentials to API requests when the user is authenticated.

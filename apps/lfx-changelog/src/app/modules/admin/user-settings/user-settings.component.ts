@@ -11,9 +11,9 @@ import { CardComponent } from '@components/card/card.component';
 import { SelectComponent } from '@components/select/select.component';
 import { ApiKeysComponent } from '@modules/admin/api-keys/api-keys.component';
 import { DisconnectSlackDialogComponent } from '@modules/admin/components/disconnect-slack-dialog/disconnect-slack-dialog.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { SlackService } from '@services/slack/slack.service';
-import { ToastService } from '@services/toast/toast.service';
+import { DialogService } from '@services/dialog.service';
+import { IntegrationsService } from '@services/integrations.service';
+import { ToastService } from '@services/toast.service';
 import { BehaviorSubject, catchError, filter, of, switchMap, tap } from 'rxjs';
 
 import type { SlackChannelOption, SlackIntegration } from '@lfx-changelog/shared';
@@ -26,7 +26,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
   styleUrl: './user-settings.component.css',
 })
 export class UserSettingsComponent {
-  private readonly slackService = inject(SlackService);
+  private readonly integrationsService = inject(IntegrationsService);
   private readonly toastService = inject(ToastService);
   private readonly dialogService = inject(DialogService);
   private readonly route = inject(ActivatedRoute);
@@ -47,7 +47,7 @@ export class UserSettingsComponent {
   protected readonly integrations = toSignal(
     this.refresh$.pipe(
       tap(() => this.loading.set(true)),
-      switchMap(() => this.slackService.getIntegrations().pipe(catchError(() => of([] as SlackIntegration[])))),
+      switchMap(() => this.integrationsService.getSlackIntegrations().pipe(catchError(() => of([] as SlackIntegration[])))),
       tap(() => this.loading.set(false))
     ),
     { initialValue: [] as SlackIntegration[] }
@@ -73,7 +73,7 @@ export class UserSettingsComponent {
   });
 
   protected connectSlack(): void {
-    this.slackService.connect();
+    this.integrationsService.connectSlack();
   }
 
   protected saveChannel(): void {
@@ -85,7 +85,7 @@ export class UserSettingsComponent {
     if (!channelId || !channel) return;
 
     this.savingChannel.set(true);
-    this.slackService.saveChannel(integration.id, channelId, channel.name).subscribe({
+    this.integrationsService.saveSlackChannel(integration.id, channelId, channel.name).subscribe({
       next: () => {
         this.savingChannel.set(false);
         this.toastService.success('Default channel saved');
@@ -128,7 +128,7 @@ export class UserSettingsComponent {
         switchMap(() => {
           const integration = this.activeIntegration();
           if (!integration) return of([] as SlackChannelOption[]);
-          return this.slackService.getChannels(integration.id).pipe(catchError(() => of([] as SlackChannelOption[])));
+          return this.integrationsService.getSlackChannels(integration.id).pipe(catchError(() => of([] as SlackChannelOption[])));
         }),
         tap(() => this.channelsLoading.set(false))
       ),

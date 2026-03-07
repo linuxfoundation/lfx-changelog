@@ -4,7 +4,7 @@
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserRole } from '@lfx-changelog/shared';
-import { AuthService } from '@services/auth/auth.service';
+import { AuthService } from '@services/auth.service';
 
 import type { CanActivateFn } from '@angular/router';
 

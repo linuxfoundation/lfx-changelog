@@ -3,9 +3,9 @@
 
 import { Component, inject, input, signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { SlackService } from '@services/slack/slack.service';
-import { ToastService } from '@services/toast/toast.service';
+import { DialogService } from '@services/dialog.service';
+import { IntegrationsService } from '@services/integrations.service';
+import { ToastService } from '@services/toast.service';
 
 @Component({
   selector: 'lfx-disconnect-slack-dialog',
@@ -14,7 +14,7 @@ import { ToastService } from '@services/toast/toast.service';
   styleUrl: './disconnect-slack-dialog.component.css',
 })
 export class DisconnectSlackDialogComponent {
-  private readonly slackService = inject(SlackService);
+  private readonly integrationsService = inject(IntegrationsService);
   private readonly toastService = inject(ToastService);
   protected readonly dialogService = inject(DialogService);
 
@@ -24,7 +24,7 @@ export class DisconnectSlackDialogComponent {
 
   protected confirm(): void {
     this.disconnecting.set(true);
-    this.slackService.disconnect(this.integrationId()).subscribe({
+    this.integrationsService.disconnectSlack(this.integrationId()).subscribe({
       next: () => {
         this.disconnecting.set(false);
         this.toastService.success('Slack disconnected');

@@ -9,10 +9,10 @@ import { CardComponent } from '@components/card/card.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
 import { LinkRepositoriesDialogComponent } from '@modules/admin/components/link-repositories-dialog/link-repositories-dialog.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { GitHubService } from '@services/github/github.service';
-import { ProductService } from '@services/product/product.service';
-import { ToastService } from '@services/toast/toast.service';
+import { DialogService } from '@services/dialog.service';
+import { IntegrationsService } from '@services/integrations.service';
+import { ProductService } from '@services/product.service';
+import { ToastService } from '@services/toast.service';
 import { catchError, map, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { ProductRepository } from '@lfx-changelog/shared';
@@ -26,7 +26,7 @@ import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 })
 export class ProductRepositoriesTabComponent implements OnInit {
   private readonly productService = inject(ProductService);
-  private readonly githubService = inject(GitHubService);
+  private readonly integrationsService = inject(IntegrationsService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
@@ -67,8 +67,8 @@ export class ProductRepositoriesTabComponent implements OnInit {
   }
 
   protected installOnNewOrg(): void {
-    this.githubService
-      .getInstallUrl(this.productId())
+    this.integrationsService
+      .getGitHubInstallUrl(this.productId())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((url) => {
         const window = this.document.defaultView;

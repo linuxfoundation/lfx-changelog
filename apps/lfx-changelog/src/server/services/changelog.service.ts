@@ -6,14 +6,16 @@ import { ChangelogStatus, Prisma, ChangelogEntry as PrismaChangelogEntry } from 
 
 import { ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
-import { getOpenSearchService } from './opensearch.service';
 import { getPrismaClient } from './prisma.service';
+import { SearchService } from './search.service';
 
-import type { ChangelogDocument, ChangelogQueryParams, PaginatedResponse, PublicChangelogEntry } from '@lfx-changelog/shared';
+import type { ChangelogDocument, ChangelogQueryParams, PaginatedResponse, PublicChangelogEntry, UnseenCount } from '@lfx-changelog/shared';
 
 type PaginatedResult<T> = Omit<PaginatedResponse<T>, 'success'>;
 
 export class ChangelogService {
+  private readonly searchService = new SearchService();
+
   public async findPublished(params: ChangelogQueryParams): Promise<PaginatedResult<PublicChangelogEntry>> {
     const prisma = getPrismaClient();
     const { page, limit, skip } = this.sanitizePagination(params);
@@ -181,8 +183,8 @@ export class ChangelogService {
 
     // If status changed away from published, remove from search index
     if (existing.status === 'published' && data.status && data.status !== 'published') {
-      getOpenSearchService()
-        .delete(id)
+      this.searchService
+        .deleteDocument(id)
         .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
     } else {
       this.syncToOpenSearch(updated);
@@ -216,8 +218,8 @@ export class ChangelogService {
       data: { status: 'draft', publishedAt: null },
       include: { product: true, author: true },
     });
-    getOpenSearchService()
-      .delete(id)
+    this.searchService
+      .deleteDocument(id)
       .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
     return draft;
   }
@@ -229,8 +231,8 @@ export class ChangelogService {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'delete', service: 'changelog' });
     }
     await prisma.changelogEntry.delete({ where: { id } });
-    getOpenSearchService()
-      .delete(id)
+    this.searchService
+      .deleteDocument(id)
       .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
   }
 
@@ -306,6 +308,92 @@ export class ChangelogService {
     return entry;
   }
 
+  // ── View tracking ───────────────────────────
+
+  public async getUnseenCounts(viewerId: string, productIds?: string[]): Promise<UnseenCount[]> {
+    const prisma = getPrismaClient();
+
+    const views = await prisma.changelogView.findMany({
+      where: {
+        viewerId,
+        ...(productIds?.length ? { productId: { in: productIds } } : {}),
+      },
+    });
+
+    const viewMap = new Map(views.map((v) => [v.productId, v.lastViewedAt]));
+
+    let targetProductIds: string[];
+    if (productIds?.length) {
+      targetProductIds = productIds;
+    } else {
+      const products = await prisma.product.findMany({
+        where: { isActive: true },
+        select: { id: true },
+      });
+      targetProductIds = products.map((p) => p.id);
+    }
+
+    const results: UnseenCount[] = await Promise.all(
+      targetProductIds.map(async (productId) => {
+        const lastViewedAt = viewMap.get(productId) ?? null;
+
+        const unseenCount = await prisma.changelogEntry.count({
+          where: {
+            productId,
+            status: 'published',
+            publishedAt: { not: null, ...(lastViewedAt ? { gt: lastViewedAt } : {}) },
+          },
+        });
+
+        return {
+          productId,
+          unseenCount,
+          lastViewedAt: lastViewedAt?.toISOString() ?? null,
+        };
+      })
+    );
+
+    return results;
+  }
+
+  public async markViewed(viewerId: string, productIds: string[]): Promise<{ productId: string; lastViewedAt: string }[]> {
+    const prisma = getPrismaClient();
+
+    const existingProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true },
+    });
+    const existingIds = new Set(existingProducts.map((p) => p.id));
+    const missing = productIds.filter((id) => !existingIds.has(id));
+    if (missing.length > 0) {
+      throw new NotFoundError(`Products not found: ${missing.join(', ')}`, { operation: 'markViewed', service: 'changelog' });
+    }
+
+    const now = new Date();
+    await prisma.$transaction(
+      productIds.map((productId) =>
+        prisma.changelogView.upsert({
+          where: {
+            viewerId_productId: { viewerId, productId },
+          },
+          create: {
+            viewerId,
+            productId,
+            lastViewedAt: now,
+          },
+          update: {
+            lastViewedAt: now,
+          },
+        })
+      )
+    );
+
+    return productIds.map((productId) => ({
+      productId,
+      lastViewedAt: now.toISOString(),
+    }));
+  }
+
   private syncToOpenSearch(entry: PrismaChangelogEntry & { product?: { name: string; slug: string; faIcon: string | null } | null }): void {
     if (entry.status !== 'published' || !entry.product) return;
 
@@ -324,8 +412,8 @@ export class ChangelogService {
       productFaIcon: entry.product.faIcon,
     };
 
-    getOpenSearchService()
-      .index(doc)
+    this.searchService
+      .indexDocument(doc)
       .catch((err) => serverLogger.warn({ err, id: entry.id }, 'Failed to sync changelog to OpenSearch'));
   }
 

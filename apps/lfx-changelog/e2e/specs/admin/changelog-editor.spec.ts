@@ -209,8 +209,9 @@ test.describe('Changelog Editor', () => {
     await deactivateProduct(targetProduct.slug);
     try {
       await editorPage.gotoNew();
+      await expect(editorPage.productSelect.locator('button[role="combobox"]')).toBeVisible();
       await editorPage.productSelect.locator('button[role="combobox"]').click();
-      await editorPage.productSelect.locator('button[role="option"]').first().waitFor({ state: 'visible' });
+      await editorPage.productSelect.locator('button[role="option"]').first().waitFor({ state: 'visible', timeout: 10_000 });
 
       const disabledOption = editorPage.productSelect.locator('button[role="option"]', { hasText: targetProduct.name });
       await expect(disabledOption).not.toBeVisible();

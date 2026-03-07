@@ -3,7 +3,6 @@
 
 import { SearchQueryParamsSchema } from '@lfx-changelog/shared';
 
-import { getOpenSearchService } from '../services/opensearch.service';
 import { SearchService } from '../services/search.service';
 
 import type { NextFunction, Request, Response } from 'express';
@@ -13,7 +12,7 @@ export class SearchController {
 
   public async search(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!getOpenSearchService().getClient()) {
+      if (!this.searchService.getClient()) {
         res.status(503).json({ success: false, error: 'Search is currently unavailable' });
         return;
       }
@@ -32,7 +31,7 @@ export class SearchController {
 
   public async reindex(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!getOpenSearchService().getClient()) {
+      if (!this.searchService.getClient()) {
         res.status(503).json({ success: false, error: 'OpenSearch is not configured' });
         return;
       }

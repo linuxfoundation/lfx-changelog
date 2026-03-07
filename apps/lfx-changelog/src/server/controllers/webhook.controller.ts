@@ -6,8 +6,8 @@ import crypto from 'node:crypto';
 
 import { serverLogger } from '../server-logger';
 import { ChangelogAgentService } from '../services/changelog-agent.service';
+import { GitHubService } from '../services/github.service';
 import { getPrismaClient } from '../services/prisma.service';
-import { ReleaseService } from '../services/release.service';
 import { SlackService } from '../services/slack.service';
 
 import type { AgentJobTrigger, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
@@ -15,7 +15,7 @@ import type { AgentJobTrigger, GitHubWebhookReleasePayload } from '@lfx-changelo
 const WEBHOOK_STATE_SECRET = process.env['WEBHOOK_STATE_SECRET'] || '';
 
 export class WebhookController {
-  private readonly releaseService = new ReleaseService();
+  private readonly githubService = new GitHubService();
   private readonly slackService = new SlackService();
   private readonly changelogAgentService = new ChangelogAgentService();
   /**
@@ -119,7 +119,7 @@ export class WebhookController {
           });
           serverLogger.info({ repoFullName, tag: releasePayload.tag_name, productId: productRepo.productId }, 'Deleted release via webhook');
         } else {
-          await this.releaseService.upsertFromWebhook(productRepo.id, releasePayload);
+          await this.githubService.upsertReleaseFromWebhook(productRepo.id, releasePayload);
           serverLogger.info(
             { repoFullName, tag: releasePayload.tag_name, action: body.action, productId: productRepo.productId },
             'Upserted release via webhook'

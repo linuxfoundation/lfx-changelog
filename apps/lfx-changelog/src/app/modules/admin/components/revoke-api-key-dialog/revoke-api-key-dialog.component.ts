@@ -3,9 +3,9 @@
 
 import { Component, inject, input } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
-import { ApiKeyService } from '@services/api-key/api-key.service';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ToastService } from '@services/toast/toast.service';
+import { ApiKeyService } from '@services/api-key.service';
+import { DialogService } from '@services/dialog.service';
+import { ToastService } from '@services/toast.service';
 
 import type { ApiKey } from '@lfx-changelog/shared';
 

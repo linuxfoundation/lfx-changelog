@@ -7,9 +7,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
 import { TimelineItemComponent } from '@components/timeline-item/timeline-item.component';
 import type { ChangelogEntryWithRelations, PublicProduct } from '@lfx-changelog/shared';
-import { ChangelogService } from '@services/changelog/changelog.service';
-import { ProductService } from '@services/product/product.service';
-import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
+import { ChangelogService } from '@services/changelog.service';
+import { ProductService } from '@services/product.service';
+import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { map, of, switchMap, tap } from 'rxjs';
 
 @Component({

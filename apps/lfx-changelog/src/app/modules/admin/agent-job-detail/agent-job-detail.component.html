@@ -1,0 +1,102 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <!-- Back link -->
+  <a routerLink="/admin/agent-jobs" class="text-text-secondary hover:text-text-primary inline-flex items-center gap-1.5 text-sm transition-colors">
+    <i class="fa-solid fa-arrow-left text-xs"></i>
+    Back to Agent Jobs
+  </a>
+
+  @if (loading()) {
+    <div class="text-text-muted flex items-center gap-2 py-8 text-sm">
+      <i class="fa-duotone fa-spinner-third fa-spin"></i>
+      Loading job details...
+    </div>
+  }
+
+  @if (!loading() && !job()) {
+    <div class="text-text-muted py-8 text-center text-sm">Agent job not found.</div>
+  }
+
+  @if (job(); as job) {
+    <!-- Header -->
+    <div class="animate-slide-in-left flex flex-wrap items-center gap-3">
+      <h1 data-testid="agent-job-detail-heading" class="font-display text-text-primary text-2xl font-bold">{{ job.product.name }}</h1>
+      <lfx-badge [label]="job.status | agentStatusLabel" [color]="job.status | agentStatusColor" />
+      <span class="text-text-muted text-sm">{{ job.trigger | agentTriggerLabel }}</span>
+      <span class="text-text-muted text-sm">{{ job.createdAt | dateFormat }}</span>
+      @if (isActive()) {
+        <span class="text-text-muted flex items-center gap-1.5 text-xs">
+          <i class="fa-duotone fa-spinner-third fa-spin"></i>
+          Live
+        </span>
+      }
+    </div>
+
+    <!-- Stat cards -->
+    <div class="animate-fade-in-up grid grid-cols-2 gap-4 [animation-delay:100ms] lg:grid-cols-4">
+      <div class="border-border bg-surface rounded-lg border p-4">
+        <div class="text-text-muted text-xs font-medium tracking-wider uppercase">Duration</div>
+        <div class="text-text-primary mt-1 text-lg font-semibold">{{ job.durationMs | duration }}</div>
+      </div>
+      <div class="border-border bg-surface rounded-lg border p-4">
+        <div class="text-text-muted text-xs font-medium tracking-wider uppercase">Turns</div>
+        <div class="text-text-primary mt-1 text-lg font-semibold">{{ job.numTurns ?? '--' }}</div>
+      </div>
+      <div class="border-border bg-surface rounded-lg border p-4">
+        <div class="text-text-muted text-xs font-medium tracking-wider uppercase">Prompt Tokens</div>
+        <div class="text-text-primary mt-1 text-lg font-semibold">{{ job.promptTokens | formatTokens }}</div>
+      </div>
+      <div class="border-border bg-surface rounded-lg border p-4">
+        <div class="text-text-muted text-xs font-medium tracking-wider uppercase">Output Tokens</div>
+        <div class="text-text-primary mt-1 text-lg font-semibold">{{ job.outputTokens | formatTokens }}</div>
+      </div>
+    </div>
+
+    <!-- Error card -->
+    @if (job.errorMessage) {
+      <div class="animate-fade-in-up rounded-lg border border-red-200 bg-red-50 p-4 [animation-delay:150ms] dark:border-red-800 dark:bg-red-950/30">
+        <div class="flex items-center gap-2 text-sm font-medium text-red-700 dark:text-red-400">
+          <i class="fa-duotone fa-triangle-exclamation"></i>
+          Error
+        </div>
+        <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ job.errorMessage }}</p>
+      </div>
+    }
+
+    <!-- Created changelog card -->
+    @if (job.changelogEntry; as entry) {
+      <div class="border-border bg-surface animate-fade-in-up rounded-lg border p-4 [animation-delay:150ms]">
+        <div class="text-text-muted mb-1 text-xs font-medium tracking-wider uppercase">Generated Changelog</div>
+        <a [routerLink]="['/admin/changelogs', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
+          {{ entry.title }}
+        </a>
+        <span class="text-text-muted ml-2 text-xs capitalize">{{ entry.status }}</span>
+      </div>
+    }
+
+    <!-- Progress log timeline -->
+    @if (job.progressLog.length > 0) {
+      <div class="animate-fade-in-up [animation-delay:200ms]">
+        <h2 class="font-display text-text-primary mb-4 text-lg font-semibold">Progress Log</h2>
+        <div class="border-border bg-surface rounded-lg border p-6">
+          @for (entry of job.progressLog; track $index) {
+            <lfx-timeline-item [date]="entry.timestamp | dateFormat" [index]="$index">
+              <div class="flex items-start gap-2">
+                <i [class]="entry.type | progressLogIcon" class="text-text-muted mt-0.5 text-sm"></i>
+                <div class="flex min-w-0 flex-1 flex-col gap-1">
+                  <span class="text-text-secondary text-xs font-medium uppercase">{{ entry.type | progressLogLabel }}</span>
+                  @if (entry.tool) {
+                    <span class="bg-surface-alt text-text-muted ml-1.5 rounded px-1.5 py-0.5 font-mono text-xs">{{ entry.tool }}</span>
+                  }
+                  <p class="text-text-primary mt-0.5 text-sm">{{ entry.summary }}</p>
+                </div>
+              </div>
+            </lfx-timeline-item>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

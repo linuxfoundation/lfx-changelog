@@ -6,8 +6,8 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { SlackService } from '@services/slack/slack.service';
+import { DialogService } from '@services/dialog.service';
+import { IntegrationsService } from '@services/integrations.service';
 import { catchError, concat, filter, map, of, switchMap, tap } from 'rxjs';
 
 import type { SlackChannelOption } from '@lfx-changelog/shared';
@@ -21,7 +21,7 @@ import type { SlackDialogState } from '@shared/interfaces/slack.interface';
   styleUrl: './post-to-slack-dialog.component.css',
 })
 export class PostToSlackDialogComponent {
-  private readonly slackService = inject(SlackService);
+  private readonly integrationsService = inject(IntegrationsService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly changelogId = input.required<string>();
@@ -66,7 +66,7 @@ export class PostToSlackDialogComponent {
     this.posting.set(true);
     this.error.set('');
 
-    this.slackService.postToSlack(this.changelogId(), channelId, channelName).subscribe({
+    this.integrationsService.postToSlack(this.changelogId(), channelId, channelName).subscribe({
       next: (res) => {
         this.posting.set(false);
         this.success.set(true);
@@ -98,7 +98,7 @@ export class PostToSlackDialogComponent {
     return toSignal(
       concat(
         of(loadingState),
-        this.slackService.getIntegrations().pipe(
+        this.integrationsService.getSlackIntegrations().pipe(
           map((integrations) => {
             const active = integrations.find((i) => i.status === 'active') ?? null;
 
@@ -126,7 +126,7 @@ export class PostToSlackDialogComponent {
         switchMap(() => {
           const integration = this.state().integration;
           if (!integration) return of([] as SlackChannelOption[]);
-          return this.slackService.getChannels(integration.id).pipe(catchError(() => of([] as SlackChannelOption[])));
+          return this.integrationsService.getSlackChannels(integration.id).pipe(catchError(() => of([] as SlackChannelOption[])));
         }),
         tap(() => this.channelsLoading.set(false))
       ),

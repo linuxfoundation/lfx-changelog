@@ -7,7 +7,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TabsComponent } from '@components/tabs/tabs.component';
-import { ProductService } from '@services/product/product.service';
+import { ProductService } from '@services/product.service';
 import { catchError, filter, first, map, of, startWith, switchMap } from 'rxjs';
 
 import { ProductOverviewTabComponent } from './product-overview-tab/product-overview-tab.component';

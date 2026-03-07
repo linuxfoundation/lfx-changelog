@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { serverLogger } from '../server-logger';
-import { getOpenSearchService } from '../services/opensearch.service';
+import { SearchService } from '../services/search.service';
 import { disconnectPrisma } from '../services/prisma.service';
 
 import type { Server } from 'node:http';
@@ -23,7 +23,7 @@ export function gracefulShutdown(server: Server): void {
 
     server.close(async () => {
       serverLogger.info('HTTP server closed');
-      await Promise.all([disconnectPrisma(), getOpenSearchService().disconnect()]);
+      await Promise.all([disconnectPrisma(), new SearchService().disconnect()]);
       serverLogger.info('Shutdown complete');
       process.exit(0);
     });

@@ -3,7 +3,18 @@
 
 import './setup.js';
 
-export { AgentJobQueryParamsSchema, AgentJobSchema, AgentJobStatusSchema, AgentJobTriggerSchema, ProgressLogEntrySchema } from './agent-job.schema.js';
+export {
+  AgentJobChangelogSchema,
+  AgentJobDetailSchema,
+  AgentJobProductSchema,
+  AgentJobQueryParamsSchema,
+  AgentJobSchema,
+  AgentJobStatusSchema,
+  AgentJobTriggerSchema,
+  AgentJobWithProductSchema,
+  ProgressLogEntrySchema,
+} from './agent-job.schema.js';
+export { AgentJobSSEEventSchema, AgentJobSSEEventTypeSchema, AgentJobSSEResultSchema } from './agent-job-sse.schema.js';
 export {
   AiChangelogMetadataSchema,
   AiProductSummarySchema,
@@ -100,7 +111,8 @@ export {
 } from './slack.schema.js';
 export { UserRoleAssignmentSchema, UserSchema } from './user.schema.js';
 
-export type { AgentJob, AgentJobQueryParams, AgentJobStatus, AgentJobTrigger, ProgressLogEntry } from './agent-job.schema.js';
+export type { AgentJob, AgentJobDetail, AgentJobQueryParams, AgentJobStatus, AgentJobTrigger, AgentJobWithProduct, ProgressLogEntry } from './agent-job.schema.js';
+export type { AgentJobSSEEvent, AgentJobSSEEventType, AgentJobSSEResult } from './agent-job-sse.schema.js';
 export type {
   AiChangelogMetadata,
   AiProductSummary,

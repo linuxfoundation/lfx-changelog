@@ -8,9 +8,9 @@ import { ButtonComponent } from '@components/button/button.component';
 import { InputComponent } from '@components/input/input.component';
 import { SelectComponent } from '@components/select/select.component';
 import { API_KEY_EXPIRATION_OPTIONS, API_KEY_SCOPES } from '@lfx-changelog/shared';
-import { ApiKeyService } from '@services/api-key/api-key.service';
-import { DialogService } from '@services/dialog/dialog.service';
-import { ToastService } from '@services/toast/toast.service';
+import { ApiKeyService } from '@services/api-key.service';
+import { DialogService } from '@services/dialog.service';
+import { ToastService } from '@services/toast.service';
 
 import type { ApiKeyScope } from '@lfx-changelog/shared';
 

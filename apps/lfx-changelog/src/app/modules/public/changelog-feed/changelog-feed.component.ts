@@ -6,10 +6,10 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
 import { TimelineItemComponent } from '@components/timeline-item/timeline-item.component';
-import { ChangelogService } from '@services/changelog/changelog.service';
-import { ProductService } from '@services/product/product.service';
-import { SearchService } from '@services/search/search.service';
-import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
+import { ChangelogService } from '@services/changelog.service';
+import { ProductService } from '@services/product.service';
+import { SearchService } from '@services/search.service';
+import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { catchError, combineLatest, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, PublicProduct, SearchHit, SearchResponse } from '@lfx-changelog/shared';

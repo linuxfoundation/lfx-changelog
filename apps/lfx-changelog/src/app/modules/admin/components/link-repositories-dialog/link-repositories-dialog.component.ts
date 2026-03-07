@@ -7,10 +7,10 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
-import { DialogService } from '@services/dialog/dialog.service';
-import { GitHubService } from '@services/github/github.service';
-import { ProductService } from '@services/product/product.service';
-import { ToastService } from '@services/toast/toast.service';
+import { DialogService } from '@services/dialog.service';
+import { IntegrationsService } from '@services/integrations.service';
+import { ProductService } from '@services/product.service';
+import { ToastService } from '@services/toast.service';
 import { catchError, forkJoin, map, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { GitHubInstallation, GitHubRepository, LinkRepositoryRequest } from '@lfx-changelog/shared';
@@ -25,7 +25,7 @@ import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 })
 export class LinkRepositoriesDialogComponent implements OnInit {
   private readonly productService = inject(ProductService);
-  private readonly githubService = inject(GitHubService);
+  private readonly integrationsService = inject(IntegrationsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   private readonly toastService = inject(ToastService);
@@ -71,8 +71,8 @@ export class LinkRepositoriesDialogComponent implements OnInit {
   }
 
   protected installOnNewOrg(): void {
-    this.githubService
-      .getInstallUrl(this.productId())
+    this.integrationsService
+      .getGitHubInstallUrl(this.productId())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((url) => {
         const window = this.document.defaultView;
@@ -144,7 +144,7 @@ export class LinkRepositoriesDialogComponent implements OnInit {
     return toSignal(
       this.fetchInstallations$.pipe(
         switchMap(() =>
-          this.githubService.getInstallations().pipe(
+          this.integrationsService.getGitHubInstallations().pipe(
             map((data) => {
               const callbackId = this.callbackInstallationId();
               if (callbackId && data.length > 0) {
@@ -166,7 +166,7 @@ export class LinkRepositoriesDialogComponent implements OnInit {
     return toSignal(
       this.fetchRepos$.pipe(
         switchMap((installationId) =>
-          this.githubService.getInstallationRepositories(installationId).pipe(
+          this.integrationsService.getGitHubInstallationRepositories(installationId).pipe(
             map((data) => {
               this.setupRepoControls(data);
               return { data, loading: false };

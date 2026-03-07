@@ -6,12 +6,12 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { ChangelogStatus } from '@lfx-changelog/shared';
-import { ChangelogService } from '@services/changelog/changelog.service';
-import { ProductService } from '@services/product/product.service';
-import { ReleaseService } from '@services/release/release.service';
-import { DateFormatPipe } from '@shared/pipes/date-format/date-format.pipe';
-import { ProductNamePipe } from '@shared/pipes/product-name/product-name.pipe';
-import { TimeAgoPipe } from '@shared/pipes/time-ago/time-ago.pipe';
+import { ChangelogService } from '@services/changelog.service';
+import { ProductService } from '@services/product.service';
+import { ReleaseService } from '@services/release.service';
+import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
+import { ProductNamePipe } from '@shared/pipes/product-name.pipe';
+import { TimeAgoPipe } from '@shared/pipes/time-ago.pipe';
 import { catchError, combineLatest, of, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, Product } from '@lfx-changelog/shared';

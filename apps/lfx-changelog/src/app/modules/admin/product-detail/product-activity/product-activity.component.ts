@@ -5,8 +5,8 @@ import { DatePipe, SlicePipe } from '@angular/common';
 import { Component, computed, inject, input, OnInit, Signal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CardComponent } from '@components/card/card.component';
-import { ProductService } from '@services/product/product.service';
-import { FirstLinePipe } from '@shared/pipes/first-line/first-line.pipe';
+import { ProductService } from '@services/product.service';
+import { FirstLinePipe } from '@shared/pipes/first-line.pipe';
 import { catchError, map, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { ProductActivity } from '@lfx-changelog/shared';

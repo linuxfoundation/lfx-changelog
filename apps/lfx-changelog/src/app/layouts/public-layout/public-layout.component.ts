@@ -4,8 +4,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { AuthService } from '@services/auth/auth.service';
-import { ThemeService } from '@services/theme/theme.service';
+import { AuthService } from '@services/auth.service';
+import { ThemeService } from '@services/theme.service';
 import { filter, map } from 'rxjs';
 
 import type { Signal } from '@angular/core';

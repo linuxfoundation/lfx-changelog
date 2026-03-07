@@ -1,7 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ApiKeyScope, CreateChangelogEntryRequestSchema, PostToSlackRequestSchema, UpdateChangelogEntryRequestSchema, UserRole } from '@lfx-changelog/shared';
+import {
+  ApiKeyScope,
+  CreateChangelogEntryRequestSchema,
+  MarkViewedRequestSchema,
+  PostToSlackRequestSchema,
+  UnseenQuerySchema,
+  UpdateChangelogEntryRequestSchema,
+  UserRole,
+} from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { ChangelogController } from '../controllers/changelog.controller';
@@ -10,6 +18,14 @@ import { validate } from '../middleware/validate.middleware';
 
 const router = Router();
 const changelogController = new ChangelogController();
+
+// ── View tracking (must be before /:id to avoid param capture) ───
+router.get('/views/unseen', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), validate({ query: UnseenQuerySchema }), (req, res, next) =>
+  changelogController.getUnseenCounts(req, res, next)
+);
+router.post('/views/mark-viewed', authorize({ scope: ApiKeyScope.CHANGELOGS_READ }), validate({ body: MarkViewedRequestSchema }), (req, res, next) =>
+  changelogController.markViewed(req, res, next)
+);
 
 router.get('/', authorize({ scope: ApiKeyScope.CHANGELOGS_READ, productRole: UserRole.EDITOR }), (req, res, next) =>
   changelogController.listAll(req, res, next)

@@ -3,7 +3,7 @@
 
 import { Component, inject, input } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
-import { DialogService } from '@services/dialog/dialog.service';
+import { DialogService } from '@services/dialog.service';
 
 @Component({
   selector: 'lfx-confirm-dialog',
