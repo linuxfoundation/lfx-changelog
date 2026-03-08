@@ -15,6 +15,10 @@ export const ProgressLogEntrySchema = z
     type: z.enum(['tool_call', 'tool_result', 'text', 'error']),
     tool: z.string().optional(),
     summary: z.string(),
+    args: z
+      .record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))
+      .optional()
+      .openapi({ type: 'object', description: 'Tool call arguments' }),
   })
   .openapi('ProgressLogEntry');
 

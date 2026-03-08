@@ -6,6 +6,7 @@ import { ChangelogStatus, Prisma, ChangelogEntry as PrismaChangelogEntry } from 
 
 import { ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
+import { AgentMemoryService } from './agent-memory.service';
 import { getPrismaClient } from './prisma.service';
 import { SearchService } from './search.service';
 
@@ -15,6 +16,7 @@ type PaginatedResult<T> = Omit<PaginatedResponse<T>, 'success'>;
 
 export class ChangelogService {
   private readonly searchService = new SearchService();
+  private readonly agentMemoryService = new AgentMemoryService();
 
   public async findPublished(params: ChangelogQueryParams): Promise<PaginatedResult<PublicChangelogEntry>> {
     const prisma = getPrismaClient();
@@ -207,6 +209,14 @@ export class ChangelogService {
       include: { product: true, author: true },
     });
     this.syncToOpenSearch(published);
+
+    // Capture correction if this is an automated entry (fire-and-forget)
+    if (published.source === 'automated') {
+      this.agentMemoryService
+        .captureCorrection(published.id, published.productId)
+        .catch((err) => serverLogger.warn({ err, id: published.id }, 'Failed to capture correction'));
+    }
+
     return published;
   }
 

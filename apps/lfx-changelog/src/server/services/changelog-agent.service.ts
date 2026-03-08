@@ -10,6 +10,7 @@ import { AgentServiceError } from '../errors';
 import { buildActivityContext } from '../helpers/activity-context.helper';
 import { serverLogger } from '../server-logger';
 import { agentJobEmitter } from './agent-job-emitter.service';
+import { AgentMemoryService } from './agent-memory.service';
 import { ChangelogService } from './changelog.service';
 import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
@@ -19,6 +20,7 @@ import type { AgentJobTrigger, GitHubCommit, GitHubPullRequest, ProgressLogEntry
 export class ChangelogAgentService {
   private readonly changelogService = new ChangelogService();
   private readonly githubService = new GitHubService();
+  private readonly agentMemoryService = new AgentMemoryService();
 
   /**
    * Runs the changelog agent for a product.
@@ -223,6 +225,10 @@ export class ChangelogAgentService {
       const latestVersion = await this.changelogService.getLatestVersion(productId);
       const product = await prisma.product.findUnique({ where: { id: productId }, select: { name: true, slug: true, description: true } });
 
+      // 6b. Fetch agent memory
+      const memoryData = await this.agentMemoryService.getMemoryForProduct(productId);
+      const memoryContext = this.agentMemoryService.formatMemoryContext(memoryData);
+
       // 7. Build user prompt
       const totalActivities = allCommits.length + allMergedPRs.length;
       const userPrompt = this.buildUserPrompt({
@@ -234,10 +240,11 @@ export class ChangelogAgentService {
         latestVersion,
         activityContext,
         totalActivities,
+        memoryContext,
       });
 
       // 8. Create MCP tools (pass jobId for precise linking)
-      const mcpServer = this.createMcpTools(jobId, productId, botUser.id, product?.slug || 'unknown');
+      const mcpServer = this.createMcpTools(jobId, productId, botUser.id, product?.slug || 'unknown', activityContext);
 
       // 9. Derive Agent SDK env vars from existing LiteLLM config
       const aiApiUrl = process.env['AI_API_URL'] || '';
@@ -286,6 +293,7 @@ export class ChangelogAgentService {
                   type: 'tool_call',
                   tool: block.name,
                   summary: `Called ${block.name}`,
+                  args: block.input as ProgressLogEntry['args'],
                 };
                 progressLog.push(entry);
                 agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
@@ -321,6 +329,11 @@ export class ChangelogAgentService {
               });
               serverLogger.info({ jobId, productId, durationMs, numTurns: message.num_turns }, 'Agent job completed successfully');
               agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
+
+              // Record quality scores from critic (fire-and-forget)
+              this.recordScoresFromProgressLog(jobId, productId, progressLog).catch((err) =>
+                serverLogger.warn({ err, jobId }, 'Failed to record quality scores')
+              );
               this.emitTerminalEvents(jobId, {
                 durationMs,
                 numTurns: message.num_turns,
@@ -423,6 +436,7 @@ export class ChangelogAgentService {
     latestVersion: string | null;
     activityContext: string;
     totalActivities: number;
+    memoryContext: string;
   }): string {
     const lines = [
       `Product: ${context.productName} (${context.productSlug})`,
@@ -432,12 +446,14 @@ export class ChangelogAgentService {
       context.latestVersion ? `Latest version: ${context.latestVersion}` : 'No previous version — use 1.0.0 as the starting version',
       context.totalActivities < 3 ? 'Note: Trivial activity — skip the critic validation step.' : '',
       '',
+      context.memoryContext,
+      '',
       context.activityContext,
     ];
     return lines.filter(Boolean).join('\n');
   }
 
-  private createMcpTools(jobId: string, productId: string, botUserId: string, productSlug: string) {
+  private createMcpTools(jobId: string, productId: string, botUserId: string, productSlug: string, activityContext: string) {
     const changelogService = this.changelogService;
 
     const searchPastChangelogs = tool(
@@ -565,6 +581,8 @@ export class ChangelogAgentService {
           `Title: ${draft.title}`,
           `Version: ${draft.version}`,
           `Description:\n${draft.description}`,
+          '',
+          `Original activity data:\n${activityContext}`,
         ].join('\n');
 
         try {
@@ -607,5 +625,40 @@ export class ChangelogAgentService {
       name: 'changelog-tools',
       tools: [searchPastChangelogs, createChangelogDraft, updateChangelogDraft, getLatestVersion, validateChangelogDraft],
     });
+  }
+
+  /**
+   * Walks the progress log to find critic scores from validate_changelog_draft.
+   * Looks for a text entry immediately after the tool call that contains JSON scores.
+   */
+  private async recordScoresFromProgressLog(jobId: string, productId: string, progressLog: ProgressLogEntry[]): Promise<void> {
+    for (let i = 0; i < progressLog.length; i++) {
+      const entry = progressLog[i];
+      if (entry.type !== 'tool_call' || entry.tool !== 'validate_changelog_draft') continue;
+
+      // The critic response appears as a subsequent text entry
+      for (let j = i + 1; j < progressLog.length; j++) {
+        const nextEntry = progressLog[j];
+        if (nextEntry.type === 'text' && nextEntry.summary) {
+          try {
+            const parsed = JSON.parse(nextEntry.summary) as { scores?: { accuracy: number; clarity: number; tone: number; completeness: number }; overall?: number };
+            if (parsed.scores && parsed.overall !== undefined) {
+              await this.agentMemoryService.recordQualityScores(jobId, productId, {
+                accuracy: parsed.scores.accuracy,
+                clarity: parsed.scores.clarity,
+                tone: parsed.scores.tone,
+                completeness: parsed.scores.completeness,
+                overall: parsed.overall,
+              });
+              return;
+            }
+          } catch {
+            // Not valid JSON — continue looking
+          }
+        }
+        // Stop searching if we hit another tool call
+        if (nextEntry.type === 'tool_call') break;
+      }
+    }
   }
 }
