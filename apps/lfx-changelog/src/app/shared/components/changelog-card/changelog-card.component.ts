@@ -5,15 +5,13 @@ import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
-import { CategoryColorPipe } from '@shared/pipes/category-color.pipe';
-import { CategoryLabelPipe } from '@shared/pipes/category-label.pipe';
 import { format } from 'date-fns';
 
 import type { ChangelogEntryWithRelations, Product } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-changelog-card',
-  imports: [CardComponent, ProductPillComponent, RouterLink, CategoryColorPipe, CategoryLabelPipe],
+  imports: [CardComponent, ProductPillComponent, RouterLink],
   templateUrl: './changelog-card.component.html',
   styleUrl: './changelog-card.component.css',
   host: { '[attr.data-testid]': "'changelog-card-' + entry()?.id" },

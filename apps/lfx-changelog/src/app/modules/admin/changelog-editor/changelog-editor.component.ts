@@ -16,7 +16,7 @@ import { ProductPillComponent } from '@components/product-pill/product-pill.comp
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { ChangelogCategory, ChangelogSource, ChangelogStatus, UserRole } from '@lfx-changelog/shared';
+import { ChangelogSource, ChangelogStatus, UserRole } from '@lfx-changelog/shared';
 import { AiService } from '@services/ai.service';
 import { AuthService } from '@services/auth.service';
 import { ChangelogService } from '@services/changelog.service';
@@ -71,7 +71,6 @@ export class ChangelogEditorComponent {
   protected readonly descriptionControl = new FormControl('', { nonNullable: true });
   protected readonly versionControl = new FormControl('', { nonNullable: true });
   protected readonly productIdControl = new FormControl('', { nonNullable: true });
-  protected readonly categoryControl = new FormControl('', { nonNullable: true });
   protected readonly releaseCountControl = new FormControl('1', { nonNullable: true });
   protected readonly additionalContextControl = new FormControl('', { nonNullable: true });
   protected readonly authorControl = new FormControl('', { nonNullable: true });
@@ -113,17 +112,6 @@ export class ChangelogEditorComponent {
   protected readonly hasGitHubRepos = computed(() => this.repoState().data.length > 0);
   protected readonly loadingRepos = computed(() => this.repoState().loading);
   protected readonly hasSlug = computed(() => !!this.slugValue()?.trim());
-
-  protected readonly categoryOptions: SelectOption[] = [
-    { label: 'None', value: '' },
-    { label: 'Feature', value: ChangelogCategory.FEATURE },
-    { label: 'Bug Fix', value: ChangelogCategory.BUGFIX },
-    { label: 'Improvement', value: ChangelogCategory.IMPROVEMENT },
-    { label: 'Security', value: ChangelogCategory.SECURITY },
-    { label: 'Deprecation', value: ChangelogCategory.DEPRECATION },
-    { label: 'Breaking Change', value: ChangelogCategory.BREAKING_CHANGE },
-    { label: 'Other', value: ChangelogCategory.OTHER },
-  ];
 
   protected readonly releaseCountOptions: SelectOption[] = Array.from({ length: 50 }, (_, i) => ({
     label: `${i + 1}`,
@@ -301,16 +289,12 @@ export class ChangelogEditorComponent {
     const existing = this.existingEntry();
     const includeCreatedBy = this.showAuthorPicker() && this.authorControl.value && this.authorControl.value !== existing?.createdBy;
 
-    const categoryValue = this.categoryControl.value;
-    const category = categoryValue ? (categoryValue as ChangelogCategory) : undefined;
-
     return existing
       ? this.changelogService.update(existing.id, {
           slug: this.slugControl.value,
           title: this.titleControl.value,
           description: this.descriptionControl.value,
           version: this.versionControl.value,
-          category: category ?? null,
           ...(includeCreatedBy ? { createdBy: this.authorControl.value } : {}),
         })
       : this.changelogService.create({
@@ -318,7 +302,6 @@ export class ChangelogEditorComponent {
           title: this.titleControl.value,
           description: this.descriptionControl.value,
           version: this.versionControl.value,
-          category,
           productId: this.productIdControl.value,
           status: ChangelogStatus.DRAFT,
         });
@@ -358,7 +341,6 @@ export class ChangelogEditorComponent {
           this.slugManuallyEdited = true;
           this.descriptionControl.setValue(entry.description);
           this.versionControl.setValue(entry.version ?? '');
-          this.categoryControl.setValue((entry as { category?: string }).category ?? '');
           this.productIdControl.setValue(entry.productId);
           this.authorControl.setValue(entry.createdBy);
           this.loading.set(false);

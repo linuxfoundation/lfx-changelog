@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
-import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, ChangelogCategory, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
+import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 import { z } from 'zod';
 
 import { AGENT_CONFIG, AGENT_CRITIC_PROMPT, AGENT_SYSTEM_PROMPT } from '../constants/agent.constants';
@@ -453,14 +453,11 @@ export class ChangelogAgentService {
         const entries = result.data.map((e) => ({
           title: e.title,
           version: e.version,
-          category: (e as { category?: string }).category ?? null,
           description: e.description?.slice(0, 500),
         }));
         return { content: [{ type: 'text' as const, text: JSON.stringify(entries, null, 2) }] };
       }
     );
-
-    const categoryValues = Object.values(ChangelogCategory) as [string, ...string[]];
 
     const createChangelogDraft = tool(
       'create_changelog_draft',
@@ -469,7 +466,6 @@ export class ChangelogAgentService {
         title: z.string().max(60),
         version: z.string(),
         description: z.string(),
-        category: z.enum(categoryValues).optional(),
       },
       async (args) => {
         const titleSlug = slugify(args.title);
@@ -482,7 +478,6 @@ export class ChangelogAgentService {
           title: args.title,
           description: args.description,
           version: args.version,
-          category: args.category,
           source: 'automated',
           createdBy: botUserId,
         });
@@ -508,14 +503,12 @@ export class ChangelogAgentService {
         title: z.string().max(60).optional(),
         version: z.string().optional(),
         description: z.string().optional(),
-        category: z.enum(categoryValues).optional(),
       },
       async (args) => {
         const updateData: Record<string, string> = {};
         if (args.title) updateData['title'] = args.title;
         if (args.version) updateData['version'] = args.version;
         if (args.description) updateData['description'] = args.description;
-        if (args.category) updateData['category'] = args.category;
 
         if (args.title) {
           const titleSlug = slugify(args.title);
@@ -552,7 +545,7 @@ export class ChangelogAgentService {
         const prisma = getPrismaClient();
         const draft = await prisma.changelogEntry.findUnique({
           where: { id: args.draftId },
-          select: { title: true, description: true, version: true, category: true },
+          select: { title: true, description: true, version: true },
         });
         if (!draft) {
           return { content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Draft not found' }) }] };
@@ -571,7 +564,6 @@ export class ChangelogAgentService {
           `Draft entry:`,
           `Title: ${draft.title}`,
           `Version: ${draft.version}`,
-          `Category: ${draft.category ?? 'none'}`,
           `Description:\n${draft.description}`,
         ].join('\n');
 

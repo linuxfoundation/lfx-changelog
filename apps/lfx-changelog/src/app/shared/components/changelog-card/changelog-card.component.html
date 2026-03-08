@@ -9,12 +9,6 @@
         <span class="text-text-muted text-xs">&middot;</span>
       }
       <span class="text-text-muted text-xs">{{ formattedDate() }}</span>
-      @if (entry().category) {
-        <span class="text-text-muted text-xs">&middot;</span>
-        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" [class]="entry().category | categoryColor">
-          {{ entry().category | categoryLabel }}
-        </span>
-      }
     </div>
     <h3 class="font-display text-text-primary text-lg font-semibold">{{ entry().title }}</h3>
     <p class="text-text-secondary text-sm leading-relaxed">{{ preview() }}</p>

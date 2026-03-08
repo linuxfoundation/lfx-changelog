@@ -1,34 +1,38 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangelogCategory } from '@lfx-changelog/shared';
+/**
+ * Activity categories used internally to organize GitHub activity context for the agent.
+ * These are NOT stored on changelog entries — they only structure the agent's input.
+ */
+export type ActivityCategory = 'feature' | 'bugfix' | 'improvement' | 'security' | 'deprecation' | 'breaking_change' | 'other';
 
-const CONVENTIONAL_PREFIX_MAP: Record<string, ChangelogCategory> = {
-  feat: ChangelogCategory.FEATURE,
-  feature: ChangelogCategory.FEATURE,
-  fix: ChangelogCategory.BUGFIX,
-  bugfix: ChangelogCategory.BUGFIX,
-  perf: ChangelogCategory.IMPROVEMENT,
-  refactor: ChangelogCategory.IMPROVEMENT,
-  improvement: ChangelogCategory.IMPROVEMENT,
-  security: ChangelogCategory.SECURITY,
-  sec: ChangelogCategory.SECURITY,
-  deprecate: ChangelogCategory.DEPRECATION,
-  deprecated: ChangelogCategory.DEPRECATION,
+const CONVENTIONAL_PREFIX_MAP: Record<string, ActivityCategory> = {
+  feat: 'feature',
+  feature: 'feature',
+  fix: 'bugfix',
+  bugfix: 'bugfix',
+  perf: 'improvement',
+  refactor: 'improvement',
+  improvement: 'improvement',
+  security: 'security',
+  sec: 'security',
+  deprecate: 'deprecation',
+  deprecated: 'deprecation',
 };
 
-const KEYWORD_PATTERNS: [RegExp, ChangelogCategory][] = [
-  [/\b(add|new|introduc|implement|creat)\w*\b/i, ChangelogCategory.FEATURE],
-  [/\b(fix|resolv|correct|patch|repair|bug)\w*\b/i, ChangelogCategory.BUGFIX],
-  [/\b(improv|enhanc|optimiz|upgrad|refactor|performance|speed)\w*\b/i, ChangelogCategory.IMPROVEMENT],
-  [/\b(secur|vulnerabilit|cve|xss|csrf|injection|auth)\w*\b/i, ChangelogCategory.SECURITY],
-  [/\b(deprecat|sunset|remov|drop support)\w*\b/i, ChangelogCategory.DEPRECATION],
-  [/\bBREAKING[ _]CHANGE\b/i, ChangelogCategory.BREAKING_CHANGE],
-  [/\b(breaking|incompatible|migration required)\b/i, ChangelogCategory.BREAKING_CHANGE],
+const KEYWORD_PATTERNS: [RegExp, ActivityCategory][] = [
+  [/\b(add|new|introduc|implement|creat)\w*\b/i, 'feature'],
+  [/\b(fix|resolv|correct|patch|repair|bug)\w*\b/i, 'bugfix'],
+  [/\b(improv|enhanc|optimiz|upgrad|refactor|performance|speed)\w*\b/i, 'improvement'],
+  [/\b(secur|vulnerabilit|cve|xss|csrf|injection|auth)\w*\b/i, 'security'],
+  [/\b(deprecat|sunset|remov|drop support)\w*\b/i, 'deprecation'],
+  [/\bBREAKING[ _]CHANGE\b/i, 'breaking_change'],
+  [/\b(breaking|incompatible|migration required)\b/i, 'breaking_change'],
 ];
 
 /**
- * Heuristically categorizes a commit message or PR title into a ChangelogCategory.
+ * Heuristically categorizes a commit message or PR title into an ActivityCategory.
  *
  * Strategy:
  * 1. Parse conventional commit prefix (e.g., `feat:`, `fix(scope):`)
@@ -36,12 +40,12 @@ const KEYWORD_PATTERNS: [RegExp, ChangelogCategory][] = [
  * 3. Fall back to keyword matching
  * 4. Default to `other`
  */
-export function categorizeActivity(text: string): ChangelogCategory {
+export function categorizeActivity(text: string): ActivityCategory {
   const trimmed = text.trim();
 
   // Check for BREAKING CHANGE first (highest priority)
   if (/\bBREAKING[ _]CHANGE\b/i.test(trimmed)) {
-    return ChangelogCategory.BREAKING_CHANGE;
+    return 'breaking_change';
   }
 
   // Parse conventional commit prefix: `type(scope)?!: message`
@@ -53,7 +57,7 @@ export function categorizeActivity(text: string): ChangelogCategory {
 
     // Common non-user-facing prefixes
     if (['chore', 'ci', 'docs', 'test', 'tests', 'build', 'style'].includes(prefix)) {
-      return ChangelogCategory.OTHER;
+      return 'other';
     }
   }
 
@@ -64,5 +68,5 @@ export function categorizeActivity(text: string): ChangelogCategory {
     }
   }
 
-  return ChangelogCategory.OTHER;
+  return 'other';
 }

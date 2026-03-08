@@ -3,7 +3,6 @@
 
 import { z } from 'zod';
 
-import { ChangelogCategory } from '../enums/changelog-category.enum.js';
 import { ChangelogStatus } from '../enums/changelog-status.enum.js';
 import { UserRole } from '../enums/user-role.enum.js';
 
@@ -17,7 +16,6 @@ export const CreateChangelogEntryRequestSchema = z
     title: z.string(),
     description: z.string(),
     version: z.string(),
-    category: z.nativeEnum(ChangelogCategory).optional(),
     status: z.nativeEnum(ChangelogStatus),
   })
   .openapi('CreateChangelogEntryRequest');
@@ -33,7 +31,6 @@ export const UpdateChangelogEntryRequestSchema = z
     title: z.string().optional(),
     description: z.string().optional(),
     version: z.string().optional(),
-    category: z.nativeEnum(ChangelogCategory).nullable().optional(),
     status: z.nativeEnum(ChangelogStatus).optional(),
     createdBy: z.string().optional(),
   })

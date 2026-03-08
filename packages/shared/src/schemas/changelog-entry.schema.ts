@@ -3,13 +3,10 @@
 
 import { z } from 'zod';
 
-import { ChangelogCategory } from '../enums/changelog-category.enum.js';
 import { ChangelogSource } from '../enums/changelog-source.enum.js';
 import { ChangelogStatus } from '../enums/changelog-status.enum.js';
 import { ProductSchema } from './product.schema.js';
 import { UserSchema } from './user.schema.js';
-
-export const ChangelogCategorySchema = z.nativeEnum(ChangelogCategory).openapi('ChangelogCategory');
 
 export const ChangelogEntrySchema = z
   .object({
@@ -20,7 +17,6 @@ export const ChangelogEntrySchema = z
     description: z.string(),
     version: z.string().nullable(),
     source: z.nativeEnum(ChangelogSource).optional(),
-    category: z.nativeEnum(ChangelogCategory).nullable().optional(),
     status: z.nativeEnum(ChangelogStatus),
     publishedAt: z.string().nullable(),
     createdBy: z.string(),

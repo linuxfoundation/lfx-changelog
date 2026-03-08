@@ -1,33 +1,24 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangelogCategory } from '@lfx-changelog/shared';
-
 import { categorizeActivity } from './categorize-activity.helper';
 
+import type { ActivityCategory } from './categorize-activity.helper';
 import type { GitHubCommit, GitHubPullRequest } from '@lfx-changelog/shared';
 
 type StoredRelease = { tagName: string; name: string | null; body: string | null; repository: { fullName: string } };
 
-const CATEGORY_LABELS: Record<ChangelogCategory, string> = {
-  [ChangelogCategory.FEATURE]: 'Features',
-  [ChangelogCategory.BUGFIX]: 'Bug Fixes',
-  [ChangelogCategory.IMPROVEMENT]: 'Improvements',
-  [ChangelogCategory.SECURITY]: 'Security',
-  [ChangelogCategory.DEPRECATION]: 'Deprecations',
-  [ChangelogCategory.BREAKING_CHANGE]: 'Breaking Changes',
-  [ChangelogCategory.OTHER]: 'Other',
+const CATEGORY_LABELS: Record<ActivityCategory, string> = {
+  feature: 'Features',
+  bugfix: 'Bug Fixes',
+  improvement: 'Improvements',
+  security: 'Security',
+  deprecation: 'Deprecations',
+  breaking_change: 'Breaking Changes',
+  other: 'Other',
 };
 
-const CATEGORY_ORDER: ChangelogCategory[] = [
-  ChangelogCategory.BREAKING_CHANGE,
-  ChangelogCategory.FEATURE,
-  ChangelogCategory.IMPROVEMENT,
-  ChangelogCategory.BUGFIX,
-  ChangelogCategory.SECURITY,
-  ChangelogCategory.DEPRECATION,
-  ChangelogCategory.OTHER,
-];
+const CATEGORY_ORDER: ActivityCategory[] = ['breaking_change', 'feature', 'improvement', 'bugfix', 'security', 'deprecation', 'other'];
 
 /**
  * Builds a structured, categorized context string from commits, merged PRs, and stored releases.
@@ -61,7 +52,7 @@ export function buildActivityContext(commits: GitHubCommit[], mergedPRs: GitHubP
   }
 
   // ── Changes by Category (from PRs, prioritized over commits) ──
-  const categorizedItems = new Map<ChangelogCategory, string[]>();
+  const categorizedItems = new Map<ActivityCategory, string[]>();
   for (const cat of CATEGORY_ORDER) categorizedItems.set(cat, []);
 
   // Categorize merged PRs

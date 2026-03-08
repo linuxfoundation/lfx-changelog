@@ -131,13 +131,6 @@
 
       <lfx-input data-testid="changelog-editor-version-input" label="Version" placeholder="e.g., 2.5.0" [formControl]="versionControl" />
 
-      <lfx-select
-        data-testid="changelog-editor-category-select"
-        label="Category"
-        [options]="categoryOptions"
-        [formControl]="categoryControl"
-        placeholder="Select category..." />
-
       @if (isEditing() && canReassignAuthor()) {
         <div class="space-y-1.5">
           <label class="text-text-primary text-sm font-medium">Author</label>

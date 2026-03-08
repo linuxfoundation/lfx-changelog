@@ -52,3 +52,10 @@ test-results/
 .playwright-mcp
 apps/lfx-changelog/e2e/.auth/
 .env.e2e
+
+# Claude Code (keep settings.json and hooks/ committed, ignore local/personal files)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/plans/
+.claude/projects/
+.claude/memory/

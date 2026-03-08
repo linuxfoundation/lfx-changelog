@@ -29,16 +29,6 @@ enum ChangelogSource {
   automated
 }
 
-enum ChangelogCategory {
-  feature
-  bugfix
-  improvement
-  security
-  deprecation
-  breaking_change
-  other
-}
-
 enum AutoChangelogLockStatus {
   in_progress
   pending_rerun
@@ -138,7 +128,6 @@ model ChangelogEntry {
   description String
   version     String?
   source      ChangelogSource   @default(manual) @map("source")
-  category    ChangelogCategory? @map("category")
   status      ChangelogStatus   @default(draft)
   publishedAt DateTime?         @map("published_at")
   createdBy   String            @map("created_by")
