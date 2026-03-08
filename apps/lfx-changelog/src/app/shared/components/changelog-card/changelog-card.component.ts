@@ -5,8 +5,9 @@ import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
-import type { ChangelogEntryWithRelations, Product } from '@lfx-changelog/shared';
 import { format } from 'date-fns';
+
+import type { ChangelogEntryWithRelations, Product } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-changelog-card',

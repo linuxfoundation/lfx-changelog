@@ -170,11 +170,14 @@ export class ChangelogService {
     if (!existing) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'update', service: 'changelog' });
     }
+
+    const updateData: Record<string, unknown> = { ...data };
+
     let updated: PrismaChangelogEntry;
     try {
       updated = await prisma.changelogEntry.update({
         where: { id },
-        data: data as Prisma.ChangelogEntryUpdateInput,
+        data: updateData as Prisma.ChangelogEntryUpdateInput,
         include: { product: true, author: true },
       });
     } catch (error) {
