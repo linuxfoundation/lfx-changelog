@@ -19,6 +19,8 @@ import { ChangelogService } from '@services/changelog.service';
 import { DialogService } from '@services/dialog.service';
 import { ProductService } from '@services/product.service';
 import { ToastService } from '@services/toast.service';
+import { CategoryColorPipe } from '@shared/pipes/category-color.pipe';
+import { CategoryLabelPipe } from '@shared/pipes/category-label.pipe';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { MapGetPipe } from '@shared/pipes/map-get.pipe';
 import { ProductNamePipe } from '@shared/pipes/product-name.pipe';
@@ -38,6 +40,8 @@ import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.int
     SelectComponent,
     TableComponent,
     TableColumnDirective,
+    CategoryColorPipe,
+    CategoryLabelPipe,
     DateFormatPipe,
     MapGetPipe,
     ProductNamePipe,

@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
-import { ChangelogStatus, Prisma, ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
+import { ChangelogCategory as ChangelogCategoryEnum, ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
+import { ChangelogCategory, ChangelogStatus, Prisma, ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
 
 import { ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
@@ -39,6 +39,7 @@ export class ChangelogService {
             title: true,
             description: true,
             version: true,
+            category: true,
             status: true,
             publishedAt: true,
             createdAt: true,
@@ -109,6 +110,7 @@ export class ChangelogService {
         title: true,
         description: true,
         version: true,
+        category: true,
         status: true,
         publishedAt: true,
         createdAt: true,
@@ -128,12 +130,14 @@ export class ChangelogService {
     title: string;
     description: string;
     version?: string;
+    category?: string;
     status?: string;
     source?: string;
     createdBy: string;
   }): Promise<PrismaChangelogEntry> {
     const prisma = getPrismaClient();
     try {
+      const validCategories = Object.values(ChangelogCategoryEnum) as string[];
       const entry = await prisma.changelogEntry.create({
         data: {
           productId: data.productId,
@@ -142,6 +146,7 @@ export class ChangelogService {
           description: data.description,
           version: data.version,
           source: data.source === 'automated' ? 'automated' : 'manual',
+          category: data.category && validCategories.includes(data.category) ? (data.category as ChangelogCategory) : null,
           status: (Object.values(ChangelogStatusEnum) as string[]).includes(data.status || '') ? (data.status as ChangelogStatus) : 'draft',
           createdBy: data.createdBy,
         },
@@ -161,6 +166,7 @@ export class ChangelogService {
       title?: string;
       description?: string;
       version?: string;
+      category?: string | null;
       status?: string;
       createdBy?: string;
     }
@@ -170,11 +176,18 @@ export class ChangelogService {
     if (!existing) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'update', service: 'changelog' });
     }
+
+    const validCategories = Object.values(ChangelogCategoryEnum) as string[];
+    const updateData: Record<string, unknown> = { ...data };
+    if ('category' in data) {
+      updateData['category'] = data.category && validCategories.includes(data.category) ? (data.category as ChangelogCategory) : null;
+    }
+
     let updated: PrismaChangelogEntry;
     try {
       updated = await prisma.changelogEntry.update({
         where: { id },
-        data: data as Prisma.ChangelogEntryUpdateInput,
+        data: updateData as Prisma.ChangelogEntryUpdateInput,
         include: { product: true, author: true },
       });
     } catch (error) {

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
-import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
+import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, ChangelogCategory, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 import { z } from 'zod';
 
-import { AGENT_CONFIG, AGENT_SYSTEM_PROMPT } from '../constants/agent.constants';
+import { AGENT_CONFIG, AGENT_CRITIC_PROMPT, AGENT_SYSTEM_PROMPT } from '../constants/agent.constants';
 import { AgentServiceError } from '../errors';
 import { buildActivityContext } from '../helpers/activity-context.helper';
 import { serverLogger } from '../server-logger';
@@ -221,16 +221,19 @@ export class ChangelogAgentService {
       const activityContext = buildActivityContext(allCommits, allMergedPRs, storedReleases);
       const existingDraft = await this.changelogService.findAutomatedDraft(productId);
       const latestVersion = await this.changelogService.getLatestVersion(productId);
-      const product = await prisma.product.findUnique({ where: { id: productId }, select: { name: true, slug: true } });
+      const product = await prisma.product.findUnique({ where: { id: productId }, select: { name: true, slug: true, description: true } });
 
       // 7. Build user prompt
+      const totalActivities = allCommits.length + allMergedPRs.length;
       const userPrompt = this.buildUserPrompt({
         productName: product?.name || 'Unknown Product',
         productSlug: product?.slug || 'unknown',
+        productDescription: product?.description || null,
         sinceDate,
         existingDraftId: existingDraft?.id || null,
         latestVersion,
         activityContext,
+        totalActivities,
       });
 
       // 8. Create MCP tools (pass jobId for precise linking)
@@ -414,20 +417,24 @@ export class ChangelogAgentService {
   private buildUserPrompt(context: {
     productName: string;
     productSlug: string;
+    productDescription: string | null;
     sinceDate: string;
     existingDraftId: string | null;
     latestVersion: string | null;
     activityContext: string;
+    totalActivities: number;
   }): string {
     const lines = [
-      `Product: ${context.productName}`,
+      `Product: ${context.productName} (${context.productSlug})`,
+      context.productDescription ? `Product description: ${context.productDescription}` : '',
       `Since: ${context.sinceDate}`,
       context.existingDraftId ? `Existing draft ID: ${context.existingDraftId} (use update_changelog_draft)` : 'No existing draft (use create_changelog_draft)',
       context.latestVersion ? `Latest version: ${context.latestVersion}` : 'No previous version — use 1.0.0 as the starting version',
+      context.totalActivities < 3 ? 'Note: Trivial activity — skip the critic validation step.' : '',
       '',
       context.activityContext,
     ];
-    return lines.join('\n');
+    return lines.filter(Boolean).join('\n');
   }
 
   private createMcpTools(jobId: string, productId: string, botUserId: string, productSlug: string) {
@@ -446,11 +453,14 @@ export class ChangelogAgentService {
         const entries = result.data.map((e) => ({
           title: e.title,
           version: e.version,
+          category: (e as { category?: string }).category ?? null,
           description: e.description?.slice(0, 500),
         }));
         return { content: [{ type: 'text' as const, text: JSON.stringify(entries, null, 2) }] };
       }
     );
+
+    const categoryValues = Object.values(ChangelogCategory) as [string, ...string[]];
 
     const createChangelogDraft = tool(
       'create_changelog_draft',
@@ -459,6 +469,7 @@ export class ChangelogAgentService {
         title: z.string().max(60),
         version: z.string(),
         description: z.string(),
+        category: z.enum(categoryValues).optional(),
       },
       async (args) => {
         const titleSlug = slugify(args.title);
@@ -471,6 +482,7 @@ export class ChangelogAgentService {
           title: args.title,
           description: args.description,
           version: args.version,
+          category: args.category,
           source: 'automated',
           createdBy: botUserId,
         });
@@ -496,12 +508,14 @@ export class ChangelogAgentService {
         title: z.string().max(60).optional(),
         version: z.string().optional(),
         description: z.string().optional(),
+        category: z.enum(categoryValues).optional(),
       },
       async (args) => {
         const updateData: Record<string, string> = {};
         if (args.title) updateData['title'] = args.title;
         if (args.version) updateData['version'] = args.version;
         if (args.description) updateData['description'] = args.description;
+        if (args.category) updateData['category'] = args.category;
 
         if (args.title) {
           const titleSlug = slugify(args.title);
@@ -530,9 +544,76 @@ export class ChangelogAgentService {
       return { content: [{ type: 'text' as const, text: JSON.stringify({ latestVersion: latest, suggestedNextVersion: next }) }] };
     });
 
+    const validateChangelogDraft = tool(
+      'validate_changelog_draft',
+      'Run a quality review on a saved draft. Returns scores and optional revision instructions. Skip for trivial activity (<3 commits/PRs).',
+      { draftId: z.string().uuid() },
+      async (args) => {
+        const prisma = getPrismaClient();
+        const draft = await prisma.changelogEntry.findUnique({
+          where: { id: args.draftId },
+          select: { title: true, description: true, version: true, category: true },
+        });
+        if (!draft) {
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Draft not found' }) }] };
+        }
+
+        // Derive API config
+        const aiApiUrl = process.env['AI_API_URL'] || '';
+        const baseUrl = aiApiUrl.replace(/\/chat\/completions$/, '');
+        const apiKey = process.env['LITELLM_API_KEY'] || '';
+
+        if (!baseUrl || !apiKey) {
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Missing AI config for critic' }) }] };
+        }
+
+        const criticPrompt = [
+          `Draft entry:`,
+          `Title: ${draft.title}`,
+          `Version: ${draft.version}`,
+          `Category: ${draft.category ?? 'none'}`,
+          `Description:\n${draft.description}`,
+        ].join('\n');
+
+        try {
+          let criticResponse = '';
+          for await (const message of query({
+            prompt: criticPrompt,
+            options: {
+              systemPrompt: AGENT_CRITIC_PROMPT,
+              model: AGENT_CONFIG.MODEL,
+              maxTurns: 1,
+              allowedTools: [],
+              permissionMode: 'bypassPermissions',
+              allowDangerouslySkipPermissions: true,
+              env: {
+                PATH: process.env['PATH'] || '/usr/local/bin:/usr/bin:/bin',
+                HOME: process.env['HOME'] || '/tmp',
+                NODE_EXTRA_CA_CERTS: process.env['NODE_EXTRA_CA_CERTS'],
+                ANTHROPIC_BASE_URL: baseUrl,
+                ANTHROPIC_API_KEY: apiKey,
+              },
+            },
+          })) {
+            if (message.type === 'assistant') {
+              for (const block of message.message.content) {
+                if (block.type === 'text') criticResponse += block.text;
+              }
+            }
+          }
+
+          return { content: [{ type: 'text' as const, text: criticResponse }] };
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : 'Critic query failed';
+          serverLogger.warn({ err, draftId: args.draftId }, 'Critic validation failed');
+          return { content: [{ type: 'text' as const, text: JSON.stringify({ error: errorMsg }) }] };
+        }
+      }
+    );
+
     return createSdkMcpServer({
       name: 'changelog-tools',
-      tools: [searchPastChangelogs, createChangelogDraft, updateChangelogDraft, getLatestVersion],
+      tools: [searchPastChangelogs, createChangelogDraft, updateChangelogDraft, getLatestVersion, validateChangelogDraft],
     });
   }
 }

@@ -12,12 +12,14 @@ import { ProductPillComponent } from '@components/product-pill/product-pill.comp
 import { AuthService } from '@services/auth.service';
 import { ChangelogService } from '@services/changelog.service';
 import { DialogService } from '@services/dialog.service';
+import { CategoryColorPipe } from '@shared/pipes/category-color.pipe';
+import { CategoryLabelPipe } from '@shared/pipes/category-label.pipe';
 import { format } from 'date-fns';
 import { catchError, of, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-changelog-detail',
-  imports: [MarkdownRendererComponent, ProductPillComponent, CardComponent, RouterLink, ButtonComponent],
+  imports: [MarkdownRendererComponent, ProductPillComponent, CardComponent, RouterLink, ButtonComponent, CategoryColorPipe, CategoryLabelPipe],
   templateUrl: './changelog-detail.component.html',
   styleUrl: './changelog-detail.component.css',
 })

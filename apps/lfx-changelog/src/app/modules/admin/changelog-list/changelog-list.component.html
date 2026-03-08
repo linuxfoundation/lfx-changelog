@@ -79,6 +79,16 @@
       <lfx-status-badge [status]="entry.status" />
     </ng-template>
 
+    <ng-template lfxColumn="Category" let-entry>
+      @if (entry.category) {
+        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium" [class]="entry.category | categoryColor">
+          {{ entry.category | categoryLabel }}
+        </span>
+      } @else {
+        <span class="text-text-muted text-sm">—</span>
+      }
+    </ng-template>
+
     <ng-template lfxColumn="Version" let-entry>
       <span class="text-text-secondary text-sm">{{ entry.version ? 'v' + entry.version : '—' }}</span>
     </ng-template>

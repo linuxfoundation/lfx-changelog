@@ -39,7 +39,7 @@ export {
 export { ApiKeySchema, CreateApiKeyRequestSchema, CreateApiKeyResponseSchema } from './api-key.schema.js';
 export { createApiResponseSchema, createPaginatedResponseSchema } from './api-response.schema.js';
 export { AuthContextSchema, AuthUserSchema } from './auth.schema.js';
-export { ChangelogEntrySchema, ChangelogEntryWithRelationsSchema } from './changelog-entry.schema.js';
+export { ChangelogCategorySchema, ChangelogEntrySchema, ChangelogEntryWithRelationsSchema } from './changelog-entry.schema.js';
 export { MarkViewedRequestSchema, MarkViewedResponseSchema, UnseenCountSchema, UnseenQuerySchema } from './changelog-view.schema.js';
 export {
   AddChatMessageParamsSchema,
