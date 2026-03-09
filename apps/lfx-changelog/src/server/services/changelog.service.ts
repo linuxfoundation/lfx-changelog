@@ -73,16 +73,27 @@ export class ChangelogService {
     if (params.query) {
       where.AND = [{ OR: [{ title: { contains: params.query, mode: 'insensitive' } }, { description: { contains: params.query, mode: 'insensitive' } }] }];
     }
-    if (params.status) {
+    // Draft-visibility scoping: non-super-admins see all published entries but only drafts for their products.
+    // When both a status filter and accessibleProductIds are present, the status filter is folded into the
+    // visibility clause so the two don't conflict (top-level `where.status` would clash with `where.OR`).
+    if (params.accessibleProductIds) {
+      const validStatus =
+        params.status && (Object.values(ChangelogStatusEnum) as string[]).includes(params.status) ? (params.status as ChangelogStatus) : undefined;
+
+      if (validStatus === ChangelogStatus.published) {
+        where.status = ChangelogStatus.published;
+      } else if (validStatus === ChangelogStatus.draft) {
+        where.status = ChangelogStatus.draft;
+        where.productId = { ...(where.productId as object), in: params.accessibleProductIds };
+      } else {
+        // No status filter — show published + own drafts
+        where.OR = [{ status: ChangelogStatus.published }, { status: ChangelogStatus.draft, productId: { in: params.accessibleProductIds } }];
+      }
+    } else if (params.status) {
       const validStatuses = Object.values(ChangelogStatusEnum) as string[];
       if (validStatuses.includes(params.status)) {
         where.status = params.status as ChangelogStatus;
       }
-    }
-
-    // Non-super-admins: show all published entries but only drafts for their products
-    if (params.accessibleProductIds) {
-      where.OR = [{ status: ChangelogStatus.published }, { status: ChangelogStatus.draft, productId: { in: params.accessibleProductIds } }];
     }
 
     const [data, total] = await Promise.all([

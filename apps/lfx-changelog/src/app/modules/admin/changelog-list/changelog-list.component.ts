@@ -184,7 +184,7 @@ export class ChangelogListComponent {
         const items: DropdownMenuItem[] = [];
 
         if (entry.status === ChangelogStatus.PUBLISHED) {
-          items.push({ label: 'View', routerLink: ['/entry', entry.slug ?? ''] });
+          items.push({ label: 'View', routerLink: ['/entry', entry.slug || entry.id] });
         }
 
         if (entry.status === ChangelogStatus.PUBLISHED && canEdit) {

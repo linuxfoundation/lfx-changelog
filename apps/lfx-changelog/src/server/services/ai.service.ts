@@ -618,13 +618,23 @@ export class AiService {
 
   private async chatGetChangelogDetail(args: GetChangelogDetailToolArgs, callerContext: ChatCallerContext): Promise<string> {
     const { accessLevel, accessibleProductIds } = callerContext;
-    const entry = accessLevel === 'admin' ? await this.changelogService.findById(args.id) : await this.changelogService.findPublishedByIdentifier(args.id);
 
-    // Non-super-admins cannot view drafts for products they don't have access to
-    if (entry.status === 'draft' && accessibleProductIds && 'productId' in entry && !accessibleProductIds.includes(entry.productId)) {
-      return JSON.stringify({ error: 'You do not have access to this draft' });
+    if (accessLevel === 'admin') {
+      const entry = await this.changelogService.findById(args.id);
+
+      // Non-super-admins cannot view drafts for products they don't have access to
+      if (entry.status === 'draft' && accessibleProductIds && !accessibleProductIds.includes(entry.productId)) {
+        return JSON.stringify({ error: 'You do not have access to this draft' });
+      }
+
+      return this.serializeChangelogEntry(entry);
     }
 
+    const entry = await this.changelogService.findPublishedByIdentifier(args.id);
+    return this.serializeChangelogEntry(entry);
+  }
+
+  private serializeChangelogEntry(entry: { id: string; title: string; description: string; version: string | null; status: string; publishedAt: unknown; createdAt: unknown; product?: unknown }): string {
     return JSON.stringify({
       id: entry.id,
       title: entry.title,
@@ -633,7 +643,7 @@ export class AiService {
       status: entry.status,
       publishedAt: entry.publishedAt,
       createdAt: entry.createdAt,
-      product: 'product' in entry ? entry.product : undefined,
+      product: entry.product,
     });
   }
 }

@@ -224,6 +224,10 @@ export class ChangelogController {
     const isSuperAdmin = userRoles.some((a) => a.role === UserRole.SUPER_ADMIN);
     if (isSuperAdmin) return undefined;
 
+    // A role with productId === null means "all products" (global editor/product admin)
+    const hasGlobalRole = userRoles.some((a) => a.productId === null && (a.role === UserRole.EDITOR || a.role === UserRole.PRODUCT_ADMIN));
+    if (hasGlobalRole) return undefined;
+
     return userRoles.filter((a) => a.productId !== null).map((a) => a.productId as string);
   }
 
