@@ -301,7 +301,7 @@ export class ChangelogAgentService {
                 const entry: ProgressLogEntry = {
                   timestamp: new Date().toISOString(),
                   type: 'text',
-                  summary: block.text.slice(0, 200),
+                  summary: block.text.slice(0, 500),
                 };
                 progressLog.push(entry);
                 agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
@@ -629,9 +629,19 @@ export class ChangelogAgentService {
 
   /**
    * Walks the progress log to find critic scores from validate_changelog_draft.
-   * Looks for a text entry immediately after the tool call that contains JSON scores.
+   * Looks for a text entry after the tool call that contains valid JSON scores.
    */
   private async recordScoresFromProgressLog(jobId: string, productId: string, progressLog: ProgressLogEntry[]): Promise<void> {
+    const CriticResponseSchema = z.object({
+      scores: z.object({
+        accuracy: z.number().min(1).max(5),
+        clarity: z.number().min(1).max(5),
+        tone: z.number().min(1).max(5),
+        completeness: z.number().min(1).max(5),
+      }),
+      overall: z.number().min(1).max(5),
+    });
+
     for (let i = 0; i < progressLog.length; i++) {
       const entry = progressLog[i];
       if (entry.type !== 'tool_call' || entry.tool !== 'validate_changelog_draft') continue;
@@ -641,15 +651,11 @@ export class ChangelogAgentService {
         const nextEntry = progressLog[j];
         if (nextEntry.type === 'text' && nextEntry.summary) {
           try {
-            const parsed = JSON.parse(nextEntry.summary) as { scores?: { accuracy: number; clarity: number; tone: number; completeness: number }; overall?: number };
-            if (parsed.scores && parsed.overall !== undefined) {
-              await this.agentMemoryService.recordQualityScores(jobId, productId, {
-                accuracy: parsed.scores.accuracy,
-                clarity: parsed.scores.clarity,
-                tone: parsed.scores.tone,
-                completeness: parsed.scores.completeness,
-                overall: parsed.overall,
-              });
+            const raw = JSON.parse(nextEntry.summary);
+            const parseResult = CriticResponseSchema.safeParse(raw);
+            if (parseResult.success) {
+              const { scores, overall } = parseResult.data;
+              await this.agentMemoryService.recordQualityScores(jobId, productId, { ...scores, overall });
               return;
             }
           } catch {

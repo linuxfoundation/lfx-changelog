@@ -16,12 +16,12 @@ export class AgentMemoryService {
   public async getMemoryForProduct(productId: string): Promise<AgentMemoryData> {
     const prisma = getPrismaClient();
     const record = await prisma.agentMemory.findUnique({ where: { productId } });
-    if (!record) return { ...EMPTY_AGENT_MEMORY };
+    if (!record) return structuredClone(EMPTY_AGENT_MEMORY);
 
     const parseResult = AgentMemoryDataSchema.safeParse(record.memory);
     if (!parseResult.success) {
       serverLogger.warn({ productId, errors: parseResult.error.issues }, 'Invalid agent memory JSON — returning default');
-      return { ...EMPTY_AGENT_MEMORY };
+      return structuredClone(EMPTY_AGENT_MEMORY);
     }
     return parseResult.data;
   }
@@ -68,10 +68,12 @@ export class AgentMemoryService {
     if (originalDraft.title === published.title && originalDraft.description === published.description) {
       serverLogger.debug({ changelogId }, 'No corrections detected — original matches published');
 
-      // Still record wasEdited = false for quality tracking
+      // Still record wasEdited = false for quality tracking, only persist if a score was updated
       const memory = await this.getMemoryForProduct(productId);
-      this.markLatestScoreUnedited(memory, agentJob.id);
-      await this.saveMemory(productId, memory);
+      const hadScore = this.markLatestScoreUnedited(memory, agentJob.id);
+      if (hadScore) {
+        await this.saveMemory(productId, memory);
+      }
       return;
     }
 
@@ -243,22 +245,24 @@ export class AgentMemoryService {
     });
   }
 
-  private markLatestScoreEdited(memory: AgentMemoryData, jobId: string): void {
+  private markLatestScoreEdited(memory: AgentMemoryData, jobId: string): boolean {
     for (let i = memory.qualityScores.length - 1; i >= 0; i--) {
       if (memory.qualityScores[i].jobId === jobId) {
         memory.qualityScores[i].wasEdited = true;
-        break;
+        return true;
       }
     }
+    return false;
   }
 
-  private markLatestScoreUnedited(memory: AgentMemoryData, jobId: string): void {
+  private markLatestScoreUnedited(memory: AgentMemoryData, jobId: string): boolean {
     for (let i = memory.qualityScores.length - 1; i >= 0; i--) {
       if (memory.qualityScores[i].jobId === jobId) {
         memory.qualityScores[i].wasEdited = false;
-        break;
+        return true;
       }
     }
+    return false;
   }
 
   private identifyWeakAreas(scores: QualityScoreEntry[]): string[] {
