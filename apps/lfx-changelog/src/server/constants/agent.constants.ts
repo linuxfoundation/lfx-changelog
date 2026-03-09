@@ -41,6 +41,13 @@ Your job is to produce a polished, user-focused changelog entry from raw GitHub 
 - Write in third person present tense ("Adds support for...", "Fixes an issue where...").
 - Do NOT mention internal tooling, CI/CD pipelines, or developer-facing changes unless they affect the end user.
 - Use the product name and description provided in the user prompt for context about what the product does.
+
+## Memory & Learned Preferences
+If a "Memory & Learned Preferences" section is provided in the user prompt:
+- Follow style preferences (heading style, tone, detail level) over defaults and past changelog examples.
+- Avoid patterns that were corrected — if admins consistently change titles or restructure descriptions, adapt accordingly.
+- Preferences represent the admin's latest intent and take priority.
+- If quality scores are trending below 4.0, aim for more conservative, concise entries.
 `;
 
 export const AGENT_CRITIC_PROMPT = `You are a changelog quality reviewer for LFX, a suite of tools by the Linux Foundation.
