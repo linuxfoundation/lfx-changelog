@@ -4,6 +4,7 @@
 import { z } from 'zod';
 
 import { AUTH_ERROR } from '../constants.js';
+import { errorResult, jsonResult } from '../helpers.js';
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
@@ -24,22 +25,15 @@ export function registerAdminSearchTools(server: McpServer, apiClient: ApiClient
       title: 'Reindex Changelogs (Admin)',
       description:
         'Trigger a full reindex of all published changelog entries into OpenSearch. Requires super_admin authentication. This deletes the existing index and rebuilds it from the database. Use when search results are stale or after bulk data changes.',
-      outputSchema: reindexResponseSchema.shape,
+      outputSchema: reindexResponseSchema,
     },
     async () => {
       if (!apiClient.isAuthenticated) return AUTH_ERROR;
 
       try {
-        const result = await apiClient.post('/api/opensearch/reindex', {});
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-          structuredContent: result as Record<string, unknown>,
-        };
+        return jsonResult(await apiClient.post('/api/opensearch/reindex', {}));
       } catch (error) {
-        return {
-          content: [{ type: 'text' as const, text: `Error reindexing changelogs: ${error instanceof Error ? error.message : String(error)}` }],
-          isError: true,
-        };
+        return errorResult('Error reindexing changelogs', error);
       }
     }
   );
