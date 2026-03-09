@@ -13,7 +13,8 @@ export interface Tab {
 
 export interface DropdownMenuItem {
   label: string;
-  action: () => void;
+  action?: () => void;
+  routerLink?: string[];
   icon?: string;
   danger?: boolean;
 }

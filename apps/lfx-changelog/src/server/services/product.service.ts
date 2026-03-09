@@ -26,13 +26,10 @@ export class ProductService {
     }
   }
 
-  public async findAll(accessibleProductIds?: string[]): Promise<PrismaProduct[]> {
+  public async findAll(): Promise<PrismaProduct[]> {
     const prisma = getPrismaClient();
     try {
-      return await prisma.product.findMany({
-        where: accessibleProductIds ? { id: { in: accessibleProductIds } } : undefined,
-        orderBy: { name: 'asc' },
-      });
+      return await prisma.product.findMany({ orderBy: { name: 'asc' } });
     } catch (error) {
       serverLogger.error({ err: error, operation: 'findAll', service: 'product' }, 'Prisma query failed');
       throw error;

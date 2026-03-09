@@ -180,14 +180,22 @@ export class ChangelogListComponent {
       const menuMap = new Map<string, DropdownMenuItem[]>();
 
       for (const entry of entries) {
+        const canEdit = this.authService.canEditProduct(entry.productId);
         const items: DropdownMenuItem[] = [];
 
         if (entry.status === ChangelogStatus.PUBLISHED) {
+          items.push({ label: 'View', routerLink: ['/entry', entry.slug ?? ''] });
+        }
+
+        if (entry.status === ChangelogStatus.PUBLISHED && canEdit) {
           items.push({ label: 'Post to Slack', action: () => this.openSlackDialog(entry) });
           items.push({ label: 'Unpublish', action: () => this.confirmUnpublish(entry) });
         }
 
-        items.push({ label: 'Delete', action: () => this.confirmDelete(entry), danger: true });
+        if (canEdit) {
+          items.push({ label: 'Delete', action: () => this.confirmDelete(entry), danger: true });
+        }
+
         menuMap.set(entry.id, items);
       }
 
@@ -197,7 +205,7 @@ export class ChangelogListComponent {
 
   private initProductOptions(): Signal<SelectOption[]> {
     return computed(() => [
-      { label: this.isSuperAdmin() ? 'All Products' : 'All My Products', value: '' },
+      { label: 'All Products', value: '' },
       ...this.products()
         .filter((p) => p.isActive)
         .map((p) => ({ label: p.name, value: p.id })),

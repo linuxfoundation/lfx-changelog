@@ -57,6 +57,15 @@ export class ChangelogController {
   public async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const entry = await this.changelogService.findById(req.params['id'] as string);
+
+      // Non-super-admins cannot view drafts for products they don't have access to
+      if (entry.status === 'draft') {
+        const accessibleProductIds = this.getAccessibleProductIds(req);
+        if (accessibleProductIds && !accessibleProductIds.includes(entry.productId)) {
+          throw new AuthorizationError('You do not have access to this draft', { operation: 'getById', service: 'changelog' });
+        }
+      }
+
       res.json({ success: true, data: entry });
     } catch (error) {
       next(error);

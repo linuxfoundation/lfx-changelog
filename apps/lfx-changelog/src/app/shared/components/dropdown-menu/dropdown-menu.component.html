@@ -1,6 +1,41 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="inline-block" (click)="toggle($event)">
+<div class="inline-block" cdkOverlayOrigin #trigger="cdkOverlayOrigin" (click)="toggle()">
   <ng-content />
 </div>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="trigger"
+  [cdkConnectedOverlayOpen]="isOpen()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="close()"
+  (detach)="close()">
+  <div class="animate-select-dropdown-in border-border bg-surface min-w-[160px] rounded-lg border py-1 shadow-lg">
+    @for (item of items(); track item.label) {
+      @if (item.routerLink) {
+        <a
+          [routerLink]="item.routerLink"
+          class="hover:bg-surface-alt flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors"
+          [class.text-red-500]="item.danger"
+          [class.hover:text-red-600]="item.danger"
+          [class.text-text-primary]="!item.danger"
+          (click)="close()">
+          {{ item.label }}
+        </a>
+      } @else {
+        <button
+          class="hover:bg-surface-alt flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors"
+          [class.text-red-500]="item.danger"
+          [class.hover:text-red-600]="item.danger"
+          [class.text-text-primary]="!item.danger"
+          (click)="onItemClick(item)">
+          {{ item.label }}
+        </button>
+      }
+    }
+  </div>
+</ng-template>

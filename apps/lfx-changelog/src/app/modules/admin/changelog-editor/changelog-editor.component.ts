@@ -93,6 +93,11 @@ export class ChangelogEditorComponent {
   protected readonly isDraft = computed(() => this.existingEntry()?.status === ChangelogStatus.DRAFT);
   protected readonly isAutomatedEntry = computed(() => this.existingEntry()?.source === ChangelogSource.AUTOMATED);
   protected readonly canReassignAuthor = computed(() => this.isSuperAdmin() || this.isAutomatedEntry());
+  protected readonly canEdit = computed(() => {
+    const entry = this.existingEntry();
+    if (!entry) return true; // New entries — user can create
+    return this.authService.canEditProduct(entry.productId);
+  });
 
   protected readonly isGenerating = computed(() => this.aiService.state().generating);
   protected readonly generationStatus = computed(() => this.aiService.state().status);

@@ -69,21 +69,20 @@ export class ChangelogService {
     const { page, limit, skip } = this.sanitizePagination(params);
 
     const where: Prisma.ChangelogEntryWhereInput = {};
-    if (params.accessibleProductIds) {
-      // Scope to accessible products; if a specific productId was also requested, intersect
-      const allowed = params.productId ? params.accessibleProductIds.filter((id) => id === params.productId) : params.accessibleProductIds;
-      where.productId = { in: allowed };
-    } else if (params.productId) {
-      where.productId = params.productId;
-    }
+    if (params.productId) where.productId = params.productId;
     if (params.query) {
-      where.OR = [{ title: { contains: params.query, mode: 'insensitive' } }, { description: { contains: params.query, mode: 'insensitive' } }];
+      where.AND = [{ OR: [{ title: { contains: params.query, mode: 'insensitive' } }, { description: { contains: params.query, mode: 'insensitive' } }] }];
     }
     if (params.status) {
       const validStatuses = Object.values(ChangelogStatusEnum) as string[];
       if (validStatuses.includes(params.status)) {
         where.status = params.status as ChangelogStatus;
       }
+    }
+
+    // Non-super-admins: show all published entries but only drafts for their products
+    if (params.accessibleProductIds) {
+      where.OR = [{ status: ChangelogStatus.published }, { status: ChangelogStatus.draft, productId: { in: params.accessibleProductIds } }];
     }
 
     const [data, total] = await Promise.all([
