@@ -7,10 +7,12 @@
       <h1 data-testid="product-management-heading" class="font-display text-text-primary text-2xl font-bold">Products</h1>
       <p class="text-text-secondary mt-1">Manage LFX products for changelog categorization.</p>
     </div>
-    <lfx-button data-testid="product-management-add-btn" variant="primary" (clicked)="openAdd()">
-      <i class="fa-solid fa-plus text-xs"></i>
-      Add Product
-    </lfx-button>
+    @if (isSuperAdmin()) {
+      <lfx-button data-testid="product-management-add-btn" variant="primary" (clicked)="openAdd()">
+        <i class="fa-solid fa-plus text-xs"></i>
+        Add Product
+      </lfx-button>
+    }
   </div>
 
   <lfx-table class="animate-rise-in block [animation-delay:150ms]" [data]="products()" [loading]="loading()" testId="product-management-table">
@@ -39,15 +41,17 @@
       }
     </ng-template>
 
-    <ng-template lfxColumn="" let-product>
-      <lfx-dropdown-menu [items]="(productMenuItems() | mapGet: product.id) ?? []">
-        <button
-          data-testid="product-management-actions-btn"
-          aria-label="Actions"
-          class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
-          <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
-        </button>
-      </lfx-dropdown-menu>
-    </ng-template>
+    @if (isSuperAdmin()) {
+      <ng-template lfxColumn="" let-product>
+        <lfx-dropdown-menu [items]="(productMenuItems() | mapGet: product.id) ?? []">
+          <button
+            data-testid="product-management-actions-btn"
+            aria-label="Actions"
+            class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
+            <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+          </button>
+        </lfx-dropdown-menu>
+      </ng-template>
+    }
   </lfx-table>
 </div>

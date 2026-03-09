@@ -144,4 +144,5 @@ export class ProductController {
       next(error);
     }
   }
+
 }

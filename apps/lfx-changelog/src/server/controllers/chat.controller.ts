@@ -11,7 +11,7 @@ import { ChatConversationService } from '../services/chat-conversation.service';
 import type { ChatAccessLevel, ChatSSEEventType, OpenAIToolCall, OpenAIToolChatMessage, SendChatMessageRequest } from '@lfx-changelog/shared';
 import type { ChatMessage as PrismaChatMessage, UserRoleAssignment } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
-import type { FlushableResponse } from '../interfaces/chat.interface';
+import type { ChatCallerContext, FlushableResponse } from '../interfaces/chat.interface';
 
 export class ChatController {
   private readonly aiService = new AiService();
@@ -20,15 +20,15 @@ export class ChatController {
   public async sendMessage(req: Request, res: Response): Promise<void> {
     const { conversationId, message } = req.body as SendChatMessageRequest;
     const userId = req.dbUser?.id ?? null;
-    const accessLevel = this.resolveAccessLevel(req);
+    const callerContext = this.buildCallerContext(req);
 
-    await this.handleChatStream(req, res, { conversationId, message, accessLevel, userId });
+    await this.handleChatStream(req, res, { conversationId, message, callerContext, userId });
   }
 
   public async sendPublicMessage(req: Request, res: Response): Promise<void> {
     const { conversationId, message } = req.body as SendChatMessageRequest;
 
-    await this.handleChatStream(req, res, { conversationId, message, accessLevel: 'public', userId: null });
+    await this.handleChatStream(req, res, { conversationId, message, callerContext: { accessLevel: 'public' }, userId: null });
   }
 
   public async listConversations(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -78,9 +78,10 @@ export class ChatController {
   private async handleChatStream(
     req: Request,
     res: Response,
-    params: { conversationId?: string; message: string; accessLevel: ChatAccessLevel; userId: string | null }
+    params: { conversationId?: string; message: string; callerContext: ChatCallerContext; userId: string | null }
   ): Promise<void> {
-    const { message, accessLevel, userId } = params;
+    const { message, callerContext, userId } = params;
+    const { accessLevel } = callerContext;
     const flushableRes = res as FlushableResponse;
 
     // SSE headers — Content-Encoding: identity bypasses compression middleware
@@ -152,7 +153,7 @@ export class ChatController {
       const conversationMessages = this.buildAiMessages(fullConversation.messages);
 
       // Run the agentic loop and stream results
-      for await (const event of this.aiService.streamChatWithPersistence(conversationMessages, accessLevel, abortController.signal)) {
+      for await (const event of this.aiService.streamChatWithPersistence(conversationMessages, callerContext, abortController.signal)) {
         if (clientDisconnected) return;
 
         if (event.type === 'done' && event._newMessages) {
@@ -190,11 +191,19 @@ export class ChatController {
     }
   }
 
-  /** Derive access level from the user's role assignments — any editor+ gets admin chat access. */
-  private resolveAccessLevel(req: Request): ChatAccessLevel {
+  /** Build caller context from the user's role assignments for the AI service. */
+  private buildCallerContext(req: Request): ChatCallerContext {
     const roles = (req.dbUser?.userRoleAssignments as UserRoleAssignment[] | undefined) ?? [];
-    const isAdmin = roles.some((r) => r.role === UserRole.SUPER_ADMIN || r.role === UserRole.PRODUCT_ADMIN || r.role === UserRole.EDITOR);
-    return isAdmin ? 'admin' : 'public';
+    const isSuperAdmin = roles.some((r) => r.role === UserRole.SUPER_ADMIN);
+    const isAdmin = isSuperAdmin || roles.some((r) => r.role === UserRole.PRODUCT_ADMIN || r.role === UserRole.EDITOR);
+    const accessLevel: ChatAccessLevel = isAdmin ? 'admin' : 'public';
+
+    // Super admins and global editors/product admins (productId === null) see all drafts
+    const hasGlobalRole =
+      isSuperAdmin || roles.some((r) => r.productId === null && (r.role === UserRole.PRODUCT_ADMIN || r.role === UserRole.EDITOR));
+    const accessibleProductIds = hasGlobalRole ? undefined : roles.filter((r) => r.productId !== null).map((r) => r.productId as string);
+
+    return { accessLevel, accessibleProductIds };
   }
 
   /** Convert Prisma DB messages to OpenAI-compatible messages for the AI context window. */

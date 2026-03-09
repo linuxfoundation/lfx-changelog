@@ -13,7 +13,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
-import { ChangelogStatus, UserRole } from '@lfx-changelog/shared';
+import { ChangelogStatus } from '@lfx-changelog/shared';
 import { AuthService } from '@services/auth.service';
 import { ChangelogService } from '@services/changelog.service';
 import { DialogService } from '@services/dialog.service';
@@ -63,7 +63,7 @@ export class ChangelogListComponent {
   protected readonly loading = signal(true);
   protected readonly reindexing = signal(false);
   protected readonly reindexResult = signal<{ indexed: number; errors: number } | null>(null);
-  protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
+  protected readonly isSuperAdmin = this.authService.isSuperAdmin;
 
   protected readonly productOptions: Signal<SelectOption[]> = this.initProductOptions();
   protected readonly statusOptions: SelectOption[] = [
@@ -180,14 +180,22 @@ export class ChangelogListComponent {
       const menuMap = new Map<string, DropdownMenuItem[]>();
 
       for (const entry of entries) {
+        const canEdit = this.authService.canEditProduct(entry.productId);
         const items: DropdownMenuItem[] = [];
 
         if (entry.status === ChangelogStatus.PUBLISHED) {
+          items.push({ label: 'View', routerLink: ['/entry', entry.slug || entry.id] });
+        }
+
+        if (entry.status === ChangelogStatus.PUBLISHED && canEdit) {
           items.push({ label: 'Post to Slack', action: () => this.openSlackDialog(entry) });
           items.push({ label: 'Unpublish', action: () => this.confirmUnpublish(entry) });
         }
 
-        items.push({ label: 'Delete', action: () => this.confirmDelete(entry), danger: true });
+        if (canEdit) {
+          items.push({ label: 'Delete', action: () => this.confirmDelete(entry), danger: true });
+        }
+
         menuMap.set(entry.id, items);
       }
 

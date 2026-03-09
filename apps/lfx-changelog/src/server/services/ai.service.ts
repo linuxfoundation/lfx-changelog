@@ -23,7 +23,6 @@ import { SearchService } from './search.service';
 import type {
   AiChangelogMetadata,
   AiSummaryResponse,
-  ChatAccessLevel,
   ChatSSEEvent,
   GetChangelogDetailToolArgs,
   OpenAIChatMessage,
@@ -37,7 +36,7 @@ import type {
   SearchChangelogsToolArgs,
   StreamDeltaChunk,
 } from '@lfx-changelog/shared';
-import type { StreamResult } from '../interfaces/chat.interface';
+import type { ChatCallerContext, StreamResult } from '../interfaces/chat.interface';
 
 export class AiService {
   private readonly productService = new ProductService();
@@ -223,13 +222,14 @@ export class AiService {
 
   public async *streamChatWithPersistence(
     conversationMessages: OpenAIToolChatMessage[],
-    accessLevel: ChatAccessLevel,
+    callerContext: ChatCallerContext,
     abortSignal?: AbortSignal
   ): AsyncGenerator<ChatSSEEvent & { _newMessages?: OpenAIToolChatMessage[] }> {
     if (!this.apiKey) {
       throw new AiServiceError('LITELLM_API_KEY is not configured', { operation: 'streamChatWithPersistence' });
     }
 
+    const { accessLevel } = callerContext;
     const systemPrompt = accessLevel === 'admin' ? CHAT_SYSTEM_PROMPT_ADMIN : CHAT_SYSTEM_PROMPT_PUBLIC;
     const tools = accessLevel === 'admin' ? CHAT_TOOLS_ADMIN : CHAT_TOOLS_PUBLIC;
 
@@ -255,7 +255,7 @@ export class AiService {
         for (const toolCall of result.toolCalls) {
           yield { type: 'tool_call', data: toolCall.function.name };
 
-          const toolResult = await this.executeChatTool(toolCall, accessLevel);
+          const toolResult = await this.executeChatTool(toolCall, callerContext);
 
           const toolMsg: OpenAIToolChatMessage = {
             role: 'tool',
@@ -281,8 +281,9 @@ export class AiService {
 
   // ── Chat tool execution ───────────────────────────
 
-  private async executeChatTool(toolCall: OpenAIToolCall, accessLevel: ChatAccessLevel): Promise<string> {
+  private async executeChatTool(toolCall: OpenAIToolCall, callerContext: ChatCallerContext): Promise<string> {
     const { name, arguments: argsString } = toolCall.function;
+    const { accessLevel } = callerContext;
 
     let parsedArgs: SearchChangelogsToolArgs | GetChangelogDetailToolArgs | Record<string, never> = {};
     try {
@@ -298,9 +299,9 @@ export class AiService {
         case 'list_products':
           return await this.chatListProducts(accessLevel);
         case 'search_changelogs':
-          return await this.chatSearchChangelogs(parsedArgs as SearchChangelogsToolArgs, accessLevel);
+          return await this.chatSearchChangelogs(parsedArgs as SearchChangelogsToolArgs, callerContext);
         case 'get_changelog_detail':
-          return await this.chatGetChangelogDetail(parsedArgs as GetChangelogDetailToolArgs, accessLevel);
+          return await this.chatGetChangelogDetail(parsedArgs as GetChangelogDetailToolArgs, callerContext);
         default:
           return JSON.stringify({ error: `Unknown tool: ${name}` });
       }
@@ -519,7 +520,7 @@ export class AiService {
     }
   }
 
-  private async chatListProducts(accessLevel: ChatAccessLevel): Promise<string> {
+  private async chatListProducts(accessLevel: ChatCallerContext['accessLevel']): Promise<string> {
     const products = accessLevel === 'admin' ? await this.productService.findAll() : await this.productService.findAllPublic();
 
     const summary = products.map((p) => ({
@@ -531,15 +532,15 @@ export class AiService {
     return JSON.stringify({ products: summary, count: summary.length });
   }
 
-  private async chatSearchChangelogs(args: SearchChangelogsToolArgs, accessLevel: ChatAccessLevel): Promise<string> {
+  private async chatSearchChangelogs(args: SearchChangelogsToolArgs, callerContext: ChatCallerContext): Promise<string> {
     const limit = args.limit || 10;
     const page = args.page || 1;
 
-    if (args.query && accessLevel === 'public' && this.searchService.getClient()) {
+    if (args.query && callerContext.accessLevel === 'public' && this.searchService.getClient()) {
       return this.chatSearchChangelogsViaOpenSearch(args.query, args.productId, page, limit);
     }
 
-    return this.chatSearchChangelogsViaDB(args, accessLevel, page, limit);
+    return this.chatSearchChangelogsViaDB(args, callerContext, page, limit);
   }
 
   private async chatSearchChangelogsViaOpenSearch(query: string, productId: string | undefined, page: number, limit: number): Promise<string> {
@@ -570,17 +571,19 @@ export class AiService {
       });
     } catch (error) {
       serverLogger.warn({ err: error }, 'OpenSearch search failed in chat tool, falling back to DB');
-      return this.chatSearchChangelogsViaDB({ query, productId, page, limit }, 'public', page, limit);
+      return this.chatSearchChangelogsViaDB({ query, productId, page, limit }, { accessLevel: 'public' }, page, limit);
     }
   }
 
-  private async chatSearchChangelogsViaDB(args: SearchChangelogsToolArgs, accessLevel: ChatAccessLevel, page: number, limit: number): Promise<string> {
+  private async chatSearchChangelogsViaDB(args: SearchChangelogsToolArgs, callerContext: ChatCallerContext, page: number, limit: number): Promise<string> {
+    const { accessLevel, accessibleProductIds } = callerContext;
     const params = {
       productId: args.productId,
       status: accessLevel === 'admin' ? args.status : undefined,
       query: args.query,
       page,
       limit,
+      accessibleProductIds,
     };
 
     const result = accessLevel === 'admin' ? await this.changelogService.findAll(params) : await this.changelogService.findPublished(params);
@@ -613,9 +616,25 @@ export class AiService {
     return text?.replace(/<\/?mark>/g, '');
   }
 
-  private async chatGetChangelogDetail(args: GetChangelogDetailToolArgs, accessLevel: ChatAccessLevel): Promise<string> {
-    const entry = accessLevel === 'admin' ? await this.changelogService.findById(args.id) : await this.changelogService.findPublishedByIdentifier(args.id);
+  private async chatGetChangelogDetail(args: GetChangelogDetailToolArgs, callerContext: ChatCallerContext): Promise<string> {
+    const { accessLevel, accessibleProductIds } = callerContext;
 
+    if (accessLevel === 'admin') {
+      const entry = await this.changelogService.findById(args.id);
+
+      // Non-super-admins cannot view drafts for products they don't have access to
+      if (entry.status === 'draft' && accessibleProductIds && !accessibleProductIds.includes(entry.productId)) {
+        return JSON.stringify({ error: 'You do not have access to this draft' });
+      }
+
+      return this.serializeChangelogEntry(entry);
+    }
+
+    const entry = await this.changelogService.findPublishedByIdentifier(args.id);
+    return this.serializeChangelogEntry(entry);
+  }
+
+  private serializeChangelogEntry(entry: { id: string; title: string; description: string; version: string | null; status: string; publishedAt: unknown; createdAt: unknown; product?: unknown }): string {
     return JSON.stringify({
       id: entry.id,
       title: entry.title,
@@ -624,7 +643,7 @@ export class AiService {
       status: entry.status,
       publishedAt: entry.publishedAt,
       createdAt: entry.createdAt,
-      product: 'product' in entry ? entry.product : undefined,
+      product: entry.product,
     });
   }
 }

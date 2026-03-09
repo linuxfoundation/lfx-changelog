@@ -179,40 +179,47 @@
         [formControl]="descriptionControl" />
 
       <div class="flex items-center gap-3 pt-2">
-        @if (!isEditing() || isDraft()) {
+        @if (canEdit()) {
+          @if (!isEditing() || isDraft()) {
+            <lfx-button
+              data-testid="changelog-editor-publish-btn"
+              variant="primary"
+              [loading]="publishing()"
+              [disabled]="saving() || deleting() || !hasSlug()"
+              (clicked)="publish()">
+              <i class="fa-duotone fa-paper-plane text-xs"></i>
+              Publish
+            </lfx-button>
+          }
+          @if (isEditing() && !isDraft()) {
+            <lfx-button
+              data-testid="changelog-editor-unpublish-btn"
+              variant="secondary"
+              [loading]="unpublishing()"
+              [disabled]="saving() || publishing() || deleting()"
+              (clicked)="confirmUnpublish()">
+              <i class="fa-solid fa-rotate-left text-xs"></i>
+              Unpublish
+            </lfx-button>
+          }
           <lfx-button
-            data-testid="changelog-editor-publish-btn"
-            variant="primary"
-            [loading]="publishing()"
-            [disabled]="saving() || deleting() || !hasSlug()"
-            (clicked)="publish()">
-            <i class="fa-duotone fa-paper-plane text-xs"></i>
-            Publish
+            data-testid="changelog-editor-save-btn"
+            [variant]="!isEditing() || isDraft() ? 'secondary' : 'primary'"
+            [loading]="saving()"
+            [disabled]="publishing() || unpublishing() || deleting() || !hasSlug()"
+            (clicked)="save()">
+            {{ isEditing() ? 'Update Entry' : 'Save as Draft' }}
           </lfx-button>
+        } @else {
+          <span class="text-text-muted text-sm">
+            <i class="fa-solid fa-lock text-xs"></i>
+            Read-only — you don't have edit access to this product
+          </span>
         }
-        @if (isEditing() && !isDraft()) {
-          <lfx-button
-            data-testid="changelog-editor-unpublish-btn"
-            variant="secondary"
-            [loading]="unpublishing()"
-            [disabled]="saving() || publishing() || deleting()"
-            (clicked)="confirmUnpublish()">
-            <i class="fa-solid fa-rotate-left text-xs"></i>
-            Unpublish
-          </lfx-button>
-        }
-        <lfx-button
-          data-testid="changelog-editor-save-btn"
-          [variant]="!isEditing() || isDraft() ? 'secondary' : 'primary'"
-          [loading]="saving()"
-          [disabled]="publishing() || unpublishing() || deleting() || !hasSlug()"
-          (clicked)="save()">
-          {{ isEditing() ? 'Update Entry' : 'Save as Draft' }}
-        </lfx-button>
         <a data-testid="changelog-editor-cancel-btn" routerLink="/admin/changelogs">
-          <lfx-button variant="secondary">Cancel</lfx-button>
+          <lfx-button variant="secondary">{{ canEdit() ? 'Cancel' : 'Back' }}</lfx-button>
         </a>
-        @if (isEditing()) {
+        @if (isEditing() && canEdit()) {
           <div class="ml-auto">
             <lfx-button
               data-testid="changelog-editor-delete-btn"

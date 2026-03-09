@@ -9,6 +9,15 @@ import type { APIRequestContext } from '@playwright/test';
 
 const TOTAL_CHANGELOGS = TEST_CHANGELOGS.length;
 
+/** Discover the seeded product ID for a given slug via the super admin API. */
+async function getProductId(api: APIRequestContext, slug: string): Promise<string> {
+  const res = await api.get('/api/products');
+  const products = (await res.json()).data;
+  const product = products.find((p: any) => p.slug === slug);
+  if (!product) throw new Error(`Product not found for slug: ${slug}`);
+  return product.id;
+}
+
 test.describe('Protected Changelogs API (/api/changelogs)', () => {
   let unauthApi: APIRequestContext;
   let superAdminApi: APIRequestContext;
@@ -448,6 +457,101 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
 
       // Cleanup
       await superAdminApi.delete(`/api/changelogs/${created.id}`);
+    });
+  });
+
+  test.describe('Draft Visibility (RBAC scoping)', () => {
+    // The editor has EDITOR role scoped to e2e-easycla only.
+    // Drafts on other products should be invisible to the editor.
+    let easyclaProductId: string;
+    let securityProductId: string;
+    let securityDraftId: string;
+
+    test.beforeAll(async () => {
+      easyclaProductId = await getProductId(superAdminApi, 'e2e-easycla');
+      securityProductId = await getProductId(superAdminApi, 'e2e-security');
+
+      // Create a draft on e2e-security (editor has no access to this product)
+      const res = await superAdminApi.post('/api/changelogs', {
+        data: { productId: securityProductId, title: 'Security Draft (Hidden)', description: 'Should not be visible to editor', version: '0.0.1', status: 'draft' },
+      });
+      expect(res.status()).toBe(201);
+      securityDraftId = (await res.json()).data.id;
+    });
+
+    test.afterAll(async () => {
+      await superAdminApi.delete(`/api/changelogs/${securityDraftId}`);
+    });
+
+    test('super admin sees all entries including drafts from all products', async () => {
+      const res = await superAdminApi.get('/api/changelogs');
+      const body = await res.json();
+
+      // Original 4 + the security draft we just created
+      expect(body.total).toBe(TOTAL_CHANGELOGS + 1);
+      const statuses = body.data.map((e: any) => e.status);
+      expect(statuses.filter((s: string) => s === 'draft')).toHaveLength(2);
+    });
+
+    test('editor listing includes published entries from all products', async () => {
+      const res = await editorApi.get('/api/changelogs?status=published');
+      expect(res.status()).toBe(200);
+      const body = await res.json();
+
+      // All 3 published entries are visible regardless of product
+      expect(body.data).toHaveLength(3);
+      const productIds = [...new Set(body.data.map((e: any) => e.productId))];
+      expect(productIds).toHaveLength(3); // entries from 3 different products
+    });
+
+    test('editor listing excludes drafts from products they lack access to', async () => {
+      const res = await editorApi.get('/api/changelogs');
+      expect(res.status()).toBe(200);
+      const body = await res.json();
+
+      // 3 published (all products) + 1 easycla draft = 4, NOT the security draft
+      expect(body.total).toBe(TOTAL_CHANGELOGS);
+      const drafts = body.data.filter((e: any) => e.status === 'draft');
+      expect(drafts).toHaveLength(1);
+      expect(drafts[0].productId).toBe(easyclaProductId);
+    });
+
+    test('editor listing with status=draft shows only own product drafts', async () => {
+      const res = await editorApi.get('/api/changelogs?status=draft');
+      expect(res.status()).toBe(200);
+      const body = await res.json();
+
+      expect(body.total).toBe(1);
+      expect(body.data[0].productId).toBe(easyclaProductId);
+    });
+
+    test('editor can GET a draft by ID from their assigned product (200)', async () => {
+      // Find the easycla draft
+      const listRes = await editorApi.get('/api/changelogs?status=draft');
+      const easyclaDraft = (await listRes.json()).data[0];
+
+      const res = await editorApi.get(`/api/changelogs/${easyclaDraft.id}`);
+      expect(res.status()).toBe(200);
+      const body = await res.json();
+      expect(body.data.id).toBe(easyclaDraft.id);
+    });
+
+    test('editor cannot GET a draft by ID from a product they lack access to (403)', async () => {
+      const res = await editorApi.get(`/api/changelogs/${securityDraftId}`);
+      expect(res.status()).toBe(403);
+      const body = await res.json();
+      expect(body.code).toBe('AUTHORIZATION_REQUIRED');
+    });
+
+    test('editor can GET a published entry by ID from any product (200)', async () => {
+      // Get a published entry from e2e-security (editor has no write access, but read is allowed)
+      const listRes = await superAdminApi.get('/api/changelogs?status=published');
+      const securityPublished = (await listRes.json()).data.find((e: any) => e.productId === securityProductId);
+
+      const res = await editorApi.get(`/api/changelogs/${securityPublished.id}`);
+      expect(res.status()).toBe(200);
+      const body = await res.json();
+      expect(body.data.id).toBe(securityPublished.id);
     });
   });
 });

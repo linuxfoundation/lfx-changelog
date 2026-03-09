@@ -40,11 +40,13 @@ export class ChangelogController {
 
   public async listAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const accessibleProductIds = this.getAccessibleProductIds(req);
       const result = await this.changelogService.findAll({
         productId: req.query['productId'] as string | undefined,
         status: req.query['status'] as string | undefined,
         page: req.query['page'] ? parseInt(req.query['page'] as string, 10) : undefined,
         limit: req.query['limit'] ? parseInt(req.query['limit'] as string, 10) : undefined,
+        accessibleProductIds,
       });
       res.json({ success: true, ...result });
     } catch (error) {
@@ -55,6 +57,15 @@ export class ChangelogController {
   public async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const entry = await this.changelogService.findById(req.params['id'] as string);
+
+      // Non-super-admins cannot view drafts for products they don't have access to
+      if (entry.status === 'draft') {
+        const accessibleProductIds = this.getAccessibleProductIds(req);
+        if (accessibleProductIds && !accessibleProductIds.includes(entry.productId)) {
+          throw new AuthorizationError('You do not have access to this draft', { operation: 'getById', service: 'changelog' });
+        }
+      }
+
       res.json({ success: true, data: entry });
     } catch (error) {
       next(error);
@@ -201,6 +212,23 @@ export class ChangelogController {
     } catch (error) {
       next(error);
     }
+  }
+
+  /**
+   * Extracts the product IDs that the authenticated user has access to.
+   * Super admins get undefined (no filter — all products).
+   * Editors/product admins get only their assigned product IDs.
+   */
+  private getAccessibleProductIds(req: Request): string[] | undefined {
+    const userRoles = (req.dbUser?.userRoleAssignments ?? []) as UserRoleAssignment[];
+    const isSuperAdmin = userRoles.some((a) => a.role === UserRole.SUPER_ADMIN);
+    if (isSuperAdmin) return undefined;
+
+    // A role with productId === null means "all products" (global editor/product admin)
+    const hasGlobalRole = userRoles.some((a) => a.productId === null && (a.role === UserRole.EDITOR || a.role === UserRole.PRODUCT_ADMIN));
+    if (hasGlobalRole) return undefined;
+
+    return userRoles.filter((a) => a.productId !== null).map((a) => a.productId as string);
   }
 
   private resolveViewerId(req: Request, requestViewerId?: string): string {

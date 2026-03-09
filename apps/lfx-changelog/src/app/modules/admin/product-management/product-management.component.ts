@@ -11,6 +11,7 @@ import { DropdownMenuComponent } from '@components/dropdown-menu/dropdown-menu.c
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
 import { ProductFormDialogComponent } from '@modules/admin/components/product-form-dialog/product-form-dialog.component';
+import { AuthService } from '@services/auth.service';
 import { DialogService } from '@services/dialog.service';
 import { ProductService } from '@services/product.service';
 import { ToastService } from '@services/toast.service';
@@ -27,9 +28,12 @@ import type { DropdownMenuItem } from '@shared/interfaces/form.interface';
   styleUrl: './product-management.component.css',
 })
 export class ProductManagementComponent {
+  private readonly authService = inject(AuthService);
   private readonly productService = inject(ProductService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
+
+  protected readonly isSuperAdmin = this.authService.isSuperAdmin;
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly loading = signal(true);
@@ -128,7 +132,10 @@ export class ProductManagementComponent {
   private initProductMenuItems(): Signal<Map<string, DropdownMenuItem[]>> {
     return computed(() => {
       const products = this.products();
+      const superAdmin = this.isSuperAdmin();
       const menuMap = new Map<string, DropdownMenuItem[]>();
+
+      if (!superAdmin) return menuMap;
 
       for (const product of products) {
         const items: DropdownMenuItem[] = [
