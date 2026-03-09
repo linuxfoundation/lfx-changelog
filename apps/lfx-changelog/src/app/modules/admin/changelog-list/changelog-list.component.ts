@@ -13,7 +13,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
-import { ChangelogStatus, UserRole } from '@lfx-changelog/shared';
+import { ChangelogStatus } from '@lfx-changelog/shared';
 import { AuthService } from '@services/auth.service';
 import { ChangelogService } from '@services/changelog.service';
 import { DialogService } from '@services/dialog.service';
@@ -63,7 +63,7 @@ export class ChangelogListComponent {
   protected readonly loading = signal(true);
   protected readonly reindexing = signal(false);
   protected readonly reindexResult = signal<{ indexed: number; errors: number } | null>(null);
-  protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
+  protected readonly isSuperAdmin = this.authService.isSuperAdmin;
 
   protected readonly productOptions: Signal<SelectOption[]> = this.initProductOptions();
   protected readonly statusOptions: SelectOption[] = [
@@ -197,7 +197,7 @@ export class ChangelogListComponent {
 
   private initProductOptions(): Signal<SelectOption[]> {
     return computed(() => [
-      { label: 'All Products', value: '' },
+      { label: this.isSuperAdmin() ? 'All Products' : 'All My Products', value: '' },
       ...this.products()
         .filter((p) => p.isActive)
         .map((p) => ({ label: p.name, value: p.id })),

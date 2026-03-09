@@ -16,7 +16,7 @@ import { ProductPillComponent } from '@components/product-pill/product-pill.comp
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { ChangelogSource, ChangelogStatus, UserRole } from '@lfx-changelog/shared';
+import { ChangelogSource, ChangelogStatus } from '@lfx-changelog/shared';
 import { AiService } from '@services/ai.service';
 import { AuthService } from '@services/auth.service';
 import { ChangelogService } from '@services/changelog.service';
@@ -64,7 +64,7 @@ export class ChangelogEditorComponent {
   private readonly toastService = inject(ToastService);
 
   protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
-  protected readonly isSuperAdmin = computed(() => this.authService.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
+  protected readonly isSuperAdmin = this.authService.isSuperAdmin;
 
   protected readonly titleControl = new FormControl('', { nonNullable: true });
   protected readonly slugControl = new FormControl('', { nonNullable: true });

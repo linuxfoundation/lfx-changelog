@@ -64,12 +64,18 @@ export class ChangelogService {
     }
   }
 
-  public async findAll(params: ChangelogQueryParams): Promise<PaginatedResult<PrismaChangelogEntry>> {
+  public async findAll(params: ChangelogQueryParams & { accessibleProductIds?: string[] }): Promise<PaginatedResult<PrismaChangelogEntry>> {
     const prisma = getPrismaClient();
     const { page, limit, skip } = this.sanitizePagination(params);
 
     const where: Prisma.ChangelogEntryWhereInput = {};
-    if (params.productId) where.productId = params.productId;
+    if (params.accessibleProductIds) {
+      // Scope to accessible products; if a specific productId was also requested, intersect
+      const allowed = params.productId ? params.accessibleProductIds.filter((id) => id === params.productId) : params.accessibleProductIds;
+      where.productId = { in: allowed };
+    } else if (params.productId) {
+      where.productId = params.productId;
+    }
     if (params.query) {
       where.OR = [{ title: { contains: params.query, mode: 'insensitive' } }, { description: { contains: params.query, mode: 'insensitive' } }];
     }

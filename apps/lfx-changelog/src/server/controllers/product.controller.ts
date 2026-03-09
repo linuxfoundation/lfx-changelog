@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { UserRole } from '@lfx-changelog/shared';
 import { NextFunction, Request, Response } from 'express';
 
 import { serverLogger } from '../server-logger';
@@ -8,6 +9,9 @@ import { GitHubService } from '../services/github.service';
 import { ProductService } from '../services/product.service';
 
 import type { GitHubCommit, GitHubPullRequest, GitHubRelease, LinkRepositoryRequest, ProductActivity } from '@lfx-changelog/shared';
+import type { UserRoleAssignment } from '@prisma/client';
+
+
 
 export class ProductController {
   private readonly productService = new ProductService();
@@ -22,9 +26,10 @@ export class ProductController {
     }
   }
 
-  public async list(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const products = await this.productService.findAll();
+      const accessibleProductIds = this.getAccessibleProductIds(req);
+      const products = await this.productService.findAll(accessibleProductIds);
       res.json({ success: true, data: products });
     } catch (error) {
       next(error);
@@ -143,5 +148,18 @@ export class ProductController {
     } catch (error) {
       next(error);
     }
+  }
+
+  /**
+   * Extracts the product IDs that the authenticated user has access to.
+   * Super admins get undefined (no filter — all products).
+   * Editors/product admins get only their assigned product IDs.
+   */
+  private getAccessibleProductIds(req: Request): string[] | undefined {
+    const userRoles = (req.dbUser?.userRoleAssignments ?? []) as UserRoleAssignment[];
+    const isSuperAdmin = userRoles.some((a) => a.role === UserRole.SUPER_ADMIN);
+    if (isSuperAdmin) return undefined;
+
+    return userRoles.filter((a) => a.productId !== null).map((a) => a.productId as string);
   }
 }
