@@ -4,6 +4,8 @@
 import { createApiResponseSchema, PublicProductSchema } from '@lfx-changelog/shared/schemas';
 import { z } from 'zod';
 
+import { errorResult, jsonResult } from '../helpers.js';
+
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import type { ApiClient } from '../api-client.js';
@@ -16,20 +18,13 @@ export function registerProductTools(server: McpServer, apiClient: ApiClient): v
     {
       title: 'List LFX Products',
       description: 'List all active LFX products. Returns each product with its id, name, slug, description, and Font Awesome icon class.',
-      outputSchema: productListResponseSchema.shape,
+      outputSchema: productListResponseSchema,
     },
     async () => {
       try {
-        const result = await apiClient.get('/public/api/products');
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
-          structuredContent: result as Record<string, unknown>,
-        };
+        return jsonResult(await apiClient.get('/public/api/products'));
       } catch (error) {
-        return {
-          content: [{ type: 'text' as const, text: `Error fetching products: ${error instanceof Error ? error.message : String(error)}` }],
-          isError: true,
-        };
+        return errorResult('Error fetching products', error);
       }
     }
   );
