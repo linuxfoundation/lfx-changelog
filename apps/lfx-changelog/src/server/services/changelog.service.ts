@@ -215,15 +215,14 @@ export class ChangelogService {
     const prisma = getPrismaClient();
     const entry = await prisma.changelogEntry.findUnique({
       where: { id },
-      include: { author: true },
+      include: { author: { select: { email: true } } },
     });
     if (!entry) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'publish', service: 'changelog' });
     }
 
-    // If the author is still the bot and the publisher hasn't explicitly set one, default to the publishing user
-    const authorEmail = (entry.author as { email: string } | null)?.email;
-    const shouldDefaultAuthor = publishedByUserId && entry.source === 'automated' && authorEmail === BOT_EMAIL;
+    // If the entry is a draft authored by the bot, default to the publishing user
+    const shouldDefaultAuthor: boolean = !!publishedByUserId && entry.status === 'draft' && entry.source === 'automated' && entry.author?.email === BOT_EMAIL;
 
     const published = await prisma.changelogEntry.update({
       where: { id },

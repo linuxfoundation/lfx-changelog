@@ -33,8 +33,9 @@ export function buildActivityContext(commits: GitHubCommit[], mergedPRs: GitHubP
   for (const pr of mergedPRs) repoSet.add(pr.repoFullName);
 
   const statsLines: string[] = [];
-  if (commits.length > 0)
+  if (commits.length > 0) {
     statsLines.push(`- ${commits.length} commit${commits.length === 1 ? '' : 's'} across ${repoSet.size} repositor${repoSet.size === 1 ? 'y' : 'ies'}`);
+  }
   if (mergedPRs.length > 0) statsLines.push(`- ${mergedPRs.length} merged pull request${mergedPRs.length === 1 ? '' : 's'}`);
   if (storedReleases.length > 0) statsLines.push(`- ${storedReleases.length} release${storedReleases.length === 1 ? '' : 's'}`);
 

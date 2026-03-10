@@ -572,8 +572,7 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
       const prisma = getTestPrismaClient();
 
       // Resolve product ID
-      const productsRes = await superAdminApi.get('/api/products');
-      productId = (await productsRes.json()).data.find((p: any) => p.slug === 'e2e-easycla').id;
+      productId = await getProductId(superAdminApi, 'e2e-easycla');
 
       // Resolve super admin user ID
       const meRes = await superAdminApi.get('/api/users/me');
