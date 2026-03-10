@@ -31,6 +31,15 @@
           <i class="fa-duotone fa-spinner-third fa-spin"></i>
           Live
         </span>
+        <lfx-button variant="danger" size="sm" [disabled]="cancelling()" (clicked)="cancelJob()">
+          @if (cancelling()) {
+            <i class="fa-duotone fa-spinner-third fa-spin text-xs"></i>
+            Cancelling...
+          } @else {
+            <i class="fa-solid fa-xmark text-xs"></i>
+            Cancel Job
+          }
+        </lfx-button>
       }
     </div>
 

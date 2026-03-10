@@ -73,6 +73,7 @@ export class AgentJobListComponent {
     { label: 'Running', value: 'running' },
     { label: 'Completed', value: 'completed' },
     { label: 'Failed', value: 'failed' },
+    { label: 'Cancelled', value: 'cancelled' },
   ];
 
   protected readonly pageState = this.initPageState();
@@ -82,6 +83,7 @@ export class AgentJobListComponent {
   protected readonly totalItems = computed(() => this.pageState().total);
   protected readonly pageSize = computed(() => this.pageState().pageSize);
   protected readonly hasActiveJobs = computed(() => this.jobs().some((j) => j.status === 'pending' || j.status === 'running'));
+  protected readonly cancellingJobs = signal(new Set<string>());
 
   public constructor() {
     combineLatest([this.productFilterControl.valueChanges, this.statusFilterControl.valueChanges])
@@ -93,6 +95,22 @@ export class AgentJobListComponent {
 
   protected onPageChange(page: number): void {
     this.page$.next(page);
+  }
+
+  protected cancelJob(jobId: string): void {
+    const current = this.cancellingJobs();
+    if (current.has(jobId)) return;
+    this.cancellingJobs.set(new Set([...current, jobId]));
+    this.agentJobService
+      .cancel(jobId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: () => {
+          const updated = new Set(this.cancellingJobs());
+          updated.delete(jobId);
+          this.cancellingJobs.set(updated);
+        },
+      });
   }
 
   protected openTriggerDialog(): void {

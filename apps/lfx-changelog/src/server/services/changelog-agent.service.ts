@@ -21,6 +21,7 @@ export class ChangelogAgentService {
   private readonly changelogService = new ChangelogService();
   private readonly githubService = new GitHubService();
   private readonly agentMemoryService = new AgentMemoryService();
+  private readonly activeControllers = new Map<string, AbortController>();
 
   /**
    * Runs the changelog agent for a product.
@@ -81,6 +82,44 @@ export class ChangelogAgentService {
   }
 
   /**
+   * Cancels a running/pending agent job.
+   * Aborts the controller if active, updates DB status, clears lock, and emits SSE events.
+   */
+  public async cancelJob(jobId: string, productId: string): Promise<void> {
+    const prisma = getPrismaClient();
+
+    // Abort the controller if it exists (stops the agent query iterator)
+    const controller = this.activeControllers.get(jobId);
+    if (controller) {
+      controller.abort();
+    }
+
+    // Update job status to cancelled
+    await prisma.agentJob.update({
+      where: { id: jobId },
+      data: { status: 'cancelled', completedAt: new Date(), errorMessage: 'Cancelled by user' },
+    });
+
+    // Clear the lock for this product so a new job can be triggered
+    await prisma.autoChangelogLock.delete({ where: { productId } }).catch((err) => {
+      serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock on cancel');
+    });
+
+    // Emit SSE events so the frontend updates in real time
+    agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'cancelled' } });
+    this.emitTerminalEvents(jobId, {
+      durationMs: null,
+      numTurns: null,
+      promptTokens: null,
+      outputTokens: null,
+      changelogEntry: null,
+      errorMessage: 'Cancelled by user',
+    });
+
+    serverLogger.info({ jobId, productId }, 'Agent job cancelled by user');
+  }
+
+  /**
    * Executes the job, then checks if a rerun was requested (pending_rerun).
    * If so, runs once more with fresh data. Finally releases the lock.
    */
@@ -90,32 +129,38 @@ export class ChangelogAgentService {
     try {
       await this.executeJob(jobId, productId);
     } finally {
-      // Check if a rerun was requested while we were running
-      const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
+      // If cancelled, the lock is already deleted by cancelJob() — skip rerun logic
+      const currentJob = await prisma.agentJob.findUnique({ where: { id: jobId }, select: { status: true } });
+      const wasCancelled = currentJob?.status === 'cancelled';
 
-      if (lock?.status === 'pending_rerun') {
-        // Reset to in_progress and run once more with fresh data
-        await prisma.autoChangelogLock.update({
-          where: { productId },
-          data: { status: 'in_progress', lockedAt: new Date() },
-        });
-        serverLogger.info({ productId }, 'Pending rerun detected — running one more agent job');
+      if (!wasCancelled) {
+        // Check if a rerun was requested while we were running
+        const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
 
-        const rerunJob = await prisma.agentJob.create({
-          data: { productId, trigger, status: 'pending', progressLog: [] },
-        });
+        if (lock?.status === 'pending_rerun') {
+          // Reset to in_progress and run once more with fresh data
+          await prisma.autoChangelogLock.update({
+            where: { productId },
+            data: { status: 'in_progress', lockedAt: new Date() },
+          });
+          serverLogger.info({ productId }, 'Pending rerun detected — running one more agent job');
 
-        try {
-          await this.executeJob(rerunJob.id, productId);
-        } finally {
+          const rerunJob = await prisma.agentJob.create({
+            data: { productId, trigger, status: 'pending', progressLog: [] },
+          });
+
+          try {
+            await this.executeJob(rerunJob.id, productId);
+          } finally {
+            await prisma.autoChangelogLock
+              .delete({ where: { productId } })
+              .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after rerun'));
+          }
+        } else {
           await prisma.autoChangelogLock
             .delete({ where: { productId } })
-            .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after rerun'));
+            .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock'));
         }
-      } else {
-        await prisma.autoChangelogLock
-          .delete({ where: { productId } })
-          .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock'));
       }
     }
   }
@@ -258,13 +303,27 @@ export class ChangelogAgentService {
       }
 
       // 10. Run the agent
-      serverLogger.info({ jobId, productId, model: AGENT_CONFIG.MODEL }, 'Starting agent query');
+      serverLogger.info(
+        {
+          jobId,
+          productId,
+          model: AGENT_CONFIG.MODEL,
+          maxTurns: AGENT_CONFIG.MAX_TURNS,
+          baseUrl,
+          hasApiKey: !!apiKey,
+          promptLength: userPrompt.length,
+          mcpToolCount: 5,
+        },
+        '[DEBUG] Starting agent query with config'
+      );
 
       const abortController = new AbortController();
+      this.activeControllers.set(jobId, abortController);
       const timeout = setTimeout(() => abortController.abort(), AGENT_CONFIG.TIMEOUT_MS);
 
+      let messageCount = 0;
       try {
-        for await (const message of query({
+        const queryIterator = query({
           prompt: userPrompt,
           options: {
             systemPrompt: AGENT_SYSTEM_PROMPT,
@@ -283,7 +342,24 @@ export class ChangelogAgentService {
               ANTHROPIC_API_KEY: apiKey,
             },
           },
-        })) {
+        });
+        serverLogger.info({ jobId }, '[DEBUG] query() returned iterator, entering for-await loop');
+
+        try {
+        for await (const message of queryIterator) {
+          messageCount++;
+          serverLogger.info(
+            {
+              jobId,
+              messageCount,
+              messageType: message.type,
+              hasSubtype: 'subtype' in message,
+              subtype: 'subtype' in message ? (message as Record<string, unknown>)['subtype'] : undefined,
+              messageKeys: Object.keys(message),
+            },
+            '[DEBUG] Received message from query iterator'
+          );
+
           // Log progress entries
           if (message.type === 'assistant') {
             for (const block of message.message.content) {
@@ -307,11 +383,30 @@ export class ChangelogAgentService {
                 agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
               }
             }
+          } else if (message.type !== 'result' && message.type !== 'user' && message.type !== 'system') {
+            // Log unexpected message types that might contain error info
+            serverLogger.warn(
+              { jobId, messageType: message.type, message: JSON.stringify(message).slice(0, 1000) },
+              '[DEBUG] Unexpected message type from query iterator'
+            );
           }
 
           // Handle final result
           if ('subtype' in message && message.type === 'result') {
             const durationMs = Date.now() - startTime;
+
+            serverLogger.info(
+              {
+                jobId,
+                subtype: message.subtype,
+                numTurns: message.num_turns,
+                inputTokens: message.usage?.['input_tokens'],
+                outputTokens: message.usage?.['output_tokens'],
+                errors: 'errors' in message ? message.errors : undefined,
+                durationMs,
+              },
+              '[DEBUG] Agent result message received'
+            );
 
             if (message.subtype === 'success') {
               const updatedJob = await prisma.agentJob.update({
@@ -371,12 +466,46 @@ export class ChangelogAgentService {
             }
           }
         }
+        serverLogger.info({ jobId, messageCount }, '[DEBUG] query iterator exhausted — loop ended');
+        } catch (iteratorErr) {
+          serverLogger.error(
+            {
+              jobId,
+              messageCount,
+              errorMessage: iteratorErr instanceof Error ? iteratorErr.message : String(iteratorErr),
+              errorStack: iteratorErr instanceof Error ? iteratorErr.stack : undefined,
+              errorName: iteratorErr instanceof Error ? iteratorErr.name : typeof iteratorErr,
+            },
+            '[DEBUG] query iterator threw error'
+          );
+          throw iteratorErr;
+        }
       } finally {
         clearTimeout(timeout);
+        this.activeControllers.delete(jobId);
       }
     } catch (err) {
+      // If the job was already cancelled by the user, don't overwrite with 'failed'
+      const existingJob = await prisma.agentJob.findUnique({ where: { id: jobId }, select: { status: true } });
+      if (existingJob?.status === 'cancelled') {
+        serverLogger.info({ jobId, productId }, 'Agent job was cancelled — skipping error handling');
+        return;
+      }
+
       const durationMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+
+      serverLogger.error(
+        {
+          jobId,
+          productId,
+          durationMs,
+          errorMessage,
+          errorStack: err instanceof Error ? err.stack : undefined,
+          errorName: err instanceof Error ? err.name : typeof err,
+        },
+        '[DEBUG] Agent executeJob caught error'
+      );
 
       const errorEntry: ProgressLogEntry = {
         timestamp: new Date().toISOString(),

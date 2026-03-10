@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 
-export const AgentJobStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']).openapi('AgentJobStatus');
+export const AgentJobStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']).openapi('AgentJobStatus');
 
 export const AgentJobTriggerSchema = z
   .enum(['webhook_push', 'webhook_release', 'webhook_pull_request', 'manual'])

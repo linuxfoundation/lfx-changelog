@@ -102,6 +102,33 @@ export class AgentJobController {
     }
   }
 
+  public async cancel(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const prisma = getPrismaClient();
+      const jobId = req.params['id'] as string;
+
+      const job = await prisma.agentJob.findUnique({
+        where: { id: jobId },
+        select: { id: true, status: true, productId: true },
+      });
+
+      if (!job) {
+        throw new NotFoundError(`Agent job not found: ${jobId}`, { operation: 'cancel', service: 'agent-job' });
+      }
+
+      if (job.status !== 'pending' && job.status !== 'running') {
+        res.status(400).json({ success: false, error: 'Only pending or running jobs can be cancelled' });
+        return;
+      }
+
+      await this.agentService.cancelJob(jobId, job.productId);
+
+      res.json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public async stream(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const prisma = getPrismaClient();
@@ -144,7 +171,7 @@ export class AgentJobController {
       sendEvent('status', { status: job.status });
 
       // If already terminal, send result + done and close
-      if (job.status === 'completed' || job.status === 'failed') {
+      if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
         sendEvent('result', {
           durationMs: job.durationMs,
           numTurns: job.numTurns,

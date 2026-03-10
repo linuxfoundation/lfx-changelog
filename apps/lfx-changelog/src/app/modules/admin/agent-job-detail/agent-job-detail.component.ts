@@ -1,10 +1,11 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
+import { ButtonComponent } from '@components/button/button.component';
 import { TimelineItemComponent } from '@components/timeline-item/timeline-item.component';
 import { AgentJobService } from '@services/agent-job.service';
 import { AgentStatusColorPipe } from '@shared/pipes/agent-status-color.pipe';
@@ -24,6 +25,7 @@ import type { AgentJobDetail, AgentJobSSEEvent } from '@lfx-changelog/shared';
   imports: [
     RouterLink,
     BadgeComponent,
+    ButtonComponent,
     TimelineItemComponent,
     AgentStatusColorPipe,
     AgentStatusLabelPipe,
@@ -40,13 +42,27 @@ import type { AgentJobDetail, AgentJobSSEEvent } from '@lfx-changelog/shared';
 export class AgentJobDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly agentJobService = inject(AgentJobService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
+  protected readonly cancelling = signal(false);
   protected readonly job = this.initJob();
   protected readonly isActive = computed(() => {
     const j = this.job();
     return j?.status === 'pending' || j?.status === 'running';
   });
+
+  protected cancelJob(): void {
+    const j = this.job();
+    if (!j || this.cancelling()) return;
+    this.cancelling.set(true);
+    this.agentJobService
+      .cancel(j.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: () => this.cancelling.set(false),
+      });
+  }
 
   private initJob() {
     return toSignal(
@@ -61,7 +77,7 @@ export class AgentJobDetailComponent {
               if (!job) return of(null);
 
               // If already terminal, no need to stream
-              if (job.status === 'completed' || job.status === 'failed') {
+              if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
                 return of(job);
               }
 
