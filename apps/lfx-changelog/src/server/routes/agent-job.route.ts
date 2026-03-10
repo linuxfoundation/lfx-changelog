@@ -14,5 +14,6 @@ router.get('/', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.PRODU
 router.get('/:id/stream', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.PRODUCTS_READ }), (req, res, next) => agentJobController.stream(req, res, next));
 router.get('/:id', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.PRODUCTS_READ }), (req, res, next) => agentJobController.getById(req, res, next));
 router.post('/trigger/:productId', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.PRODUCTS_WRITE }), (req, res, next) => agentJobController.trigger(req, res, next));
+router.post('/:id/cancel', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.PRODUCTS_WRITE }), (req, res, next) => agentJobController.cancel(req, res, next));
 
 export default router;

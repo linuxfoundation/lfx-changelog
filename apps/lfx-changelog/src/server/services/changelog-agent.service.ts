@@ -21,6 +21,7 @@ export class ChangelogAgentService {
   private readonly changelogService = new ChangelogService();
   private readonly githubService = new GitHubService();
   private readonly agentMemoryService = new AgentMemoryService();
+  private readonly activeControllers = new Map<string, AbortController>();
 
   /**
    * Runs the changelog agent for a product.
@@ -81,6 +82,44 @@ export class ChangelogAgentService {
   }
 
   /**
+   * Cancels a running/pending agent job.
+   * Aborts the controller if active, updates DB status, clears lock, and emits SSE events.
+   */
+  public async cancelJob(jobId: string, productId: string): Promise<void> {
+    const prisma = getPrismaClient();
+
+    // Conditionally update only if still active — prevents overwriting a completed/failed job
+    const updated = await prisma.agentJob.updateMany({
+      where: { id: jobId, status: { in: ['pending', 'running'] } },
+      data: { status: 'cancelled', completedAt: new Date() },
+    });
+
+    if (updated.count === 0) {
+      serverLogger.warn({ jobId, productId }, 'Cancel requested but job is no longer active');
+      return;
+    }
+
+    // Abort the controller if it exists (stops the agent query iterator)
+    const controller = this.activeControllers.get(jobId);
+    if (controller) {
+      controller.abort();
+    }
+
+    // Emit SSE events so the frontend updates in real time
+    agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'cancelled' } });
+    this.emitTerminalEvents(jobId, {
+      durationMs: null,
+      numTurns: null,
+      promptTokens: null,
+      outputTokens: null,
+      changelogEntry: null,
+      errorMessage: null,
+    });
+
+    serverLogger.info({ jobId, productId }, 'Agent job cancelled by user');
+  }
+
+  /**
    * Executes the job, then checks if a rerun was requested (pending_rerun).
    * If so, runs once more with fresh data. Finally releases the lock.
    */
@@ -90,32 +129,42 @@ export class ChangelogAgentService {
     try {
       await this.executeJob(jobId, productId);
     } finally {
-      // Check if a rerun was requested while we were running
-      const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
+      // Check if the job was cancelled — if so, clean up the lock and skip rerun
+      const currentJob = await prisma.agentJob.findUnique({ where: { id: jobId }, select: { status: true } });
+      const wasCancelled = currentJob?.status === 'cancelled';
 
-      if (lock?.status === 'pending_rerun') {
-        // Reset to in_progress and run once more with fresh data
-        await prisma.autoChangelogLock.update({
-          where: { productId },
-          data: { status: 'in_progress', lockedAt: new Date() },
-        });
-        serverLogger.info({ productId }, 'Pending rerun detected — running one more agent job');
-
-        const rerunJob = await prisma.agentJob.create({
-          data: { productId, trigger, status: 'pending', progressLog: [] },
-        });
-
-        try {
-          await this.executeJob(rerunJob.id, productId);
-        } finally {
-          await prisma.autoChangelogLock
-            .delete({ where: { productId } })
-            .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after rerun'));
-        }
-      } else {
+      if (wasCancelled) {
         await prisma.autoChangelogLock
           .delete({ where: { productId } })
-          .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock'));
+          .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after cancel'));
+      } else {
+        // Check if a rerun was requested while we were running
+        const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
+
+        if (lock?.status === 'pending_rerun') {
+          // Reset to in_progress and run once more with fresh data
+          await prisma.autoChangelogLock.update({
+            where: { productId },
+            data: { status: 'in_progress', lockedAt: new Date() },
+          });
+          serverLogger.info({ productId }, 'Pending rerun detected — running one more agent job');
+
+          const rerunJob = await prisma.agentJob.create({
+            data: { productId, trigger, status: 'pending', progressLog: [] },
+          });
+
+          try {
+            await this.executeJob(rerunJob.id, productId);
+          } finally {
+            await prisma.autoChangelogLock
+              .delete({ where: { productId } })
+              .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after rerun'));
+          }
+        } else {
+          await prisma.autoChangelogLock
+            .delete({ where: { productId } })
+            .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock'));
+        }
       }
     }
   }
@@ -258,13 +307,12 @@ export class ChangelogAgentService {
       }
 
       // 10. Run the agent
-      serverLogger.info({ jobId, productId, model: AGENT_CONFIG.MODEL }, 'Starting agent query');
-
       const abortController = new AbortController();
+      this.activeControllers.set(jobId, abortController);
       const timeout = setTimeout(() => abortController.abort(), AGENT_CONFIG.TIMEOUT_MS);
 
       try {
-        for await (const message of query({
+        const queryIterator = query({
           prompt: userPrompt,
           options: {
             systemPrompt: AGENT_SYSTEM_PROMPT,
@@ -283,7 +331,9 @@ export class ChangelogAgentService {
               ANTHROPIC_API_KEY: apiKey,
             },
           },
-        })) {
+        });
+
+        for await (const message of queryIterator) {
           // Log progress entries
           if (message.type === 'assistant') {
             for (const block of message.message.content) {
@@ -373,8 +423,16 @@ export class ChangelogAgentService {
         }
       } finally {
         clearTimeout(timeout);
+        this.activeControllers.delete(jobId);
       }
     } catch (err) {
+      // If the job was already cancelled by the user, don't overwrite with 'failed'
+      const existingJob = await prisma.agentJob.findUnique({ where: { id: jobId }, select: { status: true } });
+      if (existingJob?.status === 'cancelled') {
+        serverLogger.info({ jobId, productId }, 'Agent job was cancelled — skipping error handling');
+        return;
+      }
+
       const durationMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
 

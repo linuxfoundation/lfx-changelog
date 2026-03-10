@@ -30,6 +30,10 @@ export class AgentJobService {
     );
   }
 
+  public cancel(id: string): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(`/api/agent-jobs/${id}/cancel`, {}).pipe(take(1));
+  }
+
   public streamJob(id: string): Observable<AgentJobSSEEvent> {
     return this.sseService.connect<AgentJobSSEEventType>(`/api/agent-jobs/${id}/stream`).pipe(
       map((event) => event as AgentJobSSEEvent),

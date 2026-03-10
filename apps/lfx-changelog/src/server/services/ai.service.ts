@@ -6,7 +6,6 @@ import {
   AI_CHANGELOG_DESCRIPTION_SYSTEM_PROMPT,
   AI_CHANGELOG_METADATA_SCHEMA,
   AI_CHANGELOG_METADATA_SYSTEM_PROMPT,
-  AI_ENDPOINTS,
   AI_MODEL,
   AI_REQUEST_CONFIG,
   AI_SUMMARY_RESPONSE_SCHEMA,
@@ -44,11 +43,11 @@ export class AiService {
   private readonly searchService = new SearchService();
 
   private get apiUrl(): string {
-    return process.env['AI_API_URL'] || AI_ENDPOINTS.LITE_LLM_CHAT;
+    return process.env['AI_API_URL'] as string;
   }
 
   private get apiKey(): string {
-    return process.env['LITELLM_API_KEY'] || '';
+    return process.env['LITELLM_API_KEY'] as string;
   }
 
   // ── Summary & changelog generation ───────────────────────────
@@ -634,7 +633,16 @@ export class AiService {
     return this.serializeChangelogEntry(entry);
   }
 
-  private serializeChangelogEntry(entry: { id: string; title: string; description: string; version: string | null; status: string; publishedAt: unknown; createdAt: unknown; product?: unknown }): string {
+  private serializeChangelogEntry(entry: {
+    id: string;
+    title: string;
+    description: string;
+    version: string | null;
+    status: string;
+    publishedAt: unknown;
+    createdAt: unknown;
+    product?: unknown;
+  }): string {
     return JSON.stringify({
       id: entry.id,
       title: entry.title,

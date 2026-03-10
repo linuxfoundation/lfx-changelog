@@ -20,6 +20,8 @@ export class AgentStatusColorPipe implements PipeTransform {
         return '#22C55E';
       case 'failed':
         return '#EF4444';
+      case 'cancelled':
+        return '#F97316';
     }
   }
 }

@@ -47,6 +47,7 @@ enum AgentJobStatus {
   running
   completed
   failed
+  cancelled
 }
 
 enum AgentJobTrigger {

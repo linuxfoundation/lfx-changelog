@@ -20,7 +20,7 @@ import { AgentTriggerLabelPipe } from '@shared/pipes/agent-trigger-label.pipe';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { DurationPipe } from '@shared/pipes/duration.pipe';
 import { FormatTokensPipe } from '@shared/pipes/format-tokens.pipe';
-import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { AgentJobSSEEvent, AgentJobWithProduct, PaginatedResponse, Product } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
@@ -73,6 +73,7 @@ export class AgentJobListComponent {
     { label: 'Running', value: 'running' },
     { label: 'Completed', value: 'completed' },
     { label: 'Failed', value: 'failed' },
+    { label: 'Cancelled', value: 'cancelled' },
   ];
 
   protected readonly pageState = this.initPageState();
@@ -82,6 +83,7 @@ export class AgentJobListComponent {
   protected readonly totalItems = computed(() => this.pageState().total);
   protected readonly pageSize = computed(() => this.pageState().pageSize);
   protected readonly hasActiveJobs = computed(() => this.jobs().some((j) => j.status === 'pending' || j.status === 'running'));
+  protected readonly cancellingJobs = signal(new Set<string>());
 
   public constructor() {
     combineLatest([this.productFilterControl.valueChanges, this.statusFilterControl.valueChanges])
@@ -93,6 +95,23 @@ export class AgentJobListComponent {
 
   protected onPageChange(page: number): void {
     this.page$.next(page);
+  }
+
+  protected cancelJob(jobId: string): void {
+    const current = this.cancellingJobs();
+    if (current.has(jobId)) return;
+    this.cancellingJobs.set(new Set([...current, jobId]));
+    this.agentJobService
+      .cancel(jobId)
+      .pipe(
+        finalize(() => {
+          const updated = new Set(this.cancellingJobs());
+          updated.delete(jobId);
+          this.cancellingJobs.set(updated);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe();
   }
 
   protected openTriggerDialog(): void {

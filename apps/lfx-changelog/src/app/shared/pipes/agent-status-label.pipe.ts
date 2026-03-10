@@ -20,6 +20,8 @@ export class AgentStatusLabelPipe implements PipeTransform {
         return 'Completed';
       case 'failed':
         return 'Failed';
+      case 'cancelled':
+        return 'Cancelled';
     }
   }
 }

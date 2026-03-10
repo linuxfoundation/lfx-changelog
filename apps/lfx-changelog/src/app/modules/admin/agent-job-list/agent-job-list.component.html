@@ -78,9 +78,24 @@
     </ng-template>
 
     <ng-template lfxColumn="" let-job>
-      <a [routerLink]="['/admin/agent-jobs', job.id]" data-testid="agent-job-view-btn" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
-        View
-      </a>
+      <div class="flex items-center gap-3">
+        @if (job.status === 'pending' || job.status === 'running') {
+          <button
+            type="button"
+            [disabled]="cancellingJobs().has(job.id)"
+            (click)="cancelJob(job.id)"
+            class="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50 dark:text-red-400 dark:hover:text-red-300">
+            @if (cancellingJobs().has(job.id)) {
+              <i class="fa-duotone fa-spinner-third fa-spin text-xs"></i>
+            } @else {
+              Cancel
+            }
+          </button>
+        }
+        <a [routerLink]="['/admin/agent-jobs', job.id]" data-testid="agent-job-view-btn" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
+          View
+        </a>
+      </div>
     </ng-template>
   </lfx-table>
 </div>

@@ -31,6 +31,15 @@
           <i class="fa-duotone fa-spinner-third fa-spin"></i>
           Live
         </span>
+        <lfx-button variant="danger" size="sm" [disabled]="cancelling()" (clicked)="cancelJob()">
+          @if (cancelling()) {
+            <i class="fa-duotone fa-spinner-third fa-spin text-xs"></i>
+            Cancelling...
+          } @else {
+            <i class="fa-solid fa-xmark text-xs"></i>
+            Cancel Job
+          }
+        </lfx-button>
       }
     </div>
 
@@ -54,8 +63,19 @@
       </div>
     </div>
 
+    <!-- Cancelled card -->
+    @if (job.status === 'cancelled') {
+      <div class="animate-fade-in-up rounded-lg border border-orange-200 bg-orange-50 p-4 [animation-delay:150ms] dark:border-orange-800 dark:bg-orange-950/30">
+        <div class="flex items-center gap-2 text-sm font-medium text-orange-700 dark:text-orange-400">
+          <i class="fa-solid fa-ban"></i>
+          Cancelled
+        </div>
+        <p class="mt-1 text-sm text-orange-600 dark:text-orange-300">This job was cancelled by a user.</p>
+      </div>
+    }
+
     <!-- Error card -->
-    @if (job.errorMessage) {
+    @if (job.errorMessage && job.status !== 'cancelled') {
       <div class="animate-fade-in-up rounded-lg border border-red-200 bg-red-50 p-4 [animation-delay:150ms] dark:border-red-800 dark:bg-red-950/30">
         <div class="flex items-center gap-2 text-sm font-medium text-red-700 dark:text-red-400">
           <i class="fa-duotone fa-triangle-exclamation"></i>
