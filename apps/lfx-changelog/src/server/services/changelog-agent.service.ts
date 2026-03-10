@@ -520,7 +520,7 @@ export class ChangelogAgentService {
 
     if (atlassianEmail && atlassianToken) {
       servers['atlassian'] = {
-        type: 'sse',
+        type: 'http',
         url: atlassianUrl,
         headers: {
           Authorization: `Basic ${Buffer.from(`${atlassianEmail}:${atlassianToken}`).toString('base64')}`,
