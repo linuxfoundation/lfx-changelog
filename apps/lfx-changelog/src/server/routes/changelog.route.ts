@@ -27,12 +27,8 @@ router.post('/views/mark-viewed', authorize({ scope: ApiKeyScope.CHANGELOGS_READ
   changelogController.markViewed(req, res, next)
 );
 
-router.get('/', authorize({ scope: ApiKeyScope.CHANGELOGS_READ, role: UserRole.EDITOR }), (req, res, next) =>
-  changelogController.listAll(req, res, next)
-);
-router.get('/:id', authorize({ scope: ApiKeyScope.CHANGELOGS_READ, role: UserRole.EDITOR }), (req, res, next) =>
-  changelogController.getById(req, res, next)
-);
+router.get('/', authorize({ scope: ApiKeyScope.CHANGELOGS_READ, role: UserRole.EDITOR }), (req, res, next) => changelogController.listAll(req, res, next));
+router.get('/:id', authorize({ scope: ApiKeyScope.CHANGELOGS_READ, role: UserRole.EDITOR }), (req, res, next) => changelogController.getById(req, res, next));
 router.post(
   '/',
   authorize({ scope: ApiKeyScope.CHANGELOGS_WRITE, productRole: UserRole.EDITOR }),

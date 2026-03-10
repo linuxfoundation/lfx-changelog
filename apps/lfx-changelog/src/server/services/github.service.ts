@@ -7,7 +7,15 @@ import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 import { ProductService } from './product.service';
 
-import type { GitHubCommit, GitHubInstallation, GitHubPullRequest, GitHubRelease, GitHubRepository, GitHubWebhookReleasePayload, StoredRelease } from '@lfx-changelog/shared';
+import type {
+  GitHubCommit,
+  GitHubInstallation,
+  GitHubPullRequest,
+  GitHubRelease,
+  GitHubRepository,
+  GitHubWebhookReleasePayload,
+  StoredRelease,
+} from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
 import type { FindAllPublicOptions } from '../interfaces/release.interface';
 

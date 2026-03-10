@@ -5,7 +5,15 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, take } from 'rxjs';
 
-import type { ApiResponse, GitHubInstallation, GitHubRepository, PostToSlackResponse, SlackChannel, SlackChannelOption, SlackIntegration } from '@lfx-changelog/shared';
+import type {
+  ApiResponse,
+  GitHubInstallation,
+  GitHubRepository,
+  PostToSlackResponse,
+  SlackChannel,
+  SlackChannelOption,
+  SlackIntegration,
+} from '@lfx-changelog/shared';
 import type { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })

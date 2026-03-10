@@ -149,9 +149,9 @@ export class WebhookController {
     for (const productId of productIds) {
       serverLogger.info({ productId, event, action: body.action, repoFullName }, 'Triggering auto-changelog generation');
 
-      this.changelogAgentService.runAgentForProduct(productId, triggerType).catch((err) =>
-        serverLogger.error({ err, productId, event, action: body.action, repoFullName }, 'Agent changelog generation failed')
-      );
+      this.changelogAgentService
+        .runAgentForProduct(productId, triggerType)
+        .catch((err) => serverLogger.error({ err, productId, event, action: body.action, repoFullName }, 'Agent changelog generation failed'));
     }
   }
 

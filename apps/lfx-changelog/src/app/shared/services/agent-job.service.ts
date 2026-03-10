@@ -7,7 +7,15 @@ import { map, take, takeWhile } from 'rxjs';
 
 import { SseService } from './sse.service';
 
-import type { AgentJobDetail, AgentJobQueryParams, AgentJobSSEEvent, AgentJobSSEEventType, AgentJobWithProduct, ApiResponse, PaginatedResponse } from '@lfx-changelog/shared';
+import type {
+  AgentJobDetail,
+  AgentJobQueryParams,
+  AgentJobSSEEvent,
+  AgentJobSSEEventType,
+  AgentJobWithProduct,
+  ApiResponse,
+  PaginatedResponse,
+} from '@lfx-changelog/shared';
 import type { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })

@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
+import { BOT_EMAIL, ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
 import { ChangelogStatus, Prisma, ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
 
 import { ConflictError, NotFoundError } from '../errors';
@@ -204,24 +204,33 @@ export class ChangelogService {
 
     // If status changed away from published, remove from search index
     if (existing.status === 'published' && data.status && data.status !== 'published') {
-      this.searchService
-        .deleteDocument(id)
-        .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+      this.searchService.deleteDocument(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
     } else {
       this.syncToOpenSearch(updated);
     }
     return updated;
   }
 
-  public async publish(id: string): Promise<PrismaChangelogEntry> {
+  public async publish(id: string, publishedByUserId?: string): Promise<PrismaChangelogEntry> {
     const prisma = getPrismaClient();
-    const entry = await prisma.changelogEntry.findUnique({ where: { id } });
+    const entry = await prisma.changelogEntry.findUnique({
+      where: { id },
+      include: { author: { select: { email: true } } },
+    });
     if (!entry) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'publish', service: 'changelog' });
     }
+
+    // If the entry is a draft authored by the bot, default to the publishing user
+    const shouldDefaultAuthor: boolean = !!publishedByUserId && entry.status === 'draft' && entry.source === 'automated' && entry.author?.email === BOT_EMAIL;
+
     const published = await prisma.changelogEntry.update({
       where: { id },
-      data: { status: 'published', publishedAt: new Date() },
+      data: {
+        status: 'published',
+        publishedAt: new Date(),
+        ...(shouldDefaultAuthor ? { createdBy: publishedByUserId } : {}),
+      },
       include: { product: true, author: true },
     });
     this.syncToOpenSearch(published);
@@ -247,9 +256,7 @@ export class ChangelogService {
       data: { status: 'draft', publishedAt: null },
       include: { product: true, author: true },
     });
-    this.searchService
-      .deleteDocument(id)
-      .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+    this.searchService.deleteDocument(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
     return draft;
   }
 
@@ -260,9 +267,7 @@ export class ChangelogService {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'delete', service: 'changelog' });
     }
     await prisma.changelogEntry.delete({ where: { id } });
-    this.searchService
-      .deleteDocument(id)
-      .catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
+    this.searchService.deleteDocument(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
   }
 
   /**
@@ -441,9 +446,7 @@ export class ChangelogService {
       productFaIcon: entry.product.faIcon,
     };
 
-    this.searchService
-      .indexDocument(doc)
-      .catch((err) => serverLogger.warn({ err, id: entry.id }, 'Failed to sync changelog to OpenSearch'));
+    this.searchService.indexDocument(doc).catch((err) => serverLogger.warn({ err, id: entry.id }, 'Failed to sync changelog to OpenSearch'));
   }
 
   private handleUniqueConstraint(error: unknown, slug?: string): ConflictError | null {

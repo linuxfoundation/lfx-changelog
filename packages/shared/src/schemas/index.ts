@@ -3,7 +3,7 @@
 
 import './setup.js';
 
-export { AgentMemoryDataSchema, CorrectionEntrySchema, QualityScoreEntrySchema, StylePreferencesSchema } from './agent-memory.schema.js';
+export { AgentJobSSEEventSchema, AgentJobSSEEventTypeSchema, AgentJobSSEResultSchema } from './agent-job-sse.schema.js';
 export {
   AgentJobChangelogSchema,
   AgentJobDetailSchema,
@@ -15,7 +15,7 @@ export {
   AgentJobWithProductSchema,
   ProgressLogEntrySchema,
 } from './agent-job.schema.js';
-export { AgentJobSSEEventSchema, AgentJobSSEEventTypeSchema, AgentJobSSEResultSchema } from './agent-job-sse.schema.js';
+export { AgentMemoryDataSchema, CorrectionEntrySchema, QualityScoreEntrySchema, StylePreferencesSchema } from './agent-memory.schema.js';
 export {
   AiChangelogMetadataSchema,
   AiProductSummarySchema,
@@ -112,9 +112,17 @@ export {
 } from './slack.schema.js';
 export { UserRoleAssignmentSchema, UserSchema } from './user.schema.js';
 
-export type { AgentMemoryData, CorrectionEntry, QualityScoreEntry, StylePreferences } from './agent-memory.schema.js';
-export type { AgentJob, AgentJobDetail, AgentJobQueryParams, AgentJobStatus, AgentJobTrigger, AgentJobWithProduct, ProgressLogEntry } from './agent-job.schema.js';
 export type { AgentJobSSEEvent, AgentJobSSEEventType, AgentJobSSEResult } from './agent-job-sse.schema.js';
+export type {
+  AgentJob,
+  AgentJobDetail,
+  AgentJobQueryParams,
+  AgentJobStatus,
+  AgentJobTrigger,
+  AgentJobWithProduct,
+  ProgressLogEntry,
+} from './agent-job.schema.js';
+export type { AgentMemoryData, CorrectionEntry, QualityScoreEntry, StylePreferences } from './agent-memory.schema.js';
 export type {
   AiChangelogMetadata,
   AiProductSummary,
