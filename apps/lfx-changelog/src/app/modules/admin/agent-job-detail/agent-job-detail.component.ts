@@ -16,7 +16,7 @@ import { DurationPipe } from '@shared/pipes/duration.pipe';
 import { FormatTokensPipe } from '@shared/pipes/format-tokens.pipe';
 import { ProgressLogIconPipe } from '@shared/pipes/progress-log-icon.pipe';
 import { ProgressLogLabelPipe } from '@shared/pipes/progress-log-label.pipe';
-import { catchError, filter, map, of, scan, startWith, switchMap } from 'rxjs';
+import { catchError, filter, finalize, map, of, scan, startWith, switchMap } from 'rxjs';
 
 import type { AgentJobDetail, AgentJobSSEEvent } from '@lfx-changelog/shared';
 
@@ -58,10 +58,11 @@ export class AgentJobDetailComponent {
     this.cancelling.set(true);
     this.agentJobService
       .cancel(j.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        error: () => this.cancelling.set(false),
-      });
+      .pipe(
+        finalize(() => this.cancelling.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe();
   }
 
   private initJob() {

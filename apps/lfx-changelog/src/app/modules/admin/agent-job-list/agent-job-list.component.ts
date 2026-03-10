@@ -20,7 +20,7 @@ import { AgentTriggerLabelPipe } from '@shared/pipes/agent-trigger-label.pipe';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { DurationPipe } from '@shared/pipes/duration.pipe';
 import { FormatTokensPipe } from '@shared/pipes/format-tokens.pipe';
-import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { AgentJobSSEEvent, AgentJobWithProduct, PaginatedResponse, Product } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
@@ -103,14 +103,15 @@ export class AgentJobListComponent {
     this.cancellingJobs.set(new Set([...current, jobId]));
     this.agentJobService
       .cancel(jobId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        error: () => {
+      .pipe(
+        finalize(() => {
           const updated = new Set(this.cancellingJobs());
           updated.delete(jobId);
           this.cancellingJobs.set(updated);
-        },
-      });
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe();
   }
 
   protected openTriggerDialog(): void {

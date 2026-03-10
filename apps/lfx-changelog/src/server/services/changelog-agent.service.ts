@@ -88,22 +88,22 @@ export class ChangelogAgentService {
   public async cancelJob(jobId: string, productId: string): Promise<void> {
     const prisma = getPrismaClient();
 
+    // Conditionally update only if still active — prevents overwriting a completed/failed job
+    const updated = await prisma.agentJob.updateMany({
+      where: { id: jobId, status: { in: ['pending', 'running'] } },
+      data: { status: 'cancelled', completedAt: new Date() },
+    });
+
+    if (updated.count === 0) {
+      serverLogger.warn({ jobId, productId }, 'Cancel requested but job is no longer active');
+      return;
+    }
+
     // Abort the controller if it exists (stops the agent query iterator)
     const controller = this.activeControllers.get(jobId);
     if (controller) {
       controller.abort();
     }
-
-    // Update job status to cancelled
-    await prisma.agentJob.update({
-      where: { id: jobId },
-      data: { status: 'cancelled', completedAt: new Date(), errorMessage: 'Cancelled by user' },
-    });
-
-    // Clear the lock for this product so a new job can be triggered
-    await prisma.autoChangelogLock.delete({ where: { productId } }).catch((err) => {
-      serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock on cancel');
-    });
 
     // Emit SSE events so the frontend updates in real time
     agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'cancelled' } });
@@ -113,7 +113,7 @@ export class ChangelogAgentService {
       promptTokens: null,
       outputTokens: null,
       changelogEntry: null,
-      errorMessage: 'Cancelled by user',
+      errorMessage: null,
     });
 
     serverLogger.info({ jobId, productId }, 'Agent job cancelled by user');
@@ -129,11 +129,15 @@ export class ChangelogAgentService {
     try {
       await this.executeJob(jobId, productId);
     } finally {
-      // If cancelled, the lock is already deleted by cancelJob() — skip rerun logic
+      // Check if the job was cancelled — if so, clean up the lock and skip rerun
       const currentJob = await prisma.agentJob.findUnique({ where: { id: jobId }, select: { status: true } });
       const wasCancelled = currentJob?.status === 'cancelled';
 
-      if (!wasCancelled) {
+      if (wasCancelled) {
+        await prisma.autoChangelogLock
+          .delete({ where: { productId } })
+          .catch((err) => serverLogger.warn({ err, productId }, 'Failed to delete auto-changelog lock after cancel'));
+      } else {
         // Check if a rerun was requested while we were running
         const lock = await prisma.autoChangelogLock.findUnique({ where: { productId } });
 
@@ -303,25 +307,10 @@ export class ChangelogAgentService {
       }
 
       // 10. Run the agent
-      serverLogger.info(
-        {
-          jobId,
-          productId,
-          model: AGENT_CONFIG.MODEL,
-          maxTurns: AGENT_CONFIG.MAX_TURNS,
-          baseUrl,
-          hasApiKey: !!apiKey,
-          promptLength: userPrompt.length,
-          mcpToolCount: 5,
-        },
-        '[DEBUG] Starting agent query with config'
-      );
-
       const abortController = new AbortController();
       this.activeControllers.set(jobId, abortController);
       const timeout = setTimeout(() => abortController.abort(), AGENT_CONFIG.TIMEOUT_MS);
 
-      let messageCount = 0;
       try {
         const queryIterator = query({
           prompt: userPrompt,
@@ -343,23 +332,8 @@ export class ChangelogAgentService {
             },
           },
         });
-        serverLogger.info({ jobId }, '[DEBUG] query() returned iterator, entering for-await loop');
 
-        try {
         for await (const message of queryIterator) {
-          messageCount++;
-          serverLogger.info(
-            {
-              jobId,
-              messageCount,
-              messageType: message.type,
-              hasSubtype: 'subtype' in message,
-              subtype: 'subtype' in message ? (message as Record<string, unknown>)['subtype'] : undefined,
-              messageKeys: Object.keys(message),
-            },
-            '[DEBUG] Received message from query iterator'
-          );
-
           // Log progress entries
           if (message.type === 'assistant') {
             for (const block of message.message.content) {
@@ -383,30 +357,11 @@ export class ChangelogAgentService {
                 agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
               }
             }
-          } else if (message.type !== 'result' && message.type !== 'user' && message.type !== 'system') {
-            // Log unexpected message types that might contain error info
-            serverLogger.warn(
-              { jobId, messageType: message.type, message: JSON.stringify(message).slice(0, 1000) },
-              '[DEBUG] Unexpected message type from query iterator'
-            );
           }
 
           // Handle final result
           if ('subtype' in message && message.type === 'result') {
             const durationMs = Date.now() - startTime;
-
-            serverLogger.info(
-              {
-                jobId,
-                subtype: message.subtype,
-                numTurns: message.num_turns,
-                inputTokens: message.usage?.['input_tokens'],
-                outputTokens: message.usage?.['output_tokens'],
-                errors: 'errors' in message ? message.errors : undefined,
-                durationMs,
-              },
-              '[DEBUG] Agent result message received'
-            );
 
             if (message.subtype === 'success') {
               const updatedJob = await prisma.agentJob.update({
@@ -466,20 +421,6 @@ export class ChangelogAgentService {
             }
           }
         }
-        serverLogger.info({ jobId, messageCount }, '[DEBUG] query iterator exhausted — loop ended');
-        } catch (iteratorErr) {
-          serverLogger.error(
-            {
-              jobId,
-              messageCount,
-              errorMessage: iteratorErr instanceof Error ? iteratorErr.message : String(iteratorErr),
-              errorStack: iteratorErr instanceof Error ? iteratorErr.stack : undefined,
-              errorName: iteratorErr instanceof Error ? iteratorErr.name : typeof iteratorErr,
-            },
-            '[DEBUG] query iterator threw error'
-          );
-          throw iteratorErr;
-        }
       } finally {
         clearTimeout(timeout);
         this.activeControllers.delete(jobId);
@@ -494,18 +435,6 @@ export class ChangelogAgentService {
 
       const durationMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-
-      serverLogger.error(
-        {
-          jobId,
-          productId,
-          durationMs,
-          errorMessage,
-          errorStack: err instanceof Error ? err.stack : undefined,
-          errorName: err instanceof Error ? err.name : typeof err,
-        },
-        '[DEBUG] Agent executeJob caught error'
-      );
 
       const errorEntry: ProgressLogEntry = {
         timestamp: new Date().toISOString(),
