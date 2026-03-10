@@ -60,7 +60,7 @@ export class AgentJobDetailComponent {
       .cancel(j.id)
       .pipe(
         finalize(() => this.cancelling.set(false)),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe();
   }

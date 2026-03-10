@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { serverLogger } from '../server-logger';
-import { SearchService } from '../services/search.service';
 import { disconnectPrisma } from '../services/prisma.service';
+import { SearchService } from '../services/search.service';
 
 import type { Server } from 'node:http';
 

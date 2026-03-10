@@ -3,8 +3,8 @@
 
 import { categorizeActivity } from './categorize-activity.helper';
 
-import type { ActivityCategory } from './categorize-activity.helper';
 import type { GitHubCommit, GitHubPullRequest } from '@lfx-changelog/shared';
+import type { ActivityCategory } from './categorize-activity.helper';
 
 type StoredRelease = { tagName: string; name: string | null; body: string | null; repository: { fullName: string } };
 
@@ -33,7 +33,8 @@ export function buildActivityContext(commits: GitHubCommit[], mergedPRs: GitHubP
   for (const pr of mergedPRs) repoSet.add(pr.repoFullName);
 
   const statsLines: string[] = [];
-  if (commits.length > 0) statsLines.push(`- ${commits.length} commit${commits.length === 1 ? '' : 's'} across ${repoSet.size} repositor${repoSet.size === 1 ? 'y' : 'ies'}`);
+  if (commits.length > 0)
+    statsLines.push(`- ${commits.length} commit${commits.length === 1 ? '' : 's'} across ${repoSet.size} repositor${repoSet.size === 1 ? 'y' : 'ies'}`);
   if (mergedPRs.length > 0) statsLines.push(`- ${mergedPRs.length} merged pull request${mergedPRs.length === 1 ? '' : 's'}`);
   if (storedReleases.length > 0) statsLines.push(`- ${storedReleases.length} release${storedReleases.length === 1 ? '' : 's'}`);
 

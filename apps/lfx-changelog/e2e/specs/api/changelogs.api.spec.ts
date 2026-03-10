@@ -1,8 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { BOT_EMAIL, BOT_NAME } from '@lfx-changelog/shared';
 import { expect, test } from '@playwright/test';
 import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
+import { getTestPrismaClient } from '../../helpers/db.helper.js';
 import { TEST_CHANGELOGS } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
@@ -473,7 +475,13 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
 
       // Create a draft on e2e-security (editor has no access to this product)
       const res = await superAdminApi.post('/api/changelogs', {
-        data: { productId: securityProductId, title: 'Security Draft (Hidden)', description: 'Should not be visible to editor', version: '0.0.1', status: 'draft' },
+        data: {
+          productId: securityProductId,
+          title: 'Security Draft (Hidden)',
+          description: 'Should not be visible to editor',
+          version: '0.0.1',
+          status: 'draft',
+        },
       });
       expect(res.status()).toBe(201);
       securityDraftId = (await res.json()).data.id;
@@ -552,6 +560,146 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
       expect(res.status()).toBe(200);
       const body = await res.json();
       expect(body.data.id).toBe(securityPublished.id);
+    });
+  });
+
+  test.describe('Publish Default Author (bot → publishing user)', () => {
+    let productId: string;
+    let botUserId: string;
+    let superAdminUserId: string;
+
+    test.beforeAll(async () => {
+      const prisma = getTestPrismaClient();
+
+      // Resolve product ID
+      const productsRes = await superAdminApi.get('/api/products');
+      productId = (await productsRes.json()).data.find((p: any) => p.slug === 'e2e-easycla').id;
+
+      // Resolve super admin user ID
+      const meRes = await superAdminApi.get('/api/users/me');
+      superAdminUserId = (await meRes.json()).data.id;
+
+      // Upsert the bot user
+      const botUser = await prisma.user.upsert({
+        where: { email: BOT_EMAIL },
+        update: {},
+        create: { email: BOT_EMAIL, name: BOT_NAME, auth0Id: null, avatarUrl: null },
+        select: { id: true },
+      });
+      botUserId = botUser.id;
+    });
+
+    test('publishing a bot-authored automated draft defaults author to the publishing user', async () => {
+      const prisma = getTestPrismaClient();
+
+      // Create an automated draft directly in the DB (simulates the agent creating it)
+      const entry = await prisma.changelogEntry.create({
+        data: {
+          productId,
+          title: 'E2E Bot Draft - Default Author Test',
+          description: 'Created by bot, should be reassigned on publish.',
+          version: '0.0.1',
+          status: 'draft',
+          source: 'automated',
+          createdBy: botUserId,
+        },
+      });
+
+      // Publish via the API as super_admin
+      const publishRes = await superAdminApi.patch(`/api/changelogs/${entry.id}/publish`);
+      expect(publishRes.status()).toBe(200);
+      const published = (await publishRes.json()).data;
+
+      expect(published.status).toBe('published');
+      expect(published.createdBy).toBe(superAdminUserId);
+      expect(published.author.id).toBe(superAdminUserId);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entry.id}`);
+    });
+
+    test('publishing a bot-authored automated draft as editor defaults author to editor', async () => {
+      const prisma = getTestPrismaClient();
+
+      const editorMeRes = await editorApi.get('/api/users/me');
+      const editorUserId = (await editorMeRes.json()).data.id;
+
+      const entry = await prisma.changelogEntry.create({
+        data: {
+          productId,
+          title: 'E2E Bot Draft - Editor Publish Test',
+          description: 'Created by bot, editor publishes.',
+          version: '0.0.2',
+          status: 'draft',
+          source: 'automated',
+          createdBy: botUserId,
+        },
+      });
+
+      const publishRes = await editorApi.patch(`/api/changelogs/${entry.id}/publish`);
+      expect(publishRes.status()).toBe(200);
+      const published = (await publishRes.json()).data;
+
+      expect(published.createdBy).toBe(editorUserId);
+      expect(published.author.id).toBe(editorUserId);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entry.id}`);
+    });
+
+    test('publishing a manual draft does NOT change the author', async () => {
+      // Create a manual draft via the API (source defaults to "manual")
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: { productId, title: 'E2E Manual Draft - No Author Change', description: 'Manual entry.', version: '0.0.3', status: 'draft' },
+      });
+      const created = (await createRes.json()).data;
+
+      const publishRes = await superAdminApi.patch(`/api/changelogs/${created.id}/publish`);
+      expect(publishRes.status()).toBe(200);
+      const published = (await publishRes.json()).data;
+
+      // Author should remain the original creator (super_admin)
+      expect(published.createdBy).toBe(created.createdBy);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${created.id}`);
+    });
+
+    test('publishing an automated draft whose author was already changed does NOT override', async () => {
+      const prisma = getTestPrismaClient();
+
+      const editorMeRes = await editorApi.get('/api/users/me');
+      const editorUserId = (await editorMeRes.json()).data.id;
+
+      // Create automated draft authored by bot
+      const entry = await prisma.changelogEntry.create({
+        data: {
+          productId,
+          title: 'E2E Bot Draft - Pre-claimed Author Test',
+          description: 'Created by bot, but author already reassigned.',
+          version: '0.0.4',
+          status: 'draft',
+          source: 'automated',
+          createdBy: botUserId,
+        },
+      });
+
+      // Super admin reassigns author to editor before publishing
+      const updateRes = await superAdminApi.put(`/api/changelogs/${entry.id}`, {
+        data: { createdBy: editorUserId },
+      });
+      expect(updateRes.status()).toBe(200);
+
+      // Now publish as super_admin — author should stay as editor, not become super_admin
+      const publishRes = await superAdminApi.patch(`/api/changelogs/${entry.id}/publish`);
+      expect(publishRes.status()).toBe(200);
+      const published = (await publishRes.json()).data;
+
+      expect(published.createdBy).toBe(editorUserId);
+      expect(published.author.id).toBe(editorUserId);
+
+      // Cleanup
+      await superAdminApi.delete(`/api/changelogs/${entry.id}`);
     });
   });
 });

@@ -207,10 +207,7 @@ export class AgentMemoryService {
     return null;
   }
 
-  private generateDiffSummary(
-    original: { title: string; description: string },
-    published: { title: string; description: string }
-  ): string {
+  private generateDiffSummary(original: { title: string; description: string }, published: { title: string; description: string }): string {
     const parts: string[] = [];
 
     if (original.title !== published.title) {

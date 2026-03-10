@@ -7,13 +7,13 @@ The LFX Changelog uses a **Claude Agent SDK pipeline** to automatically generate
 
 ## Overview
 
-| Component              | Description                                                               |
-| ---------------------- | ------------------------------------------------------------------------- |
-| **Agent service**      | Orchestrates jobs: pre-fetches data, runs the agent, records metrics      |
-| **MCP tools**          | 4 scoped tools the agent can call (search, create, update, get version)   |
-| **Agent job tracking** | Database records with status, progress log, token usage, and duration     |
-| **API endpoints**      | List jobs, get job details, manually trigger a run (SUPER_ADMIN only)     |
-| **Webhook triggers**   | Automatically triggered by push, release, and merged PR webhook events    |
+| Component              | Description                                                             |
+| ---------------------- | ----------------------------------------------------------------------- |
+| **Agent service**      | Orchestrates jobs: pre-fetches data, runs the agent, records metrics    |
+| **MCP tools**          | 4 scoped tools the agent can call (search, create, update, get version) |
+| **Agent job tracking** | Database records with status, progress log, token usage, and duration   |
+| **API endpoints**      | List jobs, get job details, manually trigger a run (SUPER_ADMIN only)   |
+| **Webhook triggers**   | Automatically triggered by push, release, and merged PR webhook events  |
 
 ## Architecture
 
@@ -55,12 +55,12 @@ GitHub Webhook
 
 The agent operates in a sandboxed environment with only these 4 tools available:
 
-| Tool                      | Description                                                              |
-| ------------------------- | ------------------------------------------------------------------------ |
-| `search_past_changelogs`  | Returns up to 10 recent published entries for tone and style matching    |
-| `create_changelog_draft`  | Creates a new automated draft (title ≤ 60 chars, version, description)  |
-| `update_changelog_draft`  | Updates an existing automated draft by ID                                |
-| `get_latest_version`      | Returns the latest version string and suggests the next patch version    |
+| Tool                     | Description                                                            |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `search_past_changelogs` | Returns up to 10 recent published entries for tone and style matching  |
+| `create_changelog_draft` | Creates a new automated draft (title ≤ 60 chars, version, description) |
+| `update_changelog_draft` | Updates an existing automated draft by ID                              |
+| `get_latest_version`     | Returns the latest version string and suggests the next patch version  |
 
 All tools operate on the specific product being processed. The agent cannot access other products, publish entries, or call external APIs.
 
@@ -78,6 +78,7 @@ The agent follows a structured workflow:
 5. **SAVE** via `create_changelog_draft` or `update_changelog_draft`
 
 Rules enforced by the prompt:
+
 - Always saves as **draft** — never publishes directly
 - Writes in third person present tense ("Adds support for...", "Fixes an issue where...")
 - Omits internal tooling, CI/CD, and developer-facing details unless they affect end users
@@ -87,18 +88,18 @@ Rules enforced by the prompt:
 
 Defined in `src/server/constants/agent.constants.ts`:
 
-| Setting       | Value               | Description                                   |
-| ------------- | ------------------- | --------------------------------------------- |
-| `MAX_TURNS`   | 15                  | Maximum agent turns before forced stop         |
-| `MODEL`       | `claude-sonnet-4-6` | Claude model used for generation               |
-| `TIMEOUT_MS`  | 180,000 (3 min)     | AbortController timeout for the agent query    |
+| Setting      | Value               | Description                                 |
+| ------------ | ------------------- | ------------------------------------------- |
+| `MAX_TURNS`  | 15                  | Maximum agent turns before forced stop      |
+| `MODEL`      | `claude-sonnet-4-6` | Claude model used for generation            |
+| `TIMEOUT_MS` | 180,000 (3 min)     | AbortController timeout for the agent query |
 
 ## Environment Variables
 
-| Variable          | Required | Description                                                              |
-| ----------------- | -------- | ------------------------------------------------------------------------ |
-| `AI_API_URL`      | Yes      | LiteLLM proxy URL (e.g. `https://proxy.example.com/chat/completions`)   |
-| `LITELLM_API_KEY` | Yes      | API key for the LiteLLM proxy                                            |
+| Variable          | Required | Description                                                           |
+| ----------------- | -------- | --------------------------------------------------------------------- |
+| `AI_API_URL`      | Yes      | LiteLLM proxy URL (e.g. `https://proxy.example.com/chat/completions`) |
+| `LITELLM_API_KEY` | Yes      | API key for the LiteLLM proxy                                         |
 
 These are derived at runtime into `ANTHROPIC_BASE_URL` (with `/chat/completions` stripped) and `ANTHROPIC_API_KEY` for the Claude Agent SDK.
 
@@ -116,22 +117,22 @@ Only these env vars are passed to the agent subprocess:
 
 All endpoints require authentication and **SUPER_ADMIN** role.
 
-| Method | Path                                 | Response | Description                    |
-| ------ | ------------------------------------ | -------- | ------------------------------ |
-| GET    | `/api/agent-jobs`                    | 200      | Paginated list of agent jobs   |
-| GET    | `/api/agent-jobs/:id`                | 200      | Single job with progress log   |
-| POST   | `/api/agent-jobs/trigger/:productId` | 202      | Manually trigger an agent run  |
+| Method | Path                                 | Response | Description                   |
+| ------ | ------------------------------------ | -------- | ----------------------------- |
+| GET    | `/api/agent-jobs`                    | 200      | Paginated list of agent jobs  |
+| GET    | `/api/agent-jobs/:id`                | 200      | Single job with progress log  |
+| POST   | `/api/agent-jobs/trigger/:productId` | 202      | Manually trigger an agent run |
 
 ### GET /api/agent-jobs
 
 Query parameters:
 
-| Parameter   | Type   | Description                                           |
-| ----------- | ------ | ----------------------------------------------------- |
-| `productId` | UUID   | Filter by product ID                                  |
+| Parameter   | Type   | Description                                                    |
+| ----------- | ------ | -------------------------------------------------------------- |
+| `productId` | UUID   | Filter by product ID                                           |
 | `status`    | string | Filter by status (`pending`, `running`, `completed`, `failed`) |
-| `page`      | number | Page number (default: 1)                              |
-| `limit`     | number | Items per page (default: 20, max: 100)                |
+| `page`      | number | Page number (default: 1)                                       |
+| `limit`     | number | Items per page (default: 20, max: 100)                         |
 
 Response: `{ success, data, total, page, pageSize, totalPages }`
 
@@ -147,31 +148,31 @@ Returns `202 Accepted` with `{ success: true, data: { jobId: "<uuid>" } }`. The 
 
 ### AgentJob (Prisma)
 
-| Field            | Type              | Description                                          |
-| ---------------- | ----------------- | ---------------------------------------------------- |
-| `id`             | UUID              | Primary key                                          |
-| `productId`      | UUID (FK)         | Product this job runs for                            |
-| `trigger`        | AgentJobTrigger   | `webhook_push`, `webhook_release`, `webhook_pull_request`, `manual` |
-| `status`         | AgentJobStatus    | `pending`, `running`, `completed`, `failed`          |
-| `changelogId`    | UUID? (FK)        | Linked changelog entry if one was created/updated    |
-| `promptTokens`   | Int?              | Input tokens consumed                                |
-| `outputTokens`   | Int?              | Output tokens consumed                               |
-| `durationMs`     | Int?              | Total execution time in milliseconds                 |
-| `numTurns`       | Int?              | Number of agent turns                                |
-| `progressLog`    | JSON              | Array of `ProgressLogEntry` objects                  |
-| `errorMessage`   | String?           | Error details if job failed                          |
-| `createdAt`      | DateTime          | When the job was created                             |
-| `startedAt`      | DateTime?         | When execution began                                 |
-| `completedAt`    | DateTime?         | When execution finished                              |
+| Field          | Type            | Description                                                         |
+| -------------- | --------------- | ------------------------------------------------------------------- |
+| `id`           | UUID            | Primary key                                                         |
+| `productId`    | UUID (FK)       | Product this job runs for                                           |
+| `trigger`      | AgentJobTrigger | `webhook_push`, `webhook_release`, `webhook_pull_request`, `manual` |
+| `status`       | AgentJobStatus  | `pending`, `running`, `completed`, `failed`                         |
+| `changelogId`  | UUID? (FK)      | Linked changelog entry if one was created/updated                   |
+| `promptTokens` | Int?            | Input tokens consumed                                               |
+| `outputTokens` | Int?            | Output tokens consumed                                              |
+| `durationMs`   | Int?            | Total execution time in milliseconds                                |
+| `numTurns`     | Int?            | Number of agent turns                                               |
+| `progressLog`  | JSON            | Array of `ProgressLogEntry` objects                                 |
+| `errorMessage` | String?         | Error details if job failed                                         |
+| `createdAt`    | DateTime        | When the job was created                                            |
+| `startedAt`    | DateTime?       | When execution began                                                |
+| `completedAt`  | DateTime?       | When execution finished                                             |
 
 ### ProgressLogEntry
 
 ```typescript
 type ProgressLogEntry = {
-  timestamp: string;  // ISO 8601
+  timestamp: string; // ISO 8601
   type: 'tool_call' | 'tool_result' | 'text' | 'error';
-  tool?: string;      // Name of MCP tool called
-  summary: string;    // ≤200 chars for text, full message for errors
+  tool?: string; // Name of MCP tool called
+  summary: string; // ≤200 chars for text, full message for errors
 };
 ```
 
@@ -187,13 +188,14 @@ All automated changelogs are attributed to a dedicated bot user:
 
 The `AutoChangelogLock` table prevents duplicate agent runs and ensures no webhook activity is missed. When a webhook arrives while an agent job is already running for the same product, the system marks the lock as `pending_rerun` instead of starting a second concurrent job.
 
-| Scenario               | Action                                                                |
-| ---------------------- | --------------------------------------------------------------------- |
-| No lock exists         | Acquire lock, create job, run agent                                   |
-| Lock exists (< 10 min) | Mark `pending_rerun` — agent will re-run after current job finishes   |
-| Lock exists (> 10 min) | Reclaim stale lock (crashed replica recovery)                         |
+| Scenario               | Action                                                              |
+| ---------------------- | ------------------------------------------------------------------- |
+| No lock exists         | Acquire lock, create job, run agent                                 |
+| Lock exists (< 10 min) | Mark `pending_rerun` — agent will re-run after current job finishes |
+| Lock exists (> 10 min) | Reclaim stale lock (crashed replica recovery)                       |
 
 After an agent job completes, the service checks the lock:
+
 - If `pending_rerun` is set, it creates a **new** job and runs once more with fresh GitHub data
 - If not, it releases the lock
 

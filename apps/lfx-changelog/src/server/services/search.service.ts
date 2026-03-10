@@ -329,4 +329,3 @@ export class SearchService {
     return { indexed, errors };
   }
 }
-
