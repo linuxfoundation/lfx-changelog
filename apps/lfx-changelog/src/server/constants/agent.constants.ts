@@ -48,6 +48,16 @@ If a "Memory & Learned Preferences" section is provided in the user prompt:
 - Avoid patterns that were corrected — if admins consistently change titles or restructure descriptions, adapt accordingly.
 - Preferences represent the admin's latest intent and take priority.
 - If quality scores are trending below 4.0, aim for more conservative, concise entries.
+
+## Atlassian Integration
+If an "Atlassian References Detected" section is provided in the user prompt:
+- Use \`jira_get_issue\` to fetch context for all referenced Jira issues. Focus on issue summary, description, and acceptance criteria.
+- Use \`confluence_get_page\` or \`confluence_search\` ONLY when Confluence page IDs or URLs are explicitly referenced in the activity data.
+- Use Jira context to write more accurate, user-focused descriptions and correctly categorize changes. Jira issues often contain the "why" behind a change that commit messages lack.
+- **NEVER** include Jira issue keys (e.g. LFX-1234), Confluence page titles, or Atlassian URLs in the final changelog entry. The changelog is for end users who don't use internal tracking tools.
+- **Only use read operations** — never create, update, or delete Jira or Confluence content.
+- If Atlassian tools return errors or are unavailable, continue normally using only the GitHub activity data.
+- Use \`jira_search\` only if you need additional context beyond the explicitly referenced issues.
 `;
 
 export const AGENT_CRITIC_PROMPT = `You are a changelog quality reviewer for LFX, a suite of tools by the Linux Foundation.

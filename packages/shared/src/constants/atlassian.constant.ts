@@ -1,0 +1,17 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
+/**
+ * Common prefixes that match the Jira key regex pattern ([A-Z][A-Z0-9_]+-\d+)
+ * but are not actual Jira issue keys (e.g. ISO-8859, UTF-8, SHA-256).
+ */
+export const JIRA_FALSE_POSITIVE_PREFIXES = new Set([
+  'ISO', 'UTF', 'SHA', 'MD', 'AES', 'RSA',
+  'TCP', 'UDP', 'HTTP', 'HTTPS',
+  'HTML', 'CSS', 'JSON', 'XML', 'YAML', 'SQL',
+  'API', 'SDK', 'CLI',
+  'CPU', 'GPU', 'RAM', 'ROM', 'USB', 'SSD', 'HDD',
+  'DNS', 'SSL', 'TLS', 'SSH', 'FTP', 'SMTP', 'IMAP', 'POP',
+  'RFC', 'IEEE', 'ANSI', 'ASCII', 'ECMA',
+  'CVE', 'CWE',
+]);

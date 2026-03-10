@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { AGENT_CONFIG, AGENT_CRITIC_PROMPT, AGENT_SYSTEM_PROMPT } from '../constants/agent.constants';
 import { AgentServiceError } from '../errors';
 import { buildActivityContext } from '../helpers/activity-context.helper';
+import { extractAtlassianReferences, formatAtlassianHints } from '../helpers/atlassian-reference.helper';
 import { serverLogger } from '../server-logger';
 import { agentJobEmitter } from './agent-job-emitter.service';
 import { AgentMemoryService } from './agent-memory.service';
@@ -278,6 +279,28 @@ export class ChangelogAgentService {
       const memoryData = await this.agentMemoryService.getMemoryForProduct(productId);
       const memoryContext = this.agentMemoryService.formatMemoryContext(memoryData);
 
+      // 6c. Extract Atlassian references from activity data
+      const atlassianRefs = extractAtlassianReferences(allCommits, allMergedPRs, storedReleases);
+      const jiraRefs = atlassianRefs.filter((r) => r.type === 'jira-issue');
+      const confluenceRefs = atlassianRefs.filter((r) => r.type === 'confluence-page');
+
+      if (atlassianRefs.length > 0) {
+        serverLogger.info(
+          {
+            jobId,
+            productId,
+            jiraIssues: jiraRefs.map((r) => r.key),
+            confluencePages: confluenceRefs.map((r) => r.key),
+            totalRefs: atlassianRefs.length,
+          },
+          'Extracted Atlassian references from activity data'
+        );
+      } else {
+        serverLogger.debug({ jobId, productId }, 'No Atlassian references found in activity data');
+      }
+
+      const atlassianHints = formatAtlassianHints(atlassianRefs);
+
       // 7. Build user prompt
       const totalActivities = allCommits.length + allMergedPRs.length;
       const userPrompt = this.buildUserPrompt({
@@ -290,6 +313,7 @@ export class ChangelogAgentService {
         activityContext,
         totalActivities,
         memoryContext,
+        atlassianHints,
       });
 
       // 8. Create MCP tools (pass jobId for precise linking)
@@ -321,7 +345,7 @@ export class ChangelogAgentService {
             allowedTools: [],
             permissionMode: 'bypassPermissions',
             allowDangerouslySkipPermissions: true,
-            mcpServers: { 'changelog-tools': mcpServer },
+            mcpServers: this.buildMcpServers(mcpServer),
             abortController,
             env: {
               PATH: process.env['PATH'] || '/usr/local/bin:/usr/bin:/bin',
@@ -485,6 +509,31 @@ export class ChangelogAgentService {
     agentJobEmitter.removeAllForJob(jobId);
   }
 
+  private buildMcpServers(mcpServer: ReturnType<typeof createSdkMcpServer>): Record<string, ReturnType<typeof createSdkMcpServer> | { type: 'http'; url: string; headers?: Record<string, string> }> {
+    const servers: Record<string, ReturnType<typeof createSdkMcpServer> | { type: 'http'; url: string; headers?: Record<string, string> }> = {
+      'changelog-tools': mcpServer,
+    };
+
+    const atlassianEmail = process.env['ATLASSIAN_MCP_EMAIL'];
+    const atlassianToken = process.env['ATLASSIAN_MCP_API_TOKEN'];
+    const atlassianUrl = process.env['ATLASSIAN_MCP_URL'] || 'https://mcp.atlassian.com/v1/mcp';
+
+    if (atlassianEmail && atlassianToken) {
+      servers['atlassian'] = {
+        type: 'sse',
+        url: atlassianUrl,
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${atlassianEmail}:${atlassianToken}`).toString('base64')}`,
+        },
+      };
+      serverLogger.info({ url: atlassianUrl }, 'Atlassian MCP server configured for agent');
+    } else {
+      serverLogger.debug('Atlassian MCP not configured — ATLASSIAN_MCP_EMAIL or ATLASSIAN_MCP_API_TOKEN not set');
+    }
+
+    return servers;
+  }
+
   private buildUserPrompt(context: {
     productName: string;
     productSlug: string;
@@ -495,6 +544,7 @@ export class ChangelogAgentService {
     activityContext: string;
     totalActivities: number;
     memoryContext: string;
+    atlassianHints: string;
   }): string {
     const lines = [
       `Product: ${context.productName} (${context.productSlug})`,
@@ -505,6 +555,8 @@ export class ChangelogAgentService {
       context.totalActivities < 3 ? 'Note: Trivial activity — skip the critic validation step.' : '',
       '',
       context.memoryContext,
+      '',
+      context.atlassianHints,
       '',
       context.activityContext,
     ];
