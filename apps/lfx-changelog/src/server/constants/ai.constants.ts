@@ -4,7 +4,7 @@
 import type { AiChangelogMetadata, OpenAIJsonSchemaFormat } from '@lfx-changelog/shared';
 
 /** Default model routed through LiteLLM. */
-export const AI_MODEL = 'claude-sonnet-4-6';
+export const AI_MODEL = 'claude-opus-4-6';
 
 /** Request-level defaults. */
 export const AI_REQUEST_CONFIG = {
