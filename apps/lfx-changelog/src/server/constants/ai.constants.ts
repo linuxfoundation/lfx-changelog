@@ -3,17 +3,12 @@
 
 import type { AiChangelogMetadata, OpenAIJsonSchemaFormat } from '@lfx-changelog/shared';
 
-/** LiteLLM proxy endpoint. Override via AI_API_URL env var. */
-export const AI_ENDPOINTS = {
-  LITE_LLM_CHAT: 'https://litellm.dev.v2.cluster.linuxfound.info/chat/completions',
-} as const;
-
 /** Default model routed through LiteLLM. */
-export const AI_MODEL = 'claude-sonnet-4-6';
+export const AI_MODEL = 'claude-opus-4-6';
 
 /** Request-level defaults. */
 export const AI_REQUEST_CONFIG = {
-  MAX_TOKENS: 2048,
+  MAX_TOKENS: 4096,
   TEMPERATURE: 0.3,
   TIMEOUT_MS: 25_000,
 } as const;
