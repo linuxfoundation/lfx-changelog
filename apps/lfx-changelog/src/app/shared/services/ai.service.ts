@@ -31,26 +31,24 @@ export class AiService {
     this.reset();
     this.state.set({ ...INITIAL_STATE, generating: true, status: 'Starting generation...' });
 
-    this.subscription = this.sseService
-      .connect<ChangelogSSEEventType>('/api/ai/generate-changelog', { method: 'POST', body: request })
-      .subscribe({
-        next: (event) => this.handleSSEEvent(event as ChangelogSSEEvent),
-        error: (err) => {
-          this.state.update((s) => ({
-            ...s,
-            generating: false,
-            error: `Connection error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          }));
-        },
-        complete: () => {
-          this.state.update((s) => {
-            if (!s.done && !s.error) {
-              return { ...s, generating: false, done: true };
-            }
-            return { ...s, generating: false };
-          });
-        },
-      });
+    this.subscription = this.sseService.connect<ChangelogSSEEventType>('/api/ai/generate-changelog', { method: 'POST', body: request }).subscribe({
+      next: (event) => this.handleSSEEvent(event as ChangelogSSEEvent),
+      error: (err) => {
+        this.state.update((s) => ({
+          ...s,
+          generating: false,
+          error: `Connection error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        }));
+      },
+      complete: () => {
+        this.state.update((s) => {
+          if (!s.done && !s.error) {
+            return { ...s, generating: false, done: true };
+          }
+          return { ...s, generating: false };
+        });
+      },
+    });
   }
 
   public abort(): void {

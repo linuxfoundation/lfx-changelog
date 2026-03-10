@@ -117,7 +117,7 @@ export class ChangelogController {
 
   public async publish(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const entry = await this.changelogService.publish(req.params['id'] as string);
+      const entry = await this.changelogService.publish(req.params['id'] as string, req.dbUser?.id);
       res.json({ success: true, data: entry });
     } catch (error) {
       next(error);

@@ -109,7 +109,7 @@ export class AgentJobListComponent {
           updated.delete(jobId);
           this.cancellingJobs.set(updated);
         }),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe();
   }

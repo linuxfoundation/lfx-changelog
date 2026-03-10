@@ -199,8 +199,7 @@ export class ChatController {
     const accessLevel: ChatAccessLevel = isAdmin ? 'admin' : 'public';
 
     // Super admins and global editors/product admins (productId === null) see all drafts
-    const hasGlobalRole =
-      isSuperAdmin || roles.some((r) => r.productId === null && (r.role === UserRole.PRODUCT_ADMIN || r.role === UserRole.EDITOR));
+    const hasGlobalRole = isSuperAdmin || roles.some((r) => r.productId === null && (r.role === UserRole.PRODUCT_ADMIN || r.role === UserRole.EDITOR));
     const accessibleProductIds = hasGlobalRole ? undefined : roles.filter((r) => r.productId !== null).map((r) => r.productId as string);
 
     return { accessLevel, accessibleProductIds };
