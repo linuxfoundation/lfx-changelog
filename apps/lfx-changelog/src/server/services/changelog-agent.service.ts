@@ -5,7 +5,7 @@ import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk'
 import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 import { z } from 'zod';
 
-import { AGENT_CONFIG, AGENT_CRITIC_PROMPT, AGENT_SYSTEM_PROMPT } from '../constants/agent.constants';
+import { AGENT_CONFIG, AGENT_CRITIC_PROMPT, AGENT_SYSTEM_PROMPT, ALLOWED_ATLASSIAN_TOOLS, ALLOWED_CHANGELOG_TOOLS } from '../constants/agent.constants';
 import { AgentServiceError } from '../errors';
 import { buildActivityContext } from '../helpers/activity-context.helper';
 import { extractAtlassianReferences, formatAtlassianHints } from '../helpers/atlassian-reference.helper';
@@ -342,7 +342,7 @@ export class ChangelogAgentService {
             systemPrompt: AGENT_SYSTEM_PROMPT,
             model: AGENT_CONFIG.MODEL,
             maxTurns: AGENT_CONFIG.MAX_TURNS,
-            allowedTools: [],
+            allowedTools: [...ALLOWED_CHANGELOG_TOOLS, ...ALLOWED_ATLASSIAN_TOOLS],
             permissionMode: 'bypassPermissions',
             allowDangerouslySkipPermissions: true,
             mcpServers: this.buildMcpServers(mcpServer),

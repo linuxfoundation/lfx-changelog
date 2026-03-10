@@ -7,6 +7,23 @@ export const AGENT_CONFIG = {
   TIMEOUT_MS: 180_000, // 3 minutes
 } as const;
 
+/** Changelog MCP tools the agent is allowed to call. */
+export const ALLOWED_CHANGELOG_TOOLS = [
+  'mcp__changelog-tools__search_past_changelogs',
+  'mcp__changelog-tools__create_changelog_draft',
+  'mcp__changelog-tools__update_changelog_draft',
+  'mcp__changelog-tools__get_latest_version',
+  'mcp__changelog-tools__validate_changelog_draft',
+] as const;
+
+/** Read-only Atlassian tools the agent is allowed to call. */
+export const ALLOWED_ATLASSIAN_TOOLS = [
+  'mcp__atlassian__jira_get_issue',
+  'mcp__atlassian__jira_search',
+  'mcp__atlassian__confluence_get_page',
+  'mcp__atlassian__confluence_search',
+] as const;
+
 export const AGENT_SYSTEM_PROMPT = `You are a changelog writer for LFX, a suite of tools by the Linux Foundation.
 Your job is to produce a polished, user-focused changelog entry from raw GitHub activity data.
 
