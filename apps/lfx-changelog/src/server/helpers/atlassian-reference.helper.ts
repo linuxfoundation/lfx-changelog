@@ -48,11 +48,7 @@ function extractFromText(text: string, refs: Map<string, AtlassianReference>): v
  * Extracts Jira issue keys and Confluence page IDs from GitHub activity text.
  * Scans commit messages, PR titles/bodies, and release bodies.
  */
-export function extractAtlassianReferences(
-  commits: GitHubCommit[],
-  pullRequests: GitHubPullRequest[],
-  releases: StoredRelease[]
-): AtlassianReference[] {
+export function extractAtlassianReferences(commits: GitHubCommit[], pullRequests: GitHubPullRequest[], releases: StoredRelease[]): AtlassianReference[] {
   const refs = new Map<string, AtlassianReference>();
 
   for (const commit of commits) {
@@ -85,12 +81,12 @@ export function formatAtlassianHints(references: AtlassianReference[]): string {
 
   if (jiraRefs.length > 0) {
     lines.push(`Jira issues referenced in activity: ${jiraRefs.map((r) => r.key).join(', ')}`);
-    lines.push('Use `jira_get_issue` to fetch context for each referenced issue.');
+    lines.push('Use `getJiraIssue` to fetch context for each referenced issue.');
   }
 
   if (confluenceRefs.length > 0) {
     lines.push(`Confluence pages referenced: ${confluenceRefs.map((r) => r.key).join(', ')}`);
-    lines.push('Use `confluence_get_page` to fetch relevant documentation context.');
+    lines.push('Use `getConfluencePage` to fetch relevant documentation context.');
   }
 
   lines.push('');
