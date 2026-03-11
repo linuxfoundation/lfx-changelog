@@ -75,6 +75,43 @@ const INDEX_CONFIGS: Record<SearchTarget, IndexConfig> = {
 // Module-level client singleton — shared across all SearchService instances
 let osClient: Client | null = null;
 
+// ── Blog document mapping helper ─────────────────────────────────────────────
+// Shared between BlogService.syncToOpenSearch() and SearchService.reindexAllBlogs()
+
+type BlogWithRelationsForIndex = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  description: string;
+  type: string;
+  status: string;
+  coverImageUrl: string | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  author?: { name: string | null; avatarUrl: string | null } | null;
+  products?: { product: { id: string; name: string } }[] | null;
+};
+
+export function toBlogDocument(blog: BlogWithRelationsForIndex): BlogDocument {
+  return {
+    id: blog.id,
+    slug: blog.slug,
+    title: blog.title,
+    excerpt: blog.excerpt,
+    description: blog.description,
+    type: blog.type,
+    status: blog.status,
+    coverImageUrl: blog.coverImageUrl,
+    publishedAt: blog.publishedAt?.toISOString() ?? null,
+    createdAt: blog.createdAt.toISOString(),
+    authorName: blog.author?.name ?? 'Unknown',
+    authorAvatarUrl: blog.author?.avatarUrl ?? null,
+    productNames: blog.products?.map((p) => p.product.name) ?? [],
+    productIds: blog.products?.map((p) => p.product.id) ?? [],
+  };
+}
+
 export class SearchService {
   // ── OpenSearch client ───────────────────────────
 
@@ -310,7 +347,7 @@ export class SearchService {
    * Full-text search across any configured index. The `target` param selects
    * the index, search fields, filters, and facet configuration.
    */
-  public async search(params: SearchQueryParams): Promise<SearchResponse> {
+  public async search<T extends SearchHit = SearchHit>(params: SearchQueryParams): Promise<SearchResponse<T>> {
     const os = this.getClient();
     if (!os) {
       return { success: true, hits: [], total: 0, page: params.page, pageSize: params.limit, totalPages: 0, facets: {} };
@@ -366,8 +403,8 @@ export class SearchService {
     const hitsObj = response.body.hits;
     const total = typeof hitsObj.total === 'number' ? hitsObj.total : (hitsObj.total as { value: number }).value;
 
-    const hits: SearchHit[] = hitsObj.hits.map((hit) => {
-      const source = hit._source as Record<string, unknown>;
+    const hits = hitsObj.hits.map((hit) => {
+      const source = hit._source as ChangelogDocument | BlogDocument;
       const highlight = hit.highlight || {};
       return {
         ...source,
@@ -376,7 +413,7 @@ export class SearchService {
           title: highlight['title'] || undefined,
           description: highlight['description'] || undefined,
         },
-      };
+      } as T;
     });
 
     const responseAggs = response.body.aggregations || {};
@@ -513,22 +550,7 @@ export class SearchService {
 
       const bulkBody: (OpenSearchBulkAction | BlogDocument)[] = [];
       for (const blog of blogs) {
-        const doc: BlogDocument = {
-          id: blog.id,
-          slug: blog.slug,
-          title: blog.title,
-          excerpt: blog.excerpt,
-          description: blog.description,
-          type: blog.type,
-          status: blog.status,
-          coverImageUrl: blog.coverImageUrl,
-          publishedAt: blog.publishedAt?.toISOString() ?? null,
-          createdAt: blog.createdAt.toISOString(),
-          authorName: blog.author?.name ?? 'Unknown',
-          authorAvatarUrl: blog.author?.avatarUrl ?? null,
-          productNames: blog.products?.map((p) => p.product.name) ?? [],
-          productIds: blog.products?.map((p) => p.product.id) ?? [],
-        };
+        const doc = toBlogDocument(blog);
         bulkBody.push({ index: { _index: BLOGS_INDEX, _id: doc.id } });
         bulkBody.push(doc);
       }

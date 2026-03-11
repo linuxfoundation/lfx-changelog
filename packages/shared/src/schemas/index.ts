@@ -97,8 +97,10 @@ export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } f
 export { RuntimeConfigSchema } from './runtime-config.schema.js';
 export {
   BlogDocumentSchema,
+  BlogSearchHitSchema,
   ChangelogDocumentSchema,
   ChangelogQueryParamsSchema,
+  ChangelogSearchHitSchema,
   FacetBucketSchema,
   SearchHighlightsSchema,
   SearchHitSchema,
@@ -215,8 +217,10 @@ export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public
 export type { RuntimeConfig } from './runtime-config.schema.js';
 export type {
   BlogDocument,
+  BlogSearchHit,
   ChangelogDocument,
   ChangelogQueryParams,
+  ChangelogSearchHit,
   FacetBucket,
   SearchHighlights,
   SearchHit,

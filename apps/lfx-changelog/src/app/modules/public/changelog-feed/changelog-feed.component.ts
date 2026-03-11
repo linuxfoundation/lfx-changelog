@@ -12,7 +12,7 @@ import { SearchService } from '@services/search.service';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { catchError, combineLatest, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
 
-import type { ChangelogEntryWithRelations, PublicProduct, SearchHit, SearchResponse } from '@lfx-changelog/shared';
+import type { ChangelogEntryWithRelations, ChangelogSearchHit, PublicProduct, SearchResponse } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-changelog-feed',
@@ -32,7 +32,7 @@ export class ChangelogFeedComponent {
   protected readonly searchValue = toSignal(this.searchControl.valueChanges.pipe(startWith('')), { initialValue: '' });
 
   protected readonly publishedEntries: Signal<ChangelogEntryWithRelations[]> = this.initPublishedEntries();
-  protected readonly searchResponse: Signal<SearchResponse | null> = this.initSearchResponse();
+  protected readonly searchResponse: Signal<SearchResponse<ChangelogSearchHit> | null> = this.initSearchResponse();
   protected readonly isSearchActive = computed(() => this.searchResponse() !== null);
   protected readonly searchEntries = computed(() => {
     const response = this.searchResponse();
@@ -48,26 +48,26 @@ export class ChangelogFeedComponent {
     this.searchControl.setValue('');
   }
 
-  private mapSearchHitToEntry(hit: SearchHit): ChangelogEntryWithRelations {
+  private mapSearchHitToEntry(hit: ChangelogSearchHit): ChangelogEntryWithRelations {
     return {
-      id: hit['id'] as string,
-      slug: hit['slug'] as string | null,
-      title: hit['title'] as string,
-      description: hit['description'] as string,
-      version: hit['version'] as string | null,
-      status: hit['status'] as ChangelogEntryWithRelations['status'],
-      publishedAt: hit['publishedAt'] as string | null,
-      createdAt: hit['createdAt'] as string,
-      updatedAt: hit['createdAt'] as string,
-      productId: hit['productId'] as string,
+      id: hit.id,
+      slug: hit.slug,
+      title: hit.title,
+      description: hit.description,
+      version: hit.version,
+      status: hit.status as ChangelogEntryWithRelations['status'],
+      publishedAt: hit.publishedAt,
+      createdAt: hit.createdAt,
+      updatedAt: hit.createdAt,
+      productId: hit.productId,
       createdBy: '',
       product: {
-        id: hit['productId'] as string,
-        name: hit['productName'] as string,
-        slug: hit['productSlug'] as string,
+        id: hit.productId,
+        name: hit.productName,
+        slug: hit.productSlug,
         description: null,
         iconUrl: null,
-        faIcon: (hit['productFaIcon'] as string | null) ?? null,
+        faIcon: hit.productFaIcon ?? null,
         isActive: true,
         githubInstallationId: null,
         createdAt: '',
@@ -88,13 +88,13 @@ export class ChangelogFeedComponent {
     );
   }
 
-  private initSearchResponse(): Signal<SearchResponse | null> {
+  private initSearchResponse(): Signal<SearchResponse<ChangelogSearchHit> | null> {
     return toSignal(
       combineLatest([this.searchControl.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), toObservable(this.selectedProduct)]).pipe(
         switchMap(([query, productId]) => {
           const q = (query || '').trim();
           if (!q) return of(null);
-          return this.searchService.search({ target: 'changelogs', q, productId: productId || undefined }).pipe(catchError(() => of(null)));
+          return this.searchService.search<ChangelogSearchHit>({ target: 'changelogs', q, productId: productId || undefined }).pipe(catchError(() => of(null)));
         })
       ),
       { initialValue: null }

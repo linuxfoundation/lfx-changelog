@@ -22,6 +22,8 @@ import { SearchService } from './search.service';
 import type {
   AiChangelogMetadata,
   AiSummaryResponse,
+  BlogSearchHit,
+  ChangelogSearchHit,
   ChatSSEEvent,
   GetChangelogDetailToolArgs,
   OpenAIChatMessage,
@@ -549,20 +551,19 @@ export class AiService {
 
   private async chatSearchChangelogsViaOpenSearch(query: string, productId: string | undefined, page: number, limit: number): Promise<string> {
     try {
-      const result = await this.searchService.search({ target: 'changelogs', q: query, productId, page, limit });
+      const result = await this.searchService.search<ChangelogSearchHit>({ target: 'changelogs', q: query, productId, page, limit });
 
       const entries = result.hits.map((hit) => ({
-        id: hit['id'],
-        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit['title'],
-        description: hit['description']
-          ? String(hit['description']).slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) +
-            (String(hit['description']).length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
+        id: hit.id,
+        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit.title,
+        description: hit.description
+          ? hit.description.slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) + (hit.description.length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
           : null,
-        version: hit['version'],
-        status: hit['status'],
-        publishedAt: hit['publishedAt'],
-        productName: hit['productName'],
-        productSlug: hit['productSlug'],
+        version: hit.version,
+        status: hit.status,
+        publishedAt: hit.publishedAt,
+        productName: hit.productName,
+        productSlug: hit.productSlug,
         score: hit.score,
       }));
 
@@ -576,6 +577,7 @@ export class AiService {
       });
     } catch (error) {
       serverLogger.warn({ err: error }, 'OpenSearch search failed in chat tool, falling back to DB');
+      // target is required by SearchToolArgs but ignored by the DB fallback path
       return this.chatSearchChangelogsViaDB({ target: 'changelogs', query, productId, page, limit }, { accessLevel: 'public' }, page, limit);
     }
   }
@@ -622,22 +624,25 @@ export class AiService {
     const page = args.page || 1;
 
     if (!this.searchService.getClient()) {
-      return JSON.stringify({ error: 'Blog search is not available — OpenSearch is not configured' });
+      return JSON.stringify({ error: 'Blog search requires OpenSearch. No results available — try searching changelogs instead.' });
+    }
+
+    if (!args.query) {
+      return JSON.stringify({ error: 'A search query is required for blog search' });
     }
 
     try {
-      const result = await this.searchService.search({ target: 'blogs', q: args.query || '*', type: args.type, page, limit });
+      const result = await this.searchService.search<BlogSearchHit>({ target: 'blogs', q: args.query, type: args.type, page, limit });
 
       const posts = result.hits.map((hit) => ({
-        id: hit['id'],
-        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit['title'],
-        excerpt: hit['excerpt']
-          ? String(hit['excerpt']).slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) +
-            (String(hit['excerpt']).length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
+        id: hit.id,
+        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit.title,
+        excerpt: hit.excerpt
+          ? hit.excerpt.slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) + (hit.excerpt.length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
           : null,
-        type: hit['type'],
-        authorName: hit['authorName'],
-        publishedAt: hit['publishedAt'],
+        type: hit.type,
+        authorName: hit.authorName,
+        publishedAt: hit.publishedAt,
         score: hit.score,
       }));
 

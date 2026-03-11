@@ -88,15 +88,21 @@ export const BlogDocumentSchema = z
 
 export type BlogDocument = z.infer<typeof BlogDocumentSchema>;
 
-// ── Generic search hit ──────────────────────────────────────────────────────
-export const SearchHitSchema = z
-  .object({
-    score: z.number().openapi({ description: 'Relevance score from OpenSearch' }),
-    highlights: SearchHighlightsSchema.openapi({ description: 'Highlighted matching fragments' }),
-  })
-  .catchall(z.unknown())
-  .openapi('SearchHit');
+// ── Search hit ──────────────────────────────────────────────────────────────
+// Hits can come from any index, so the runtime type is a union of all document
+// shapes plus the score/highlights envelope added by the search layer.
+const SearchHitEnvelopeSchema = z.object({
+  score: z.number().openapi({ description: 'Relevance score from OpenSearch' }),
+  highlights: SearchHighlightsSchema.openapi({ description: 'Highlighted matching fragments' }),
+});
 
+export const ChangelogSearchHitSchema = ChangelogDocumentSchema.merge(SearchHitEnvelopeSchema).openapi('ChangelogSearchHit');
+export type ChangelogSearchHit = z.infer<typeof ChangelogSearchHitSchema>;
+
+export const BlogSearchHitSchema = BlogDocumentSchema.merge(SearchHitEnvelopeSchema).openapi('BlogSearchHit');
+export type BlogSearchHit = z.infer<typeof BlogSearchHitSchema>;
+
+export const SearchHitSchema = z.union([ChangelogSearchHitSchema, BlogSearchHitSchema]).openapi('SearchHit');
 export type SearchHit = z.infer<typeof SearchHitSchema>;
 
 // ── Facet bucket ────────────────────────────────────────────────────────────
@@ -123,4 +129,6 @@ export const SearchResponseSchema = z
   })
   .openapi('SearchResponse');
 
-export type SearchResponse = z.infer<typeof SearchResponseSchema>;
+/** When called without a type argument, `SearchResponse` matches the Zod schema exactly.
+ *  Pass a narrower hit type (e.g. `SearchResponse<ChangelogSearchHit>`) to get typed hits. */
+export type SearchResponse<T extends SearchHit = SearchHit> = Omit<z.infer<typeof SearchResponseSchema>, 'hits'> & { hits: T[] };

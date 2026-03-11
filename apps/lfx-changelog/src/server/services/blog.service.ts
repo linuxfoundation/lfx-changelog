@@ -7,9 +7,9 @@ import { BlogStatus, BlogType, Prisma, Blog as PrismaBlog } from '@prisma/client
 import { ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
-import { SearchService } from './search.service';
+import { SearchService, toBlogDocument } from './search.service';
 
-import type { BlogDocument, BlogPostQueryParams, PaginatedResponse } from '@lfx-changelog/shared';
+import type { BlogPostQueryParams, PaginatedResponse } from '@lfx-changelog/shared';
 
 type PaginatedResult<T> = Omit<PaginatedResponse<T>, 'success'>;
 
@@ -322,23 +322,7 @@ export class BlogService {
   private syncToOpenSearch(blog: BlogWithRelations): void {
     if (blog.status !== 'published') return;
 
-    const doc: BlogDocument = {
-      id: blog.id,
-      slug: blog.slug,
-      title: blog.title,
-      excerpt: blog.excerpt,
-      description: blog.description,
-      type: blog.type,
-      status: blog.status,
-      coverImageUrl: blog.coverImageUrl,
-      publishedAt: blog.publishedAt?.toISOString() ?? null,
-      createdAt: blog.createdAt.toISOString(),
-      authorName: blog.author?.name ?? 'Unknown',
-      authorAvatarUrl: blog.author?.avatarUrl ?? null,
-      productNames: blog.products?.map((p) => p.product.name) ?? [],
-      productIds: blog.products?.map((p) => p.product.id) ?? [],
-    };
-
+    const doc = toBlogDocument(blog);
     this.searchService.indexBlogDocument(doc).catch((err) => serverLogger.warn({ err, id: blog.id }, 'Failed to sync blog to OpenSearch'));
   }
 
