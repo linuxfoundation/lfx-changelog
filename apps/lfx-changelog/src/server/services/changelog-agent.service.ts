@@ -509,7 +509,9 @@ export class ChangelogAgentService {
     agentJobEmitter.removeAllForJob(jobId);
   }
 
-  private buildMcpServers(mcpServer: ReturnType<typeof createSdkMcpServer>): Record<string, ReturnType<typeof createSdkMcpServer> | { type: 'http'; url: string; headers?: Record<string, string> }> {
+  private buildMcpServers(
+    mcpServer: ReturnType<typeof createSdkMcpServer>
+  ): Record<string, ReturnType<typeof createSdkMcpServer> | { type: 'http'; url: string; headers?: Record<string, string> }> {
     const servers: Record<string, ReturnType<typeof createSdkMcpServer> | { type: 'http'; url: string; headers?: Record<string, string> }> = {
       'changelog-tools': mcpServer,
     };

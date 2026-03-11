@@ -61,6 +61,17 @@
       </a>
 
       <a
+        data-testid="admin-sidebar-blog"
+        routerLink="/admin/blog"
+        routerLinkActive="bg-brand-50 text-brand-700 font-medium"
+        class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors">
+        <i class="fa-duotone fa-newspaper w-5 shrink-0 text-center"></i>
+        @if (!sidebarCollapsed()) {
+          <span>Blog</span>
+        }
+      </a>
+
+      <a
         data-testid="admin-sidebar-products"
         routerLink="/admin/products"
         routerLinkActive="bg-brand-50 text-brand-700 font-medium"

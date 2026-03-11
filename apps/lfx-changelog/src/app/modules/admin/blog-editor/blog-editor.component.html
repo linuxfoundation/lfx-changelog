@@ -1,0 +1,163 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left flex items-center justify-between">
+    <div>
+      <h1 data-testid="blog-editor-heading" class="font-display text-text-primary text-2xl font-bold">
+        {{ isEditing() ? 'Edit Blog Post' : 'New Blog Post' }}
+      </h1>
+      <p class="text-text-secondary mt-1">{{ isEditing() ? 'Update this blog post.' : 'Create a new blog post with markdown preview.' }}</p>
+    </div>
+    <a routerLink="/admin/blog">
+      <lfx-button variant="ghost">
+        <i class="fa-solid fa-arrow-left text-xs"></i>
+        Back
+      </lfx-button>
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <!-- Form -->
+    <div class="animate-slide-in-left relative z-10 space-y-5 [animation-delay:150ms]">
+      <lfx-input data-testid="blog-editor-title-input" label="Title" placeholder="Enter blog post title..." [formControl]="titleControl" />
+
+      <div class="space-y-1.5">
+        <div class="flex items-end gap-2">
+          <div class="flex-1">
+            <lfx-input data-testid="blog-editor-slug-input" label="Slug" placeholder="url-friendly-slug" [formControl]="slugControl" />
+          </div>
+          @if (!slugValue()) {
+            <lfx-button variant="secondary" class="mb-1" size="sm" [disabled]="!titleValue()" (clicked)="generateSlugFromTitle()">
+              <i class="fa-solid fa-rotate text-xs"></i>
+              Generate
+            </lfx-button>
+          }
+        </div>
+        @if (!slugValue() && titleValue()) {
+          <p class="text-xs text-amber-600 dark:text-amber-400">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+            Slug is required. Click Generate or enter one manually.
+          </p>
+        }
+      </div>
+
+      <lfx-input
+        data-testid="blog-editor-excerpt-input"
+        label="Excerpt (optional)"
+        placeholder="A brief summary for the listing..."
+        [formControl]="excerptControl" />
+
+      <lfx-select data-testid="blog-editor-type-select" label="Type" [options]="typeOptions" [formControl]="typeControl" placeholder="Select type..." />
+
+      <div class="grid grid-cols-2 gap-4">
+        <lfx-input data-testid="blog-editor-period-start" label="Period Start" type="date" [formControl]="periodStartControl" />
+        <lfx-input data-testid="blog-editor-period-end" label="Period End" type="date" [formControl]="periodEndControl" />
+      </div>
+
+      <lfx-markdown-editor
+        data-testid="blog-editor-description"
+        label="Content"
+        [rows]="16"
+        placeholder="Write blog post content in markdown..."
+        [formControl]="descriptionControl" />
+
+      <div class="flex items-center gap-3 pt-2">
+        @if (!isEditing() || isDraft()) {
+          <lfx-button
+            data-testid="blog-editor-publish-btn"
+            variant="primary"
+            [loading]="publishing()"
+            [disabled]="saving() || deleting() || !hasSlug()"
+            (clicked)="publish()">
+            <i class="fa-duotone fa-paper-plane text-xs"></i>
+            Publish
+          </lfx-button>
+        }
+        @if (isEditing() && !isDraft()) {
+          <lfx-button
+            data-testid="blog-editor-unpublish-btn"
+            variant="secondary"
+            [loading]="unpublishing()"
+            [disabled]="saving() || publishing() || deleting()"
+            (clicked)="confirmUnpublish()">
+            <i class="fa-solid fa-rotate-left text-xs"></i>
+            Unpublish
+          </lfx-button>
+        }
+        <lfx-button
+          data-testid="blog-editor-save-btn"
+          [variant]="!isEditing() || isDraft() ? 'secondary' : 'primary'"
+          [loading]="saving()"
+          [disabled]="publishing() || unpublishing() || deleting() || !hasSlug()"
+          (clicked)="save()">
+          {{ isEditing() ? 'Update Post' : 'Save as Draft' }}
+        </lfx-button>
+        <a data-testid="blog-editor-cancel-btn" routerLink="/admin/blog">
+          <lfx-button variant="secondary">Cancel</lfx-button>
+        </a>
+        @if (isEditing()) {
+          <div class="ml-auto">
+            <lfx-button
+              data-testid="blog-editor-delete-btn"
+              variant="danger"
+              [loading]="deleting()"
+              [disabled]="saving() || publishing() || unpublishing()"
+              (clicked)="confirmDelete()">
+              <i class="fa-solid fa-trash text-xs"></i>
+              Delete
+            </lfx-button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div class="animate-slide-in-right hidden [animation-delay:200ms] lg:block">
+      <div class="sticky top-6 space-y-6">
+        <div class="flex items-center justify-between">
+          <h2 data-testid="blog-editor-preview" class="text-text-muted text-sm font-medium">
+            <i class="fa-duotone fa-eye mr-1"></i>
+            Live Preview
+          </h2>
+          <div class="border-border flex gap-0.5 rounded-lg border p-0.5">
+            <button
+              data-testid="blog-editor-preview-desktop"
+              class="cursor-pointer rounded-md px-2.5 py-1.5 text-sm transition-colors"
+              [class]="previewMode() === 'desktop' ? 'bg-surface-alt text-text-primary' : 'text-text-muted hover:text-text-secondary'"
+              (click)="previewMode.set('desktop')">
+              <i class="fa-duotone fa-desktop"></i>
+            </button>
+            <button
+              data-testid="blog-editor-preview-mobile"
+              class="cursor-pointer rounded-md px-2.5 py-1.5 text-sm transition-colors"
+              [class]="previewMode() === 'mobile' ? 'bg-surface-alt text-text-primary' : 'text-text-muted hover:text-text-secondary'"
+              (click)="previewMode.set('mobile')">
+              <i class="fa-duotone fa-mobile"></i>
+            </button>
+          </div>
+        </div>
+
+        <div [class]="previewMode() === 'mobile' ? 'border-border/60 mx-auto max-w-sm rounded-xl border border-dashed p-3 transition-all' : 'transition-all'">
+          <lfx-card>
+            <div class="space-y-5">
+              <div class="flex flex-wrap items-center gap-2">
+                <lfx-status-badge [status]="previewStatus()" />
+              </div>
+
+              <h3 class="font-display text-text-primary text-xl font-bold">{{ titleValue() || 'Untitled Blog Post' }}</h3>
+
+              @if (descriptionValue()) {
+                <div class="border-border border-t pt-4">
+                  <lfx-markdown-renderer [content]="descriptionValue()" />
+                </div>
+              } @else {
+                <p class="text-text-muted py-6 text-center text-sm">Start typing content to see the rendered preview.</p>
+              }
+            </div>
+          </lfx-card>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

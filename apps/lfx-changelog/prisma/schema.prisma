@@ -55,6 +55,19 @@ enum AgentJobTrigger {
   webhook_release
   webhook_pull_request
   manual
+  newsletter_monthly
+  newsletter_product
+  newsletter_manual
+}
+
+enum BlogPostStatus {
+  draft
+  published
+}
+
+enum BlogPostType {
+  monthly_roundup
+  product_newsletter
 }
 
 model Product {
@@ -76,6 +89,7 @@ model Product {
   changelogViews      ChangelogView[]
   agentJobs           AgentJob[]
   agentMemory         AgentMemory?
+  blogPostProducts    BlogPostProduct[]
 
   @@map("products")
 }
@@ -139,10 +153,11 @@ model ChangelogEntry {
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
 
-  product            Product              @relation(fields: [productId], references: [id])
-  author             User                 @relation(fields: [createdBy], references: [id])
-  slackNotifications SlackNotification[]
-  agentJobs          AgentJob[]
+  product               Product                  @relation(fields: [productId], references: [id])
+  author                User                     @relation(fields: [createdBy], references: [id])
+  slackNotifications    SlackNotification[]
+  agentJobs             AgentJob[]
+  blogPostChangelogs    BlogPostChangelogEntry[]
 
   @@index([productId, status, publishedAt])
   @@map("changelog_entries")
@@ -162,6 +177,7 @@ model User {
   apiKeys             ApiKey[]
   chatConversations   ChatConversation[]
   slackIntegrations   SlackIntegration[]
+  blogPosts           BlogPost[]
 
   @@map("users")
 }
@@ -328,8 +344,11 @@ model AgentJob {
   completedAt  DateTime?       @map("completed_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
+  blogPostId     String?         @map("blog_post_id")
+
   product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   changelogEntry ChangelogEntry? @relation(fields: [changelogId], references: [id], onDelete: SetNull)
+  blogPost       BlogPost?       @relation(fields: [blogPostId], references: [id], onDelete: SetNull)
 
   @@index([productId, status])
   @@index([createdAt])
@@ -347,4 +366,53 @@ model AgentMemory {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("agent_memories")
+}
+
+model BlogPost {
+  id            String         @id @default(uuid())
+  slug          String         @unique
+  title         String
+  excerpt       String?
+  description   String
+  type          BlogPostType   @default(monthly_roundup)
+  status        BlogPostStatus @default(draft)
+  coverImageUrl String?        @map("cover_image_url")
+  publishedAt   DateTime?      @map("published_at")
+  periodStart   DateTime?      @map("period_start")
+  periodEnd     DateTime?      @map("period_end")
+  createdBy     String         @map("created_by")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  author     User                     @relation(fields: [createdBy], references: [id])
+  products   BlogPostProduct[]
+  changelogs BlogPostChangelogEntry[]
+  agentJobs  AgentJob[]
+
+  @@index([status, publishedAt])
+  @@map("blog_posts")
+}
+
+model BlogPostProduct {
+  id         String @id @default(uuid())
+  blogPostId String @map("blog_post_id")
+  productId  String @map("product_id")
+
+  blogPost BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([blogPostId, productId])
+  @@map("blog_post_products")
+}
+
+model BlogPostChangelogEntry {
+  id               String @id @default(uuid())
+  blogPostId       String @map("blog_post_id")
+  changelogEntryId String @map("changelog_entry_id")
+
+  blogPost       BlogPost       @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+  changelogEntry ChangelogEntry @relation(fields: [changelogEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([blogPostId, changelogEntryId])
+  @@map("blog_post_changelog_entries")
 }
