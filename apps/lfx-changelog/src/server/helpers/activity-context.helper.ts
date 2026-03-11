@@ -61,7 +61,12 @@ export function buildActivityContext(commits: GitHubCommit[], mergedPRs: GitHubP
   const prCommitMessages = new Set<string>();
   for (const pr of mergedPRs) {
     const category = categorizeActivity(pr.title);
-    categorizedItems.get(category)!.push(`- ${pr.title} (${pr.repoFullName})`);
+    let line = `- ${pr.title} (${pr.repoFullName})`;
+    if (pr.body) {
+      const excerpt = pr.body.replace(/\r?\n/g, ' ').trim().slice(0, 200);
+      if (excerpt) line += `\n  > ${excerpt}${pr.body.length > 200 ? '...' : ''}`;
+    }
+    categorizedItems.get(category)!.push(line);
     // Track PR titles to avoid duplication with commits
     prCommitMessages.add(pr.title.toLowerCase().trim());
   }

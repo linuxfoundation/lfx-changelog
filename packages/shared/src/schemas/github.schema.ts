@@ -66,6 +66,7 @@ export const GitHubPullRequestSchema = z
     id: z.number(),
     number: z.number(),
     title: z.string(),
+    body: z.string().nullable(),
     state: z.string(),
     html_url: z.string(),
     created_at: z.string(),

@@ -95,7 +95,7 @@ export class SseService {
       }
       throw err;
     } finally {
-      reader.cancel().catch(() => {});
+      reader.cancel().catch(() => undefined);
     }
   }
 
