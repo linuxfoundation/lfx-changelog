@@ -50,24 +50,24 @@ export class ChangelogFeedComponent {
 
   private mapSearchHitToEntry(hit: SearchHit): ChangelogEntryWithRelations {
     return {
-      id: hit.id,
-      slug: hit.slug,
-      title: hit.title,
-      description: hit.description,
-      version: hit.version,
-      status: hit.status as ChangelogEntryWithRelations['status'],
-      publishedAt: hit.publishedAt,
-      createdAt: hit.createdAt,
-      updatedAt: hit.createdAt,
-      productId: hit.productId,
+      id: hit['id'] as string,
+      slug: hit['slug'] as string | null,
+      title: hit['title'] as string,
+      description: hit['description'] as string,
+      version: hit['version'] as string | null,
+      status: hit['status'] as ChangelogEntryWithRelations['status'],
+      publishedAt: hit['publishedAt'] as string | null,
+      createdAt: hit['createdAt'] as string,
+      updatedAt: hit['createdAt'] as string,
+      productId: hit['productId'] as string,
       createdBy: '',
       product: {
-        id: hit.productId,
-        name: hit.productName,
-        slug: hit.productSlug,
+        id: hit['productId'] as string,
+        name: hit['productName'] as string,
+        slug: hit['productSlug'] as string,
         description: null,
         iconUrl: null,
-        faIcon: hit.productFaIcon ?? null,
+        faIcon: (hit['productFaIcon'] as string | null) ?? null,
         isActive: true,
         githubInstallationId: null,
         createdAt: '',
@@ -94,7 +94,7 @@ export class ChangelogFeedComponent {
         switchMap(([query, productId]) => {
           const q = (query || '').trim();
           if (!q) return of(null);
-          return this.searchService.search({ q, productId: productId || undefined }).pipe(catchError(() => of(null)));
+          return this.searchService.search({ target: 'changelogs', q, productId: productId || undefined }).pipe(catchError(() => of(null)));
         })
       ),
       { initialValue: null }

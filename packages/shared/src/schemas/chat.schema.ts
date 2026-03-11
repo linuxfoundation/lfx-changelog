@@ -4,6 +4,7 @@
 import { z } from 'zod';
 
 import { OpenAIToolCallSchema } from './ai.schema.js';
+import { SearchTargetSchema } from './search.schema.js';
 
 // --- Enums ---
 
@@ -82,15 +83,17 @@ export type ChatMessageUI = z.infer<typeof ChatMessageUISchema>;
 
 // --- Tool argument schemas ---
 
-export const SearchChangelogsToolArgsSchema = z.object({
+export const SearchToolArgsSchema = z.object({
+  target: SearchTargetSchema,
   query: z.string().optional(),
   productId: z.string().optional(),
+  type: z.string().optional(),
   status: z.string().optional(),
   page: z.number().optional(),
   limit: z.number().optional(),
 });
 
-export type SearchChangelogsToolArgs = z.infer<typeof SearchChangelogsToolArgsSchema>;
+export type SearchToolArgs = z.infer<typeof SearchToolArgsSchema>;
 
 export const GetChangelogDetailToolArgsSchema = z.object({
   id: z.string(),

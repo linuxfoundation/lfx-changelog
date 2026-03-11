@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CHANGELOGS_INDEX } from '@lfx-changelog/shared';
+import { BLOGS_INDEX, CHANGELOGS_INDEX } from '@lfx-changelog/shared';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
@@ -137,7 +137,7 @@ const OPENSEARCH_URL = process.env['OPENSEARCH_URL'] || 'http://localhost:9202';
 export async function seedTestOpenSearch(): Promise<void> {
   const client = getTestPrismaClient();
 
-  // Create the changelogs index with the correct mapping
+  // ── Changelogs index ──────────────────────────────────────────────────────
   const indexRes = await fetch(`${OPENSEARCH_URL}/${CHANGELOGS_INDEX}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -162,7 +162,7 @@ export async function seedTestOpenSearch(): Promise<void> {
     }),
   });
   if (!indexRes.ok) {
-    throw new Error(`Failed to create OpenSearch index: ${indexRes.status} ${await indexRes.text()}`);
+    throw new Error(`Failed to create OpenSearch changelogs index: ${indexRes.status} ${await indexRes.text()}`);
   }
 
   // Query all published entries with their product relations
@@ -194,7 +194,73 @@ export async function seedTestOpenSearch(): Promise<void> {
       }),
     });
     if (!docRes.ok) {
-      throw new Error(`Failed to index entry ${entry.id}: ${docRes.status} ${await docRes.text()}`);
+      throw new Error(`Failed to index changelog entry ${entry.id}: ${docRes.status} ${await docRes.text()}`);
+    }
+  }
+
+  // ── Blogs index ───────────────────────────────────────────────────────────
+  const blogsIndexRes = await fetch(`${OPENSEARCH_URL}/${BLOGS_INDEX}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      settings: { number_of_shards: 1, number_of_replicas: 0 },
+      mappings: {
+        properties: {
+          id: { type: 'keyword' },
+          slug: { type: 'keyword' },
+          title: { type: 'text', boost: 3 },
+          excerpt: { type: 'text' },
+          description: { type: 'text' },
+          type: { type: 'keyword' },
+          status: { type: 'keyword' },
+          coverImageUrl: { type: 'keyword' },
+          publishedAt: { type: 'date' },
+          createdAt: { type: 'date' },
+          authorName: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+          authorAvatarUrl: { type: 'keyword' },
+          productNames: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+          productIds: { type: 'keyword' },
+        },
+      },
+    }),
+  });
+  if (!blogsIndexRes.ok) {
+    throw new Error(`Failed to create OpenSearch blogs index: ${blogsIndexRes.status} ${await blogsIndexRes.text()}`);
+  }
+
+  // Query all published blogs with their relations
+  const blogs = await client.blog.findMany({
+    where: { status: 'published' },
+    include: {
+      author: { select: { name: true, avatarUrl: true } },
+      products: { include: { product: { select: { id: true, name: true } } } },
+    },
+  });
+
+  // Index each published blog
+  for (const blog of blogs) {
+    const docRes = await fetch(`${OPENSEARCH_URL}/${BLOGS_INDEX}/_doc/${blog.id}?refresh=wait_for`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: blog.id,
+        slug: blog.slug,
+        title: blog.title,
+        excerpt: blog.excerpt,
+        description: blog.description,
+        type: blog.type,
+        status: blog.status,
+        coverImageUrl: blog.coverImageUrl,
+        publishedAt: blog.publishedAt?.toISOString() ?? null,
+        createdAt: blog.createdAt.toISOString(),
+        authorName: blog.author?.name ?? 'Unknown',
+        authorAvatarUrl: blog.author?.avatarUrl ?? null,
+        productNames: blog.products?.map((p) => p.product.name) ?? [],
+        productIds: blog.products?.map((p) => p.product.id) ?? [],
+      }),
+    });
+    if (!docRes.ok) {
+      throw new Error(`Failed to index blog ${blog.id}: ${docRes.status} ${await docRes.text()}`);
     }
   }
 }

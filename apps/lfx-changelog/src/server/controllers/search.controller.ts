@@ -7,6 +7,9 @@ import { SearchService } from '../services/search.service';
 
 import type { NextFunction, Request, Response } from 'express';
 
+type ReindexTarget = 'changelogs' | 'blogs' | 'all';
+const VALID_REINDEX_TARGETS = new Set<ReindexTarget>(['changelogs', 'blogs', 'all']);
+
 export class SearchController {
   private readonly searchService = new SearchService();
 
@@ -29,14 +32,28 @@ export class SearchController {
     }
   }
 
-  public async reindex(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async reindex(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!this.searchService.getClient()) {
         res.status(503).json({ success: false, error: 'OpenSearch is not configured' });
         return;
       }
-      const result = await this.searchService.reindexAll();
-      res.json({ success: true, data: result });
+
+      const target = this.parseReindexTarget(req.query['target'] as string | undefined);
+      if (target === null) {
+        res.status(400).json({ success: false, error: 'Invalid target. Must be one of: changelogs, blogs, all' });
+        return;
+      }
+
+      const results: Record<string, { indexed: number; errors: number }> = {};
+      if (target === 'changelogs' || target === 'all') {
+        results['changelogs'] = await this.searchService.reindexAll();
+      }
+      if (target === 'blogs' || target === 'all') {
+        results['blogs'] = await this.searchService.reindexAllBlogs();
+      }
+
+      res.json({ success: true, data: results });
     } catch (error) {
       if (this.isOpenSearchConnectionError(error)) {
         res.status(503).json({ success: false, error: 'OpenSearch is currently unavailable' });
@@ -44,6 +61,12 @@ export class SearchController {
       }
       next(error);
     }
+  }
+
+  private parseReindexTarget(raw: string | undefined): ReindexTarget | null {
+    if (!raw) return 'all';
+    const normalized = raw.toLowerCase() as ReindexTarget;
+    return VALID_REINDEX_TARGETS.has(normalized) ? normalized : null;
   }
 
   private isOpenSearchConnectionError(error: unknown): boolean {

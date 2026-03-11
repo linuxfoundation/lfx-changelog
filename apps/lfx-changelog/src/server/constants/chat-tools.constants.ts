@@ -19,22 +19,28 @@ export const CHAT_TOOLS_PUBLIC: OpenAIFunctionTool[] = [
   {
     type: 'function',
     function: {
-      name: 'search_changelogs',
+      name: 'search',
       description:
-        "Search published changelog entries by keywords. ALWAYS provide a query with relevant keywords extracted from the user's question to get the most relevant results. Can also filter by product ID. Returns paginated results ranked by relevance with title, version, date, and a truncated description.",
+        "Search published changelogs or blog posts by keywords. Set target to 'changelogs' for release notes and product updates, or 'blogs' for blog posts, roundups, and announcements. ALWAYS provide a query with relevant keywords extracted from the user's question to get the most relevant results. Returns paginated results ranked by relevance.",
       parameters: {
         type: 'object',
         properties: {
+          target: {
+            type: 'string',
+            enum: ['changelogs', 'blogs'],
+            description: "Which index to search: 'changelogs' for release notes and product updates, 'blogs' for blog posts and announcements.",
+          },
           query: {
             type: 'string',
             description:
-              'Search keywords to find relevant changelogs (e.g. "security fix", "new dashboard", "performance improvement"). Highly recommended — omitting this returns all entries sorted by date which is less efficient.',
+              'Search keywords to find relevant results (e.g. "security fix", "new dashboard", "monthly roundup"). Highly recommended — omitting this returns all entries sorted by date which is less efficient.',
           },
-          productId: { type: 'string', description: 'Filter by product UUID. Use list_products first to find the ID.' },
+          productId: { type: 'string', description: 'Filter by product UUID (changelogs only). Use list_products first to find the ID.' },
+          type: { type: 'string', description: 'Filter by blog type (blogs only), e.g. "monthly_roundup", "announcement".' },
           page: { type: 'number', description: 'Page number (default 1)' },
           limit: { type: 'number', description: 'Results per page (default 10, max 100)' },
         },
-        required: [],
+        required: ['target'],
       },
     },
   },
@@ -71,23 +77,29 @@ export const CHAT_TOOLS_ADMIN: OpenAIFunctionTool[] = [
   {
     type: 'function',
     function: {
-      name: 'search_changelogs',
+      name: 'search',
       description:
-        "Search changelog entries (including drafts) by keywords. ALWAYS provide a query with relevant keywords extracted from the user's question to get the most relevant results. Can also filter by product ID and status. Returns paginated results ranked by relevance with title, version, date, status, and a truncated description.",
+        "Search changelogs (including drafts) or blog posts by keywords. Set target to 'changelogs' for release notes and product updates, or 'blogs' for blog posts, roundups, and announcements. ALWAYS provide a query with relevant keywords extracted from the user's question to get the most relevant results. Returns paginated results ranked by relevance.",
       parameters: {
         type: 'object',
         properties: {
+          target: {
+            type: 'string',
+            enum: ['changelogs', 'blogs'],
+            description: "Which index to search: 'changelogs' for release notes and product updates, 'blogs' for blog posts and announcements.",
+          },
           query: {
             type: 'string',
             description:
-              'Search keywords to find relevant changelogs (e.g. "security fix", "new dashboard", "performance improvement"). Highly recommended — omitting this returns all entries sorted by date which is less efficient.',
+              'Search keywords to find relevant results (e.g. "security fix", "new dashboard", "monthly roundup"). Highly recommended — omitting this returns all entries sorted by date which is less efficient.',
           },
-          productId: { type: 'string', description: 'Filter by product UUID. Use list_products first to find the ID.' },
-          status: { type: 'string', enum: ['draft', 'published'], description: 'Filter by status (default: all)' },
+          productId: { type: 'string', description: 'Filter by product UUID (changelogs only). Use list_products first to find the ID.' },
+          type: { type: 'string', description: 'Filter by blog type (blogs only), e.g. "monthly_roundup", "announcement".' },
+          status: { type: 'string', enum: ['draft', 'published'], description: 'Filter changelog by status (default: all)' },
           page: { type: 'number', description: 'Page number (default 1)' },
           limit: { type: 'number', description: 'Results per page (default 10, max 100)' },
         },
-        required: [],
+        required: ['target'],
       },
     },
   },

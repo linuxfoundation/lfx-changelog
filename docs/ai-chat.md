@@ -47,11 +47,11 @@ Intermediate tool-calling rounds use **non-streaming** requests (the full respon
 
 The AI has access to three tools that call existing backend services directly (no HTTP round-trips):
 
-| Tool                   | Description                                       | Public         | Admin                             |
-| ---------------------- | ------------------------------------------------- | -------------- | --------------------------------- |
-| `list_products`        | Lists all products with IDs, names, and slugs     | Active only    | All (including inactive)          |
-| `search_changelogs`    | Searches changelogs with optional filters         | Published only | Published + drafts, status filter |
-| `get_changelog_detail` | Gets the full content of a single changelog entry | Published only | Published + drafts                |
+| Tool                   | Description                                                                | Public         | Admin                             |
+| ---------------------- | -------------------------------------------------------------------------- | -------------- | --------------------------------- |
+| `list_products`        | Lists all products with IDs, names, and slugs                              | Active only    | All (including inactive)          |
+| `search`               | Unified search with `target` param (`changelogs` or `blogs`), plus filters | Published only | Published + drafts, status filter |
+| `get_changelog_detail` | Gets the full content of a single changelog entry                          | Published only | Published + drafts                |
 
 Tools call `ProductService` and `ChangelogService` directly rather than going through the HTTP API. This avoids unnecessary network hops and authentication overhead.
 
@@ -134,7 +134,7 @@ event: status
 data: "Searching changelogs..."
 
 event: tool_call
-data: "search_changelogs"
+data: "search"
 
 event: content
 data: "Here"

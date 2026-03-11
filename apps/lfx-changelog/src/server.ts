@@ -31,7 +31,10 @@ setupRateLimiting(app); // IP-based rate limiting (API-key limiter is in routes,
 setupLogger(app); // Pino HTTP request logging
 setupAuth(app); // Auth0 OIDC + login/logout routes
 setupRoutes(app); // Health, docs, webhooks, public API, MCP, protected API
-new SearchService().ensureIndex().catch((err) => serverLogger.warn({ err }, 'OpenSearch index setup failed — search will be unavailable'));
+const searchService = new SearchService();
+Promise.all([searchService.ensureIndex(), searchService.ensureBlogsIndex()]).catch((err) =>
+  serverLogger.warn({ err }, 'OpenSearch index setup failed — search will be unavailable')
+);
 setupSsr(app); // Angular SSR catch-all + global error handler
 
 export function startServer(): void {

@@ -58,7 +58,7 @@ export function setupRoutes(app: Express): void {
   // ── Public API routes (no auth required) ──────────────────────────────
   app.use('/public/api/chat', sameOriginOnly, publicChatRouter);
   app.use('/public/api/blog', publicBlogRouter);
-  app.use('/public/api/changelogs/search', publicSearchRouter);
+  app.use('/public/api/search', publicSearchRouter);
   app.use('/public/api/changelogs', publicChangelogRouter);
   app.use('/public/api/products', publicProductRouter);
 

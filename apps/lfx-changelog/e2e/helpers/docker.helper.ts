@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CHANGELOGS_INDEX } from '@lfx-changelog/shared';
+import { BLOGS_INDEX, CHANGELOGS_INDEX } from '@lfx-changelog/shared';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
 
@@ -50,12 +50,14 @@ export function waitForTestOpenSearch(retries = 60): void {
 }
 
 export function cleanTestOpenSearch(): void {
-  try {
-    execFileSync('curl', ['-sf', '-X', 'DELETE', `http://localhost:9202/${CHANGELOGS_INDEX}`], {
-      stdio: 'ignore',
-    });
-  } catch {
-    // Index may not exist yet — safe to ignore
+  for (const index of [CHANGELOGS_INDEX, BLOGS_INDEX]) {
+    try {
+      execFileSync('curl', ['-sf', '-X', 'DELETE', `http://localhost:9202/${index}`], {
+        stdio: 'ignore',
+      });
+    } catch {
+      // Index may not exist yet — safe to ignore
+    }
   }
 }
 

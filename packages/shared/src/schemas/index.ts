@@ -53,7 +53,7 @@ export {
   ChatMessageUISchema,
   ChatSSEEventSchema,
   GetChangelogDetailToolArgsSchema,
-  SearchChangelogsToolArgsSchema,
+  SearchToolArgsSchema,
   SendChatMessageRequestSchema,
   StreamDeltaChunkSchema,
   StreamDeltaToolCallSchema,
@@ -96,13 +96,15 @@ export { ProductSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
 export { RuntimeConfigSchema } from './runtime-config.schema.js';
 export {
+  BlogDocumentSchema,
   ChangelogDocumentSchema,
   ChangelogQueryParamsSchema,
-  ProductFacetSchema,
+  FacetBucketSchema,
   SearchHighlightsSchema,
   SearchHitSchema,
   SearchQueryParamsSchema,
   SearchResponseSchema,
+  SearchTargetSchema,
 } from './search.schema.js';
 export {
   PostChangelogEntrySchema,
@@ -169,7 +171,7 @@ export type {
   ChatSSEEvent,
   ChatSSEEventType,
   GetChangelogDetailToolArgs,
-  SearchChangelogsToolArgs,
+  SearchToolArgs,
   SendChatMessageRequest,
   StreamDeltaChunk,
   StreamDeltaToolCall,
@@ -212,14 +214,16 @@ export type { Product } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
 export type { RuntimeConfig } from './runtime-config.schema.js';
 export type {
+  BlogDocument,
   ChangelogDocument,
   ChangelogQueryParams,
-  ProductFacet,
+  FacetBucket,
   SearchHighlights,
   SearchHit,
   SearchQueryParams,
   SearchQueryParamsInput,
   SearchResponse,
+  SearchTarget,
 } from './search.schema.js';
 export type {
   PostChangelogEntry,

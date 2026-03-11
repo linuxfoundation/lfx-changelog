@@ -32,7 +32,7 @@ import type {
   OpenAIToolCall,
   OpenAIToolChatMessage,
   PublicChangelogEntry,
-  SearchChangelogsToolArgs,
+  SearchToolArgs,
   StreamDeltaChunk,
 } from '@lfx-changelog/shared';
 import type { ChatCallerContext, StreamResult } from '../interfaces/chat.interface';
@@ -284,9 +284,9 @@ export class AiService {
     const { name, arguments: argsString } = toolCall.function;
     const { accessLevel } = callerContext;
 
-    let parsedArgs: SearchChangelogsToolArgs | GetChangelogDetailToolArgs | Record<string, never> = {};
+    let parsedArgs: Record<string, unknown> = {};
     try {
-      parsedArgs = JSON.parse(argsString) as typeof parsedArgs;
+      parsedArgs = JSON.parse(argsString) as Record<string, unknown>;
     } catch {
       return JSON.stringify({ error: `Invalid JSON arguments for tool ${name}` });
     }
@@ -297,8 +297,13 @@ export class AiService {
       switch (name) {
         case 'list_products':
           return await this.chatListProducts(accessLevel);
-        case 'search_changelogs':
-          return await this.chatSearchChangelogs(parsedArgs as SearchChangelogsToolArgs, callerContext);
+        case 'search': {
+          const searchArgs = parsedArgs as SearchToolArgs;
+          if (searchArgs.target === 'blogs') {
+            return await this.chatSearchBlogs(searchArgs);
+          }
+          return await this.chatSearchChangelogs(searchArgs, callerContext);
+        }
         case 'get_changelog_detail':
           return await this.chatGetChangelogDetail(parsedArgs as GetChangelogDetailToolArgs, callerContext);
         default:
@@ -531,7 +536,7 @@ export class AiService {
     return JSON.stringify({ products: summary, count: summary.length });
   }
 
-  private async chatSearchChangelogs(args: SearchChangelogsToolArgs, callerContext: ChatCallerContext): Promise<string> {
+  private async chatSearchChangelogs(args: SearchToolArgs, callerContext: ChatCallerContext): Promise<string> {
     const limit = args.limit || 10;
     const page = args.page || 1;
 
@@ -544,19 +549,20 @@ export class AiService {
 
   private async chatSearchChangelogsViaOpenSearch(query: string, productId: string | undefined, page: number, limit: number): Promise<string> {
     try {
-      const result = await this.searchService.search({ q: query, productId, page, limit });
+      const result = await this.searchService.search({ target: 'changelogs', q: query, productId, page, limit });
 
       const entries = result.hits.map((hit) => ({
-        id: hit.id,
-        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit.title,
-        description: hit.description
-          ? hit.description.slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) + (hit.description.length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
+        id: hit['id'],
+        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit['title'],
+        description: hit['description']
+          ? String(hit['description']).slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) +
+            (String(hit['description']).length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
           : null,
-        version: hit.version,
-        status: hit.status,
-        publishedAt: hit.publishedAt,
-        productName: hit.productName,
-        productSlug: hit.productSlug,
+        version: hit['version'],
+        status: hit['status'],
+        publishedAt: hit['publishedAt'],
+        productName: hit['productName'],
+        productSlug: hit['productSlug'],
         score: hit.score,
       }));
 
@@ -570,11 +576,11 @@ export class AiService {
       });
     } catch (error) {
       serverLogger.warn({ err: error }, 'OpenSearch search failed in chat tool, falling back to DB');
-      return this.chatSearchChangelogsViaDB({ query, productId, page, limit }, { accessLevel: 'public' }, page, limit);
+      return this.chatSearchChangelogsViaDB({ target: 'changelogs', query, productId, page, limit }, { accessLevel: 'public' }, page, limit);
     }
   }
 
-  private async chatSearchChangelogsViaDB(args: SearchChangelogsToolArgs, callerContext: ChatCallerContext, page: number, limit: number): Promise<string> {
+  private async chatSearchChangelogsViaDB(args: SearchToolArgs, callerContext: ChatCallerContext, page: number, limit: number): Promise<string> {
     const { accessLevel, accessibleProductIds } = callerContext;
     const params = {
       productId: args.productId,
@@ -609,6 +615,43 @@ export class AiService {
       totalPages: result.totalPages,
       searchMethod: 'database',
     });
+  }
+
+  private async chatSearchBlogs(args: SearchToolArgs): Promise<string> {
+    const limit = args.limit || 10;
+    const page = args.page || 1;
+
+    if (!this.searchService.getClient()) {
+      return JSON.stringify({ error: 'Blog search is not available — OpenSearch is not configured' });
+    }
+
+    try {
+      const result = await this.searchService.search({ target: 'blogs', q: args.query || '*', type: args.type, page, limit });
+
+      const posts = result.hits.map((hit) => ({
+        id: hit['id'],
+        title: this.stripHighlightTags(hit.highlights?.title?.[0]) || hit['title'],
+        excerpt: hit['excerpt']
+          ? String(hit['excerpt']).slice(0, CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH) +
+            (String(hit['excerpt']).length > CHAT_CONFIG.DESCRIPTION_TRUNCATE_LENGTH ? '...' : '')
+          : null,
+        type: hit['type'],
+        authorName: hit['authorName'],
+        publishedAt: hit['publishedAt'],
+        score: hit.score,
+      }));
+
+      return JSON.stringify({
+        posts,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+        totalPages: result.totalPages,
+      });
+    } catch (error) {
+      serverLogger.warn({ err: error }, 'Blog search failed in chat tool');
+      return JSON.stringify({ error: 'Blog search failed — please try again later' });
+    }
   }
 
   private stripHighlightTags(text: string | undefined): string | undefined {
