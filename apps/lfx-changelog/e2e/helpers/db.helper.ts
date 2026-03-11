@@ -29,9 +29,9 @@ export async function cleanTestDatabase(): Promise<void> {
   const client = getTestPrismaClient();
 
   // Delete in FK-safe order
-  await client.blogPostChangelogEntry.deleteMany();
-  await client.blogPostProduct.deleteMany();
-  await client.blogPost.deleteMany();
+  await client.blogChangelogEntry.deleteMany();
+  await client.blogProduct.deleteMany();
+  await client.blog.deleteMany();
   await client.chatMessage.deleteMany();
   await client.chatConversation.deleteMany();
   await client.apiKey.deleteMany();
@@ -115,7 +115,7 @@ export async function seedTestDatabase(): Promise<void> {
 
   // 5. Create blog posts
   for (const post of TEST_BLOG_POSTS) {
-    await client.blogPost.create({
+    await client.blog.create({
       data: {
         slug: post.slug,
         title: post.title,

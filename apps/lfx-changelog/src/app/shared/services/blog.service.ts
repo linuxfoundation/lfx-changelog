@@ -16,7 +16,7 @@ import type {
 import type { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
-export class BlogPostService {
+export class BlogService {
   private readonly http = inject(HttpClient);
 
   public getPublished(params?: BlogPostQueryParams): Observable<PaginatedResponse<BlogPostWithRelations>> {
@@ -28,71 +28,57 @@ export class BlogPostService {
   }
 
   public getAll(params?: BlogPostQueryParams): Observable<PaginatedResponse<BlogPostWithRelations>> {
-    return this.http.get<PaginatedResponse<BlogPostWithRelations>>('/api/blog-posts', { params: this.buildParams(params) });
+    return this.http.get<PaginatedResponse<BlogPostWithRelations>>('/api/blogs', { params: this.buildParams(params) });
   }
 
   public getById(id: string): Observable<BlogPostWithRelations> {
-    return this.http.get<ApiResponse<BlogPostWithRelations>>(`/api/blog-posts/${id}`).pipe(map((res) => res.data));
+    return this.http.get<ApiResponse<BlogPostWithRelations>>(`/api/blogs/${id}`).pipe(map((res) => res.data));
   }
 
   public create(data: CreateBlogPostRequest): Observable<BlogPostWithRelations> {
-    return this.http.post<ApiResponse<BlogPostWithRelations>>('/api/blog-posts', data).pipe(
+    return this.http.post<ApiResponse<BlogPostWithRelations>>('/api/blogs', data).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public update(id: string, data: UpdateBlogPostRequest): Observable<BlogPostWithRelations> {
-    return this.http.put<ApiResponse<BlogPostWithRelations>>(`/api/blog-posts/${id}`, data).pipe(
+    return this.http.put<ApiResponse<BlogPostWithRelations>>(`/api/blogs/${id}`, data).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public publish(id: string): Observable<BlogPostWithRelations> {
-    return this.http.patch<ApiResponse<BlogPostWithRelations>>(`/api/blog-posts/${id}/publish`, {}).pipe(
+    return this.http.patch<ApiResponse<BlogPostWithRelations>>(`/api/blogs/${id}/publish`, {}).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public unpublish(id: string): Observable<BlogPostWithRelations> {
-    return this.http.patch<ApiResponse<BlogPostWithRelations>>(`/api/blog-posts/${id}/unpublish`, {}).pipe(
+    return this.http.patch<ApiResponse<BlogPostWithRelations>>(`/api/blogs/${id}/unpublish`, {}).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public remove(id: string): Observable<HttpResponse<void>> {
-    return this.http.delete<void>(`/api/blog-posts/${id}`, { observe: 'response' }).pipe(take(1));
+    return this.http.delete<void>(`/api/blogs/${id}`, { observe: 'response' }).pipe(take(1));
   }
 
   public linkProducts(id: string, productIds: string[]): Observable<BlogPostWithRelations> {
-    return this.http.post<ApiResponse<BlogPostWithRelations>>(`/api/blog-posts/${id}/link-products`, { productIds }).pipe(
+    return this.http.post<ApiResponse<BlogPostWithRelations>>(`/api/blogs/${id}/link-products`, { productIds }).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public linkChangelogs(id: string, changelogEntryIds: string[]): Observable<BlogPostWithRelations> {
-    return this.http.post<ApiResponse<BlogPostWithRelations>>(`/api/blog-posts/${id}/link-changelogs`, { changelogEntryIds }).pipe(
+    return this.http.post<ApiResponse<BlogPostWithRelations>>(`/api/blogs/${id}/link-changelogs`, { changelogEntryIds }).pipe(
       map((res) => res.data),
       take(1)
     );
-  }
-
-  public getChangelogsForPeriod(
-    periodStart: string,
-    periodEnd: string,
-    productIds?: string[]
-  ): Observable<{ id: string; title: string; slug: string | null; version: string | null; publishedAt: string | null; productId: string }[]> {
-    let params = new HttpParams().set('periodStart', periodStart).set('periodEnd', periodEnd);
-    if (productIds?.length) params = params.set('productIds', productIds.join(','));
-    return this.http
-      .get<
-        ApiResponse<{ id: string; title: string; slug: string | null; version: string | null; publishedAt: string | null; productId: string }[]>
-      >('/api/blog-posts/changelogs-for-period', { params })
-      .pipe(map((res) => res.data));
   }
 
   private buildParams(params?: BlogPostQueryParams): HttpParams {

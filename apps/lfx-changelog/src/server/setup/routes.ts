@@ -8,7 +8,7 @@ import { sameOriginOnly } from '../middleware/same-origin.middleware';
 import agentJobRouter from '../routes/agent-job.route';
 import aiRouter from '../routes/ai.route';
 import apiKeyRouter from '../routes/api-key.route';
-import blogPostRouter from '../routes/blog-post.route';
+import blogRouter from '../routes/blog.route';
 import changelogRouter from '../routes/changelog.route';
 import chatRouter from '../routes/chat.route';
 import githubRouter, { releaseRouter } from '../routes/github.route';
@@ -84,7 +84,7 @@ export function setupRoutes(app: Express): void {
   // ── Protected API routes ──────────────────────────────────────────────
   app.use('/api/agent-jobs', agentJobRouter);
   app.use('/api/ai', aiRouter);
-  app.use('/api/blog-posts', blogPostRouter);
+  app.use('/api/blogs', blogRouter);
 
   // Chat is UI-only — same-origin + session auth only (no API key, no cross-origin)
   app.use('/api/chat', sameOriginOnly, (req: Request, res: Response, next: NextFunction) => {

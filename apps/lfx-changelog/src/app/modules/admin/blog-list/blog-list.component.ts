@@ -12,9 +12,9 @@ import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
-import { BlogPostStatus, BlogPostType } from '@lfx-changelog/shared';
+import { BlogStatus, BlogType } from '@lfx-changelog/shared';
 import { AuthService } from '@services/auth.service';
-import { BlogPostService } from '@services/blog-post.service';
+import { BlogService } from '@services/blog.service';
 import { DialogService } from '@services/dialog.service';
 import { ToastService } from '@services/toast.service';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
@@ -43,7 +43,7 @@ import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.int
 })
 export class BlogListComponent {
   private readonly authService = inject(AuthService);
-  private readonly blogPostService = inject(BlogPostService);
+  private readonly blogService = inject(BlogService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
@@ -59,14 +59,14 @@ export class BlogListComponent {
 
   protected readonly typeOptions: SelectOption[] = [
     { label: 'All Types', value: '' },
-    { label: 'Monthly Roundup', value: BlogPostType.MONTHLY_ROUNDUP },
-    { label: 'Product Newsletter', value: BlogPostType.PRODUCT_NEWSLETTER },
+    { label: 'Monthly Roundup', value: BlogType.MONTHLY_ROUNDUP },
+    { label: 'Product Newsletter', value: BlogType.PRODUCT_NEWSLETTER },
   ];
 
   protected readonly statusOptions: SelectOption[] = [
     { label: 'All Statuses', value: '' },
-    { label: 'Published', value: BlogPostStatus.PUBLISHED },
-    { label: 'Draft', value: BlogPostStatus.DRAFT },
+    { label: 'Published', value: BlogStatus.PUBLISHED },
+    { label: 'Draft', value: BlogStatus.DRAFT },
   ];
 
   protected readonly pageState = this.initPageState();
@@ -89,9 +89,9 @@ export class BlogListComponent {
 
   protected formatType(type: string): string {
     switch (type) {
-      case BlogPostType.MONTHLY_ROUNDUP:
+      case BlogType.MONTHLY_ROUNDUP:
         return 'Monthly Roundup';
-      case BlogPostType.PRODUCT_NEWSLETTER:
+      case BlogType.PRODUCT_NEWSLETTER:
         return 'Product Newsletter';
       default:
         return type;
@@ -130,7 +130,7 @@ export class BlogListComponent {
   }
 
   private unpublishEntry(entry: BlogPostWithRelations): void {
-    this.blogPostService.unpublish(entry.id).subscribe({
+    this.blogService.unpublish(entry.id).subscribe({
       next: () => {
         this.toastService.success('Blog post reverted to draft');
         this.refreshList();
@@ -140,7 +140,7 @@ export class BlogListComponent {
   }
 
   private deleteEntry(entry: BlogPostWithRelations): void {
-    this.blogPostService.remove(entry.id).subscribe({
+    this.blogService.remove(entry.id).subscribe({
       next: () => {
         this.toastService.success('Blog post deleted');
         this.refreshList();
@@ -161,7 +161,7 @@ export class BlogListComponent {
       for (const entry of entries) {
         const items: DropdownMenuItem[] = [];
 
-        if (entry.status === BlogPostStatus.PUBLISHED) {
+        if (entry.status === BlogStatus.PUBLISHED) {
           items.push({ label: 'View', routerLink: ['/blog', entry.slug] });
           items.push({ label: 'Unpublish', action: () => this.confirmUnpublish(entry) });
         }
@@ -186,7 +186,7 @@ export class BlogListComponent {
       ]).pipe(
         tap(() => this.loading.set(true)),
         switchMap(([type, status, page]) =>
-          this.blogPostService
+          this.blogService
             .getAll({
               ...(type ? { type } : {}),
               ...(status ? { status } : {}),

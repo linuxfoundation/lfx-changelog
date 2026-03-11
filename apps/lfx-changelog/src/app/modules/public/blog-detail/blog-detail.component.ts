@@ -7,7 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
-import { BlogPostService } from '@services/blog-post.service';
+import { BlogService } from '@services/blog.service';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { format } from 'date-fns';
 import { catchError, of, tap } from 'rxjs';
@@ -20,12 +20,12 @@ import { catchError, of, tap } from 'rxjs';
 })
 export class BlogDetailComponent {
   private readonly route = inject(ActivatedRoute);
-  private readonly blogPostService = inject(BlogPostService);
+  private readonly blogService = inject(BlogService);
 
   protected readonly loading = signal(true);
 
   protected readonly post = toSignal(
-    this.blogPostService.getPublishedBySlug(this.route.snapshot.paramMap.get('slug') ?? '').pipe(
+    this.blogService.getPublishedBySlug(this.route.snapshot.paramMap.get('slug') ?? '').pipe(
       tap(() => this.loading.set(false)),
       catchError(() => {
         this.loading.set(false);

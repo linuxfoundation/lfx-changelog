@@ -3,8 +3,8 @@
 
 import { z } from 'zod';
 
-import { BlogPostStatus } from '../enums/blog-post-status.enum.js';
-import { BlogPostType } from '../enums/blog-post-type.enum.js';
+import { BlogStatus } from '../enums/blog-status.enum.js';
+import { BlogType } from '../enums/blog-type.enum.js';
 import { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
 
 export const BlogPostSchema = z
@@ -14,8 +14,8 @@ export const BlogPostSchema = z
     title: z.string(),
     excerpt: z.string().nullable(),
     description: z.string(),
-    type: z.nativeEnum(BlogPostType),
-    status: z.nativeEnum(BlogPostStatus),
+    type: z.nativeEnum(BlogType),
+    status: z.nativeEnum(BlogStatus),
     coverImageUrl: z.string().nullable(),
     publishedAt: z.string().nullable(),
     periodStart: z.string().nullable(),

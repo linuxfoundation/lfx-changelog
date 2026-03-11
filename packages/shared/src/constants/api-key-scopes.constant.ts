@@ -43,6 +43,24 @@ export const API_KEY_SCOPES: ApiKeyScopeMetadata[] = [
     color: '#F59E0B',
     minimumRole: UserRole.SUPER_ADMIN,
   },
+  {
+    scope: ApiKeyScope.BLOGS_READ,
+    label: 'Read Blogs',
+    description: 'Read blog posts and their details',
+    resource: 'blogs',
+    action: 'read',
+    color: '#06B6D4',
+    minimumRole: UserRole.EDITOR,
+  },
+  {
+    scope: ApiKeyScope.BLOGS_WRITE,
+    label: 'Write Blogs',
+    description: 'Create, update, publish, and delete blog posts',
+    resource: 'blogs',
+    action: 'write',
+    color: '#EC4899',
+    minimumRole: UserRole.PRODUCT_ADMIN,
+  },
 ];
 
 /** Expiration preset options (in days) for API key creation UI. */

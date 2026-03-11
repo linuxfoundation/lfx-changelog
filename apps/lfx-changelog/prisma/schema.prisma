@@ -25,6 +25,8 @@ enum ApiKeyScope {
   changelogs_write
   products_read
   products_write
+  blogs_read
+  blogs_write
 }
 
 enum ChangelogSource {
@@ -60,12 +62,12 @@ enum AgentJobTrigger {
   newsletter_manual
 }
 
-enum BlogPostStatus {
+enum BlogStatus {
   draft
   published
 }
 
-enum BlogPostType {
+enum BlogType {
   monthly_roundup
   product_newsletter
 }
@@ -89,7 +91,7 @@ model Product {
   changelogViews      ChangelogView[]
   agentJobs           AgentJob[]
   agentMemory         AgentMemory?
-  blogPostProducts    BlogPostProduct[]
+  blogProducts    BlogProduct[]
 
   @@map("products")
 }
@@ -157,7 +159,7 @@ model ChangelogEntry {
   author                User                     @relation(fields: [createdBy], references: [id])
   slackNotifications    SlackNotification[]
   agentJobs             AgentJob[]
-  blogPostChangelogs    BlogPostChangelogEntry[]
+  blogChangelogs    BlogChangelogEntry[]
 
   @@index([productId, status, publishedAt])
   @@map("changelog_entries")
@@ -177,7 +179,7 @@ model User {
   apiKeys             ApiKey[]
   chatConversations   ChatConversation[]
   slackIntegrations   SlackIntegration[]
-  blogPosts           BlogPost[]
+  blogs               Blog[]
 
   @@map("users")
 }
@@ -344,11 +346,11 @@ model AgentJob {
   completedAt  DateTime?       @map("completed_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
-  blogPostId     String?         @map("blog_post_id")
+  blogId         String?         @map("blog_id")
 
   product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   changelogEntry ChangelogEntry? @relation(fields: [changelogId], references: [id], onDelete: SetNull)
-  blogPost       BlogPost?       @relation(fields: [blogPostId], references: [id], onDelete: SetNull)
+  blog           Blog?           @relation(fields: [blogId], references: [id], onDelete: SetNull)
 
   @@index([productId, status])
   @@index([createdAt])
@@ -368,51 +370,51 @@ model AgentMemory {
   @@map("agent_memories")
 }
 
-model BlogPost {
-  id            String         @id @default(uuid())
-  slug          String         @unique
+model Blog {
+  id            String     @id @default(uuid())
+  slug          String     @unique
   title         String
   excerpt       String?
   description   String
-  type          BlogPostType   @default(monthly_roundup)
-  status        BlogPostStatus @default(draft)
-  coverImageUrl String?        @map("cover_image_url")
-  publishedAt   DateTime?      @map("published_at")
-  periodStart   DateTime?      @map("period_start")
-  periodEnd     DateTime?      @map("period_end")
-  createdBy     String         @map("created_by")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
+  type          BlogType   @default(monthly_roundup)
+  status        BlogStatus @default(draft)
+  coverImageUrl String?    @map("cover_image_url")
+  publishedAt   DateTime?  @map("published_at")
+  periodStart   DateTime?  @map("period_start")
+  periodEnd     DateTime?  @map("period_end")
+  createdBy     String     @map("created_by")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  author     User                     @relation(fields: [createdBy], references: [id])
-  products   BlogPostProduct[]
-  changelogs BlogPostChangelogEntry[]
+  author     User                 @relation(fields: [createdBy], references: [id])
+  products   BlogProduct[]
+  changelogs BlogChangelogEntry[]
   agentJobs  AgentJob[]
 
   @@index([status, publishedAt])
-  @@map("blog_posts")
+  @@map("blogs")
 }
 
-model BlogPostProduct {
-  id         String @id @default(uuid())
-  blogPostId String @map("blog_post_id")
-  productId  String @map("product_id")
+model BlogProduct {
+  id        String @id @default(uuid())
+  blogId    String @map("blog_id")
+  productId String @map("product_id")
 
-  blogPost BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  blog    Blog    @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([blogPostId, productId])
-  @@map("blog_post_products")
+  @@unique([blogId, productId])
+  @@map("blog_products")
 }
 
-model BlogPostChangelogEntry {
+model BlogChangelogEntry {
   id               String @id @default(uuid())
-  blogPostId       String @map("blog_post_id")
+  blogId           String @map("blog_id")
   changelogEntryId String @map("changelog_entry_id")
 
-  blogPost       BlogPost       @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+  blog           Blog           @relation(fields: [blogId], references: [id], onDelete: Cascade)
   changelogEntry ChangelogEntry @relation(fields: [changelogEntryId], references: [id], onDelete: Cascade)
 
-  @@unique([blogPostId, changelogEntryId])
-  @@map("blog_post_changelog_entries")
+  @@unique([blogId, changelogEntryId])
+  @@map("blog_changelog_entries")
 }

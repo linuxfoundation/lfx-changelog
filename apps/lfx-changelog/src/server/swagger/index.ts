@@ -9,7 +9,7 @@ import swaggerUi from 'swagger-ui-express';
 import '@lfx-changelog/shared';
 
 import { agentJobRegistry } from './paths/agent-jobs.path';
-import { blogPostRegistry } from './paths/blog-posts.path';
+import { blogPostRegistry } from './paths/blogs.path';
 import { changelogRegistry } from './paths/changelogs.path';
 import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';

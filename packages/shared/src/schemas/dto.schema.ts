@@ -3,8 +3,8 @@
 
 import { z } from 'zod';
 
-import { BlogPostStatus } from '../enums/blog-post-status.enum.js';
-import { BlogPostType } from '../enums/blog-post-type.enum.js';
+import { BlogStatus } from '../enums/blog-status.enum.js';
+import { BlogType } from '../enums/blog-type.enum.js';
 import { ChangelogStatus } from '../enums/changelog-status.enum.js';
 import { UserRole } from '../enums/user-role.enum.js';
 
@@ -96,8 +96,8 @@ export const CreateBlogPostRequestSchema = z
       .optional(),
     excerpt: z.string().optional(),
     description: z.string(),
-    type: z.nativeEnum(BlogPostType),
-    status: z.nativeEnum(BlogPostStatus).optional(),
+    type: z.nativeEnum(BlogType),
+    status: z.nativeEnum(BlogStatus).optional(),
     coverImageUrl: z.string().url().optional(),
     periodStart: z.string().optional(),
     periodEnd: z.string().optional(),
@@ -117,7 +117,7 @@ export const UpdateBlogPostRequestSchema = z
       .optional(),
     excerpt: z.string().optional(),
     description: z.string().optional(),
-    type: z.nativeEnum(BlogPostType).optional(),
+    type: z.nativeEnum(BlogType).optional(),
     coverImageUrl: z.string().url().nullable().optional(),
     periodStart: z.string().nullable().optional(),
     periodEnd: z.string().nullable().optional(),

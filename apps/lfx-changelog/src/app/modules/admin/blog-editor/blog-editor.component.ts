@@ -13,9 +13,9 @@ import { MarkdownEditorComponent } from '@components/markdown-editor/markdown-ed
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
-import { BlogPostStatus, BlogPostType } from '@lfx-changelog/shared';
+import { BlogStatus, BlogType } from '@lfx-changelog/shared';
 import { AuthService } from '@services/auth.service';
-import { BlogPostService } from '@services/blog-post.service';
+import { BlogService } from '@services/blog.service';
 import { DialogService } from '@services/dialog.service';
 import { ProductService } from '@services/product.service';
 import { ToastService } from '@services/toast.service';
@@ -46,7 +46,7 @@ export class BlogEditorComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly blogPostService = inject(BlogPostService);
+  private readonly blogService = inject(BlogService);
   private readonly productService = inject(ProductService);
   protected readonly authService = inject(AuthService);
   private readonly dialogService = inject(DialogService);
@@ -58,7 +58,7 @@ export class BlogEditorComponent {
   protected readonly slugControl = new FormControl('', { nonNullable: true });
   protected readonly excerptControl = new FormControl('', { nonNullable: true });
   protected readonly descriptionControl = new FormControl('', { nonNullable: true });
-  protected readonly typeControl = new FormControl(BlogPostType.MONTHLY_ROUNDUP, { nonNullable: true });
+  protected readonly typeControl = new FormControl(BlogType.MONTHLY_ROUNDUP, { nonNullable: true });
   protected readonly periodStartControl = new FormControl('', { nonNullable: true });
   protected readonly periodEndControl = new FormControl('', { nonNullable: true });
 
@@ -74,8 +74,8 @@ export class BlogEditorComponent {
 
   protected readonly existingEntry: Signal<BlogPostWithRelations | undefined> = this.initExistingEntry();
   protected readonly isEditing = computed(() => !!this.existingEntry());
-  protected readonly isDraft = computed(() => this.existingEntry()?.status === BlogPostStatus.DRAFT);
-  protected readonly previewStatus = computed(() => this.existingEntry()?.status ?? BlogPostStatus.DRAFT);
+  protected readonly isDraft = computed(() => this.existingEntry()?.status === BlogStatus.DRAFT);
+  protected readonly previewStatus = computed(() => this.existingEntry()?.status ?? BlogStatus.DRAFT);
 
   protected readonly titleValue = toSignal(this.titleControl.valueChanges, { initialValue: this.titleControl.value });
   protected readonly slugValue = toSignal(this.slugControl.valueChanges, { initialValue: this.slugControl.value });
@@ -83,8 +83,8 @@ export class BlogEditorComponent {
   protected readonly hasSlug = computed(() => !!this.slugValue()?.trim());
 
   protected readonly typeOptions: SelectOption[] = [
-    { label: 'Monthly Roundup', value: BlogPostType.MONTHLY_ROUNDUP },
-    { label: 'Product Newsletter', value: BlogPostType.PRODUCT_NEWSLETTER },
+    { label: 'Monthly Roundup', value: BlogType.MONTHLY_ROUNDUP },
+    { label: 'Product Newsletter', value: BlogType.PRODUCT_NEWSLETTER },
   ];
 
   public constructor() {
@@ -115,7 +115,7 @@ export class BlogEditorComponent {
   protected publish(): void {
     this.publishing.set(true);
     this.buildSaveRequest$()
-      .pipe(switchMap((post) => this.blogPostService.publish(post.id).pipe(map(() => post))))
+      .pipe(switchMap((post) => this.blogService.publish(post.id).pipe(map(() => post))))
       .subscribe({
         next: (post) => {
           this.publishing.set(false);
@@ -165,7 +165,7 @@ export class BlogEditorComponent {
     if (!entry) return;
 
     this.unpublishing.set(true);
-    this.blogPostService.unpublish(entry.id).subscribe({
+    this.blogService.unpublish(entry.id).subscribe({
       next: () => {
         this.unpublishing.set(false);
         this.toastService.success('Blog post unpublished');
@@ -183,7 +183,7 @@ export class BlogEditorComponent {
     if (!entry) return;
 
     this.deleting.set(true);
-    this.blogPostService.remove(entry.id).subscribe({
+    this.blogService.remove(entry.id).subscribe({
       next: () => {
         this.deleting.set(false);
         this.toastService.success('Blog post deleted');
@@ -200,7 +200,7 @@ export class BlogEditorComponent {
     const existing = this.existingEntry();
 
     return existing
-      ? this.blogPostService.update(existing.id, {
+      ? this.blogService.update(existing.id, {
           title: this.titleControl.value,
           slug: this.slugControl.value,
           excerpt: this.excerptControl.value || undefined,
@@ -209,13 +209,13 @@ export class BlogEditorComponent {
           periodStart: this.periodStartControl.value || undefined,
           periodEnd: this.periodEndControl.value || undefined,
         })
-      : this.blogPostService.create({
+      : this.blogService.create({
           title: this.titleControl.value,
           slug: this.slugControl.value || undefined,
           excerpt: this.excerptControl.value || undefined,
           description: this.descriptionControl.value,
           type: this.typeControl.value,
-          status: BlogPostStatus.DRAFT,
+          status: BlogStatus.DRAFT,
           periodStart: this.periodStartControl.value || undefined,
           periodEnd: this.periodEndControl.value || undefined,
         });
@@ -227,14 +227,14 @@ export class BlogEditorComponent {
 
     this.loading.set(true);
     return toSignal(
-      this.blogPostService.getById(id).pipe(
+      this.blogService.getById(id).pipe(
         tap((entry) => {
           this.titleControl.setValue(entry.title);
           this.slugControl.setValue(entry.slug ?? '');
           this.slugManuallyEdited = true;
           this.excerptControl.setValue(entry.excerpt ?? '');
           this.descriptionControl.setValue(entry.description);
-          this.typeControl.setValue(entry.type as BlogPostType);
+          this.typeControl.setValue(entry.type as BlogType);
           this.periodStartControl.setValue(entry.periodStart ? entry.periodStart.substring(0, 10) : '');
           this.periodEndControl.setValue(entry.periodEnd ? entry.periodEnd.substring(0, 10) : '');
           this.loading.set(false);

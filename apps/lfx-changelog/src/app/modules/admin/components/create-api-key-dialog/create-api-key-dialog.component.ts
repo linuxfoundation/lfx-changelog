@@ -30,12 +30,9 @@ export class CreateApiKeyDialogComponent {
 
   protected readonly nameControl = new FormControl('', { nonNullable: true });
   protected readonly expirationControl = new FormControl('90', { nonNullable: true });
-  protected readonly scopeControls: Record<string, FormControl<boolean>> = {
-    'changelogs:read': new FormControl(false, { nonNullable: true }),
-    'changelogs:write': new FormControl(false, { nonNullable: true }),
-    'products:read': new FormControl(false, { nonNullable: true }),
-    'products:write': new FormControl(false, { nonNullable: true }),
-  };
+  protected readonly scopeControls: Record<string, FormControl<boolean>> = Object.fromEntries(
+    API_KEY_SCOPES.map((s) => [s.scope, new FormControl(false, { nonNullable: true })])
+  );
 
   protected readonly saving = signal(false);
 

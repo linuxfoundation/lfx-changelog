@@ -41,9 +41,9 @@ test.describe('API Keys', () => {
       await expect(apiKeysPage.createDialog).not.toBeVisible();
     });
 
-    test('should display all four scope checkboxes', async () => {
+    test('should display all scope checkboxes', async () => {
       await apiKeysPage.openCreateDialog();
-      await expect(apiKeysPage.scopeCheckboxes).toHaveCount(4);
+      await expect(apiKeysPage.scopeCheckboxes).toHaveCount(6);
     });
   });
 
