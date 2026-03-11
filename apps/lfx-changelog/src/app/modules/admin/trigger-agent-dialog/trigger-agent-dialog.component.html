@@ -2,11 +2,20 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="space-y-4">
-  <p class="text-text-secondary text-sm">
-    Select a product to run the changelog agent. The agent will analyze recent activity and generate a draft changelog entry.
-  </p>
+  <lfx-tabs [tabs]="agentTabs" [(activeTab)]="activeTab" />
 
-  <lfx-select label="Product" [options]="productOptions()" [formControl]="productControl" placeholder="Select a product..." />
+  @if (activeTab() === 'changelog') {
+    <p class="text-text-secondary text-sm">
+      Select a product to run the changelog agent. The agent will analyze recent activity and generate a draft changelog entry.
+    </p>
+    <lfx-select label="Product" [options]="productOptions()" [formControl]="productControl" placeholder="Select a product..." />
+  } @else {
+    <p class="text-text-secondary text-sm">Run the blog agent to generate a monthly roundup post summarizing changelog activity across all products.</p>
+    <div class="grid grid-cols-2 gap-3">
+      <lfx-select label="Month" [options]="monthOptions" [formControl]="monthControl" placeholder="Select month..." />
+      <lfx-select label="Year" [options]="yearOptions" [formControl]="yearControl" placeholder="Select year..." />
+    </div>
+  }
 
   @if (error()) {
     <div
@@ -18,7 +27,7 @@
 
   <div class="flex justify-end gap-3">
     <lfx-button variant="secondary" (clicked)="dialogService.close()">Cancel</lfx-button>
-    <lfx-button variant="primary" [loading]="triggering()" [disabled]="productControl.invalid" (clicked)="trigger()">
+    <lfx-button variant="primary" [loading]="triggering()" [disabled]="isDisabled()" (clicked)="trigger()">
       <i class="fa-duotone fa-robot text-xs"></i>
       Run Agent
     </lfx-button>

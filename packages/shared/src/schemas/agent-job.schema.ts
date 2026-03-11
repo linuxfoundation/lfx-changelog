@@ -25,7 +25,7 @@ export const ProgressLogEntrySchema = z
 export const AgentJobSchema = z
   .object({
     id: z.string().uuid(),
-    productId: z.string().uuid(),
+    productId: z.string().uuid().nullable(),
     trigger: AgentJobTriggerSchema,
     status: AgentJobStatusSchema,
     changelogId: z.string().uuid().nullable(),
@@ -67,13 +67,22 @@ export const AgentJobChangelogSchema = z
   })
   .openapi('AgentJobChangelog');
 
+export const AgentJobBlogSchema = z
+  .object({
+    id: z.string().uuid(),
+    title: z.string(),
+    status: z.string(),
+  })
+  .openapi('AgentJobBlog');
+
 export const AgentJobWithProductSchema = AgentJobSchema.extend({
-  product: AgentJobProductSchema,
+  product: AgentJobProductSchema.nullable(),
 }).openapi('AgentJobWithProduct');
 
 export const AgentJobDetailSchema = AgentJobSchema.extend({
-  product: AgentJobProductSchema,
+  product: AgentJobProductSchema.nullable(),
   changelogEntry: AgentJobChangelogSchema.nullable(),
+  blog: AgentJobBlogSchema.nullable(),
 }).openapi('AgentJobDetail');
 
 export type AgentJobStatus = z.infer<typeof AgentJobStatusSchema>;

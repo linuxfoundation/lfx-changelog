@@ -21,11 +21,11 @@ export class AgentTriggerLabelPipe implements PipeTransform {
       case 'manual':
         return 'Manual';
       case 'newsletter_monthly':
-        return 'Monthly Newsletter';
+        return 'Blog: Monthly Roundup';
       case 'newsletter_product':
-        return 'Product Newsletter';
+        return 'Blog: Product Newsletter';
       case 'newsletter_manual':
-        return 'Manual Newsletter';
+        return 'Blog: Manual';
     }
   }
 }

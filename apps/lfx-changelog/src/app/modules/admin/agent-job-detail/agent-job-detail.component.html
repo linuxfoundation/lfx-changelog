@@ -22,7 +22,7 @@
   @if (job(); as job) {
     <!-- Header -->
     <div class="animate-slide-in-left flex flex-wrap items-center gap-3">
-      <h1 data-testid="agent-job-detail-heading" class="font-display text-text-primary text-2xl font-bold">{{ job.product.name }}</h1>
+      <h1 data-testid="agent-job-detail-heading" class="font-display text-text-primary text-2xl font-bold">{{ job.product?.name ?? 'Blog Agent' }}</h1>
       <lfx-badge [label]="job.status | agentStatusLabel" [color]="job.status | agentStatusColor" />
       <span class="text-text-muted text-sm">{{ job.trigger | agentTriggerLabel }}</span>
       <span class="text-text-muted text-sm">{{ job.createdAt | dateFormat }}</span>
@@ -93,6 +93,17 @@
           {{ entry.title }}
         </a>
         <span class="text-text-muted ml-2 text-xs capitalize">{{ entry.status }}</span>
+      </div>
+    }
+
+    <!-- Created blog card -->
+    @if (job.blog; as blog) {
+      <div class="border-border bg-surface animate-fade-in-up rounded-lg border p-4 [animation-delay:150ms]">
+        <div class="text-text-muted mb-1 text-xs font-medium tracking-wider uppercase">Generated Blog</div>
+        <a [routerLink]="['/admin/blog', blog.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
+          {{ blog.title }}
+        </a>
+        <span class="text-text-muted ml-2 text-xs capitalize">{{ blog.status }}</span>
       </div>
     }
 

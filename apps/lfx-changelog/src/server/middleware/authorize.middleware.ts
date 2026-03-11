@@ -12,8 +12,8 @@ import type { ApiKeyScope } from '@lfx-changelog/shared';
 import type { UserRoleAssignment } from '@prisma/client';
 
 interface AuthorizeOptions {
-  /** API key scope required. API keys are rejected if omitted. */
-  scope?: ApiKeyScope;
+  /** API key scope(s) required. Pass an array to allow any of the listed scopes. API keys are rejected if omitted. */
+  scope?: ApiKeyScope | ApiKeyScope[];
   /** Global role check (applies to both OAuth and API key auth). */
   role?: UserRole;
   /** Product-scoped role check (applies to both OAuth and API key auth). */
@@ -80,8 +80,10 @@ export function authorize(options: AuthorizeOptions = {}) {
           return;
         }
 
-        if (!apiKeyService.hasScope(req.apiKey, options.scope)) {
-          next(new AuthorizationError(`API key missing required scope: ${options.scope}`, { path: req.path }));
+        const scopes = Array.isArray(options.scope) ? options.scope : [options.scope];
+        const hasAnyScope = scopes.some((s) => apiKeyService.hasScope(req.apiKey!, s));
+        if (!hasAnyScope) {
+          next(new AuthorizationError(`API key missing required scope: ${scopes.join(' or ')}`, { path: req.path }));
           return;
         }
 
