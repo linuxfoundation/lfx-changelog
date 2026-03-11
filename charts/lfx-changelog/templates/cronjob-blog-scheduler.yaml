@@ -45,12 +45,16 @@ spec:
                 - |
                   const baseUrl = process.env.BASE_URL;
                   const apiKey = process.env.BLOG_SCHEDULER_API_KEY;
+                  if (!baseUrl) { console.error('BASE_URL not set'); process.exit(1); }
                   if (!apiKey) { console.error('BLOG_SCHEDULER_API_KEY not set'); process.exit(1); }
                   fetch(baseUrl + '/api/agent-jobs/trigger-blog/monthly', {
                     method: 'POST',
                     headers: { 'Authorization': 'Bearer ' + apiKey },
                   })
-                  .then(function(r) { return r.json(); })
+                  .then(function(r) {
+                    if (!r.ok) { return r.text().then(function(b) { console.error('HTTP', r.status, r.statusText, b); process.exit(1); }); }
+                    return r.json();
+                  })
                   .then(function(d) { console.log('Triggered:', JSON.stringify(d)); process.exit(0); })
                   .catch(function(e) { console.error('Failed:', e); process.exit(1); });
               env:

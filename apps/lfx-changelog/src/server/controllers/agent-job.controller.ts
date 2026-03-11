@@ -147,10 +147,21 @@ export class AgentJobController {
 
       // Compute period: previous month by default, or custom year/month from query
       const now = new Date();
-      let year = parseInt(req.query['year'] as string, 10);
-      let month = parseInt(req.query['month'] as string, 10);
+      const rawYear = req.query['year'] as string | undefined;
+      const rawMonth = req.query['month'] as string | undefined;
 
-      if (isNaN(year) || isNaN(month)) {
+      let year: number;
+      let month: number;
+
+      if (rawYear || rawMonth) {
+        // If either param is provided, both must be valid
+        year = parseInt(rawYear as string, 10);
+        month = parseInt(rawMonth as string, 10);
+        if (isNaN(year) || isNaN(month)) {
+          res.status(400).json({ success: false, error: 'Both year and month must be provided together' });
+          return;
+        }
+      } else {
         // Default to previous month
         const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
         year = prev.getUTCFullYear();

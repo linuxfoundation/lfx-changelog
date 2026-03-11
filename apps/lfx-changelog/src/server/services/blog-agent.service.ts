@@ -38,6 +38,22 @@ export class BlogAgentService {
       });
     }
 
+    // Prevent duplicate concurrent jobs for the same period
+    const activeJob = await prisma.agentJob.findFirst({
+      where: {
+        trigger: 'newsletter_monthly',
+        status: { in: ['pending', 'running'] },
+      },
+      select: { id: true },
+    });
+
+    if (activeJob) {
+      serverLogger.info({ existingJobId: activeJob.id, periodStart: period.start }, 'Blog agent job already active — skipping');
+      throw new AgentServiceError('A blog agent job is already running. Wait for it to complete or cancel it first.', {
+        operation: 'runMonthlyRoundup',
+      });
+    }
+
     const existingDraftId = existing?.id || null;
 
     // Ensure bot user exists
