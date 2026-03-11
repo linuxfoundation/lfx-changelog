@@ -68,8 +68,8 @@ export class ChangelogService {
   }
 
   public reindexSearch(): Observable<{ indexed: number; errors: number }> {
-    return this.http.post<ApiResponse<{ indexed: number; errors: number }>>('/api/opensearch/reindex', {}).pipe(
-      map((res) => res.data),
+    return this.http.post<ApiResponse<{ changelogs: { indexed: number; errors: number } }>>('/api/opensearch/reindex?target=changelogs', {}).pipe(
+      map((res) => res.data.changelogs),
       take(1)
     );
   }

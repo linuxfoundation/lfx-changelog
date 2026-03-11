@@ -10,11 +10,12 @@ export const searchRegistry = new OpenAPIRegistry();
 
 searchRegistry.registerPath({
   method: 'get',
-  path: '/public/api/changelogs/search',
+  path: '/public/api/search',
   tags: ['Public - Search'],
-  summary: 'Search published changelogs',
+  summary: 'Search published content',
   description:
-    'Full-text search across published changelog entries with fuzzy matching, relevance scoring, highlighted snippets, and product facets.\n\n' +
+    'Full-text search across published changelogs or blog posts with fuzzy matching, relevance scoring, highlighted snippets, and facets.\n\n' +
+    'Use the `target` query parameter to select which index to search (`changelogs` or `blogs`).\n\n' +
     '**Required privilege:** None — this endpoint is publicly accessible.',
   request: {
     query: SearchQueryParamsSchema,
@@ -46,21 +47,31 @@ searchRegistry.registerPath({
   method: 'post',
   path: '/api/opensearch/reindex',
   tags: ['OpenSearch'],
-  summary: 'Reindex all published changelogs',
+  summary: 'Reindex OpenSearch indices',
   description:
-    'Deletes the existing OpenSearch index and re-indexes all published changelog entries from the database.\n\n' + '**Required privilege:** `super_admin`',
+    'Deletes and re-indexes the specified OpenSearch indices from the database. ' +
+    'Use the `target` query parameter to control which indices are rebuilt.\n\n' +
+    '**Required privilege:** `super_admin`',
   security: [{ apiKeyAuth: [] }],
+  request: {
+    query: z.object({
+      target: z.enum(['changelogs', 'blogs', 'all']).default('all').openapi({ description: 'Which index to reindex (default: all)' }),
+    }),
+  },
   responses: {
     200: {
-      description: 'Reindex result',
+      description: 'Reindex result per target',
       content: {
         'application/json': {
           schema: z.object({
             success: z.boolean(),
-            data: z.object({
-              indexed: z.number().openapi({ description: 'Number of entries indexed' }),
-              errors: z.number().openapi({ description: 'Number of indexing errors' }),
-            }),
+            data: z.record(
+              z.string(),
+              z.object({
+                indexed: z.number().openapi({ description: 'Number of entries indexed' }),
+                errors: z.number().openapi({ description: 'Number of indexing errors' }),
+              })
+            ),
           }),
         },
       },

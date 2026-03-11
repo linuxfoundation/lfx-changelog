@@ -5,7 +5,9 @@ import { BlogStatus as BlogStatusEnum, BlogType as BlogTypeEnum, MAX_PAGE_SIZE }
 import { BlogStatus, BlogType, Prisma, Blog as PrismaBlog } from '@prisma/client';
 
 import { ConflictError, NotFoundError } from '../errors';
+import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
+import { SearchService, toBlogDocument } from './search.service';
 
 import type { BlogPostQueryParams, PaginatedResponse } from '@lfx-changelog/shared';
 
@@ -39,6 +41,8 @@ const BLOG_INCLUDE = {
 } as const;
 
 export class BlogService {
+  private readonly searchService = new SearchService();
+
   public async findAll(params: BlogPostQueryParams): Promise<PaginatedResult<BlogWithRelations>> {
     const prisma = getPrismaClient();
     const { page, limit, skip } = this.sanitizePagination(params);
@@ -158,6 +162,7 @@ export class BlogService {
         },
         include: BLOG_INCLUDE,
       });
+      this.syncToOpenSearch(post as BlogWithRelations);
       return post as BlogWithRelations;
     } catch (error) {
       throw this.handleUniqueConstraint(error, uniqueSlug) ?? error;
@@ -195,6 +200,8 @@ export class BlogService {
         } as Prisma.BlogUpdateInput,
         include: BLOG_INCLUDE,
       });
+
+      this.syncToOpenSearch(updated as BlogWithRelations);
       return updated as BlogWithRelations;
     } catch (error) {
       throw this.handleUniqueConstraint(error, data.slug, 'update') ?? error;
@@ -212,6 +219,7 @@ export class BlogService {
       data: { status: 'published', publishedAt: new Date() },
       include: BLOG_INCLUDE,
     });
+    this.syncToOpenSearch(published as BlogWithRelations);
     return published as BlogWithRelations;
   }
 
@@ -226,6 +234,7 @@ export class BlogService {
       data: { status: 'draft', publishedAt: null },
       include: BLOG_INCLUDE,
     });
+    this.searchService.deleteBlogDocument(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove blog from OpenSearch'));
     return draft as BlogWithRelations;
   }
 
@@ -236,6 +245,7 @@ export class BlogService {
       throw new NotFoundError(`Blog post not found: ${id}`, { operation: 'delete', service: 'blog' });
     }
     await prisma.blog.delete({ where: { id } });
+    this.searchService.deleteBlogDocument(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove blog from OpenSearch'));
   }
 
   public async linkProducts(blogId: string, productIds: string[]): Promise<BlogWithRelations> {
@@ -252,7 +262,9 @@ export class BlogService {
       prisma.blogProduct.createMany({ data: uniqueProductIds.map((productId) => ({ blogId, productId })) }),
     ]);
 
-    return this.findById(blogId);
+    const updated = await this.findById(blogId);
+    this.syncToOpenSearch(updated);
+    return updated;
   }
 
   public async linkChangelogs(blogId: string, changelogEntryIds: string[]): Promise<BlogWithRelations> {
@@ -269,7 +281,9 @@ export class BlogService {
       prisma.blogChangelogEntry.createMany({ data: uniqueChangelogEntryIds.map((changelogEntryId) => ({ blogId, changelogEntryId })) }),
     ]);
 
-    return this.findById(blogId);
+    const updated = await this.findById(blogId);
+    this.syncToOpenSearch(updated);
+    return updated;
   }
 
   private async ensureUniqueSlug(slug: string): Promise<string> {
@@ -303,6 +317,13 @@ export class BlogService {
       return new ConflictError(`A blog post with slug "${slug}" already exists`, { operation, service: 'blog' });
     }
     return null;
+  }
+
+  private syncToOpenSearch(blog: BlogWithRelations): void {
+    if (blog.status !== 'published') return;
+
+    const doc = toBlogDocument(blog);
+    this.searchService.indexBlogDocument(doc).catch((err) => serverLogger.warn({ err, id: blog.id }, 'Failed to sync blog to OpenSearch'));
   }
 
   private sanitizePagination(params: BlogPostQueryParams): { page: number; limit: number; skip: number } {

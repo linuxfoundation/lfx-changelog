@@ -16,11 +16,18 @@ export const ChangelogQueryParamsSchema = z
 
 export type ChangelogQueryParams = z.infer<typeof ChangelogQueryParamsSchema>;
 
+// ── Search targets ──────────────────────────────────────────────────────────
+export const SearchTargetSchema = z.enum(['changelogs', 'blogs']).openapi({ description: 'Which index to search' });
+
+export type SearchTarget = z.infer<typeof SearchTargetSchema>;
+
 // ── Search query params ─────────────────────────────────────────────────────
 export const SearchQueryParamsSchema = z
   .object({
+    target: SearchTargetSchema,
     q: z.string().min(1).openapi({ description: 'Search query string' }),
-    productId: z.string().uuid().optional().openapi({ description: 'Filter by product ID' }),
+    productId: z.string().uuid().optional().openapi({ description: 'Filter by product ID (changelogs)' }),
+    type: z.string().optional().openapi({ description: 'Filter by blog type (blogs)' }),
     page: z.coerce.number().int().min(1).default(1).openapi({ description: 'Page number (default: 1)' }),
     limit: z.coerce.number().int().min(1).max(100).default(20).openapi({ description: 'Results per page (default: 20, max: 100)' }),
   })
@@ -59,40 +66,69 @@ export const ChangelogDocumentSchema = z
 
 export type ChangelogDocument = z.infer<typeof ChangelogDocumentSchema>;
 
-// ── Search hit ───────────────────────────────────────────────────────────────
-export const SearchHitSchema = ChangelogDocumentSchema.extend({
+// ── Blog document (OpenSearch index shape) ──────────────────────────────────
+export const BlogDocumentSchema = z
+  .object({
+    id: z.string().openapi({ description: 'Blog post ID' }),
+    slug: z.string().openapi({ description: 'Blog post slug' }),
+    title: z.string().openapi({ description: 'Blog post title' }),
+    excerpt: z.string().nullable().openapi({ description: 'Blog post excerpt' }),
+    description: z.string().openapi({ description: 'Blog post description (markdown)' }),
+    type: z.string().openapi({ description: 'Blog type (monthly_roundup, product_newsletter)' }),
+    status: z.string().openapi({ description: 'Blog status' }),
+    coverImageUrl: z.string().nullable().openapi({ description: 'Cover image URL' }),
+    publishedAt: z.string().nullable().openapi({ description: 'ISO date when published' }),
+    createdAt: z.string().openapi({ description: 'ISO date when created' }),
+    authorName: z.string().openapi({ description: 'Author display name' }),
+    authorAvatarUrl: z.string().nullable().openapi({ description: 'Author avatar URL' }),
+    productNames: z.array(z.string()).openapi({ description: 'Associated product names' }),
+    productIds: z.array(z.string()).openapi({ description: 'Associated product IDs' }),
+  })
+  .openapi('BlogDocument');
+
+export type BlogDocument = z.infer<typeof BlogDocumentSchema>;
+
+// ── Search hit ──────────────────────────────────────────────────────────────
+// Hits can come from any index, so the runtime type is a union of all document
+// shapes plus the score/highlights envelope added by the search layer.
+const SearchHitEnvelopeSchema = z.object({
   score: z.number().openapi({ description: 'Relevance score from OpenSearch' }),
   highlights: SearchHighlightsSchema.openapi({ description: 'Highlighted matching fragments' }),
-}).openapi('SearchHit');
+});
 
+export const ChangelogSearchHitSchema = ChangelogDocumentSchema.merge(SearchHitEnvelopeSchema).openapi('ChangelogSearchHit');
+export type ChangelogSearchHit = z.infer<typeof ChangelogSearchHitSchema>;
+
+export const BlogSearchHitSchema = BlogDocumentSchema.merge(SearchHitEnvelopeSchema).openapi('BlogSearchHit');
+export type BlogSearchHit = z.infer<typeof BlogSearchHitSchema>;
+
+export const SearchHitSchema = z.union([ChangelogSearchHitSchema, BlogSearchHitSchema]).openapi('SearchHit');
 export type SearchHit = z.infer<typeof SearchHitSchema>;
 
-// ── Product facet ────────────────────────────────────────────────────────────
-export const ProductFacetSchema = z
+// ── Facet bucket ────────────────────────────────────────────────────────────
+export const FacetBucketSchema = z
   .object({
-    productId: z.string().openapi({ description: 'Product ID' }),
-    productName: z.string().openapi({ description: 'Product name' }),
+    key: z.string().openapi({ description: 'Facet key (e.g., product ID, blog type)' }),
+    label: z.string().optional().openapi({ description: 'Human-readable label (e.g., product name)' }),
     count: z.number().openapi({ description: 'Number of matching entries' }),
   })
-  .openapi('ProductFacet');
+  .openapi('FacetBucket');
 
-export type ProductFacet = z.infer<typeof ProductFacetSchema>;
+export type FacetBucket = z.infer<typeof FacetBucketSchema>;
 
 // ── Full search response ─────────────────────────────────────────────────────
 export const SearchResponseSchema = z
   .object({
     success: z.boolean().openapi({ description: 'Whether the request was successful' }),
-    hits: z.array(SearchHitSchema).openapi({ description: 'Matching changelog entries' }),
+    hits: z.array(SearchHitSchema).openapi({ description: 'Matching entries' }),
     total: z.number().openapi({ description: 'Total number of matching entries' }),
     page: z.number().openapi({ description: 'Current page' }),
     pageSize: z.number().openapi({ description: 'Results per page' }),
     totalPages: z.number().openapi({ description: 'Total number of pages' }),
-    facets: z
-      .object({
-        products: z.array(ProductFacetSchema).openapi({ description: 'Product facet counts' }),
-      })
-      .openapi({ description: 'Faceted search results' }),
+    facets: z.record(z.string(), z.array(FacetBucketSchema)).openapi({ description: 'Faceted search results keyed by facet name' }),
   })
   .openapi('SearchResponse');
 
-export type SearchResponse = z.infer<typeof SearchResponseSchema>;
+/** When called without a type argument, `SearchResponse` matches the Zod schema exactly.
+ *  Pass a narrower hit type (e.g. `SearchResponse<ChangelogSearchHit>`) to get typed hits. */
+export type SearchResponse<T extends SearchHit = SearchHit> = Omit<z.infer<typeof SearchResponseSchema>, 'hits'> & { hits: T[] };

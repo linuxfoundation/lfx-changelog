@@ -3,11 +3,12 @@
 
 import { expect, test } from '@playwright/test';
 import { createApiKeyContext, createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
-import { TEST_CHANGELOGS } from '../../helpers/test-data.js';
+import { TEST_BLOG_POSTS, TEST_CHANGELOGS } from '../../helpers/test-data.js';
 
 import type { APIRequestContext, APIResponse } from '@playwright/test';
 
 const PUBLISHED_COUNT = TEST_CHANGELOGS.filter((c) => c.status === 'published').length;
+const PUBLISHED_BLOG_COUNT = TEST_BLOG_POSTS.filter((p) => p.status === 'published').length;
 
 const MCP_HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' };
 
@@ -130,7 +131,7 @@ test.describe('MCP Endpoint (/mcp)', () => {
       expect(toolNames).toContain('list-products');
       expect(toolNames).toContain('list-changelogs');
       expect(toolNames).toContain('get-changelog');
-      expect(toolNames).toContain('search-changelogs');
+      expect(toolNames).toContain('search');
 
       // Admin product tools
       expect(toolNames).toContain('list-products-admin');
@@ -147,7 +148,7 @@ test.describe('MCP Endpoint (/mcp)', () => {
       expect(toolNames).toContain('delete-changelog');
 
       // Admin search tools
-      expect(toolNames).toContain('reindex-changelogs');
+      expect(toolNames).toContain('reindex');
     });
   });
 
@@ -197,8 +198,8 @@ test.describe('MCP Endpoint (/mcp)', () => {
       expect(content.data.title).toBeDefined();
     });
 
-    test('search-changelogs returns search results without auth', async () => {
-      const body = await callMcpTool(api, 'search-changelogs', { q: 'CLA' });
+    test('search returns changelog results without auth', async () => {
+      const body = await callMcpTool(api, 'search', { target: 'changelogs', q: 'CLA' });
       expect(body.result).toBeDefined();
       expect(body.result.isError).toBeUndefined();
 
@@ -213,8 +214,8 @@ test.describe('MCP Endpoint (/mcp)', () => {
       expect(Array.isArray(content.facets.products)).toBe(true);
     });
 
-    test('search-changelogs returns score and highlights', async () => {
-      const body = await callMcpTool(api, 'search-changelogs', { q: 'CLA' });
+    test('search returns score and highlights for changelogs', async () => {
+      const body = await callMcpTool(api, 'search', { target: 'changelogs', q: 'CLA' });
       const content = JSON.parse(body.result.content[0].text);
 
       expect(content.hits.length).toBeGreaterThan(0);
@@ -226,13 +227,13 @@ test.describe('MCP Endpoint (/mcp)', () => {
       expect(firstHit.productName).toBeDefined();
     });
 
-    test('search-changelogs supports productId filtering', async () => {
+    test('search supports productId filtering for changelogs', async () => {
       // Get the e2e-easycla product ID
       const productsBody = await callMcpTool(api, 'list-products');
       const productsContent = JSON.parse(productsBody.result.content[0].text);
       const easycla = productsContent.data.find((p: any) => p.slug === 'e2e-easycla');
 
-      const body = await callMcpTool(api, 'search-changelogs', { q: 'E2E', productId: easycla.id });
+      const body = await callMcpTool(api, 'search', { target: 'changelogs', q: 'E2E', productId: easycla.id });
       const content = JSON.parse(body.result.content[0].text);
 
       expect(content.success).toBe(true);
@@ -241,20 +242,43 @@ test.describe('MCP Endpoint (/mcp)', () => {
       }
     });
 
-    test('search-changelogs supports pagination', async () => {
-      const body = await callMcpTool(api, 'search-changelogs', { q: 'E2E', limit: 1 });
+    test('search supports pagination', async () => {
+      const body = await callMcpTool(api, 'search', { target: 'changelogs', q: 'E2E', limit: 1 });
       const content = JSON.parse(body.result.content[0].text);
 
       expect(content.pageSize).toBe(1);
       expect(content.hits.length).toBeLessThanOrEqual(1);
     });
 
-    test('search-changelogs returns empty results for non-matching query', async () => {
-      const body = await callMcpTool(api, 'search-changelogs', { q: 'xyznonexistent123' });
+    test('search returns empty results for non-matching query', async () => {
+      const body = await callMcpTool(api, 'search', { target: 'changelogs', q: 'xyznonexistent123' });
       const content = JSON.parse(body.result.content[0].text);
 
       expect(content.total).toBe(0);
       expect(content.hits).toHaveLength(0);
+    });
+
+    test('search returns blog results with target=blogs', async () => {
+      const body = await callMcpTool(api, 'search', { target: 'blogs', q: 'EasyCLA' });
+      expect(body.result).toBeDefined();
+      expect(body.result.isError).toBeUndefined();
+
+      const content = JSON.parse(body.result.content[0].text);
+      expect(content.success).toBe(true);
+      expect(Array.isArray(content.hits)).toBe(true);
+      expect(content.total).toBeGreaterThanOrEqual(1);
+      expect(content.facets).toBeDefined();
+      expect(Array.isArray(content.facets.types)).toBe(true);
+    });
+
+    test('search supports type filtering for blogs', async () => {
+      const body = await callMcpTool(api, 'search', { target: 'blogs', q: 'E2E', type: 'monthly_roundup' });
+      const content = JSON.parse(body.result.content[0].text);
+
+      expect(content.success).toBe(true);
+      for (const hit of content.hits) {
+        expect(hit.type).toBe('monthly_roundup');
+      }
     });
   });
 
@@ -448,24 +472,39 @@ test.describe('MCP Endpoint (/mcp)', () => {
       await Promise.all([superAdminApi.dispose(), mcpFullApi.dispose()]);
     });
 
-    test('reindex-changelogs returns auth error without API key', async () => {
-      const body = await callMcpTool(api, 'reindex-changelogs');
+    test('reindex returns auth error without API key', async () => {
+      const body = await callMcpTool(api, 'reindex', { target: 'changelogs' });
       expect(body.result).toBeDefined();
       expect(body.result.isError).toBe(true);
       expect(body.result.content[0].text).toContain('Authentication required');
     });
 
-    test('reindex-changelogs succeeds with valid API key', async () => {
-      const body = await callMcpTool(mcpFullApi, 'reindex-changelogs');
+    test('reindex changelogs succeeds with valid API key', async () => {
+      const body = await callMcpTool(mcpFullApi, 'reindex', { target: 'changelogs' });
       expect(body.result).toBeDefined();
       expect(body.result.isError).toBeUndefined();
 
       const content = JSON.parse(body.result.content[0].text);
       expect(content.success).toBe(true);
-      expect(typeof content.data.indexed).toBe('number');
-      expect(typeof content.data.errors).toBe('number');
-      expect(content.data.errors).toBe(0);
-      expect(content.data.indexed).toBe(PUBLISHED_COUNT);
+      expect(content.data.changelogs).toBeDefined();
+      expect(typeof content.data.changelogs.indexed).toBe('number');
+      expect(typeof content.data.changelogs.errors).toBe('number');
+      expect(content.data.changelogs.errors).toBe(0);
+      expect(content.data.changelogs.indexed).toBe(PUBLISHED_COUNT);
+    });
+
+    test('reindex blogs succeeds with valid API key', async () => {
+      const body = await callMcpTool(mcpFullApi, 'reindex', { target: 'blogs' });
+      expect(body.result).toBeDefined();
+      expect(body.result.isError).toBeUndefined();
+
+      const content = JSON.parse(body.result.content[0].text);
+      expect(content.success).toBe(true);
+      expect(content.data.blogs).toBeDefined();
+      expect(typeof content.data.blogs.indexed).toBe('number');
+      expect(typeof content.data.blogs.errors).toBe('number');
+      expect(content.data.blogs.errors).toBe(0);
+      expect(content.data.blogs.indexed).toBe(PUBLISHED_BLOG_COUNT);
     });
   });
 

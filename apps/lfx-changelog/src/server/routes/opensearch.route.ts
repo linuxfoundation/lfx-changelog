@@ -10,6 +10,7 @@ import { authorize } from '../middleware/authorize.middleware';
 const router = Router();
 const searchController = new SearchController();
 
+// POST /reindex?target=changelogs|blogs|all (default: all)
 router.post('/reindex', authorize({ scope: ApiKeyScope.CHANGELOGS_WRITE, role: UserRole.SUPER_ADMIN }), (req, res, next) =>
   searchController.reindex(req, res, next)
 );

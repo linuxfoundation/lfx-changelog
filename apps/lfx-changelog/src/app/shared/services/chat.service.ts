@@ -173,8 +173,8 @@ export class ChatService {
     switch (toolName) {
       case 'list_products':
         return 'Looking up products...';
-      case 'search_changelogs':
-        return 'Searching changelogs...';
+      case 'search':
+        return 'Searching...';
       case 'get_changelog_detail':
         return 'Reading changelog details...';
       default:
