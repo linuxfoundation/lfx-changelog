@@ -6,7 +6,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 import { buildConnectionString } from '../../src/server/helpers/build-connection-string';
-import { TEST_CHANGELOGS, TEST_PRODUCTS, TEST_ROLE_ASSIGNMENTS, TEST_USERS } from './test-data.js';
+import { TEST_BLOG_POSTS, TEST_CHANGELOGS, TEST_PRODUCTS, TEST_ROLE_ASSIGNMENTS, TEST_USERS } from './test-data.js';
 
 let prisma: PrismaClient | null = null;
 
@@ -29,6 +29,9 @@ export async function cleanTestDatabase(): Promise<void> {
   const client = getTestPrismaClient();
 
   // Delete in FK-safe order
+  await client.blogChangelogEntry.deleteMany();
+  await client.blogProduct.deleteMany();
+  await client.blog.deleteMany();
   await client.chatMessage.deleteMany();
   await client.chatConversation.deleteMany();
   await client.apiKey.deleteMany();
@@ -106,6 +109,24 @@ export async function seedTestDatabase(): Promise<void> {
         status: entry.status,
         publishedAt: entry.publishedAt ?? null,
         createdBy: users[entry.authorIndex]!.id,
+      },
+    });
+  }
+
+  // 5. Create blog posts
+  for (const post of TEST_BLOG_POSTS) {
+    await client.blog.create({
+      data: {
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt ?? null,
+        description: post.description,
+        type: post.type,
+        status: post.status,
+        publishedAt: post.publishedAt ?? null,
+        periodStart: post.periodStart ?? null,
+        periodEnd: post.periodEnd ?? null,
+        createdBy: users[post.authorIndex]!.id,
       },
     });
   }

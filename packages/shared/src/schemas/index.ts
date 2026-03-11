@@ -40,6 +40,7 @@ export {
 export { ApiKeySchema, CreateApiKeyRequestSchema, CreateApiKeyResponseSchema } from './api-key.schema.js';
 export { createApiResponseSchema, createPaginatedResponseSchema } from './api-response.schema.js';
 export { AuthContextSchema, AuthUserSchema } from './auth.schema.js';
+export { BlogPostQueryParamsSchema, BlogPostSchema, BlogPostWithRelationsSchema } from './blog-post.schema.js';
 export { ChangelogEntrySchema, ChangelogEntryWithRelationsSchema } from './changelog-entry.schema.js';
 export { MarkViewedRequestSchema, MarkViewedResponseSchema, UnseenCountSchema, UnseenQuerySchema } from './changelog-view.schema.js';
 export {
@@ -59,9 +60,13 @@ export {
 } from './chat.schema.js';
 export {
   AssignRoleRequestSchema,
+  CreateBlogPostRequestSchema,
   CreateChangelogEntryRequestSchema,
   CreateProductRequestSchema,
   CreateUserRequestSchema,
+  LinkBlogPostChangelogsRequestSchema,
+  LinkBlogPostProductsRequestSchema,
+  UpdateBlogPostRequestSchema,
   UpdateChangelogEntryRequestSchema,
   UpdateProductRequestSchema,
 } from './dto.schema.js';
@@ -150,6 +155,7 @@ export type {
 export type { ApiKey, ApiKeyScopeMetadata, CreateApiKeyRequest, CreateApiKeyResponse } from './api-key.schema.js';
 export type { ApiResponse, PaginatedResponse } from './api-response.schema.js';
 export type { AuthContext, AuthUser } from './auth.schema.js';
+export type { BlogPost, BlogPostQueryParams, BlogPostWithRelations } from './blog-post.schema.js';
 export type { ChangelogEntry, ChangelogEntryWithRelations } from './changelog-entry.schema.js';
 export type { MarkViewedRequest, MarkViewedResponse, UnseenCount, UnseenQuery } from './changelog-view.schema.js';
 export type {
@@ -170,9 +176,13 @@ export type {
 } from './chat.schema.js';
 export type {
   AssignRoleRequest,
+  CreateBlogPostRequest,
   CreateChangelogEntryRequest,
   CreateProductRequest,
   CreateUserRequest,
+  LinkBlogPostChangelogsRequest,
+  LinkBlogPostProductsRequest,
+  UpdateBlogPostRequest,
   UpdateChangelogEntryRequest,
   UpdateProductRequest,
 } from './dto.schema.js';

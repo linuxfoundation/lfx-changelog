@@ -1,0 +1,75 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left flex items-center justify-between">
+    <div>
+      <h1 data-testid="blog-list-heading" class="font-display text-text-primary text-2xl font-bold">Blogs</h1>
+      <p class="text-text-secondary mt-1">Manage blog posts and newsletters.</p>
+    </div>
+    <a data-testid="blog-list-new-post-btn" routerLink="/admin/blog/new">
+      <lfx-button variant="primary">
+        <i class="fa-solid fa-plus text-xs"></i>
+        New Blog Post
+      </lfx-button>
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <div class="animate-fade-in-up relative z-10 grid grid-cols-1 gap-4 [animation-delay:100ms] sm:grid-cols-2">
+    <lfx-select data-testid="blog-list-type-filter" label="Type" [options]="typeOptions" [formControl]="typeFilterControl" placeholder="All Types" />
+    <lfx-select data-testid="blog-list-status-filter" label="Status" [options]="statusOptions" [formControl]="statusFilterControl" placeholder="All Statuses" />
+  </div>
+
+  <!-- Table -->
+  <lfx-table
+    class="animate-rise-in block [animation-delay:200ms]"
+    [data]="filteredEntries()"
+    [loading]="loading()"
+    testId="blog-list-table"
+    emptyMessage="No blog posts match the selected filters."
+    [currentPage]="currentPage()"
+    [totalPages]="totalPages()"
+    [totalItems]="totalItems()"
+    [pageSize]="pageSize()"
+    (pageChange)="onPageChange($event)">
+    <ng-template lfxColumn="Title" let-entry>
+      <a [routerLink]="['/admin/blog', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
+        {{ entry.title }}
+      </a>
+    </ng-template>
+
+    <ng-template lfxColumn="Type" let-entry>
+      <span class="text-text-secondary text-sm">{{ entry.type | blogTypeLabel }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="Status" let-entry>
+      <lfx-status-badge [status]="entry.status" />
+    </ng-template>
+
+    <ng-template lfxColumn="Products" let-entry>
+      <span class="text-text-secondary text-sm">
+        @if (entry.products?.length) {
+          {{ entry.products.length }} product{{ entry.products.length > 1 ? 's' : '' }}
+        } @else {
+          —
+        }
+      </span>
+    </ng-template>
+
+    <ng-template lfxColumn="Updated" let-entry>
+      <span class="text-text-muted text-sm">{{ entry.updatedAt | dateFormat }}</span>
+    </ng-template>
+
+    <ng-template lfxColumn="" let-entry>
+      <lfx-dropdown-menu [items]="(entryMenuItems() | mapGet: entry.id) ?? []">
+        <button
+          data-testid="blog-list-actions-btn"
+          aria-label="Actions"
+          class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
+          <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+        </button>
+      </lfx-dropdown-menu>
+    </ng-template>
+  </lfx-table>
+</div>

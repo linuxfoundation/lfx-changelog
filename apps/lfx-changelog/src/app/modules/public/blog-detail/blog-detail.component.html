@@ -1,0 +1,97 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (post(); as post) {
+  <div class="animate-fade-in-up space-y-6">
+    <a
+      data-testid="blog-detail-back-link"
+      routerLink="/blog"
+      class="text-brand-600 hover:text-brand-700 inline-flex items-center gap-1.5 text-sm font-medium transition-colors">
+      <i class="fa-solid fa-arrow-left text-xs"></i>
+      Back to blog
+    </a>
+
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_280px]">
+      <!-- Main content -->
+      <div>
+        <div class="space-y-4">
+          <span class="bg-brand-50 text-brand-700 rounded-full px-2.5 py-0.5 text-xs font-medium">
+            {{ post.type | blogTypeLabel }}
+          </span>
+          <h1 data-testid="blog-detail-title" class="font-display text-text-primary text-3xl font-bold">{{ post.title }}</h1>
+          @if (post.excerpt) {
+            <p data-testid="blog-detail-excerpt" class="text-text-secondary text-lg">{{ post.excerpt }}</p>
+          }
+          <lfx-markdown-renderer data-testid="blog-detail-content" [content]="post.description" />
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-4 self-start lg:sticky lg:top-24">
+        <lfx-card>
+          <div class="space-y-5">
+            <div data-testid="blog-detail-published-date">
+              <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Published</h3>
+              <p class="text-text-primary mt-1 text-sm">
+                @if (post.publishedAt) {
+                  {{ post.publishedAt | dateFormat: 'MMMM d, yyyy' }}
+                } @else {
+                  Not published
+                }
+              </p>
+            </div>
+
+            @if (post.author) {
+              <div data-testid="blog-detail-author">
+                <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Author</h3>
+                <p class="text-text-primary mt-1 text-sm">{{ post.author.name }}</p>
+              </div>
+            }
+
+            @if (post.products?.length) {
+              <div data-testid="blog-detail-products">
+                <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Products</h3>
+                <div class="mt-1.5 flex flex-wrap gap-1.5">
+                  @for (product of post.products; track product.id) {
+                    <lfx-product-pill [product]="product" />
+                  }
+                </div>
+              </div>
+            }
+
+            @if (post.periodStart || post.periodEnd) {
+              <div data-testid="blog-detail-period">
+                <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Period</h3>
+                <p class="text-text-primary mt-1 text-sm">
+                  @if (post.periodStart) {
+                    {{ post.periodStart | dateFormat: 'MMM d, yyyy' }}
+                  }
+                  @if (post.periodStart && post.periodEnd) {
+                    &ndash;
+                  }
+                  @if (post.periodEnd) {
+                    {{ post.periodEnd | dateFormat: 'MMM d, yyyy' }}
+                  }
+                </p>
+              </div>
+            }
+          </div>
+        </lfx-card>
+      </div>
+    </div>
+  </div>
+} @else if (loading()) {
+  <div data-testid="blog-detail-loading" class="py-16 text-center">
+    <i class="fa-duotone fa-spinner-third fa-spin text-brand-600 mb-4 text-4xl"></i>
+    <p class="text-text-muted text-sm">Loading blog post...</p>
+  </div>
+} @else {
+  <div data-testid="blog-detail-not-found" class="py-16 text-center">
+    <i class="fa-duotone fa-circle-question text-text-muted mb-4 text-4xl"></i>
+    <p class="font-display text-text-secondary text-lg font-medium">Blog post not found</p>
+    <a routerLink="/blog" class="text-brand-600 hover:text-brand-700 mt-3 inline-flex items-center gap-1.5 text-sm font-medium">
+      <i class="fa-solid fa-arrow-left text-xs"></i>
+      Back to blog
+    </a>
+  </div>
+}

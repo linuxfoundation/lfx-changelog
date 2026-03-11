@@ -9,6 +9,7 @@ import swaggerUi from 'swagger-ui-express';
 import '@lfx-changelog/shared';
 
 import { agentJobRegistry } from './paths/agent-jobs.path';
+import { blogPostRegistry } from './paths/blogs.path';
 import { changelogRegistry } from './paths/changelogs.path';
 import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
@@ -37,6 +38,7 @@ registry.registerComponent('securitySchemes', 'cookieAuth', {
 const allRegistries = [
   publicProductRegistry,
   publicChangelogRegistry,
+  blogPostRegistry,
   searchRegistry,
   productRegistry,
   changelogRegistry,
@@ -65,6 +67,7 @@ const document = generator.generateDocument({
   tags: [
     { name: 'Public - Products', description: 'No authentication required' },
     { name: 'Public - Changelogs', description: 'No authentication required' },
+    { name: 'Public - Blog', description: 'Blog posts — no authentication required' },
     { name: 'Public - Search', description: 'Full-text search — no authentication required' },
 
     { name: 'Products', description: 'Authentication required' },
@@ -73,6 +76,7 @@ const document = generator.generateDocument({
     { name: 'Releases', description: 'Authentication required' },
     { name: 'OpenSearch', description: 'OpenSearch administration — super_admin only' },
     { name: 'Users', description: 'Authentication required' },
+    { name: 'Blog Posts', description: 'Blog post management — authentication required' },
     { name: 'Agent Jobs', description: 'Changelog agent job management — super_admin only' },
   ],
 });

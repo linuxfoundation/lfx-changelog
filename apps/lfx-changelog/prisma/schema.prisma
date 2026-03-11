@@ -25,6 +25,8 @@ enum ApiKeyScope {
   changelogs_write
   products_read
   products_write
+  blogs_read
+  blogs_write
 }
 
 enum ChangelogSource {
@@ -55,6 +57,19 @@ enum AgentJobTrigger {
   webhook_release
   webhook_pull_request
   manual
+  newsletter_monthly
+  newsletter_product
+  newsletter_manual
+}
+
+enum BlogStatus {
+  draft
+  published
+}
+
+enum BlogType {
+  monthly_roundup
+  product_newsletter
 }
 
 model Product {
@@ -76,6 +91,7 @@ model Product {
   changelogViews      ChangelogView[]
   agentJobs           AgentJob[]
   agentMemory         AgentMemory?
+  blogProducts    BlogProduct[]
 
   @@map("products")
 }
@@ -139,10 +155,11 @@ model ChangelogEntry {
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
 
-  product            Product              @relation(fields: [productId], references: [id])
-  author             User                 @relation(fields: [createdBy], references: [id])
-  slackNotifications SlackNotification[]
-  agentJobs          AgentJob[]
+  product               Product                  @relation(fields: [productId], references: [id])
+  author                User                     @relation(fields: [createdBy], references: [id])
+  slackNotifications    SlackNotification[]
+  agentJobs             AgentJob[]
+  blogChangelogs    BlogChangelogEntry[]
 
   @@index([productId, status, publishedAt])
   @@map("changelog_entries")
@@ -162,6 +179,7 @@ model User {
   apiKeys             ApiKey[]
   chatConversations   ChatConversation[]
   slackIntegrations   SlackIntegration[]
+  blogs               Blog[]
 
   @@map("users")
 }
@@ -328,8 +346,11 @@ model AgentJob {
   completedAt  DateTime?       @map("completed_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
+  blogId         String?         @map("blog_id")
+
   product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   changelogEntry ChangelogEntry? @relation(fields: [changelogId], references: [id], onDelete: SetNull)
+  blog           Blog?           @relation(fields: [blogId], references: [id], onDelete: SetNull)
 
   @@index([productId, status])
   @@index([createdAt])
@@ -347,4 +368,53 @@ model AgentMemory {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("agent_memories")
+}
+
+model Blog {
+  id            String     @id @default(uuid())
+  slug          String     @unique
+  title         String
+  excerpt       String?
+  description   String
+  type          BlogType   @default(monthly_roundup)
+  status        BlogStatus @default(draft)
+  coverImageUrl String?    @map("cover_image_url")
+  publishedAt   DateTime?  @map("published_at")
+  periodStart   DateTime?  @map("period_start")
+  periodEnd     DateTime?  @map("period_end")
+  createdBy     String     @map("created_by")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  author     User                 @relation(fields: [createdBy], references: [id])
+  products   BlogProduct[]
+  changelogs BlogChangelogEntry[]
+  agentJobs  AgentJob[]
+
+  @@index([status, publishedAt])
+  @@map("blogs")
+}
+
+model BlogProduct {
+  id        String @id @default(uuid())
+  blogId    String @map("blog_id")
+  productId String @map("product_id")
+
+  blog    Blog    @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([blogId, productId])
+  @@map("blog_products")
+}
+
+model BlogChangelogEntry {
+  id               String @id @default(uuid())
+  blogId           String @map("blog_id")
+  changelogEntryId String @map("changelog_entry_id")
+
+  blog           Blog           @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  changelogEntry ChangelogEntry @relation(fields: [changelogEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([blogId, changelogEntryId])
+  @@map("blog_changelog_entries")
 }

@@ -8,12 +8,14 @@ import { sameOriginOnly } from '../middleware/same-origin.middleware';
 import agentJobRouter from '../routes/agent-job.route';
 import aiRouter from '../routes/ai.route';
 import apiKeyRouter from '../routes/api-key.route';
+import blogRouter from '../routes/blog.route';
 import changelogRouter from '../routes/changelog.route';
 import chatRouter from '../routes/chat.route';
 import githubRouter, { releaseRouter } from '../routes/github.route';
 import mcpRouter from '../routes/mcp.route';
 import opensearchRouter from '../routes/opensearch.route';
 import productRouter from '../routes/product.route';
+import publicBlogRouter from '../routes/public-blog.route';
 import publicChangelogRouter from '../routes/public-changelog.route';
 import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
@@ -55,6 +57,7 @@ export function setupRoutes(app: Express): void {
 
   // ── Public API routes (no auth required) ──────────────────────────────
   app.use('/public/api/chat', sameOriginOnly, publicChatRouter);
+  app.use('/public/api/blog', publicBlogRouter);
   app.use('/public/api/changelogs/search', publicSearchRouter);
   app.use('/public/api/changelogs', publicChangelogRouter);
   app.use('/public/api/products', publicProductRouter);
@@ -81,6 +84,7 @@ export function setupRoutes(app: Express): void {
   // ── Protected API routes ──────────────────────────────────────────────
   app.use('/api/agent-jobs', agentJobRouter);
   app.use('/api/ai', aiRouter);
+  app.use('/api/blogs', blogRouter);
 
   // Chat is UI-only — same-origin + session auth only (no API key, no cross-origin)
   app.use('/api/chat', sameOriginOnly, (req: Request, res: Response, next: NextFunction) => {

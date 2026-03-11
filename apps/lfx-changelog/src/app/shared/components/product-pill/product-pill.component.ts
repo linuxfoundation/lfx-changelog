@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, input } from '@angular/core';
-import type { Product } from '@lfx-changelog/shared';
+
+import type { Product, PublicProduct } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-product-pill',
@@ -10,5 +11,5 @@ import type { Product } from '@lfx-changelog/shared';
   styleUrl: './product-pill.component.css',
 })
 export class ProductPillComponent {
-  public readonly product = input.required<Product>();
+  public readonly product = input.required<Product | PublicProduct>();
 }

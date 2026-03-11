@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { API_KEY_SCOPES } from '@lfx-changelog/shared';
 import { expect, test } from '@playwright/test';
 import { ApiKeysPage } from '../../pages/api-keys.page.js';
 
@@ -41,9 +42,9 @@ test.describe('API Keys', () => {
       await expect(apiKeysPage.createDialog).not.toBeVisible();
     });
 
-    test('should display all four scope checkboxes', async () => {
+    test('should display all scope checkboxes', async () => {
       await apiKeysPage.openCreateDialog();
-      await expect(apiKeysPage.scopeCheckboxes).toHaveCount(4);
+      await expect(apiKeysPage.scopeCheckboxes).toHaveCount(API_KEY_SCOPES.length);
     });
   });
 

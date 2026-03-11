@@ -5,6 +5,8 @@ import { Component, computed, input } from '@angular/core';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ChangelogStatus } from '@lfx-changelog/shared';
 
+import type { BlogStatus } from '@lfx-changelog/shared';
+
 @Component({
   selector: 'lfx-status-badge',
   imports: [BadgeComponent],
@@ -12,9 +14,9 @@ import { ChangelogStatus } from '@lfx-changelog/shared';
   styleUrl: './status-badge.component.css',
 })
 export class StatusBadgeComponent {
-  public readonly status = input.required<ChangelogStatus>();
+  public readonly status = input.required<ChangelogStatus | BlogStatus>();
 
-  protected readonly label = computed(() => (this.status() === ChangelogStatus.DRAFT ? 'Draft' : 'Published'));
+  protected readonly label = computed(() => (this.status() === 'draft' ? 'Draft' : 'Published'));
 
-  protected readonly color = computed(() => (this.status() === ChangelogStatus.DRAFT ? '#F59E0B' : '#22C55E'));
+  protected readonly color = computed(() => (this.status() === 'draft' ? '#F59E0B' : '#22C55E'));
 }

@@ -24,6 +24,14 @@ export const routes: Routes = [
         loadComponent: () => import('@modules/public/changelog-detail/changelog-detail.component').then((m) => m.ChangelogDetailComponent),
       },
       {
+        path: 'blog',
+        loadComponent: () => import('@modules/public/blog-feed/blog-feed.component').then((m) => m.BlogFeedComponent),
+      },
+      {
+        path: 'blog/:slug',
+        loadComponent: () => import('@modules/public/blog-detail/blog-detail.component').then((m) => m.BlogDetailComponent),
+      },
+      {
         path: 'chat',
         loadComponent: () => import('@modules/public/public-chat/public-chat.component').then((m) => m.PublicChatComponent),
       },
@@ -37,6 +45,18 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () => import('@modules/admin/admin-dashboard/admin-dashboard.component').then((m) => m.AdminDashboardComponent),
+      },
+      {
+        path: 'blog',
+        loadComponent: () => import('@modules/admin/blog-list/blog-list.component').then((m) => m.BlogListComponent),
+      },
+      {
+        path: 'blog/new',
+        loadComponent: () => import('@modules/admin/blog-editor/blog-editor.component').then((m) => m.BlogEditorComponent),
+      },
+      {
+        path: 'blog/:id/edit',
+        loadComponent: () => import('@modules/admin/blog-editor/blog-editor.component').then((m) => m.BlogEditorComponent),
       },
       {
         path: 'changelogs',

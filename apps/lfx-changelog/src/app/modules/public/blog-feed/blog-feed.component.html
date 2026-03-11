@@ -1,0 +1,77 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-8">
+  <!-- Header -->
+  <div class="animate-fade-in-up">
+    <h1 data-testid="blog-feed-heading" class="font-display text-text-primary text-3xl font-bold">Blogs</h1>
+    <p class="text-text-secondary mt-2">Monthly roundups, product newsletters, and highlights from across LFX.</p>
+  </div>
+
+  <!-- Posts -->
+  <div data-testid="blog-feed-posts" class="animate-fade-in-up [animation-delay:100ms]">
+    @if (loading()) {
+      <div data-testid="blog-feed-loading" class="py-16 text-center">
+        <i class="fa-duotone fa-spinner-third fa-spin text-brand-600 mb-4 text-4xl"></i>
+        <p class="text-text-muted text-sm">Loading blog posts...</p>
+      </div>
+    } @else if (posts().length === 0) {
+      <div data-testid="blog-feed-empty" class="py-16 text-center">
+        <i class="fa-duotone fa-newspaper text-text-muted mb-4 text-4xl"></i>
+        <p class="font-display text-text-secondary text-lg font-medium">No blog posts yet</p>
+        <p class="text-text-muted mt-1 text-sm">Check back soon for updates.</p>
+      </div>
+    } @else {
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        @for (post of posts(); track post.id; let i = $index) {
+          <a [routerLink]="['/blog', post.slug]" class="group block">
+            <lfx-card class="h-full transition-shadow duration-200 group-hover:shadow-md">
+              <div class="flex h-full flex-col space-y-3">
+                <!-- Type badge -->
+                <div class="flex items-center gap-2">
+                  <span class="bg-brand-50 text-brand-700 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                    {{ post.type | blogTypeLabel }}
+                  </span>
+                </div>
+
+                <!-- Title -->
+                <h2
+                  data-testid="blog-feed-post-title"
+                  class="font-display text-text-primary group-hover:text-brand-600 text-lg font-semibold transition-colors">
+                  {{ post.title }}
+                </h2>
+
+                <!-- Excerpt -->
+                @if (post.excerpt) {
+                  <p class="text-text-secondary line-clamp-3 flex-1 text-sm">{{ post.excerpt }}</p>
+                } @else {
+                  <div class="flex-1"></div>
+                }
+
+                <!-- Footer: products + date -->
+                <div class="border-border space-y-3 border-t pt-3">
+                  @if (post.products?.length) {
+                    <div class="flex flex-wrap gap-1.5">
+                      @for (product of post.products; track product.id) {
+                        <lfx-product-pill [product]="product" />
+                      }
+                    </div>
+                  }
+                  <div class="text-text-muted flex items-center gap-3 text-xs">
+                    @if (post.publishedAt) {
+                      <span>{{ post.publishedAt | dateFormat }}</span>
+                    }
+                    @if (post.author) {
+                      <span>&middot;</span>
+                      <span>{{ post.author.name }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            </lfx-card>
+          </a>
+        }
+      </div>
+    }
+  </div>
+</div>

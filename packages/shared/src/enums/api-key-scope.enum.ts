@@ -6,4 +6,6 @@ export enum ApiKeyScope {
   CHANGELOGS_WRITE = 'changelogs:write',
   PRODUCTS_READ = 'products:read',
   PRODUCTS_WRITE = 'products:write',
+  BLOGS_READ = 'blogs:read',
+  BLOGS_WRITE = 'blogs:write',
 }
