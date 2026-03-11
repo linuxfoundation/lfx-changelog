@@ -17,6 +17,7 @@ import { AuthService } from '@services/auth.service';
 import { BlogService } from '@services/blog.service';
 import { DialogService } from '@services/dialog.service';
 import { ToastService } from '@services/toast.service';
+import { BlogTypeLabelPipe } from '@shared/pipes/blog-type-label.pipe';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { MapGetPipe } from '@shared/pipes/map-get.pipe';
 import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, tap } from 'rxjs';
@@ -35,6 +36,7 @@ import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.int
     StatusBadgeComponent,
     TableComponent,
     TableColumnDirective,
+    BlogTypeLabelPipe,
     DateFormatPipe,
     MapGetPipe,
   ],
@@ -85,17 +87,6 @@ export class BlogListComponent {
 
   protected onPageChange(page: number): void {
     this.page$.next(page);
-  }
-
-  protected formatType(type: string): string {
-    switch (type) {
-      case BlogType.MONTHLY_ROUNDUP:
-        return 'Monthly Roundup';
-      case BlogType.PRODUCT_NEWSLETTER:
-        return 'Product Newsletter';
-      default:
-        return type;
-    }
   }
 
   private confirmUnpublish(entry: BlogPostWithRelations): void {

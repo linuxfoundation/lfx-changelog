@@ -60,10 +60,12 @@ test.describe('Blog Feed', () => {
   test('should show empty state when no posts match', async ({ page }) => {
     // Navigate with a filter that would yield no results — use a fake type
     await page.goto('/blog?type=nonexistent', { waitUntil: 'networkidle' });
-    // Either empty state is visible or posts container has no cards
+    const cards = feedPage.getPostCards();
     const emptyVisible = await feedPage.empty.isVisible();
     if (emptyVisible) {
       await expect(feedPage.empty).toBeVisible();
     }
+    // Regardless of empty state visibility, no post cards should be rendered
+    await expect(cards).toHaveCount(0);
   });
 });

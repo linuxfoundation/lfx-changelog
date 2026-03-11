@@ -29,7 +29,7 @@ export const AgentJobSchema = z
     trigger: AgentJobTriggerSchema,
     status: AgentJobStatusSchema,
     changelogId: z.string().uuid().nullable(),
-    blogPostId: z.string().uuid().nullable(),
+    blogId: z.string().uuid().nullable(),
     promptTokens: z.number().int().nullable(),
     outputTokens: z.number().int().nullable(),
     durationMs: z.number().int().nullable(),

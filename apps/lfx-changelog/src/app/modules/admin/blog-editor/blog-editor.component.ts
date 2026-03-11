@@ -48,11 +48,9 @@ export class BlogEditorComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly blogService = inject(BlogService);
   private readonly productService = inject(ProductService);
-  protected readonly authService = inject(AuthService);
+  private readonly authService = inject(AuthService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
-
-  protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
 
   protected readonly titleControl = new FormControl('', { nonNullable: true });
   protected readonly slugControl = new FormControl('', { nonNullable: true });
@@ -72,6 +70,7 @@ export class BlogEditorComponent {
   protected readonly loading = signal(false);
   protected readonly previewMode = signal<'desktop' | 'mobile'>('desktop');
 
+  protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });
   protected readonly existingEntry: Signal<BlogPostWithRelations | undefined> = this.initExistingEntry();
   protected readonly isEditing = computed(() => !!this.existingEntry());
   protected readonly isDraft = computed(() => this.existingEntry()?.status === BlogStatus.DRAFT);

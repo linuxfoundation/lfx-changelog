@@ -40,7 +40,7 @@
     </ng-template>
 
     <ng-template lfxColumn="Type" let-entry>
-      <span class="text-text-secondary text-sm">{{ formatType(entry.type) }}</span>
+      <span class="text-text-secondary text-sm">{{ entry.type | blogTypeLabel }}</span>
     </ng-template>
 
     <ng-template lfxColumn="Status" let-entry>

@@ -16,7 +16,7 @@
       <div>
         <div class="space-y-4">
           <span class="bg-brand-50 text-brand-700 rounded-full px-2.5 py-0.5 text-xs font-medium">
-            {{ typeLabel() }}
+            {{ post.type | blogTypeLabel }}
           </span>
           <h1 data-testid="blog-detail-title" class="font-display text-text-primary text-3xl font-bold">{{ post.title }}</h1>
           @if (post.excerpt) {
@@ -32,7 +32,13 @@
           <div class="space-y-5">
             <div data-testid="blog-detail-published-date">
               <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Published</h3>
-              <p class="text-text-primary mt-1 text-sm">{{ formattedPublishedAt() }}</p>
+              <p class="text-text-primary mt-1 text-sm">
+                @if (post.publishedAt) {
+                  {{ post.publishedAt | dateFormat: 'MMMM d, yyyy' }}
+                } @else {
+                  Not published
+                }
+              </p>
             </div>
 
             @if (post.author) {

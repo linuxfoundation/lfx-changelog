@@ -30,7 +30,7 @@
                 <!-- Type badge -->
                 <div class="flex items-center gap-2">
                   <span class="bg-brand-50 text-brand-700 rounded-full px-2.5 py-0.5 text-xs font-medium">
-                    {{ post.type === 'monthly_roundup' ? 'Monthly Roundup' : 'Product Newsletter' }}
+                    {{ post.type | blogTypeLabel }}
                   </span>
                 </div>
 

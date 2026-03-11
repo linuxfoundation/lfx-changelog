@@ -85,7 +85,7 @@ export class BlogService {
     const prisma = getPrismaClient();
     const { page, limit, skip } = this.sanitizePagination(params);
 
-    const where: Prisma.BlogWhereInput = { status: 'published' };
+    const where: Prisma.BlogWhereInput = { status: 'published', publishedAt: { not: null } };
     const validTypes = Object.values(BlogTypeEnum) as string[];
     if (params.type && validTypes.includes(params.type)) where.type = params.type as BlogType;
 
@@ -246,9 +246,10 @@ export class BlogService {
     }
 
     // Replace all product links
+    const uniqueProductIds = [...new Set(productIds)];
     await prisma.$transaction([
       prisma.blogProduct.deleteMany({ where: { blogId } }),
-      ...productIds.map((productId) => prisma.blogProduct.create({ data: { blogId, productId } })),
+      prisma.blogProduct.createMany({ data: uniqueProductIds.map((productId) => ({ blogId, productId })) }),
     ]);
 
     return this.findById(blogId);
@@ -262,26 +263,32 @@ export class BlogService {
     }
 
     // Replace all changelog links
+    const uniqueChangelogEntryIds = [...new Set(changelogEntryIds)];
     await prisma.$transaction([
       prisma.blogChangelogEntry.deleteMany({ where: { blogId } }),
-      ...changelogEntryIds.map((changelogEntryId) => prisma.blogChangelogEntry.create({ data: { blogId, changelogEntryId } })),
+      prisma.blogChangelogEntry.createMany({ data: uniqueChangelogEntryIds.map((changelogEntryId) => ({ blogId, changelogEntryId })) }),
     ]);
 
     return this.findById(blogId);
   }
 
-  public async ensureUniqueSlug(slug: string): Promise<string> {
+  private async ensureUniqueSlug(slug: string): Promise<string> {
     const prisma = getPrismaClient();
     const existing = await prisma.blog.findUnique({ where: { slug }, select: { id: true } });
     if (!existing) return slug;
 
+    const MAX_SLUG_ATTEMPTS = 100;
     let suffix = 2;
-    while (true) {
+    while (suffix <= MAX_SLUG_ATTEMPTS) {
       const candidate = `${slug}-${suffix}`;
       const conflict = await prisma.blog.findUnique({ where: { slug: candidate }, select: { id: true } });
       if (!conflict) return candidate;
       suffix++;
     }
+    throw new ConflictError(`Unable to generate unique slug for "${slug}" after ${MAX_SLUG_ATTEMPTS} attempts`, {
+      operation: 'ensureUniqueSlug',
+      service: 'blog',
+    });
   }
 
   private generateSlug(title: string): string {

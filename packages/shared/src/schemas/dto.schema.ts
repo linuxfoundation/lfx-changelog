@@ -95,7 +95,7 @@ export const CreateBlogPostRequestSchema = z
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase alphanumeric with hyphens')
       .optional(),
     excerpt: z.string().optional(),
-    description: z.string(),
+    description: z.string().min(1),
     type: z.nativeEnum(BlogType),
     status: z.nativeEnum(BlogStatus).optional(),
     coverImageUrl: z.string().url().optional(),
