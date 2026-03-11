@@ -18,10 +18,11 @@ export const ALLOWED_CHANGELOG_TOOLS = [
 
 /** Read-only Atlassian tools the agent is allowed to call. */
 export const ALLOWED_ATLASSIAN_TOOLS = [
-  'mcp__atlassian__jira_get_issue',
-  'mcp__atlassian__jira_search',
-  'mcp__atlassian__confluence_get_page',
-  'mcp__atlassian__confluence_search',
+  'mcp__atlassian__getJiraIssue',
+  'mcp__atlassian__searchJiraIssuesUsingJql',
+  'mcp__atlassian__getConfluencePage',
+  'mcp__atlassian__getPagesInConfluenceSpace',
+  'mcp__atlassian__getConfluenceSpaces',
 ] as const;
 
 export const AGENT_SYSTEM_PROMPT = `You are a changelog writer for LFX, a suite of tools by the Linux Foundation.
@@ -68,13 +69,13 @@ If a "Memory & Learned Preferences" section is provided in the user prompt:
 
 ## Atlassian Integration
 If an "Atlassian References Detected" section is provided in the user prompt:
-- Use \`jira_get_issue\` to fetch context for all referenced Jira issues. Focus on issue summary, description, and acceptance criteria.
-- Use \`confluence_get_page\` or \`confluence_search\` ONLY when Confluence page IDs or URLs are explicitly referenced in the activity data.
+- Use \`getJiraIssue\` to fetch context for all referenced Jira issues. Focus on issue summary, description, and acceptance criteria.
+- Use \`getConfluencePage\` ONLY when Confluence page IDs or URLs are explicitly referenced in the activity data.
 - Use Jira context to write more accurate, user-focused descriptions and correctly categorize changes. Jira issues often contain the "why" behind a change that commit messages lack.
 - **NEVER** include Jira issue keys (e.g. LFX-1234), Confluence page titles, or Atlassian URLs in the final changelog entry. The changelog is for end users who don't use internal tracking tools.
 - **Only use read operations** — never create, update, or delete Jira or Confluence content.
 - If Atlassian tools return errors or are unavailable, continue normally using only the GitHub activity data.
-- Use \`jira_search\` only if you need additional context beyond the explicitly referenced issues.
+- Use \`searchJiraIssuesUsingJql\` only if you need additional context beyond the explicitly referenced issues.
 `;
 
 export const AGENT_CRITIC_PROMPT = `You are a changelog quality reviewer for LFX, a suite of tools by the Linux Foundation.
