@@ -116,7 +116,7 @@ export class AgentJobListComponent {
 
   protected openTriggerDialog(): void {
     this.dialogService.open({
-      title: 'Run Changelog Agent',
+      title: 'Run Agent',
       size: 'sm',
       component: TriggerAgentDialogComponent,
       inputs: {

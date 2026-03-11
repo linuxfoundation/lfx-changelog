@@ -38,6 +38,16 @@ export class AgentJobService {
     );
   }
 
+  public triggerBlog(type: string, params?: { year?: number; month?: number }): Observable<{ jobId: string }> {
+    let httpParams = new HttpParams();
+    if (params?.year) httpParams = httpParams.set('year', params.year.toString());
+    if (params?.month) httpParams = httpParams.set('month', params.month.toString());
+    return this.http.post<ApiResponse<{ jobId: string }>>(`/api/agent-jobs/trigger-blog/${type}`, {}, { params: httpParams }).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
   public cancel(id: string): Observable<{ success: boolean }> {
     return this.http.post<{ success: boolean }>(`/api/agent-jobs/${id}/cancel`, {}).pipe(take(1));
   }

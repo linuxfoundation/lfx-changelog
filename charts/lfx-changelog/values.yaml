@@ -205,3 +205,13 @@ environment:
   # Webhook state signing (used by GitHub App and Slack OAuth callbacks)
   WEBHOOK_STATE_SECRET:
     value:
+
+# Blog scheduler CronJob (monthly roundup trigger)
+blogScheduler:
+  enabled: false
+  # 9:00 AM UTC on the 1st of every month
+  schedule: "0 9 1 * *"
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1

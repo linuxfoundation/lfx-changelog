@@ -331,7 +331,7 @@ model ChangelogView {
 
 model AgentJob {
   id           String          @id @default(uuid())
-  productId    String          @map("product_id")
+  productId    String?         @map("product_id")
   trigger      AgentJobTrigger
   status       AgentJobStatus  @default(pending)
   changelogId  String?         @map("changelog_entry_id")
@@ -348,7 +348,7 @@ model AgentJob {
 
   blogId         String?         @map("blog_id")
 
-  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product        Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
   changelogEntry ChangelogEntry? @relation(fields: [changelogId], references: [id], onDelete: SetNull)
   blog           Blog?           @relation(fields: [blogId], references: [id], onDelete: SetNull)
 
@@ -391,6 +391,7 @@ model Blog {
   changelogs BlogChangelogEntry[]
   agentJobs  AgentJob[]
 
+  @@unique([type, periodStart])
   @@index([status, publishedAt])
   @@map("blogs")
 }

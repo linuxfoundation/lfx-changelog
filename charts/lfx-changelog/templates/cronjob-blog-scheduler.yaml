@@ -1,0 +1,77 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+{{- if .Values.blogScheduler.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "lfx-changelog.fullname" . }}-blog-scheduler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "lfx-changelog.labels" . | nindent 4 }}
+    app.kubernetes.io/component: blog-scheduler
+spec:
+  schedule: {{ .Values.blogScheduler.schedule | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: {{ .Values.blogScheduler.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.blogScheduler.failedJobsHistoryLimit }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "lfx-changelog.labels" . | nindent 8 }}
+        app.kubernetes.io/component: blog-scheduler
+    spec:
+      ttlSecondsAfterFinished: {{ .Values.blogScheduler.ttlSecondsAfterFinished }}
+      backoffLimit: {{ .Values.blogScheduler.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: blog-scheduler
+        spec:
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ .Values.serviceAccount.name | default (include "lfx-changelog.serviceAccountName" .) }}
+          restartPolicy: Never
+          containers:
+            - name: trigger
+              image: {{ include "lfx-changelog.image" . }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["node"]
+              args:
+                - "-e"
+                - |
+                  const baseUrl = process.env.BASE_URL;
+                  const apiKey = process.env.BLOG_SCHEDULER_API_KEY;
+                  if (!baseUrl) { console.error('BASE_URL not set'); process.exit(1); }
+                  if (!apiKey) { console.error('BLOG_SCHEDULER_API_KEY not set'); process.exit(1); }
+                  fetch(baseUrl + '/api/agent-jobs/trigger-blog/monthly', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + apiKey },
+                  })
+                  .then(function(r) {
+                    if (!r.ok) { return r.text().then(function(b) { console.error('HTTP', r.status, r.statusText, b); process.exit(1); }); }
+                    return r.json();
+                  })
+                  .then(function(d) { console.log('Triggered:', JSON.stringify(d)); process.exit(0); })
+                  .catch(function(e) { console.error('Failed:', e); process.exit(1); });
+              env:
+              {{- range $name, $config := .Values.environment }}
+              - name: {{ $name }}
+                {{- if $config.value }}
+                value: {{ $config.value | quote }}
+                {{- else if $config.valueFrom }}
+                valueFrom:
+                  {{- toYaml $config.valueFrom | nindent 18 }}
+                {{- end }}
+              {{- end }}
+              resources:
+                limits:
+                  cpu: 100m
+                  memory: 128Mi
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+{{- end }}

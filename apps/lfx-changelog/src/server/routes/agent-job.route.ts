@@ -18,7 +18,10 @@ router.get('/:id', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.PR
 router.post('/trigger/:productId', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.PRODUCTS_WRITE }), (req, res, next) =>
   agentJobController.trigger(req, res, next)
 );
-router.post('/:id/cancel', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.PRODUCTS_WRITE }), (req, res, next) =>
+router.post('/trigger-blog/:type', authorize({ role: UserRole.SUPER_ADMIN, scope: ApiKeyScope.BLOGS_WRITE }), (req, res, next) =>
+  agentJobController.triggerBlog(req, res, next)
+);
+router.post('/:id/cancel', authorize({ role: UserRole.SUPER_ADMIN, scope: [ApiKeyScope.PRODUCTS_WRITE, ApiKeyScope.BLOGS_WRITE] }), (req, res, next) =>
   agentJobController.cancel(req, res, next)
 );
 

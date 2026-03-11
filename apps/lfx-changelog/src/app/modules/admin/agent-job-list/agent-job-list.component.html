@@ -5,7 +5,7 @@
   <div class="animate-slide-in-left flex items-center justify-between">
     <div>
       <h1 data-testid="agent-job-list-heading" class="font-display text-text-primary text-2xl font-bold">Agent Jobs</h1>
-      <p class="text-text-secondary mt-1">Monitor and manage changelog agent runs.</p>
+      <p class="text-text-secondary mt-1">Monitor and manage agent runs.</p>
     </div>
     <div class="flex items-center gap-3">
       @if (hasActiveJobs()) {
@@ -45,7 +45,7 @@
     [pageSize]="pageSize()"
     (pageChange)="onPageChange($event)">
     <ng-template lfxColumn="Product" let-job>
-      <span class="text-text-primary text-sm font-medium">{{ job.product.name }}</span>
+      <span class="text-text-primary text-sm font-medium">{{ job.product?.name ?? 'Blog Agent' }}</span>
     </ng-template>
 
     <ng-template lfxColumn="Trigger" let-job>

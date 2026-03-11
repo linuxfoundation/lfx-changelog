@@ -6,6 +6,7 @@ import { AgentJobStatusSchema, MAX_PAGE_SIZE } from '@lfx-changelog/shared';
 import { NotFoundError } from '../errors';
 import { FlushableResponse } from '../interfaces/chat.interface';
 import { agentJobEmitter } from '../services/agent-job-emitter.service';
+import { BlogAgentService } from '../services/blog-agent.service';
 import { ChangelogAgentService } from '../services/changelog-agent.service';
 import { getPrismaClient } from '../services/prisma.service';
 
@@ -15,6 +16,7 @@ import type { NextFunction, Request, Response } from 'express';
 
 export class AgentJobController {
   private readonly agentService = new ChangelogAgentService();
+  private readonly blogAgentService = new BlogAgentService();
 
   public async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -70,6 +72,7 @@ export class AgentJobController {
         include: {
           product: { select: { id: true, name: true, slug: true } },
           changelogEntry: { select: { id: true, title: true, status: true } },
+          blog: { select: { id: true, title: true, status: true } },
         },
       });
 
@@ -121,9 +124,61 @@ export class AgentJobController {
         return;
       }
 
-      await this.agentService.cancelJob(jobId, job.productId);
+      if (job.productId) {
+        await this.agentService.cancelJob(jobId, job.productId);
+      } else {
+        await this.blogAgentService.cancelJob(jobId);
+      }
 
       res.json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async triggerBlog(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const type = req.params['type'] as string;
+
+      if (type !== 'monthly') {
+        res.status(400).json({ success: false, error: 'Invalid blog trigger type. Supported: monthly' });
+        return;
+      }
+
+      // Compute period: previous month by default, or custom year/month from query
+      const now = new Date();
+      const rawYear = req.query['year'] as string | undefined;
+      const rawMonth = req.query['month'] as string | undefined;
+
+      let year: number;
+      let month: number;
+
+      if (rawYear || rawMonth) {
+        // If either param is provided, both must be valid
+        year = parseInt(rawYear as string, 10);
+        month = parseInt(rawMonth as string, 10);
+        if (isNaN(year) || isNaN(month)) {
+          res.status(400).json({ success: false, error: 'Both year and month must be provided together' });
+          return;
+        }
+      } else {
+        // Default to previous month
+        const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+        year = prev.getUTCFullYear();
+        month = prev.getUTCMonth() + 1; // 1-based
+      }
+
+      if (month < 1 || month > 12 || year < 2020 || year > 2100) {
+        res.status(400).json({ success: false, error: 'Invalid year or month' });
+        return;
+      }
+
+      const start = new Date(Date.UTC(year, month - 1, 1));
+      const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+
+      const jobId = await this.blogAgentService.runMonthlyRoundup({ start, end });
+
+      res.status(202).json({ success: true, data: { jobId } });
     } catch (error) {
       next(error);
     }
