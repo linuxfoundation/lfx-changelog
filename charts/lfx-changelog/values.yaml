@@ -208,7 +208,6 @@ environment:
 
 # Blog scheduler CronJob (monthly roundup trigger)
 blogScheduler:
-  enabled: false
   # 9:00 AM UTC on the 1st of every month
   schedule: "0 9 1 * *"
   backoffLimit: 2

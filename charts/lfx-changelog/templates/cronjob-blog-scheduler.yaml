@@ -1,7 +1,6 @@
 # Copyright The Linux Foundation and each contributor to LFX.
 # SPDX-License-Identifier: MIT
 
-{{- if .Values.blogScheduler.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -74,4 +73,3 @@ spec:
                 requests:
                   cpu: 50m
                   memory: 64Mi
-{{- end }}

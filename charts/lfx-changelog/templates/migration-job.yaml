@@ -37,6 +37,9 @@ spec:
           command: ["node"]
           args: ["node_modules/prisma/build/index.js", "migrate", "deploy"]
           env:
+          # Disable Prisma telemetry/update-check — hangs in restricted networks
+          - name: CHECKPOINT_DISABLE
+            value: "1"
           {{- range $name, $config := .Values.environment }}
           - name: {{ $name }}
             {{- if $config.value }}
