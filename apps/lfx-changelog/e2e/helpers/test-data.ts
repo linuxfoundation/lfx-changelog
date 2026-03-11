@@ -1,7 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangelogStatus, CreateChangelogEntryRequestSchema, UserRole, UserRoleAssignmentSchema, UserSchema } from '@lfx-changelog/shared';
+import {
+  BlogPostStatus,
+  BlogPostType,
+  ChangelogStatus,
+  CreateChangelogEntryRequestSchema,
+  UserRole,
+  UserRoleAssignmentSchema,
+  UserSchema,
+} from '@lfx-changelog/shared';
 import { z } from 'zod';
 
 import type { CreateProductRequest } from '@lfx-changelog/shared';
@@ -22,9 +30,23 @@ const TestChangelogSchema = CreateChangelogEntryRequestSchema.pick({ title: true
   publishedAt: z.date().optional(),
 });
 
+const TestBlogPostSchema = z.object({
+  title: z.string(),
+  slug: z.string(),
+  excerpt: z.string().optional(),
+  description: z.string(),
+  type: z.nativeEnum(BlogPostType),
+  status: z.nativeEnum(BlogPostStatus),
+  authorIndex: z.number(),
+  publishedAt: z.date().optional(),
+  periodStart: z.date().optional(),
+  periodEnd: z.date().optional(),
+});
+
 type TestUser = z.infer<typeof TestUserSchema>;
 type TestRoleAssignment = z.infer<typeof TestRoleAssignmentSchema>;
 type TestChangelog = z.infer<typeof TestChangelogSchema>;
+export type TestBlogPost = z.infer<typeof TestBlogPostSchema>;
 
 function e2eEmail(role: string, fallback: string): string {
   return process.env[`E2E_${role}_EMAIL`] || fallback;
@@ -77,6 +99,38 @@ export const TEST_PRODUCTS: CreateProductRequest[] = [
 export const TEST_ROLE_ASSIGNMENTS: TestRoleAssignment[] = [
   { userIndex: 1, productSlug: 'e2e-easycla', role: UserRole.PRODUCT_ADMIN },
   { userIndex: 2, productSlug: 'e2e-easycla', role: UserRole.EDITOR },
+];
+
+export const TEST_BLOG_POSTS: TestBlogPost[] = [
+  {
+    title: 'E2E: January 2026 Monthly Roundup',
+    slug: 'e2e-january-2026-roundup',
+    excerpt: 'Highlights from across LFX in January 2026.',
+    description: '## January Highlights\n\nA busy month across all LFX products.',
+    type: BlogPostType.MONTHLY_ROUNDUP,
+    status: BlogPostStatus.PUBLISHED,
+    authorIndex: 0,
+    publishedAt: new Date('2026-02-01T10:00:00Z'),
+    periodStart: new Date('2026-01-01'),
+    periodEnd: new Date('2026-01-31'),
+  },
+  {
+    title: 'E2E: EasyCLA Product Newsletter',
+    slug: 'e2e-easycla-newsletter',
+    description: '## EasyCLA Updates\n\nLatest improvements to the CLA workflow.',
+    type: BlogPostType.PRODUCT_NEWSLETTER,
+    status: BlogPostStatus.PUBLISHED,
+    authorIndex: 0,
+    publishedAt: new Date('2026-02-15T14:00:00Z'),
+  },
+  {
+    title: 'E2E: Draft Upcoming Features',
+    slug: 'e2e-draft-upcoming-features',
+    description: '## Coming Soon\n\nDraft notes for upcoming features.',
+    type: BlogPostType.MONTHLY_ROUNDUP,
+    status: BlogPostStatus.DRAFT,
+    authorIndex: 0,
+  },
 ];
 
 export const TEST_CHANGELOGS: TestChangelog[] = [
