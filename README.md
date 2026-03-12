@@ -4,24 +4,39 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 
 ## Features
 
-- **Public changelog feed** --- filterable timeline of published entries across all LFX products
-- **Per-product views** --- dedicated changelog pages for each of the 9 LFX products
-- **Pretty URLs** --- human-readable slugs for changelog entries (e.g., `/entry/security-march-2026-patches`)
-- **Full-text search** --- OpenSearch-powered search with fuzzy matching, field boosting, highlighting, and product faceting
-- **Admin dashboard** --- overview of drafts, published entries, and recent activity
-- **Changelog editor** --- Markdown-based editor with live preview and category tagging
-- **AI-powered generation** --- automatically generate draft changelog entries from GitHub commits, merged PRs, and releases
-- **AI chat assistant** --- conversational AI that answers questions about changelog data with streaming responses
-- **GitHub integration** --- GitHub App for repository tracking, release syncing, and webhook-driven changelog generation
-- **Slack integration** --- share published changelogs to Slack channels with rich BlockKit messages
-- **Role-based access** --- super admin, product admin, and editor roles with per-product scoping
-- **Auth0 authentication** --- secure login via OpenID Connect
-- **API key access** --- scoped API keys for programmatic access to protected endpoints (CI/CD, scripts, external tools)
-- **Dark mode** --- light/dark dual-theme with system preference detection
-- **Server-side rendering** --- Angular SSR for fast initial loads and SEO
-- **MCP server** --- AI tool integration via the Model Context Protocol (Claude Desktop, Cursor, etc.)
-- **Observability** --- Datadog APM, RUM with session replay, and structured HTTP request logging
-- **E2E test suite** --- Playwright tests covering public pages, admin flows, RBAC, and API endpoints
+### Public
+
+- 📰 **Changelog feed** — filterable timeline of published entries across all LFX products
+- 📦 **Per-product views** — dedicated changelog pages for each of the 9 LFX products
+- 🔗 **Pretty URLs** — human-readable slugs (e.g., `/entry/security-march-2026-patches`)
+- 🔍 **Full-text search** — OpenSearch-powered with fuzzy matching, highlighting, and product faceting
+- 👁️ **Changelog views** — unseen-count tracking so external LFX apps can show notification badges
+- 🌙 **Dark mode** — light/dark dual-theme with system preference detection
+
+### Admin
+
+- 📊 **Dashboard** — overview of drafts, published entries, and recent activity
+- ✏️ **Changelog editor** — Markdown-based editor with live preview and category tagging
+- 🔐 **Role-based access** — super admin, product admin, and editor roles with per-product scoping
+
+### AI
+
+- 🤖 **Changelog agent** — Claude Agent SDK pipeline that auto-generates drafts from GitHub commits, merged PRs, and releases
+- 📝 **Blog generation** — monthly roundup blog posts synthesized from recent changelogs, with admin editor and public feed
+- 💬 **Chat assistant** — conversational AI that answers questions about changelog data with streaming responses
+
+### Integrations
+
+- 🐙 **GitHub** — GitHub App for repository tracking, release syncing, and webhook-driven changelog generation
+- 💬 **Slack** — share published changelogs to Slack channels with rich BlockKit messages
+- 🔌 **MCP server** — AI tool integration via the Model Context Protocol (Claude Desktop, Cursor, etc.)
+
+### Infrastructure
+
+- 🔑 **Auth0 + API keys** — OAuth sessions and scoped API keys for programmatic access (CI/CD, scripts, external tools)
+- ⚡ **Server-side rendering** — Angular SSR for fast initial loads and SEO
+- 📈 **Observability** — Datadog APM, RUM with session replay, and structured HTTP request logging
+- 🧪 **E2E test suite** — Playwright tests covering public pages, admin flows, RBAC, and API endpoints
 
 ## Tech Stack
 
@@ -140,20 +155,22 @@ The server supports two ways to configure the database connection: a single `DAT
 | `yarn db:migrate`       | Run database migrations             |
 | `yarn db:seed`          | Seed the database with sample data  |
 | `yarn db:studio`        | Open Prisma Studio (database GUI)   |
-| `yarn test`             | Run Playwright E2E tests            |
 | `yarn test`             | Run tests across all workspaces     |
+| `yarn e2e`              | Run Playwright E2E tests            |
+| `yarn watch`            | Build all packages in watch mode    |
 
 ### App-level (`apps/lfx-changelog`)
 
-| Script             | Description                         |
-| ------------------ | ----------------------------------- |
-| `yarn start`       | Angular dev server with live reload |
-| `yarn build:dev`   | Development build                   |
-| `yarn build:prod`  | Production build                    |
-| `yarn lint`        | Lint the Angular app                |
-| `yarn test`        | Run Playwright E2E tests            |
-| `yarn test:headed` | Run E2E tests with browser visible  |
-| `yarn test:ui`     | Run E2E tests in Playwright UI mode |
+| Script             | Description                          |
+| ------------------ | ------------------------------------ |
+| `yarn start`       | Angular dev server with live reload  |
+| `yarn build:dev`   | Development build                    |
+| `yarn build:prod`  | Production build                     |
+| `yarn lint`        | Lint the Angular app                 |
+| `yarn test`        | Run Playwright E2E tests             |
+| `yarn test:headed` | Run E2E tests with browser visible   |
+| `yarn test:ui`     | Run E2E tests in Playwright UI mode  |
+| `yarn test:report` | Open the last Playwright HTML report |
 
 ## Project Structure
 
@@ -302,6 +319,8 @@ Adding the `deploy-preview` label to a PR builds and pushes a branch-specific im
 | -------------------------------------------------------- | ----------------------------------------------------------------- |
 | [AI Chat](docs/ai-chat.md)                               | Agentic chat assistant, SSE streaming, conversation persistence   |
 | [API Authentication](docs/api-authentication.md)         | API keys, OAuth sessions, scopes, and usage examples              |
+| [Changelog Agent](docs/changelog-agent.md)               | Claude Agent SDK pipeline, MCP tools, job tracking, webhooks      |
+| [Changelog Views](docs/changelog-views.md)               | Unseen-count tracking API for external LFX product apps           |
 | [Database Migrations](docs/database-migrations.md)       | Automated (CI/CD) and manual migration workflows                  |
 | [GitHub Integration](docs/github-integration.md)         | GitHub App, repo tracking, release sync, auto-changelog, webhooks |
 | [MCP Server](docs/mcp-server.md)                         | MCP tools, resources, and client setup                            |
@@ -313,7 +332,6 @@ Adding the `deploy-preview` label to a PR builds and pushes a branch-specific im
 | [Webhook Testing](docs/webhook-testing.md)               | Testing GitHub release webhooks locally                           |
 | [Contributing](CONTRIBUTING.md)                          | License headers, code style, commit conventions                   |
 | [Security](SECURITY.md)                                  | Vulnerability reporting                                           |
-| [Roadmap](PLAN.md)                                       | Implementation plan and upcoming phases                           |
 
 ## Contributing
 

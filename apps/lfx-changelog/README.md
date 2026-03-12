@@ -1,59 +1,73 @@
-# LfxChangelog
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.14.
+# LFX Changelog App
 
-## Development server
+Angular 20 SSR application with an Express 5 backend. This is the main workspace in the [lfx-changelog](../../README.md) monorepo.
 
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Development
 
 ```bash
-ng generate component component-name
+# from the monorepo root
+yarn start            # dev server at http://localhost:4204
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Or directly from this directory:
 
 ```bash
-ng generate --help
+yarn start            # ng serve (live reload)
+yarn build:dev        # development build
+yarn build:prod       # production build
+yarn lint             # ESLint
 ```
 
-## Building
+## Source Layout
 
-To build the project run:
+```text
+src/
+├── app/
+│   ├── layouts/          # Public and admin layout shells
+│   ├── modules/
+│   │   ├── public/       # Public-facing pages (feed, detail, blog, chat)
+│   │   ├── admin/        # Authenticated admin pages (dashboard, editors, management)
+│   │   └── chat/         # Shared chat module
+│   └── shared/           # Reusable components, services, pipes, guards, and utils
+├── server/
+│   ├── controllers/      # Request handlers
+│   ├── services/         # Business logic and Prisma queries
+│   ├── routes/           # Public (/public/api/*) and protected (/api/*) route definitions
+│   ├── middleware/        # Auth, RBAC, validation, error handling
+│   ├── swagger/          # OpenAPI path definitions (serves Swagger UI at /docs)
+│   ├── setup/            # Server initialization and bootstrapping
+│   ├── helpers/          # DB connection, shared utilities
+│   └── errors/           # Custom error classes
+└── environments/         # Environment configs
+```
+
+The server follows a **Controller → Service** pattern. Public endpoints serve unauthenticated read access, while protected endpoints enforce [Auth0 sessions or API keys](../../docs/api-authentication.md) with [role-based access control](../../README.md#roles). For more on individual server features, see the [docs](../../docs/) covering the [AI chat](../../docs/ai-chat.md), [changelog agent](../../docs/changelog-agent.md), [GitHub integration](../../docs/github-integration.md), [OpenSearch](../../docs/opensearch.md), and [Slack integration](../../docs/slack-integration.md).
+
+## Database
+
+Prisma schema and migrations live in `prisma/`. See the root README for migration instructions.
 
 ```bash
-ng build
+yarn prisma studio    # browse data in Prisma Studio
+yarn prisma generate  # regenerate Prisma client
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Testing
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+Playwright E2E tests live in `e2e/` with Page Object Model classes and spec files organized by area.
 
 ```bash
-ng test
+yarn test             # headless
+yarn test:headed      # browser visible
+yarn test:ui          # Playwright UI mode
+yarn test:report      # open last HTML report
 ```
 
-## Running end-to-end tests
+Tests auto-start a test database on port 5433, run migrations, seed data, and launch the dev server. See [E2E Testing](../../docs/testing/e2e-testing.md) for details.
 
-For end-to-end (e2e) testing, run:
+## Environment
 
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Copy `.env.example` to `.env` and fill in the values. See the [root README](../../README.md#environment-variables) for the full variable reference.
