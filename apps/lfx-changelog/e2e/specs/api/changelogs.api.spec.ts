@@ -82,7 +82,7 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
 
   test.describe('List', () => {
     test('should return all entries (published + draft) for super_admin', async () => {
-      const res = await superAdminApi.get('/api/changelogs');
+      const res = await superAdminApi.get('/api/changelogs?limit=100');
       const body = await res.json();
 
       expect(body.total).toBe(TOTAL_CHANGELOGS);
@@ -492,7 +492,7 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
     });
 
     test('super admin sees all entries including drafts from all products', async () => {
-      const res = await superAdminApi.get('/api/changelogs');
+      const res = await superAdminApi.get('/api/changelogs?limit=100');
       const body = await res.json();
 
       // Original 4 + the security draft we just created
@@ -502,22 +502,22 @@ test.describe('Protected Changelogs API (/api/changelogs)', () => {
     });
 
     test('editor listing includes published entries from all products', async () => {
-      const res = await editorApi.get('/api/changelogs?status=published');
+      const res = await editorApi.get('/api/changelogs?status=published&limit=100');
       expect(res.status()).toBe(200);
       const body = await res.json();
 
-      // All 3 published entries are visible regardless of product
-      expect(body.data).toHaveLength(3);
+      // 3 original published + 22 bulk published entries = 25
+      expect(body.data).toHaveLength(25);
       const productIds = [...new Set(body.data.map((e: any) => e.productId))];
       expect(productIds).toHaveLength(3); // entries from 3 different products
     });
 
     test('editor listing excludes drafts from products they lack access to', async () => {
-      const res = await editorApi.get('/api/changelogs');
+      const res = await editorApi.get('/api/changelogs?limit=100');
       expect(res.status()).toBe(200);
       const body = await res.json();
 
-      // 3 published (all products) + 1 easycla draft = 4, NOT the security draft
+      // 25 published (all products) + 1 easycla draft = 26, NOT the security draft
       expect(body.total).toBe(TOTAL_CHANGELOGS);
       const drafts = body.data.filter((e: any) => e.status === 'draft');
       expect(drafts).toHaveLength(1);

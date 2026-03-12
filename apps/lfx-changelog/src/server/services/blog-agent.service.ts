@@ -38,22 +38,6 @@ export class BlogAgentService {
       });
     }
 
-    // Prevent duplicate concurrent jobs for the same period
-    const activeJob = await prisma.agentJob.findFirst({
-      where: {
-        trigger: 'newsletter_monthly',
-        status: { in: ['pending', 'running'] },
-      },
-      select: { id: true },
-    });
-
-    if (activeJob) {
-      serverLogger.info({ existingJobId: activeJob.id, periodStart: period.start }, 'Blog agent job already active — skipping');
-      throw new AgentServiceError('A blog agent job is already running. Wait for it to complete or cancel it first.', {
-        operation: 'runMonthlyRoundup',
-      });
-    }
-
     const existingDraftId = existing?.id || null;
 
     // Ensure bot user exists
@@ -64,10 +48,43 @@ export class BlogAgentService {
       select: { id: true },
     });
 
-    // Create agent job (no productId for monthly roundups)
-    const job = await prisma.agentJob.create({
-      data: { trigger: 'newsletter_monthly', status: 'pending', progressLog: [] },
-    });
+    // Use a serializable transaction to atomically check for active jobs and create a new one.
+    // This prevents the TOCTOU race where two concurrent requests both pass the duplicate guard.
+    let job: { id: string };
+    try {
+      job = await prisma.$transaction(
+        async (tx) => {
+          const activeJob = await tx.agentJob.findFirst({
+            where: {
+              trigger: 'newsletter_monthly',
+              status: { in: ['pending', 'running'] },
+            },
+            select: { id: true },
+          });
+
+          if (activeJob) {
+            serverLogger.info({ existingJobId: activeJob.id, periodStart: period.start }, 'Blog agent job already active — skipping');
+            throw new AgentServiceError('A blog agent job is already running. Wait for it to complete or cancel it first.', {
+              operation: 'runMonthlyRoundup',
+            });
+          }
+
+          return tx.agentJob.create({
+            data: { trigger: 'newsletter_monthly', status: 'pending', progressLog: [] },
+          });
+        },
+        { isolationLevel: 'Serializable' }
+      );
+    } catch (err) {
+      if (err instanceof AgentServiceError) throw err;
+      // P2034: Prisma serialization failure (concurrent transaction conflict)
+      if (err instanceof Error && 'code' in err && (err as any).code === 'P2034') {
+        throw new AgentServiceError('A blog agent job is already running. Wait for it to complete or cancel it first.', {
+          operation: 'runMonthlyRoundup',
+        });
+      }
+      throw err;
+    }
 
     serverLogger.info({ jobId: job.id, periodStart: period.start, periodEnd: period.end }, 'Created blog agent job');
 

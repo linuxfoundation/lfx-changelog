@@ -3,6 +3,7 @@
 
 import { expect, test } from '@playwright/test';
 import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
+import { getTestPrismaClient } from '../../helpers/db.helper.js';
 
 import type { APIRequestContext } from '@playwright/test';
 
@@ -219,24 +220,23 @@ test.describe('Blog Agent API (/api/agent-jobs/trigger-blog)', () => {
     const dupeMonth = 6;
 
     test('triggering while another blog job is active returns 502', async () => {
-      // Trigger the first job
-      const firstRes = await superAdminApi.post(`/api/agent-jobs/trigger-blog/monthly?year=${dupeYear}&month=${dupeMonth}`);
-      if (firstRes.status() === 502) {
-        // AI env vars not configured or other error — skip
-        test.skip();
-        return;
+      const prisma = getTestPrismaClient();
+
+      // Create a pending job directly in the DB — deterministic, no timing race
+      const pendingJob = await prisma.agentJob.create({
+        data: { trigger: 'newsletter_monthly', status: 'pending', progressLog: [] },
+      });
+
+      try {
+        // Trigger should be rejected since a pending job already exists
+        const res = await superAdminApi.post(`/api/agent-jobs/trigger-blog/monthly?year=${dupeYear}&month=${dupeMonth}`);
+        expect(res.status()).toBe(502);
+        const body = await res.json();
+        expect(body.error).toContain('already running');
+      } finally {
+        // Clean up the pending job
+        await prisma.agentJob.delete({ where: { id: pendingJob.id } });
       }
-      expect(firstRes.status()).toBe(202);
-      const firstJobId = (await firstRes.json()).data.jobId;
-
-      // Trigger a second job immediately — should be rejected since one is already active
-      const secondRes = await superAdminApi.post(`/api/agent-jobs/trigger-blog/monthly?year=${dupeYear}&month=${dupeMonth + 1}`);
-      expect(secondRes.status()).toBe(502);
-      const body = await secondRes.json();
-      expect(body.message).toContain('already running');
-
-      // Clean up
-      await superAdminApi.post(`/api/agent-jobs/${firstJobId}/cancel`);
     });
   });
 

@@ -143,7 +143,7 @@ function generateBulkChangelogs(): TestChangelog[] {
     status: ChangelogStatus.PUBLISHED,
     productSlug: productSlugs[i % productSlugs.length]!,
     authorIndex: 0,
-    publishedAt: new Date(`2026-03-${String(i + 1).padStart(2, '0')}T12:00:00Z`),
+    publishedAt: new Date(`2025-01-${String(i + 1).padStart(2, '0')}T12:00:00Z`),
   }));
 }
 
