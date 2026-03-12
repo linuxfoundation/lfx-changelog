@@ -5,7 +5,7 @@ import { Component, computed, inject, input, SecurityContext } from '@angular/co
 import { DomSanitizer } from '@angular/platform-browser';
 import { marked, type Tokens } from 'marked';
 
-const CALLOUT_REGEX = /^\s*<p>\[!(STATS|HIGHLIGHT|MILESTONE)\]\s*\n?/;
+const CALLOUT_REGEX = /^\s*<p>\[!(STATS|HIGHLIGHT|MILESTONE)\]\s*\n?(.*?)<\/p>/s;
 
 marked.use({
   renderer: {
@@ -15,7 +15,8 @@ marked.use({
       if (!match) return `<blockquote>${innerHtml}</blockquote>\n`;
 
       const type = match[1].toLowerCase();
-      const content = innerHtml.replace(CALLOUT_REGEX, '<p>');
+      const remaining = match[2]?.trim();
+      const content = innerHtml.replace(CALLOUT_REGEX, remaining ? `<p>${remaining}</p>` : '');
       return `<div class="callout callout-${type}"><div class="callout-body">${content}</div></div>\n`;
     },
   },

@@ -493,6 +493,9 @@ body {
 .prose-themed .callout .callout-body > *:last-child {
   margin-bottom: 0;
 }
+.prose-themed .callout .callout-body > p:empty {
+  display: none;
+}
 .prose-themed .callout::before {
   display: block;
   font-family: var(--font-display);
@@ -527,10 +530,6 @@ body {
   height: 3px;
   background: linear-gradient(90deg, var(--color-accent-cyan), var(--color-accent-indigo));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-/* Hide empty <p> left over after callout marker removal */
-.prose-themed .callout-stats .callout-body > p:empty {
-  display: none;
 }
 /* Stat cards grid */
 .prose-themed .callout-stats .callout-body ul {
