@@ -480,6 +480,117 @@ body {
   color: var(--color-text-muted);
   font-style: italic;
 }
+
+/* ── Callout blocks (> [!TYPE] admonitions) ── */
+.prose-themed .callout {
+  position: relative;
+  border-radius: var(--radius-lg);
+  border-left: 4px solid;
+  padding: 1.25rem 1.25rem 1.25rem 1.25rem;
+  margin: 1.5em 0;
+  font-style: normal;
+}
+.prose-themed .callout .callout-body > *:last-child {
+  margin-bottom: 0;
+}
+.prose-themed .callout::before {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+/* ── STATS callout — dashboard widget ── */
+.prose-themed .callout-stats {
+  background: var(--color-surface);
+  border-left: none;
+  border: 1px solid var(--color-border);
+  padding: 1.25rem;
+  text-align: left;
+  overflow: hidden;
+}
+.prose-themed .callout-stats::before {
+  content: 'Month at a Glance';
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  opacity: 0.7;
+}
+/* Gradient accent bar at top */
+.prose-themed .callout-stats::after {
+  content: '';
+  position: absolute;
+  inset-x: 0;
+  top: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent-cyan), var(--color-accent-indigo));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+/* Hide empty <p> left over after callout marker removal */
+.prose-themed .callout-stats .callout-body > p:empty {
+  display: none;
+}
+/* Stat cards grid */
+.prose-themed .callout-stats .callout-body ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+/* Individual stat card */
+.prose-themed .callout-stats .callout-body li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem 0.75rem;
+  text-align: center;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  transition: all 0.2s ease;
+}
+.prose-themed .callout-stats .callout-body li:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+/* Big number */
+.prose-themed .callout-stats .callout-body li strong {
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  line-height: 1;
+  font-weight: 800;
+  color: var(--color-brand-600);
+}
+
+/* ── HIGHLIGHT callout ── */
+.prose-themed .callout-highlight {
+  background: var(--color-surface-alt);
+  border-color: var(--color-brand-500);
+}
+.prose-themed .callout-highlight::before {
+  content: 'Highlight';
+  color: var(--color-brand-600);
+}
+
+/* ── MILESTONE callout ── */
+.prose-themed .callout-milestone {
+  background: var(--color-new-feature-bg);
+  border-color: var(--color-new-feature);
+}
+.prose-themed .callout-milestone::before {
+  content: 'Milestone';
+  color: var(--color-new-feature);
+}
+
 .prose-themed hr {
   border: none;
   border-top: 1px solid var(--color-border);
