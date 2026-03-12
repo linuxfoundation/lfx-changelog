@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { expect, test } from '@playwright/test';
+import { TEST_CHANGELOGS } from '../../helpers/test-data.js';
 import { ChangelogFeedPage } from '../../pages/changelog-feed.page.js';
 import { PublicLayoutPage } from '../../pages/public-layout.page.js';
 
@@ -114,5 +115,89 @@ test.describe('Changelog Feed', () => {
     await feedPage.search('xyznonexistent123');
     await expect(feedPage.searchEmpty).toBeVisible({ timeout: 10_000 });
     await expect(feedPage.searchEmpty).toContainText('No results found');
+  });
+});
+
+test.describe('Changelog Feed — Pagination', () => {
+  const PUBLISHED_COUNT = TEST_CHANGELOGS.filter((c) => c.status === 'published').length;
+  const PAGE_SIZE = 20;
+  const TOTAL_PAGES = Math.ceil(PUBLISHED_COUNT / PAGE_SIZE);
+  const LAST_PAGE_SIZE = PUBLISHED_COUNT - PAGE_SIZE * (TOTAL_PAGES - 1);
+  let feedPage: ChangelogFeedPage;
+
+  test.beforeEach(async ({ page }) => {
+    feedPage = new ChangelogFeedPage(page);
+    await feedPage.goto();
+  });
+
+  test('should show pagination when multiple pages exist', async () => {
+    await expect(feedPage.pagination).toBeVisible();
+  });
+
+  test('should display correct page info text', async () => {
+    await expect(feedPage.paginationInfo).toContainText(`Showing 1 to ${PAGE_SIZE} of ${PUBLISHED_COUNT}`);
+  });
+
+  test('should disable previous button on first page', async () => {
+    await expect(feedPage.paginationPrev).toBeDisabled();
+  });
+
+  test('should enable next button on first page', async () => {
+    await expect(feedPage.paginationNext).toBeEnabled();
+  });
+
+  test('should navigate to next page when clicking next', async () => {
+    await feedPage.paginationNext.click();
+    const start = PAGE_SIZE + 1;
+    const end = Math.min(PAGE_SIZE * 2, PUBLISHED_COUNT);
+    await expect(feedPage.paginationInfo).toContainText(`Showing ${start} to ${end} of ${PUBLISHED_COUNT}`);
+    await expect(feedPage.paginationPrev).toBeEnabled();
+  });
+
+  test('should disable next button on last page', async () => {
+    await feedPage.getPaginationPage(TOTAL_PAGES).click();
+    await expect(feedPage.paginationNext).toBeDisabled();
+  });
+
+  test('should navigate back with previous button', async () => {
+    await feedPage.paginationNext.click();
+    await expect(feedPage.paginationInfo).toContainText(`Showing ${PAGE_SIZE + 1}`);
+    await feedPage.paginationPrev.click();
+    await expect(feedPage.paginationInfo).toContainText(`Showing 1 to ${PAGE_SIZE} of ${PUBLISHED_COUNT}`);
+  });
+
+  test('should highlight active page number', async () => {
+    const page1Btn = feedPage.getPaginationPage(1);
+    await expect(page1Btn).toHaveAttribute('aria-current', 'page');
+
+    await feedPage.paginationNext.click();
+    const page2Btn = feedPage.getPaginationPage(2);
+    await expect(page2Btn).toHaveAttribute('aria-current', 'page');
+    await expect(page1Btn).not.toHaveAttribute('aria-current', 'page');
+  });
+
+  test('should navigate when clicking a page number directly', async () => {
+    await feedPage.getPaginationPage(TOTAL_PAGES).click();
+    const start = PAGE_SIZE * (TOTAL_PAGES - 1) + 1;
+    await expect(feedPage.paginationInfo).toContainText(`Showing ${start} to ${PUBLISHED_COUNT} of ${PUBLISHED_COUNT}`);
+  });
+
+  test('should reset to page 1 when changing product filter', async ({ page }) => {
+    await feedPage.paginationNext.click();
+    const page2Count = await feedPage.getEntryCards().count();
+
+    const chips = page.locator('[data-testid^="changelog-feed-filter-chip-"]');
+    await chips.first().click();
+
+    await expect(feedPage.getEntryCards().first()).toBeVisible();
+    await expect(feedPage.getEntryCards()).not.toHaveCount(page2Count);
+  });
+
+  test('should render correct number of entry cards per page', async () => {
+    const cards = feedPage.getEntryCards();
+    await expect(cards).toHaveCount(PAGE_SIZE);
+
+    await feedPage.getPaginationPage(TOTAL_PAGES).click();
+    await expect(cards).toHaveCount(LAST_PAGE_SIZE);
   });
 });

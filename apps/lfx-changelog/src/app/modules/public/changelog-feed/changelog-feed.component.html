@@ -91,6 +91,15 @@
           </lfx-timeline-item>
         }
 
+        @if (publishedEntries().length > 0) {
+          <lfx-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalItems]="totalItems()"
+            [pageSize]="pageSize()"
+            (pageChange)="onPageChange($event)" />
+        }
+
         @if (publishedEntries().length === 0) {
           <div data-testid="changelog-feed-empty" class="py-16 text-center">
             <i class="fa-duotone fa-filter-slash text-text-muted mb-4 text-4xl"></i>

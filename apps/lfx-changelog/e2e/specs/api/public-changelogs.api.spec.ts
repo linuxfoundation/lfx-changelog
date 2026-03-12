@@ -56,6 +56,42 @@ test.describe('Public Changelogs API', () => {
       expect(body.totalPages).toBe(PUBLISHED_COUNT);
     });
 
+    test('should return different entries on page 2', async () => {
+      const page1Res = await api.get('/public/api/changelogs?page=1&limit=1');
+      const page1Body = await page1Res.json();
+
+      const page2Res = await api.get('/public/api/changelogs?page=2&limit=1');
+      const page2Body = await page2Res.json();
+
+      expect(page2Body.page).toBe(2);
+      expect(page2Body.data).toHaveLength(1);
+      expect(page2Body.data[0].id).not.toBe(page1Body.data[0].id);
+      expect(page2Body.total).toBe(page1Body.total);
+    });
+
+    test('should return empty data for out-of-range page', async () => {
+      const res = await api.get('/public/api/changelogs?page=999&limit=20');
+      const body = await res.json();
+
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveLength(0);
+      expect(body.page).toBe(999);
+      expect(body.total).toBe(PUBLISHED_COUNT);
+    });
+
+    test('should preserve total count across all pages', async () => {
+      const page1Res = await api.get('/public/api/changelogs?page=1&limit=2');
+      const page1Body = await page1Res.json();
+
+      const page2Res = await api.get('/public/api/changelogs?page=2&limit=2');
+      const page2Body = await page2Res.json();
+
+      expect(page1Body.total).toBe(PUBLISHED_COUNT);
+      expect(page2Body.total).toBe(PUBLISHED_COUNT);
+      expect(page1Body.totalPages).toBe(Math.ceil(PUBLISHED_COUNT / 2));
+      expect(page2Body.totalPages).toBe(Math.ceil(PUBLISHED_COUNT / 2));
+    });
+
     test('should support productId filtering', async () => {
       // First, get products to find a valid ID
       const productsRes = await api.get('/public/api/products');
@@ -139,7 +175,7 @@ test.describe('Public Changelogs API', () => {
     });
 
     test('should include slug field in list response', async () => {
-      const res = await api.get('/public/api/changelogs');
+      const res = await api.get(`/public/api/changelogs?limit=100`);
       const body = await res.json();
 
       const entryWithSlug = body.data.find((e: any) => e.slug === 'e2e-easycla-cla-signature-flow');

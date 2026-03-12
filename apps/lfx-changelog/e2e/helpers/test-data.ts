@@ -133,6 +133,20 @@ export const TEST_BLOG_POSTS: TestBlogPost[] = [
   },
 ];
 
+function generateBulkChangelogs(): TestChangelog[] {
+  const productSlugs = TEST_PRODUCTS.map((p) => p.slug);
+  return Array.from({ length: 22 }, (_, i) => ({
+    title: `E2E: Bulk update ${i + 1}`,
+    slug: `e2e-bulk-entry-${i + 1}`,
+    description: `## Update ${i + 1}\n\nBulk test entry for pagination.`,
+    version: `1.0.${i + 1}`,
+    status: ChangelogStatus.PUBLISHED,
+    productSlug: productSlugs[i % productSlugs.length]!,
+    authorIndex: 0,
+    publishedAt: new Date(`2026-03-${String(i + 1).padStart(2, '0')}T12:00:00Z`),
+  }));
+}
+
 export const TEST_CHANGELOGS: TestChangelog[] = [
   {
     title: 'E2E: Added new CLA signature flow',
@@ -176,4 +190,5 @@ export const TEST_CHANGELOGS: TestChangelog[] = [
     authorIndex: 0,
     publishedAt: undefined,
   },
+  ...generateBulkChangelogs(),
 ];
