@@ -73,15 +73,9 @@ agentJobRegistry.registerPath({
         .max(2100)
         .optional()
         .openapi({ description: 'Year for the roundup period. Both year and month must be provided together, or both omitted (defaults to previous month).' }),
-      month: z.coerce
-        .number()
-        .int()
-        .min(1)
-        .max(12)
-        .optional()
-        .openapi({
-          description: 'Month for the roundup period (1-12). Both year and month must be provided together, or both omitted (defaults to previous month).',
-        }),
+      month: z.coerce.number().int().min(1).max(12).optional().openapi({
+        description: 'Month for the roundup period (1-12). Both year and month must be provided together, or both omitted (defaults to previous month).',
+      }),
     }),
   },
   responses: {

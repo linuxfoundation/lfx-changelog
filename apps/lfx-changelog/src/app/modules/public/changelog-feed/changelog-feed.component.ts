@@ -12,7 +12,7 @@ import { ChangelogService } from '@services/changelog.service';
 import { ProductService } from '@services/product.service';
 import { SearchService } from '@services/search.service';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
-import { catchError, combineLatest, debounceTime, distinctUntilChanged, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, ChangelogSearchHit, PaginatedResponse, PublicProduct, SearchResponse } from '@lfx-changelog/shared';
 
@@ -35,6 +35,7 @@ export class ChangelogFeedComponent {
   protected readonly searchValue = toSignal(this.searchControl.valueChanges.pipe(startWith('')), { initialValue: '' });
   protected readonly currentPage = signal(1);
 
+  private readonly fetchParams = computed(() => ({ productId: this.selectedProduct(), page: this.currentPage() }));
   protected readonly paginatedResult: Signal<PaginatedResponse<ChangelogEntryWithRelations>> = this.initPaginatedResult();
   protected readonly publishedEntries = computed(() => this.paginatedResult().data);
   protected readonly totalPages = computed(() => this.paginatedResult().totalPages);
@@ -96,10 +97,14 @@ export class ChangelogFeedComponent {
   private initPaginatedResult(): Signal<PaginatedResponse<ChangelogEntryWithRelations>> {
     const emptyResult: PaginatedResponse<ChangelogEntryWithRelations> = { success: true, data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
     return toSignal(
-      combineLatest([toObservable(this.selectedProduct), toObservable(this.currentPage)]).pipe(
+      toObservable(this.fetchParams).pipe(
         tap(() => this.loading.set(true)),
-        switchMap(([productId, page]) => this.changelogService.getPublished({ ...(productId ? { productId } : {}), page })),
-        tap(() => this.loading.set(false))
+        switchMap(({ productId, page }) =>
+          this.changelogService.getPublished({ ...(productId ? { productId } : {}), page }).pipe(
+            catchError(() => of(emptyResult)),
+            finalize(() => this.loading.set(false))
+          )
+        )
       ),
       { initialValue: emptyResult }
     );
