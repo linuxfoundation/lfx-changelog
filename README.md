@@ -156,7 +156,6 @@ The server supports two ways to configure the database connection: a single `DAT
 | `yarn db:seed`          | Seed the database with sample data  |
 | `yarn db:studio`        | Open Prisma Studio (database GUI)   |
 | `yarn test`             | Run tests across all workspaces     |
-| `yarn e2e`              | Run Playwright E2E tests            |
 | `yarn watch`            | Build all packages in watch mode    |
 
 ### App-level (`apps/lfx-changelog`)

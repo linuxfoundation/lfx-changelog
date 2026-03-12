@@ -9,10 +9,10 @@ Angular 20 SSR application with an Express 5 backend. This is the main workspace
 
 ```bash
 # from the monorepo root
-yarn start            # dev server at http://localhost:4204
+yarn workspace lfx-changelog start   # dev server at http://localhost:4204
 ```
 
-Or directly from this directory:
+Or directly from this directory (`apps/lfx-changelog`):
 
 ```bash
 yarn start            # ng serve (live reload)
