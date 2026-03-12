@@ -13,6 +13,10 @@ export class ChangelogFeedPage {
   public readonly searchResults: Locator;
   public readonly searchCount: Locator;
   public readonly searchEmpty: Locator;
+  public readonly pagination: Locator;
+  public readonly paginationInfo: Locator;
+  public readonly paginationPrev: Locator;
+  public readonly paginationNext: Locator;
 
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="changelog-feed-heading"]');
@@ -24,6 +28,10 @@ export class ChangelogFeedPage {
     this.searchResults = page.locator('[data-testid="changelog-feed-search-results"]');
     this.searchCount = page.locator('[data-testid="changelog-feed-search-count"]');
     this.searchEmpty = page.locator('[data-testid="changelog-feed-search-empty"]');
+    this.pagination = page.locator('[data-testid="pagination"]');
+    this.paginationInfo = page.locator('[data-testid="pagination-info"]');
+    this.paginationPrev = page.locator('[data-testid="pagination-prev"]');
+    this.paginationNext = page.locator('[data-testid="pagination-next"]');
   }
 
   public async goto() {
@@ -56,5 +64,9 @@ export class ChangelogFeedPage {
 
   public async clearSearch() {
     await this.searchClear.click();
+  }
+
+  public getPaginationPage(pageNumber: number): Locator {
+    return this.page.locator(`[data-testid="pagination-page-${pageNumber}"]`);
   }
 }

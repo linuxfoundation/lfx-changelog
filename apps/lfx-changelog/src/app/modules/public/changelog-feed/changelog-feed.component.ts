@@ -1,26 +1,29 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, type Signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, computed, inject, PLATFORM_ID, signal, type Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
+import { PaginationComponent } from '@components/pagination/pagination.component';
 import { TimelineItemComponent } from '@components/timeline-item/timeline-item.component';
 import { ChangelogService } from '@services/changelog.service';
 import { ProductService } from '@services/product.service';
 import { SearchService } from '@services/search.service';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
-import { catchError, combineLatest, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap, tap } from 'rxjs';
 
-import type { ChangelogEntryWithRelations, ChangelogSearchHit, PublicProduct, SearchResponse } from '@lfx-changelog/shared';
+import type { ChangelogEntryWithRelations, ChangelogSearchHit, PaginatedResponse, PublicProduct, SearchResponse } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-changelog-feed',
-  imports: [ChangelogCardComponent, TimelineItemComponent, DateFormatPipe, ReactiveFormsModule],
+  imports: [ChangelogCardComponent, PaginationComponent, TimelineItemComponent, DateFormatPipe, ReactiveFormsModule],
   templateUrl: './changelog-feed.component.html',
   styleUrl: './changelog-feed.component.css',
 })
 export class ChangelogFeedComponent {
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly productService = inject(ProductService);
   private readonly changelogService = inject(ChangelogService);
   private readonly searchService = inject(SearchService);
@@ -30,8 +33,15 @@ export class ChangelogFeedComponent {
   protected readonly loading = signal(true);
   protected readonly searchControl = new FormControl('');
   protected readonly searchValue = toSignal(this.searchControl.valueChanges.pipe(startWith('')), { initialValue: '' });
+  protected readonly currentPage = signal(1);
 
-  protected readonly publishedEntries: Signal<ChangelogEntryWithRelations[]> = this.initPublishedEntries();
+  private readonly fetchParams = computed(() => ({ productId: this.selectedProduct(), page: this.currentPage() }));
+  protected readonly paginatedResult: Signal<PaginatedResponse<ChangelogEntryWithRelations>> = this.initPaginatedResult();
+  protected readonly publishedEntries = computed(() => this.paginatedResult().data);
+  protected readonly totalPages = computed(() => this.paginatedResult().totalPages);
+  protected readonly totalItems = computed(() => this.paginatedResult().total);
+  protected readonly pageSize = computed(() => this.paginatedResult().pageSize);
+
   protected readonly searchResponse: Signal<SearchResponse<ChangelogSearchHit> | null> = this.initSearchResponse();
   protected readonly isSearchActive = computed(() => this.searchResponse() !== null);
   protected readonly searchEntries = computed(() => {
@@ -42,6 +52,14 @@ export class ChangelogFeedComponent {
 
   protected toggleProduct(productId: string): void {
     this.selectedProduct.update((v) => (v === productId ? '' : productId));
+    this.currentPage.set(1);
+  }
+
+  protected onPageChange(page: number): void {
+    this.currentPage.set(page);
+    if (isPlatformBrowser(this.platformId)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   protected clearSearch(): void {
@@ -76,15 +94,19 @@ export class ChangelogFeedComponent {
     };
   }
 
-  private initPublishedEntries(): Signal<ChangelogEntryWithRelations[]> {
+  private initPaginatedResult(): Signal<PaginatedResponse<ChangelogEntryWithRelations>> {
+    const emptyResult: PaginatedResponse<ChangelogEntryWithRelations> = { success: true, data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
     return toSignal(
-      toObservable(this.selectedProduct).pipe(
+      toObservable(this.fetchParams).pipe(
         tap(() => this.loading.set(true)),
-        switchMap((productId) => this.changelogService.getPublished(productId ? { productId } : undefined)),
-        map((res) => res.data),
-        tap(() => this.loading.set(false))
+        switchMap(({ productId, page }) =>
+          this.changelogService.getPublished({ ...(productId ? { productId } : {}), page }).pipe(
+            catchError(() => of(emptyResult)),
+            finalize(() => this.loading.set(false))
+          )
+        )
       ),
-      { initialValue: [] }
+      { initialValue: emptyResult }
     );
   }
 

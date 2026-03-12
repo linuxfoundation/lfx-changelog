@@ -2,9 +2,9 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 @if (totalPages() > 1) {
-  <div class="border-border flex flex-col items-center justify-between gap-3 border-t px-5 py-3 sm:flex-row">
+  <div data-testid="pagination" class="border-border flex flex-col items-center justify-between gap-3 border-t px-5 py-3 sm:flex-row">
     @if (totalItems() > 0) {
-      <p class="text-text-muted text-sm">
+      <p data-testid="pagination-info" class="text-text-muted text-sm">
         Showing <span class="text-text-secondary font-medium">{{ rangeStart() }}</span> to
         <span class="text-text-secondary font-medium">{{ rangeEnd() }}</span> of
         <span class="text-text-secondary font-medium">{{ totalItems() }}</span>
@@ -14,6 +14,7 @@
     <nav class="flex items-center gap-1">
       <!-- Previous -->
       <button
+        data-testid="pagination-prev"
         type="button"
         class="text-text-muted hover:bg-surface-alt hover:text-text-secondary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40"
         [disabled]="!hasPrevious()"
@@ -27,6 +28,8 @@
           <span class="text-text-muted inline-flex h-8 w-8 items-center justify-center text-sm">&hellip;</span>
         } @else {
           <button
+            [attr.data-testid]="'pagination-page-' + page"
+            [attr.aria-current]="page === currentPage() ? 'page' : null"
             type="button"
             class="inline-flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium transition-colors"
             [class]="page === currentPage() ? 'bg-brand-600 text-white' : 'text-text-muted hover:bg-surface-alt hover:text-text-secondary'"
@@ -38,6 +41,7 @@
 
       <!-- Next -->
       <button
+        data-testid="pagination-next"
         type="button"
         class="text-text-muted hover:bg-surface-alt hover:text-text-secondary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40"
         [disabled]="!hasNext()"
