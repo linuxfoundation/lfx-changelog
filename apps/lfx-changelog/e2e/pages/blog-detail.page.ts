@@ -6,7 +6,6 @@ import type { Locator, Page } from '@playwright/test';
 export class BlogDetailPage {
   public readonly backLink: Locator;
   public readonly title: Locator;
-  public readonly excerpt: Locator;
   public readonly content: Locator;
   public readonly publishedDate: Locator;
   public readonly author: Locator;
@@ -18,7 +17,6 @@ export class BlogDetailPage {
   public constructor(public readonly page: Page) {
     this.backLink = page.locator('[data-testid="blog-detail-back-link"]');
     this.title = page.locator('[data-testid="blog-detail-title"]');
-    this.excerpt = page.locator('[data-testid="blog-detail-excerpt"]');
     this.content = page.locator('[data-testid="blog-detail-content"]');
     this.publishedDate = page.locator('[data-testid="blog-detail-published-date"]');
     this.author = page.locator('[data-testid="blog-detail-author"]');

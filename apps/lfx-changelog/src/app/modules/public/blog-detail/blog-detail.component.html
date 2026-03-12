@@ -19,9 +19,6 @@
             {{ post.type | blogTypeLabel }}
           </span>
           <h1 data-testid="blog-detail-title" class="font-display text-text-primary text-3xl font-bold">{{ post.title }}</h1>
-          @if (post.excerpt) {
-            <p data-testid="blog-detail-excerpt" class="text-text-secondary text-lg">{{ post.excerpt }}</p>
-          }
           <lfx-markdown-renderer data-testid="blog-detail-content" [content]="post.description" />
         </div>
       </div>

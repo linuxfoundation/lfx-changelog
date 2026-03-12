@@ -3,7 +3,24 @@
 
 import { Component, computed, inject, input, SecurityContext } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
-import { marked } from 'marked';
+import { marked, type Tokens } from 'marked';
+
+const CALLOUT_REGEX = /^\s*<p>\[!(STATS|HIGHLIGHT|MILESTONE)\]\s*\n?(.*?)<\/p>/s;
+
+marked.use({
+  renderer: {
+    blockquote({ tokens }: Tokens.Blockquote): string {
+      const innerHtml = this.parser.parse(tokens);
+      const match = innerHtml.match(CALLOUT_REGEX);
+      if (!match) return `<blockquote>${innerHtml}</blockquote>\n`;
+
+      const type = match[1].toLowerCase();
+      const remaining = match[2]?.trim();
+      const content = innerHtml.replace(CALLOUT_REGEX, remaining ? `<p>${remaining}</p>` : '');
+      return `<div class="callout callout-${type}"><div class="callout-body">${content}</div></div>\n`;
+    },
+  },
+});
 
 @Component({
   selector: 'lfx-markdown-renderer',

@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, input, model, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -94,9 +95,9 @@ export class TriggerAgentDialogComponent {
         this.onTriggered()?.();
         this.dialogService.close();
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.triggering.set(false);
-        this.error.set('Failed to trigger agent job. A job may already be running for this product.');
+        this.error.set(err.error?.error || 'Failed to trigger agent job.');
       },
     });
   }
@@ -112,9 +113,9 @@ export class TriggerAgentDialogComponent {
         this.onTriggered()?.();
         this.dialogService.close();
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.triggering.set(false);
-        this.error.set('Failed to trigger blog agent job. A job may already be running for this period.');
+        this.error.set(err.error?.error || 'Failed to trigger blog agent job.');
       },
     });
   }
