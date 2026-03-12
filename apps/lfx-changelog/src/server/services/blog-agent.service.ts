@@ -375,7 +375,7 @@ export class BlogAgentService {
       string,
       {
         product: { id: string; name: string; slug: string; description: string | null };
-        entries: { title: string; description: string; version: string | null; publishedAt: Date | null }[];
+        entries: { title: string; slug: string | null; description: string; version: string | null; publishedAt: Date | null }[];
       }
     >
   ): string {
@@ -390,7 +390,8 @@ export class BlogAgentService {
 
       for (const entry of entries) {
         const version = entry.version ? ` (${entry.version})` : '';
-        sections.push(`- **${entry.title}**${version}`);
+        const slug = entry.slug ? ` | slug: ${entry.slug}` : '';
+        sections.push(`- **${entry.title}**${version}${slug}`);
         // Cap description to prevent context overflow
         const desc = entry.description.slice(0, 200);
         sections.push(`  ${desc}${entry.description.length > 200 ? '...' : ''}`);
