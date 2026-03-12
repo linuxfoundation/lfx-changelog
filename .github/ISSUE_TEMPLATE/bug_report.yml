@@ -1,0 +1,116 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+name: Bug Report
+description: Report a bug or unexpected behavior in LFX Changelog
+labels: ['bug', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below to help us investigate.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected Area
+      description: Which part of the application is affected?
+      multiple: true
+      options:
+        - Public changelog feed
+        - Changelog entry page
+        - Admin dashboard
+        - Changelog editor
+        - AI chat assistant
+        - AI changelog generation
+        - GitHub integration
+        - Slack integration
+        - Search (OpenSearch)
+        - Authentication / Login
+        - API endpoints
+        - MCP server
+        - Dark mode / Theming
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Critical (application crash, data loss)
+        - Major (feature broken, no workaround)
+        - Minor (feature broken, workaround exists)
+        - Low (cosmetic, typo, minor inconvenience)
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Provide relevant environment details.
+      placeholder: |
+        - OS: macOS 15.3
+        - Browser: Chrome 131
+        - Node.js: 22.x
+        - Deployment: local / dev / production
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Logs
+      description: Add any screenshots, error messages, or log output that help explain the problem.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem (related issues, recent changes, etc.).
+    validations:
+      required: false
