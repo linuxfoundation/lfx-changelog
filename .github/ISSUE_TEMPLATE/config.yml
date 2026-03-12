@@ -1,0 +1,11 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/linuxfoundation/lfx-changelog/security/advisories/new
+    about: Report a security vulnerability using GitHub's private security reporting.
+  - name: Contributing Guide
+    url: https://github.com/linuxfoundation/lfx-changelog/blob/main/CONTRIBUTING.md
+    about: Read the contributing guidelines before opening an issue.
