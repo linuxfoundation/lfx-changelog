@@ -36,6 +36,16 @@
         </nav>
       </div>
       <div class="flex items-center gap-2">
+        <!-- GitHub link -->
+        <a
+          data-testid="public-layout-github-link"
+          href="https://github.com/linuxfoundation/lfx-changelog"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="View on GitHub"
+          class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg p-2 transition-colors">
+          <i class="fa-brands fa-github text-base"></i>
+        </a>
         <!-- Theme toggle -->
         <button
           data-testid="public-layout-theme-toggle"
@@ -157,7 +167,7 @@
   @if (!isChatRoute()) {
     <footer class="border-border bg-surface border-t py-8">
       <div class="text-text-muted mx-auto max-w-7xl px-4 text-center text-sm sm:px-6 lg:px-8">
-        &copy; {{ currentYear }} The Linux Foundation. All rights reserved.
+        <lfx-footer></lfx-footer>
       </div>
     </footer>
   }

@@ -2290,6 +2290,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@linuxfoundation/lfx-ui-core@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "@linuxfoundation/lfx-ui-core@npm:0.1.0"
+  peerDependencies:
+    prettier: ">=3.0.0"
+  peerDependenciesMeta:
+    prettier:
+      optional: true
+  checksum: 10c0/b8d7759201276c9c6b7cca55e8406c197a63af80ff6bbed9ebfff0a10f1f98d397a3cc495cee11231313186469bf4d2d28c53b6903c77b09b58fd03ee4ebea81
+  languageName: node
+  linkType: hard
+
 "@listr2/prompt-adapter-inquirer@npm:3.0.1":
   version: 3.0.1
   resolution: "@listr2/prompt-adapter-inquirer@npm:3.0.1"
@@ -7611,6 +7623,7 @@ __metadata:
     "@eslint/js": "npm:^9.28.0"
     "@lfx-changelog/mcp-server": "workspace:*"
     "@lfx-changelog/shared": "workspace:*"
+    "@linuxfoundation/lfx-ui-core": "npm:^0.1.0"
     "@opensearch-project/opensearch": "npm:^3.5.1"
     "@playwright/test": "npm:^1.58.2"
     "@prisma/adapter-pg": "npm:^7.4.1"

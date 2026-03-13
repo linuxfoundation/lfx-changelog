@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, CUSTOM_ELEMENTS_SCHEMA, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '@services/auth.service';
@@ -15,6 +15,7 @@ import type { Signal } from '@angular/core';
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './public-layout.component.html',
   styleUrl: './public-layout.component.css',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class PublicLayoutComponent {
   private readonly authService = inject(AuthService);
@@ -24,7 +25,6 @@ export class PublicLayoutComponent {
 
   protected readonly authenticated = this.authService.authenticated;
   protected readonly dbUser = this.authService.dbUser;
-  protected readonly currentYear = new Date().getFullYear();
   protected readonly isDark = this.themeService.isDark;
   protected readonly isChatRoute: Signal<boolean> = this.initIsChatRoute();
   protected readonly mobileMenuOpen = signal(false);
