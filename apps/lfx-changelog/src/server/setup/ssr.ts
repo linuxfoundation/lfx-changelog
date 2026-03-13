@@ -3,6 +3,7 @@
 
 import { AngularNodeAppEngine, writeResponseToNodeResponse } from '@angular/ssr/node';
 
+import { ssrCacheMiddleware } from '../middleware/cache.middleware';
 import { serverLogger } from '../server-logger';
 import { UserService } from '../services/user.service';
 
@@ -17,6 +18,9 @@ const userService = new UserService();
  * Builds the auth context from the OIDC session and passes it to Angular.
  */
 export function setupSsr(app: Express): void {
+  // SSR cache headers — must run before Angular renders to set headers on the response
+  app.use(ssrCacheMiddleware);
+
   // Angular SSR catch-all
   app.use(async (req: Request, res: Response, next: NextFunction) => {
     const authContext: AuthContext = {

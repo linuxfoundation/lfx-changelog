@@ -49,10 +49,11 @@ export function setupGlobalMiddleware(app: Express): void {
   });
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-  // Static files
+  // Static files — hashed build artifacts get aggressive, immutable caching
   app.use(
     express.static(browserDistFolder, {
       maxAge: '1y',
+      immutable: true,
       index: false,
       redirect: false,
     })

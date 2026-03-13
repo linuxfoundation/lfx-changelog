@@ -29,3 +29,23 @@ export function noCacheMiddleware(_req: Request, res: Response, next: NextFuncti
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   next();
 }
+
+/**
+ * Middleware for SSR pages that sets cache headers based on the request path.
+ *
+ * - Appends `Cookie` to the Vary header so browsers invalidate their cache when auth state
+ *   changes (e.g. after login/logout), rather than serving a stale page from cache.
+ * - Admin pages (`/admin/*`): `Cache-Control: private, max-age=0` — never cached.
+ * - All other pages: `Cache-Control: public, max-age=600` (10 minutes).
+ */
+export function ssrCacheMiddleware(req: Request, res: Response, next: NextFunction): void {
+  res.vary('Cookie');
+
+  if (req.path.startsWith('/admin')) {
+    res.setHeader('Cache-Control', 'private, max-age=0');
+  } else {
+    res.setHeader('Cache-Control', 'public, max-age=600');
+  }
+
+  next();
+}
