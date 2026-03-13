@@ -35,14 +35,20 @@ export function noCacheMiddleware(_req: Request, res: Response, next: NextFuncti
  *
  * - Appends `Cookie` to the Vary header so browsers invalidate their cache when auth state
  *   changes (e.g. after login/logout), rather than serving a stale page from cache.
- * - Admin pages (`/admin/*`): `Cache-Control: private, max-age=0` — never cached.
+ * - Only applies to GET/HEAD requests — non-idempotent methods are skipped.
+ * - Admin pages (`/admin/*`): `Cache-Control: private, no-store` — never cached or stored.
  * - All other pages: `Cache-Control: public, max-age=600` (10 minutes).
  */
 export function ssrCacheMiddleware(req: Request, res: Response, next: NextFunction): void {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    next();
+    return;
+  }
+
   res.vary('Cookie');
 
   if (req.path.startsWith('/admin')) {
-    res.setHeader('Cache-Control', 'private, max-age=0');
+    res.setHeader('Cache-Control', 'private, no-store');
   } else {
     res.setHeader('Cache-Control', 'public, max-age=600');
   }
