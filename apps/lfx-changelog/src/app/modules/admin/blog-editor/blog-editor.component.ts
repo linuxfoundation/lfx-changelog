@@ -68,6 +68,7 @@ export class BlogEditorComponent {
   protected readonly unpublishing = signal(false);
   protected readonly deleting = signal(false);
   protected readonly loading = signal(false);
+  protected readonly showPreview = signal(false);
   protected readonly previewMode = signal<'desktop' | 'mobile'>('desktop');
 
   protected readonly products = toSignal(this.productService.getAll(), { initialValue: [] as Product[] });

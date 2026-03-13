@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { map } from 'rxjs';
@@ -21,6 +21,9 @@ import type { ChatAccessLevel } from '@lfx-changelog/shared';
   imports: [ReactiveFormsModule, ChatMessageComponent],
   templateUrl: './chat-page.component.html',
   styleUrl: './chat-page.component.css',
+  host: {
+    '(document:keydown.escape)': 'showHistory() && showHistory.set(false)',
+  },
 })
 export class ChatPageComponent {
   private readonly chatService = inject(ChatService);
@@ -41,6 +44,8 @@ export class ChatPageComponent {
   protected readonly conversations = this.chatService.conversations;
   protected readonly error = this.chatService.error;
   protected readonly authenticated = this.authService.authenticated;
+
+  protected readonly showHistory = signal(false);
 
   protected readonly hasMessages = computed(() => this.messages().length > 0);
   protected readonly canSend: Signal<boolean> = this.initCanSend();
@@ -86,11 +91,17 @@ export class ChatPageComponent {
 
   protected newConversation(): void {
     this.chatService.newConversation();
+    this.showHistory.set(false);
+  }
+
+  protected toggleHistory(): void {
+    this.showHistory.update((v) => !v);
   }
 
   protected loadConversation(id: string): void {
     this.chatService.loadConversation(id);
     this.autoScroll = true;
+    this.showHistory.set(false);
   }
 
   protected deleteConversation(event: Event, id: string): void {

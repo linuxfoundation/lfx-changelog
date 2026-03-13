@@ -78,6 +78,7 @@ export class ChangelogEditorComponent {
   private slugManuallyEdited = false;
   private settingSlugProgrammatically = false;
 
+  protected readonly showPreview = signal(false);
   protected readonly saving = signal(false);
   protected readonly publishing = signal(false);
   protected readonly unpublishing = signal(false);

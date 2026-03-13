@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="space-y-6">
-  <div class="animate-slide-in-left flex items-center justify-between">
+  <div class="animate-slide-in-left flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 data-testid="blog-list-heading" class="font-display text-text-primary text-2xl font-bold">Blogs</h1>
       <p class="text-text-secondary mt-1">Manage blog posts and newsletters.</p>
@@ -21,55 +21,118 @@
     <lfx-select data-testid="blog-list-status-filter" label="Status" [options]="statusOptions" [formControl]="statusFilterControl" placeholder="All Statuses" />
   </div>
 
-  <!-- Table -->
-  <lfx-table
-    class="animate-rise-in block [animation-delay:200ms]"
-    [data]="filteredEntries()"
-    [loading]="loading()"
-    testId="blog-list-table"
-    emptyMessage="No blog posts match the selected filters."
-    [currentPage]="currentPage()"
-    [totalPages]="totalPages()"
-    [totalItems]="totalItems()"
-    [pageSize]="pageSize()"
-    (pageChange)="onPageChange($event)">
-    <ng-template lfxColumn="Title" let-entry>
-      <a [routerLink]="['/admin/blog', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
-        {{ entry.title }}
-      </a>
-    </ng-template>
+  <!-- Table (desktop) -->
+  <div class="animate-rise-in hidden [animation-delay:200ms] md:block">
+    <lfx-table
+      [data]="filteredEntries()"
+      [loading]="loading()"
+      testId="blog-list-table"
+      emptyMessage="No blog posts match the selected filters."
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalItems]="totalItems()"
+      [pageSize]="pageSize()"
+      (pageChange)="onPageChange($event)">
+      <ng-template lfxColumn="Title" let-entry>
+        <a [routerLink]="['/admin/blog', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 text-sm font-medium">
+          {{ entry.title }}
+        </a>
+      </ng-template>
 
-    <ng-template lfxColumn="Type" let-entry>
-      <span class="text-text-secondary text-sm">{{ entry.type | blogTypeLabel }}</span>
-    </ng-template>
+      <ng-template lfxColumn="Type" let-entry>
+        <span class="text-text-secondary text-sm">{{ entry.type | blogTypeLabel }}</span>
+      </ng-template>
 
-    <ng-template lfxColumn="Status" let-entry>
-      <lfx-status-badge [status]="entry.status" />
-    </ng-template>
+      <ng-template lfxColumn="Status" let-entry>
+        <lfx-status-badge [status]="entry.status" />
+      </ng-template>
 
-    <ng-template lfxColumn="Products" let-entry>
-      <span class="text-text-secondary text-sm">
-        @if (entry.products?.length) {
-          {{ entry.products.length }} product{{ entry.products.length > 1 ? 's' : '' }}
-        } @else {
-          —
-        }
-      </span>
-    </ng-template>
+      <ng-template lfxColumn="Products" let-entry>
+        <span class="text-text-secondary text-sm">
+          @if (entry.products?.length) {
+            {{ entry.products.length }} product{{ entry.products.length > 1 ? 's' : '' }}
+          } @else {
+            —
+          }
+        </span>
+      </ng-template>
 
-    <ng-template lfxColumn="Updated" let-entry>
-      <span class="text-text-muted text-sm">{{ entry.updatedAt | dateFormat }}</span>
-    </ng-template>
+      <ng-template lfxColumn="Updated" let-entry>
+        <span class="text-text-muted text-sm">{{ entry.updatedAt | dateFormat }}</span>
+      </ng-template>
 
-    <ng-template lfxColumn="" let-entry>
-      <lfx-dropdown-menu [items]="(entryMenuItems() | mapGet: entry.id) ?? []">
-        <button
-          data-testid="blog-list-actions-btn"
-          aria-label="Actions"
-          class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
-          <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
-        </button>
-      </lfx-dropdown-menu>
-    </ng-template>
-  </lfx-table>
+      <ng-template lfxColumn="" let-entry>
+        <lfx-dropdown-menu [items]="(entryMenuItems() | mapGet: entry.id) ?? []">
+          <button
+            data-testid="blog-list-actions-btn"
+            aria-label="Actions"
+            class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
+            <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+          </button>
+        </lfx-dropdown-menu>
+      </ng-template>
+    </lfx-table>
+  </div>
+
+  <!-- Card list (mobile) -->
+  <div class="animate-rise-in space-y-3 [animation-delay:200ms] md:hidden">
+    @if (loading()) {
+      @for (_ of [1, 2, 3]; track $index) {
+        <lfx-card>
+          <div class="animate-pulse space-y-3">
+            <div class="bg-surface-alt h-4 w-3/4 rounded"></div>
+            <div class="bg-surface-alt h-3 w-1/2 rounded"></div>
+            <div class="flex gap-3">
+              <div class="bg-surface-alt h-5 w-16 rounded-full"></div>
+              <div class="bg-surface-alt h-5 w-20 rounded"></div>
+            </div>
+          </div>
+        </lfx-card>
+      }
+    } @else if (filteredEntries().length === 0) {
+      <lfx-card>
+        <p class="text-text-muted text-center text-sm">No blog posts match the selected filters.</p>
+      </lfx-card>
+    } @else {
+      @for (entry of filteredEntries(); track entry.id) {
+        <lfx-card>
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1 space-y-2">
+              <a [routerLink]="['/admin/blog', entry.id, 'edit']" class="text-brand-600 hover:text-brand-700 block truncate text-sm font-medium">
+                {{ entry.title }}
+              </a>
+              <p class="text-text-secondary text-xs">{{ entry.type | blogTypeLabel }}</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <lfx-status-badge [status]="entry.status" />
+                <span class="text-text-secondary text-xs">
+                  @if (entry.products && entry.products.length) {
+                    {{ entry.products.length }} product{{ entry.products.length > 1 ? 's' : '' }}
+                  }
+                </span>
+                <span class="text-text-muted text-xs">{{ entry.updatedAt | dateFormat }}</span>
+              </div>
+            </div>
+            <lfx-dropdown-menu [items]="(entryMenuItems() | mapGet: entry.id) ?? []">
+              <button
+                aria-label="Actions"
+                class="text-text-muted hover:bg-surface-alt hover:text-text-primary shrink-0 cursor-pointer rounded p-1.5 transition-colors">
+                <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+              </button>
+            </lfx-dropdown-menu>
+          </div>
+        </lfx-card>
+      }
+
+      @if (totalPages() > 1) {
+        <lfx-card padding="none">
+          <lfx-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalItems]="totalItems()"
+            [pageSize]="pageSize()"
+            (pageChange)="onPageChange($event)" />
+        </lfx-card>
+      }
+    }
+  </div>
 </div>

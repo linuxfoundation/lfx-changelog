@@ -6,6 +6,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
 import { AddUserDialogComponent } from '@modules/admin/components/add-user-dialog/add-user-dialog.component';
@@ -22,7 +23,17 @@ import type { Product, User } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-user-management',
-  imports: [AvatarComponent, BadgeComponent, ButtonComponent, TableComponent, TableColumnDirective, ProductNamePipe, RoleColorPipe, RoleLabelPipe],
+  imports: [
+    AvatarComponent,
+    BadgeComponent,
+    ButtonComponent,
+    CardComponent,
+    TableComponent,
+    TableColumnDirective,
+    ProductNamePipe,
+    RoleColorPipe,
+    RoleLabelPipe,
+  ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.css',
 })
