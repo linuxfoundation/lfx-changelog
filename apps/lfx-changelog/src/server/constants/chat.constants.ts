@@ -8,6 +8,7 @@ export const CHAT_CONFIG = {
   MAX_TOOL_ITERATIONS: 10,
   MAX_CONVERSATION_MESSAGES: 50,
   DESCRIPTION_TRUNCATE_LENGTH: 300,
+  SESSION_COOKIE_NAME: 'lfx_chat_session',
 } as const;
 
 export const CHAT_SYSTEM_PROMPT_PUBLIC = `You are the LFX product team's assistant — think of yourself as a friendly product owner explaining what's new and why it matters to the people who use LFX every day.

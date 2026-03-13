@@ -24,6 +24,10 @@ if (process.env['NODE_ENV'] !== 'production') {
 
 const app = express();
 
+// Trust exactly one proxy hop (k8s ingress / load balancer) so req.ip
+// resolves the real client IP from X-Forwarded-For instead of the proxy's IP.
+app.set('trust proxy', 1);
+
 // Request pipeline (order matters)
 setupGlobalMiddleware(app); // Request ID, helmet, compression, body parsers, static files
 setupCors(app); // CORS strategies for public API, MCP, and API-key requests

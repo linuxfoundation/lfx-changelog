@@ -1,14 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import rateLimit from 'express-rate-limit';
 
-import type { Express, Request, RequestHandler } from 'express';
-
-/** Extracts the client IP from X-Forwarded-For or falls back to req.ip. */
-function getClientIp(req: Request): string {
-  return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-}
+import type { Express, RequestHandler } from 'express';
 
 /**
  * Creates the API-key rate limiter instance (1000 req/hour per key).
@@ -21,7 +16,7 @@ export function createApiKeyRateLimiter(): RequestHandler {
     limit: 1000,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => (req as Request).apiKey!.id,
+    keyGenerator: (req) => req.apiKey!.id,
     message: { error: 'API key rate limit exceeded. Maximum 1000 requests per hour.' },
   });
 }
@@ -37,7 +32,7 @@ export function createPublicChatRateLimiter(): RequestHandler {
     limit: 3,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => ipKeyGenerator(getClientIp(req as Request)),
+    keyGenerator: (req) => req.ip ?? 'unknown',
     message: { error: 'Too many chat requests. Please wait a moment before trying again.' },
   });
 }
@@ -48,7 +43,7 @@ export function createAuthenticatedChatRateLimiter(): RequestHandler {
     limit: 15,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => (req as Request).dbUser?.id ?? ipKeyGenerator(getClientIp(req as Request)),
+    keyGenerator: (req) => req.dbUser?.id ?? req.ip ?? 'unknown',
     message: { error: 'Too many chat requests. Please wait a moment before trying again.' },
   });
 }
@@ -65,13 +60,13 @@ export function setupRateLimiting(app: Express): void {
     return;
   }
 
-  // IP-based limiter — 100 req/min
+  // IP-based limiter — 100 req/min (req.ip is trusted via app.set('trust proxy', true))
   const apiRateLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 100,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => ipKeyGenerator(getClientIp(req as Request)),
+    keyGenerator: (req) => req.ip ?? 'unknown',
     message: { error: 'Too many requests, please try again later.' },
   });
   app.use('/public/api', apiRateLimiter);

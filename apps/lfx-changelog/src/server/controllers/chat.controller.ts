@@ -32,26 +32,9 @@ export class ChatController {
   public async sendPublicMessage(req: Request, res: Response): Promise<void> {
     const { conversationId, message } = req.body as SendChatMessageRequest;
     const isAuthenticated = !!req.oidc?.isAuthenticated();
-
-    // After the first message in a conversation, require login
-    if (conversationId && !isAuthenticated) {
-      const userMessageCount = await this.conversationService.countUserMessages(conversationId);
-      if (userMessageCount >= 1) {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.setHeader('Content-Encoding', 'identity');
-        res.flushHeaders();
-        res.write(`event: auth_required\ndata: ${JSON.stringify('Sign in to continue the conversation.')}\n\n`);
-        res.end();
-        return;
-      }
-    }
-
-    // Ensure a session cookie exists for fingerprinting anonymous conversations
     const sessionFingerprint = this.getOrSetSessionCookie(req, res);
 
-    // If authenticated, resolve DB user so the conversation is owned
+    // Resolve DB user if authenticated
     let userId: string | null = null;
     if (isAuthenticated) {
       const email = req.oidc?.user?.['email'] as string | undefined;
@@ -61,12 +44,14 @@ export class ChatController {
       }
     }
 
-    // Transfer ownership of anonymous conversation to the now-authenticated user
-    if (conversationId && userId) {
-      await this.conversationService.claimConversation(conversationId, userId, sessionFingerprint);
-    }
-
-    await this.handleChatStream(req, res, { conversationId, message, callerContext: { accessLevel: 'public' }, userId, sessionFingerprint });
+    await this.handleChatStream(req, res, {
+      conversationId,
+      message,
+      callerContext: { accessLevel: 'public' },
+      userId,
+      sessionFingerprint,
+      isAuthenticated,
+    });
   }
 
   public async listConversations(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -97,6 +82,16 @@ export class ChatController {
         return;
       }
 
+      // Block access to unowned conversations with a different session fingerprint.
+      // This prevents conversation hijacking via leaked or guessed conversation IDs.
+      if (!conversation.userId && conversation.sessionFingerprint) {
+        const callerFingerprint = this.readSessionFingerprint(req);
+        if (callerFingerprint !== conversation.sessionFingerprint) {
+          res.status(403).json({ success: false, error: 'Forbidden' });
+          return;
+        }
+      }
+
       res.json({ success: true, data: conversation });
     } catch (error) {
       next(error);
@@ -113,22 +108,32 @@ export class ChatController {
     }
   }
 
-  private async handleChatStream(
-    req: Request,
-    res: Response,
-    params: { conversationId?: string; message: string; callerContext: ChatCallerContext; userId: string | null; sessionFingerprint?: string }
-  ): Promise<void> {
-    const { message, callerContext, userId } = params;
-    const { accessLevel } = callerContext;
-    const flushableRes = res as FlushableResponse;
-
-    // SSE headers — Content-Encoding: identity bypasses compression middleware
+  private sendSSEHeaders(res: Response): void {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('Content-Encoding', 'identity');
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
+  }
+
+  private async handleChatStream(
+    req: Request,
+    res: Response,
+    params: {
+      conversationId?: string;
+      message: string;
+      callerContext: ChatCallerContext;
+      userId: string | null;
+      sessionFingerprint?: string;
+      isAuthenticated?: boolean;
+    }
+  ): Promise<void> {
+    const { message, callerContext, userId } = params;
+    const { accessLevel } = callerContext;
+    const flushableRes = res as FlushableResponse;
+
+    this.sendSSEHeaders(res);
 
     // Disable Nagle's algorithm — send each SSE event immediately instead of
     // batching small writes into larger TCP packets
@@ -172,6 +177,29 @@ export class ChatController {
           res.end();
           return;
         }
+
+        // Block access to unowned conversations with a different session fingerprint
+        if (!existing.userId && existing.sessionFingerprint && params.sessionFingerprint !== existing.sessionFingerprint) {
+          sendEvent('error', 'You do not have access to this conversation.');
+          res.end();
+          return;
+        }
+
+        // Public auth gate: after the first message, require login for unauthenticated users.
+        // This runs AFTER access checks to prevent probing conversation state without authorization.
+        if (accessLevel === 'public' && !params.isAuthenticated) {
+          const userMessageCount = await this.conversationService.countUserMessages(conversationId);
+          if (userMessageCount >= 1) {
+            sendEvent('auth_required', 'Sign in to continue the conversation.');
+            res.end();
+            return;
+          }
+        }
+
+        // Claim anonymous conversation for the now-authenticated user
+        if (userId && !existing.userId) {
+          await this.conversationService.claimConversation(conversationId, userId, params.sessionFingerprint ?? '');
+        }
       } else {
         const conversation = await this.conversationService.createConversation(userId, accessLevel, params.sessionFingerprint);
         conversationId = conversation.id;
@@ -186,7 +214,7 @@ export class ChatController {
         content: message,
       });
 
-      // Build conversation history for AI context
+      // Build conversation history for AI context — re-fetch to include the just-persisted user message
       const fullConversation = await this.conversationService.getConversation(conversationId);
       const conversationMessages = this.buildAiMessages(fullConversation.messages);
 
@@ -282,25 +310,29 @@ export class ChatController {
     return clean.length > 60 ? clean.slice(0, 57) + '...' : clean;
   }
 
-  /** Read the `lfx_chat_session` cookie or set a new one. Returns the SHA-256 hash. */
-  private getOrSetSessionCookie(req: Request, res: Response): string {
-    const cookieName = 'lfx_chat_session';
-
-    // Parse the cookie header manually (no cookie-parser middleware)
+  /** Read the session cookie hash without setting one. Returns null if no cookie exists. */
+  private readSessionFingerprint(req: Request): string | null {
+    const cookieName = CHAT_CONFIG.SESSION_COOKIE_NAME;
     const cookieHeader = req.headers['cookie'] ?? '';
     const match = cookieHeader.split(';').find((c) => c.trim().startsWith(`${cookieName}=`));
-    let raw = match?.split('=')?.[1]?.trim();
+    // Use substring instead of split('=')[1] — cookie values (e.g. base64) may contain '='
+    const raw = match ? match.substring(match.indexOf('=') + 1).trim() : undefined;
+    return raw ? createHash('sha256').update(raw).digest('hex') : null;
+  }
 
-    if (!raw) {
-      raw = randomUUID();
-      res.cookie(cookieName, raw, {
-        httpOnly: true,
-        sameSite: 'strict',
-        secure: process.env['NODE_ENV'] === 'production',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/public/api/chat',
-      });
-    }
+  /** Read the session cookie or set a new one. Returns the SHA-256 hash. */
+  private getOrSetSessionCookie(req: Request, res: Response): string {
+    const existing = this.readSessionFingerprint(req);
+    if (existing) return existing;
+
+    const raw = randomUUID();
+    res.cookie(CHAT_CONFIG.SESSION_COOKIE_NAME, raw, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env['NODE_ENV'] === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/public/api/chat',
+    });
 
     return createHash('sha256').update(raw).digest('hex');
   }
