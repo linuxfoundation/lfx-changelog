@@ -219,12 +219,13 @@ model ApiKey {
 }
 
 model ChatConversation {
-  id          String          @id @default(uuid())
-  userId      String?         @map("user_id")
-  title       String          @default("New conversation")
-  accessLevel ChatAccessLevel @default(public) @map("access_level")
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
+  id                 String          @id @default(uuid())
+  userId             String?         @map("user_id")
+  title              String          @default("New conversation")
+  accessLevel        ChatAccessLevel @default(public) @map("access_level")
+  sessionFingerprint String?         @map("session_fingerprint")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
 
   user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   messages ChatMessage[]

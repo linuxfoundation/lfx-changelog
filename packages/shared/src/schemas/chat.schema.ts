@@ -139,11 +139,11 @@ export type StreamDeltaChunk = z.infer<typeof StreamDeltaChunkSchema>;
 
 // --- SSE events ---
 
-export type ChatSSEEventType = 'status' | 'content' | 'tool_call' | 'conversation_id' | 'title' | 'done' | 'error';
+export type ChatSSEEventType = 'status' | 'content' | 'tool_call' | 'conversation_id' | 'title' | 'done' | 'error' | 'auth_required';
 
 export const ChatSSEEventSchema = z
   .object({
-    type: z.enum(['status', 'content', 'tool_call', 'conversation_id', 'title', 'done', 'error']),
+    type: z.enum(['status', 'content', 'tool_call', 'conversation_id', 'title', 'done', 'error', 'auth_required']),
     data: z.string(),
   })
   .openapi('ChatSSEEvent');

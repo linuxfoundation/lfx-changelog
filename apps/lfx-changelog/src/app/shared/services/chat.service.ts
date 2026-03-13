@@ -28,6 +28,7 @@ export class ChatService {
   public readonly conversationTitle = signal('New conversation');
   public readonly conversations: Signal<ChatConversation[]> = this.initConversations();
   public readonly error = signal('');
+  public readonly authRequired = signal(false);
 
   private subscription: Subscription | null = null;
   private charBuffer = '';
@@ -35,6 +36,7 @@ export class ChatService {
 
   public sendMessage(message: string): void {
     this.error.set('');
+    this.authRequired.set(false);
 
     // Add user message to UI immediately
     this.messages.update((msgs) => [...msgs, { role: 'user', content: message }]);
@@ -119,6 +121,7 @@ export class ChatService {
     this.conversationId.set(null);
     this.conversationTitle.set('New conversation');
     this.error.set('');
+    this.authRequired.set(false);
   }
 
   public newConversation(): void {
@@ -151,6 +154,26 @@ export class ChatService {
         if (this.mode() === 'admin') {
           this.loadConversations();
         }
+        break;
+      case 'auth_required':
+        this.flushCharBuffer();
+        this.authRequired.set(true);
+        this.streaming.set(false);
+        this.currentStatus.set('');
+        // Remove the empty assistant placeholder AND the optimistic user message
+        // (server rejected the request before persisting either)
+        this.messages.update((msgs) => {
+          const trimmed = [...msgs];
+          // Remove trailing empty assistant message
+          if (trimmed.length > 0 && trimmed[trimmed.length - 1].role === 'assistant' && !trimmed[trimmed.length - 1].content) {
+            trimmed.pop();
+          }
+          // Remove the optimistic user message that was never persisted
+          if (trimmed.length > 0 && trimmed[trimmed.length - 1].role === 'user') {
+            trimmed.pop();
+          }
+          return trimmed;
+        });
         break;
       case 'error':
         this.flushCharBuffer();

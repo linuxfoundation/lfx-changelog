@@ -13,13 +13,14 @@ import type { AddChatMessageParams, ChatAccessLevel as ChatAccessLevelType } fro
 import type { ChatConversation as PrismaChatConversation, ChatMessage as PrismaChatMessage } from '@prisma/client';
 
 export class ChatConversationService {
-  public async createConversation(userId: string | null, accessLevel: ChatAccessLevelType): Promise<PrismaChatConversation> {
+  public async createConversation(userId: string | null, accessLevel: ChatAccessLevelType, sessionFingerprint?: string): Promise<PrismaChatConversation> {
     const prisma = getPrismaClient();
     try {
       return await prisma.chatConversation.create({
         data: {
           userId,
           accessLevel: accessLevel as ChatAccessLevel,
+          sessionFingerprint: sessionFingerprint ?? null,
         },
       });
     } catch (error) {
@@ -90,6 +91,26 @@ export class ChatConversationService {
     await prisma.chatConversation.update({
       where: { id },
       data: { title },
+    });
+  }
+
+  /**
+   * Claim an anonymous conversation for an authenticated user.
+   * Only succeeds if the conversation is unowned AND the session fingerprint matches
+   * the one stored at creation time. This prevents hijacking via guessed conversation IDs.
+   */
+  public async claimConversation(conversationId: string, userId: string, sessionFingerprint: string): Promise<void> {
+    const prisma = getPrismaClient();
+    await prisma.chatConversation.updateMany({
+      where: { id: conversationId, userId: null, sessionFingerprint },
+      data: { userId, sessionFingerprint: null },
+    });
+  }
+
+  public async countUserMessages(conversationId: string): Promise<number> {
+    const prisma = getPrismaClient();
+    return prisma.chatMessage.count({
+      where: { conversationId, role: 'user' },
     });
   }
 

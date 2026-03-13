@@ -1,12 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { createHash, randomUUID } from 'node:crypto';
+
 import { UserRole } from '@lfx-changelog/shared';
 
 import { CHAT_CONFIG } from '../constants/chat.constants';
 import { serverLogger } from '../server-logger';
 import { AiService } from '../services/ai.service';
 import { ChatConversationService } from '../services/chat-conversation.service';
+import { UserService } from '../services/user.service';
 
 import type { ChatAccessLevel, ChatSSEEventType, OpenAIToolCall, OpenAIToolChatMessage, SendChatMessageRequest } from '@lfx-changelog/shared';
 import type { ChatMessage as PrismaChatMessage, UserRoleAssignment } from '@prisma/client';
@@ -16,6 +19,7 @@ import type { ChatCallerContext, FlushableResponse } from '../interfaces/chat.in
 export class ChatController {
   private readonly aiService = new AiService();
   private readonly conversationService = new ChatConversationService();
+  private readonly userService = new UserService();
 
   public async sendMessage(req: Request, res: Response): Promise<void> {
     const { conversationId, message } = req.body as SendChatMessageRequest;
@@ -27,8 +31,42 @@ export class ChatController {
 
   public async sendPublicMessage(req: Request, res: Response): Promise<void> {
     const { conversationId, message } = req.body as SendChatMessageRequest;
+    const isAuthenticated = !!req.oidc?.isAuthenticated();
 
-    await this.handleChatStream(req, res, { conversationId, message, callerContext: { accessLevel: 'public' }, userId: null });
+    // After the first message in a conversation, require login
+    if (conversationId && !isAuthenticated) {
+      const userMessageCount = await this.conversationService.countUserMessages(conversationId);
+      if (userMessageCount >= 1) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Content-Encoding', 'identity');
+        res.flushHeaders();
+        res.write(`event: auth_required\ndata: ${JSON.stringify('Sign in to continue the conversation.')}\n\n`);
+        res.end();
+        return;
+      }
+    }
+
+    // Ensure a session cookie exists for fingerprinting anonymous conversations
+    const sessionFingerprint = this.getOrSetSessionCookie(req, res);
+
+    // If authenticated, resolve DB user so the conversation is owned
+    let userId: string | null = null;
+    if (isAuthenticated) {
+      const email = req.oidc?.user?.['email'] as string | undefined;
+      if (email) {
+        const dbUser = await this.userService.findByEmail(email);
+        userId = dbUser?.id ?? null;
+      }
+    }
+
+    // Transfer ownership of anonymous conversation to the now-authenticated user
+    if (conversationId && userId) {
+      await this.conversationService.claimConversation(conversationId, userId, sessionFingerprint);
+    }
+
+    await this.handleChatStream(req, res, { conversationId, message, callerContext: { accessLevel: 'public' }, userId, sessionFingerprint });
   }
 
   public async listConversations(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -78,7 +116,7 @@ export class ChatController {
   private async handleChatStream(
     req: Request,
     res: Response,
-    params: { conversationId?: string; message: string; callerContext: ChatCallerContext; userId: string | null }
+    params: { conversationId?: string; message: string; callerContext: ChatCallerContext; userId: string | null; sessionFingerprint?: string }
   ): Promise<void> {
     const { message, callerContext, userId } = params;
     const { accessLevel } = callerContext;
@@ -135,7 +173,7 @@ export class ChatController {
           return;
         }
       } else {
-        const conversation = await this.conversationService.createConversation(userId, accessLevel);
+        const conversation = await this.conversationService.createConversation(userId, accessLevel, params.sessionFingerprint);
         conversationId = conversation.id;
         isNewConversation = true;
       }
@@ -242,6 +280,29 @@ export class ChatController {
     // Simple title from the first user message — truncate to 60 chars
     const clean = message.replace(/\n/g, ' ').trim();
     return clean.length > 60 ? clean.slice(0, 57) + '...' : clean;
+  }
+
+  /** Read the `lfx_chat_session` cookie or set a new one. Returns the SHA-256 hash. */
+  private getOrSetSessionCookie(req: Request, res: Response): string {
+    const cookieName = 'lfx_chat_session';
+
+    // Parse the cookie header manually (no cookie-parser middleware)
+    const cookieHeader = req.headers['cookie'] ?? '';
+    const match = cookieHeader.split(';').find((c) => c.trim().startsWith(`${cookieName}=`));
+    let raw = match?.split('=')?.[1]?.trim();
+
+    if (!raw) {
+      raw = randomUUID();
+      res.cookie(cookieName, raw, {
+        httpOnly: true,
+        sameSite: 'strict',
+        secure: process.env['NODE_ENV'] === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/public/api/chat',
+      });
+    }
+
+    return createHash('sha256').update(raw).digest('hex');
   }
 
   private toUserFriendlyError(error: Error): string {
