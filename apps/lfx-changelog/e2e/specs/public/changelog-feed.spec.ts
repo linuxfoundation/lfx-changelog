@@ -81,7 +81,7 @@ test.describe('Changelog Feed', () => {
   });
 
   test('should display the footer', async ({ page }) => {
-    const footer = page.locator('footer');
+    const footer = page.locator('footer').first();
     await expect(footer).toBeVisible();
     await expect(footer.locator('lfx-footer')).toBeAttached();
   });
