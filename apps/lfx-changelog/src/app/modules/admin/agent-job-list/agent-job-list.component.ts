@@ -7,6 +7,8 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
+import { PaginationComponent } from '@components/pagination/pagination.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
@@ -33,6 +35,8 @@ import type { Subscription } from 'rxjs';
     RouterLink,
     BadgeComponent,
     ButtonComponent,
+    CardComponent,
+    PaginationComponent,
     SelectComponent,
     TableComponent,
     TableColumnDirective,

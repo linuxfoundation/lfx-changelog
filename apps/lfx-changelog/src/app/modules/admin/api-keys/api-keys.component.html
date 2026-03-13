@@ -3,7 +3,7 @@
 
 <div class="space-y-6">
   <!-- Header -->
-  <div class="flex items-center justify-between">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h2 data-testid="api-keys-heading" class="text-text-primary text-lg font-semibold">API Keys</h2>
       <p class="text-text-secondary mt-0.5 text-sm">Manage programmatic access to the LFX Changelog API.</p>
@@ -20,7 +20,7 @@
       @for (_ of [1, 2]; track $index) {
         <div class="border-border bg-surface rounded-xl border p-5">
           <div class="flex items-start gap-4">
-            <div class="bg-surface-alt h-10 w-10 animate-pulse rounded-lg"></div>
+            <div class="bg-surface-alt hidden h-10 w-10 animate-pulse rounded-lg sm:block"></div>
             <div class="flex-1 space-y-3">
               <div class="bg-surface-alt h-4 w-40 animate-pulse rounded"></div>
               <div class="flex gap-2">
@@ -54,47 +54,62 @@
           data-testid="api-key-row"
           class="animate-fade-in-up border-border bg-surface group hover:border-l-brand-600 rounded-xl border transition-all hover:border-l-3 hover:shadow-md"
           [style.animation-delay.ms]="$index * 60 + 150">
-          <div class="flex items-start gap-4 p-5">
-            <!-- Key icon -->
-            <div class="bg-surface-alt border-border flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
-              <i class="fa-duotone fa-key text-brand-600 text-sm"></i>
-            </div>
-
-            <!-- Key details -->
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2.5">
-                <span data-testid="api-key-name" class="text-text-primary font-medium">{{ key.name }}</span>
-                <span class="text-text-muted bg-surface-alt rounded px-1.5 py-0.5 font-mono text-xs">{{ key.keyPrefix }}...</span>
+          <div class="p-4 sm:p-5">
+            <div class="flex items-start gap-3 sm:gap-4">
+              <!-- Key icon (boxed on desktop) -->
+              <div class="bg-surface-alt border-border hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg border sm:flex">
+                <i class="fa-duotone fa-key text-brand-600 text-sm"></i>
               </div>
 
-              <!-- Scopes -->
-              <div class="mt-2.5 flex flex-wrap gap-1.5">
-                @for (scope of key.scopes; track scope) {
-                  <lfx-badge [label]="scope" [color]="scope | scopeColor" size="sm" />
-                }
-              </div>
+              <!-- Key details -->
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <span data-testid="api-key-name" class="text-text-primary flex items-center gap-1.5 font-medium">
+                      <i class="fa-duotone fa-key text-brand-600 text-xs sm:hidden"></i>
+                      {{ key.name }}
+                    </span>
+                    <span class="text-text-muted bg-surface-alt mt-1 inline-block rounded px-1.5 py-0.5 font-mono text-xs">{{ key.keyPrefix }}...</span>
+                  </div>
+                  <!-- Actions (desktop inline, mobile below) -->
+                  <div class="hidden shrink-0 sm:block">
+                    <lfx-button data-testid="api-key-revoke-btn-desktop" variant="ghost" size="sm" (clicked)="openRevoke(key)">
+                      <span class="text-red-500 opacity-60 transition-opacity group-hover:opacity-100">Revoke</span>
+                    </lfx-button>
+                  </div>
+                </div>
 
-              <!-- Metadata row -->
-              <div class="text-text-muted mt-3 flex items-center gap-4 text-xs">
-                <span class="flex items-center gap-1.5">
-                  <i class="fa-solid fa-clock text-[10px]"></i>
-                  Expires {{ key.expiresAt | date: 'MMM d, yyyy' }}
-                </span>
-                @if (key.lastUsedAt) {
+                <!-- Scopes -->
+                <div class="mt-2.5 flex flex-wrap gap-1.5">
+                  @for (scope of key.scopes; track scope) {
+                    <lfx-badge [label]="scope" [color]="scope | scopeColor" size="sm" />
+                  }
+                </div>
+
+                <!-- Metadata row -->
+                <div class="text-text-muted mt-3 flex flex-col gap-1 text-xs sm:flex-row sm:items-center sm:gap-4">
                   <span class="flex items-center gap-1.5">
-                    <i class="fa-solid fa-arrow-right-arrow-left text-[10px]"></i>
-                    Last used {{ key.lastUsedAt | date: 'MMM d, yyyy' }}
+                    <i class="fa-solid fa-clock text-[10px]"></i>
+                    Expires {{ key.expiresAt | date: 'MMM d, yyyy' }}
                   </span>
-                } @else {
-                  <span class="text-text-muted/60 italic">Never used</span>
-                }
+                  @if (key.lastUsedAt) {
+                    <span class="flex items-center gap-1.5">
+                      <i class="fa-solid fa-arrow-right-arrow-left text-[10px]"></i>
+                      Last used {{ key.lastUsedAt | date: 'MMM d, yyyy' }}
+                    </span>
+                  } @else {
+                    <span class="text-text-muted/60 italic">Never used</span>
+                  }
+                </div>
+
+                <!-- Revoke button (mobile only) -->
+                <div class="mt-3 sm:hidden">
+                  <lfx-button data-testid="api-key-revoke-btn-mobile" variant="ghost" size="sm" (clicked)="openRevoke(key)">
+                    <span class="text-red-500">Revoke</span>
+                  </lfx-button>
+                </div>
               </div>
             </div>
-
-            <!-- Actions -->
-            <lfx-button data-testid="api-key-revoke-btn" variant="ghost" size="sm" (clicked)="openRevoke(key)">
-              <span class="text-red-500 opacity-60 transition-opacity group-hover:opacity-100">Revoke</span>
-            </lfx-button>
           </div>
         </div>
       }
@@ -116,15 +131,16 @@
         <div class="mt-3 space-y-2">
           @for (key of inactiveKeys(); track key.id) {
             <div class="animate-fade-in border-border bg-surface rounded-xl border opacity-50" [style.animation-delay.ms]="$index * 40">
-              <div class="flex items-center gap-4 px-5 py-4">
-                <!-- Muted key icon -->
-                <div class="bg-surface-alt border-border flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border">
+              <div class="flex items-start gap-3 px-4 py-3 sm:items-center sm:gap-4 sm:px-5 sm:py-4">
+                <!-- Muted key icon (boxed on desktop) -->
+                <div class="bg-surface-alt border-border hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border sm:flex">
                   <i class="fa-duotone fa-key-skeleton text-text-muted text-sm"></i>
                 </div>
 
                 <!-- Key info -->
                 <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2.5">
+                  <div class="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
+                    <i class="fa-duotone fa-key-skeleton text-text-muted text-xs sm:hidden"></i>
                     <span class="text-text-secondary line-through">{{ key.name }}</span>
                     <span class="text-text-muted font-mono text-xs">{{ key.keyPrefix }}...</span>
                     @if ((key | keyStatus) === 'revoked') {

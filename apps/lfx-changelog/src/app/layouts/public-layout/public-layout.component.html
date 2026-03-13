@@ -30,7 +30,7 @@
             routerLink="/chat"
             routerLinkActive="bg-surface-alt text-text-primary"
             class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors">
-            <i class="fa-duotone fa-messages text-xs"></i>
+            <i class="fa-duotone fa-sparkles text-xs"></i>
             Chat
           </a>
         </nav>
@@ -58,30 +58,104 @@
             <i class="fa-duotone fa-moon animate-spin-in text-base"></i>
           }
         </button>
-        @if (authenticated() && dbUser()) {
-          <a
-            data-testid="public-layout-admin-btn"
-            routerLink="/admin"
-            class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
-            Admin
-          </a>
-        } @else if (authenticated()) {
-          <a
-            data-testid="public-layout-logout-btn"
-            href="/logout"
-            class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
-            Logout
-          </a>
-        } @else {
-          <a
-            data-testid="public-layout-login-btn"
-            href="/login"
-            class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
-            Login
-          </a>
-        }
+
+        <!-- Desktop auth buttons (hidden on mobile) -->
+        <div class="hidden sm:flex">
+          @if (authenticated() && dbUser()) {
+            <a
+              data-testid="public-layout-admin-btn"
+              routerLink="/admin"
+              class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+              Admin
+            </a>
+          } @else if (authenticated()) {
+            <a
+              data-testid="public-layout-logout-btn"
+              href="/logout"
+              class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+              Logout
+            </a>
+          } @else {
+            <a
+              data-testid="public-layout-login-btn"
+              href="/login"
+              class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+              Login
+            </a>
+          }
+        </div>
+
+        <!-- Mobile menu button (visible only on mobile) -->
+        <button
+          data-testid="public-layout-mobile-menu-btn"
+          (click)="toggleMobileMenu()"
+          class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg p-2 transition-colors sm:hidden"
+          aria-label="Toggle menu">
+          @if (mobileMenuOpen()) {
+            <i class="fa-solid fa-xmark text-lg"></i>
+          } @else {
+            <i class="fa-solid fa-bars text-lg"></i>
+          }
+        </button>
       </div>
     </div>
+
+    <!-- Mobile menu panel -->
+    @if (mobileMenuOpen()) {
+      <div data-testid="public-layout-mobile-menu" class="border-border border-t sm:hidden">
+        <nav class="bg-surface space-y-1 px-4 py-3">
+          <a
+            routerLink="/"
+            routerLinkActive="bg-surface-alt text-text-primary"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMobileMenu()"
+            class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
+            <i class="fa-duotone fa-rectangle-history text-xs"></i>
+            All Updates
+          </a>
+          <a
+            routerLink="/blog"
+            routerLinkActive="bg-surface-alt text-text-primary"
+            (click)="closeMobileMenu()"
+            class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
+            <i class="fa-duotone fa-newspaper text-xs"></i>
+            Blogs
+          </a>
+          <a
+            routerLink="/chat"
+            routerLinkActive="bg-surface-alt text-text-primary"
+            (click)="closeMobileMenu()"
+            class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
+            <i class="fa-duotone fa-sparkles text-xs"></i>
+            Chat
+          </a>
+          <div class="border-border my-1 border-t"></div>
+          @if (authenticated() && dbUser()) {
+            <a
+              routerLink="/admin"
+              (click)="closeMobileMenu()"
+              class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
+              <i class="fa-duotone fa-lock text-xs"></i>
+              Admin
+            </a>
+          } @else if (authenticated()) {
+            <a
+              href="/logout"
+              class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
+              <i class="fa-duotone fa-right-from-bracket text-xs"></i>
+              Logout
+            </a>
+          } @else {
+            <a
+              href="/login"
+              class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
+              <i class="fa-duotone fa-right-to-bracket text-xs"></i>
+              Login
+            </a>
+          }
+        </nav>
+      </div>
+    }
   </header>
 
   <!-- Main content: chat route gets full-bleed flex, other routes get constrained content -->

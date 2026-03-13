@@ -17,9 +17,27 @@
     </a>
   </div>
 
+  <!-- Mobile Edit/Preview toggle -->
+  <div class="border-border bg-surface flex rounded-lg border p-1 lg:hidden">
+    <button
+      (click)="showPreview.set(false)"
+      class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all"
+      [class]="!showPreview() ? 'bg-brand-600 text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'">
+      <i class="fa-solid fa-pen-to-square mr-1.5 text-xs"></i>
+      Edit
+    </button>
+    <button
+      (click)="showPreview.set(true)"
+      class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all"
+      [class]="showPreview() ? 'bg-brand-600 text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'">
+      <i class="fa-duotone fa-eye mr-1.5 text-xs"></i>
+      Preview
+    </button>
+  </div>
+
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <!-- Form -->
-    <div class="animate-slide-in-left relative z-10 space-y-5 [animation-delay:150ms]">
+    <div class="animate-slide-in-left relative z-10 space-y-5 [animation-delay:150ms]" [class.max-lg:hidden]="showPreview()">
       <!-- Product selector (first — determines AI generation availability) -->
       <lfx-select
         data-testid="changelog-editor-product-select"
@@ -178,7 +196,7 @@
         placeholder="Write markdown content..."
         [formControl]="descriptionControl" />
 
-      <div class="flex items-center gap-3 pt-2">
+      <div class="editor-actions flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:items-center">
         @if (canEdit()) {
           @if (!isEditing() || isDraft()) {
             <lfx-button
@@ -210,33 +228,35 @@
             (clicked)="save()">
             {{ isEditing() ? 'Update Entry' : 'Save as Draft' }}
           </lfx-button>
-        } @else {
-          <span class="text-text-muted text-sm">
-            <i class="fa-solid fa-lock text-xs"></i>
-            Read-only — you don't have edit access to this product
-          </span>
-        }
-        <a data-testid="changelog-editor-cancel-btn" routerLink="/admin/changelogs">
-          <lfx-button variant="secondary">{{ canEdit() ? 'Cancel' : 'Back' }}</lfx-button>
-        </a>
-        @if (isEditing() && canEdit()) {
-          <div class="ml-auto">
+          <a data-testid="changelog-editor-cancel-btn" routerLink="/admin/changelogs">
+            <lfx-button variant="secondary">Cancel</lfx-button>
+          </a>
+          @if (isEditing()) {
             <lfx-button
               data-testid="changelog-editor-delete-btn"
               variant="danger"
+              class="sm:ml-auto"
               [loading]="deleting()"
               [disabled]="saving() || publishing() || unpublishing()"
               (clicked)="confirmDelete()">
               <i class="fa-solid fa-trash text-xs"></i>
               Delete
             </lfx-button>
-          </div>
+          }
+        } @else {
+          <span class="text-text-muted text-sm">
+            <i class="fa-solid fa-lock text-xs"></i>
+            Read-only — you don't have edit access to this product
+          </span>
+          <a data-testid="changelog-editor-cancel-btn" routerLink="/admin/changelogs">
+            <lfx-button variant="secondary">Back</lfx-button>
+          </a>
         }
       </div>
     </div>
 
     <!-- Live preview -->
-    <div class="animate-slide-in-right hidden [animation-delay:200ms] lg:block">
+    <div class="animate-slide-in-right [animation-delay:200ms] lg:block" [class.max-lg:hidden]="!showPreview()">
       <div class="sticky top-6 space-y-6">
         <h2 data-testid="changelog-editor-preview" class="text-text-muted text-sm font-medium">
           <i class="fa-duotone fa-eye mr-1"></i>

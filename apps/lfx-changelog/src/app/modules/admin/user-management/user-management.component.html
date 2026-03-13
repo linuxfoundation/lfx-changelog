@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="space-y-6">
-  <div class="animate-slide-in-left flex items-center justify-between">
+  <div class="animate-slide-in-left flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 data-testid="user-management-heading" class="font-display text-text-primary text-2xl font-bold">Users</h1>
       <p class="text-text-secondary mt-1">Manage user access and role assignments.</p>
@@ -13,35 +13,91 @@
     </lfx-button>
   </div>
 
-  <lfx-table class="animate-rise-in block [animation-delay:150ms]" [data]="users()" [loading]="loading()" testId="user-management-table">
-    <ng-template lfxColumn="User" let-user>
-      <div class="flex items-center gap-3">
-        <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
-        <span class="text-text-primary text-sm font-medium">{{ user.name }}</span>
-      </div>
-    </ng-template>
+  <!-- Table (desktop) -->
+  <div class="animate-rise-in hidden [animation-delay:150ms] md:block">
+    <lfx-table [data]="users()" [loading]="loading()" testId="user-management-table">
+      <ng-template lfxColumn="User" let-user>
+        <div class="flex items-center gap-3">
+          <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
+          <span class="text-text-primary text-sm font-medium">{{ user.name }}</span>
+        </div>
+      </ng-template>
 
-    <ng-template lfxColumn="Email" let-user>
-      <span class="text-text-secondary text-sm">{{ user.email }}</span>
-    </ng-template>
+      <ng-template lfxColumn="Email" let-user>
+        <span class="text-text-secondary text-sm">{{ user.email }}</span>
+      </ng-template>
 
-    <ng-template lfxColumn="Roles" let-user>
-      <div class="flex flex-wrap gap-1">
-        @for (ra of user.roles; track ra.id) {
-          <div class="flex items-center gap-1">
-            <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
-            @if (ra.productId) {
-              <span class="text-text-muted text-xs">({{ ra.productId | productName: products() }})</span>
+      <ng-template lfxColumn="Roles" let-user>
+        <div class="flex flex-wrap gap-1">
+          @for (ra of user.roles; track ra.id) {
+            <div class="flex items-center gap-1">
+              <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
+              @if (ra.productId) {
+                <span class="text-text-muted text-xs">({{ ra.productId | productName: products() }})</span>
+              }
+            </div>
+          }
+        </div>
+      </ng-template>
+
+      <ng-template lfxColumn="Actions" let-user>
+        <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
+          >Manage Roles</lfx-button
+        >
+      </ng-template>
+    </lfx-table>
+  </div>
+
+  <!-- Card list (mobile) -->
+  <div class="animate-rise-in space-y-3 [animation-delay:150ms] md:hidden">
+    @if (loading()) {
+      @for (_ of [1, 2, 3]; track $index) {
+        <lfx-card>
+          <div class="animate-pulse space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="bg-surface-alt h-8 w-8 rounded-full"></div>
+              <div class="bg-surface-alt h-4 w-1/3 rounded"></div>
+            </div>
+            <div class="bg-surface-alt h-3 w-1/2 rounded"></div>
+            <div class="bg-surface-alt h-5 w-20 rounded-full"></div>
+          </div>
+        </lfx-card>
+      }
+    } @else if (users().length === 0) {
+      <lfx-card>
+        <p class="text-text-muted text-center text-sm">No users found.</p>
+      </lfx-card>
+    } @else {
+      @for (user of users(); track user.id) {
+        <lfx-card>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex min-w-0 items-center gap-3">
+                <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
+                <div class="min-w-0">
+                  <p class="text-text-primary truncate text-sm font-medium">{{ user.name }}</p>
+                  <p class="text-text-secondary truncate text-xs">{{ user.email }}</p>
+                </div>
+              </div>
+              <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)">
+                Manage
+              </lfx-button>
+            </div>
+            @if (user.roles?.length) {
+              <div class="flex flex-wrap gap-1">
+                @for (ra of user.roles; track ra.id) {
+                  <div class="flex items-center gap-1">
+                    <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
+                    @if (ra.productId) {
+                      <span class="text-text-muted text-xs">({{ ra.productId | productName: products() }})</span>
+                    }
+                  </div>
+                }
+              </div>
             }
           </div>
-        }
-      </div>
-    </ng-template>
-
-    <ng-template lfxColumn="Actions" let-user>
-      <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
-        >Manage Roles</lfx-button
-      >
-    </ng-template>
-  </lfx-table>
+        </lfx-card>
+      }
+    }
+  </div>
 </div>

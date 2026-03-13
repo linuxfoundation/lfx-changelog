@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="space-y-6">
-  <div class="animate-slide-in-left flex items-center justify-between">
+  <div class="animate-slide-in-left flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 data-testid="product-management-heading" class="font-display text-text-primary text-2xl font-bold">Products</h1>
       <p class="text-text-secondary mt-1">Manage LFX products for changelog categorization.</p>
@@ -15,43 +15,100 @@
     }
   </div>
 
-  <lfx-table class="animate-rise-in block [animation-delay:150ms]" [data]="products()" [loading]="loading()" testId="product-management-table">
-    <ng-template lfxColumn="Name" let-product>
-      <a [routerLink]="['/admin/products', product.id]" class="flex items-center gap-2.5 hover:opacity-80">
-        @if (product.faIcon) {
-          <i [class]="product.faIcon" class="text-brand-600"></i>
-        }
-        <span class="text-text-primary text-sm font-medium hover:underline">{{ product.name }}</span>
-      </a>
-    </ng-template>
-
-    <ng-template lfxColumn="Slug" let-product>
-      <span class="text-text-secondary font-mono text-sm">{{ product.slug }}</span>
-    </ng-template>
-
-    <ng-template lfxColumn="Description" let-product>
-      <span class="text-text-secondary max-w-xs truncate text-sm">{{ product.description || '—' }}</span>
-    </ng-template>
-
-    <ng-template lfxColumn="Status" let-product>
-      @if (product.isActive) {
-        <lfx-badge label="Enabled" color="#22C55E" size="sm" />
-      } @else {
-        <lfx-badge label="Disabled" color="#EF4444" size="sm" />
-      }
-    </ng-template>
-
-    @if (isSuperAdmin()) {
-      <ng-template lfxColumn="" let-product>
-        <lfx-dropdown-menu [items]="(productMenuItems() | mapGet: product.id) ?? []">
-          <button
-            data-testid="product-management-actions-btn"
-            aria-label="Actions"
-            class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
-            <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
-          </button>
-        </lfx-dropdown-menu>
+  <!-- Table (desktop) -->
+  <div class="animate-rise-in hidden [animation-delay:150ms] md:block">
+    <lfx-table [data]="products()" [loading]="loading()" testId="product-management-table">
+      <ng-template lfxColumn="Name" let-product>
+        <a [routerLink]="['/admin/products', product.id]" class="flex items-center gap-2.5 hover:opacity-80">
+          @if (product.faIcon) {
+            <i [class]="product.faIcon" class="text-brand-600"></i>
+          }
+          <span class="text-text-primary text-sm font-medium hover:underline">{{ product.name }}</span>
+        </a>
       </ng-template>
+
+      <ng-template lfxColumn="Slug" let-product>
+        <span class="text-text-secondary font-mono text-sm">{{ product.slug }}</span>
+      </ng-template>
+
+      <ng-template lfxColumn="Description" let-product>
+        <span class="text-text-secondary max-w-xs truncate text-sm">{{ product.description || '—' }}</span>
+      </ng-template>
+
+      <ng-template lfxColumn="Status" let-product>
+        @if (product.isActive) {
+          <lfx-badge label="Enabled" color="#22C55E" size="sm" />
+        } @else {
+          <lfx-badge label="Disabled" color="#EF4444" size="sm" />
+        }
+      </ng-template>
+
+      @if (isSuperAdmin()) {
+        <ng-template lfxColumn="" let-product>
+          <lfx-dropdown-menu [items]="(productMenuItems() | mapGet: product.id) ?? []">
+            <button
+              data-testid="product-management-actions-btn"
+              aria-label="Actions"
+              class="text-text-muted hover:bg-surface-alt hover:text-text-primary cursor-pointer rounded p-1.5 transition-colors">
+              <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+            </button>
+          </lfx-dropdown-menu>
+        </ng-template>
+      }
+    </lfx-table>
+  </div>
+
+  <!-- Card list (mobile) -->
+  <div class="animate-rise-in space-y-3 [animation-delay:150ms] md:hidden">
+    @if (loading()) {
+      @for (_ of [1, 2, 3]; track $index) {
+        <lfx-card>
+          <div class="animate-pulse space-y-3">
+            <div class="flex items-center gap-2.5">
+              <div class="bg-surface-alt h-4 w-4 rounded"></div>
+              <div class="bg-surface-alt h-4 w-1/3 rounded"></div>
+            </div>
+            <div class="bg-surface-alt h-3 w-2/3 rounded"></div>
+            <div class="bg-surface-alt h-5 w-16 rounded-full"></div>
+          </div>
+        </lfx-card>
+      }
+    } @else if (products().length === 0) {
+      <lfx-card>
+        <p class="text-text-muted text-center text-sm">No products found.</p>
+      </lfx-card>
+    } @else {
+      @for (product of products(); track product.id) {
+        <lfx-card>
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1 space-y-2">
+              <a [routerLink]="['/admin/products', product.id]" class="flex items-center gap-2.5 hover:opacity-80">
+                @if (product.faIcon) {
+                  <i [class]="product.faIcon" class="text-brand-600"></i>
+                }
+                <span class="text-text-primary text-sm font-medium hover:underline">{{ product.name }}</span>
+              </a>
+              @if (product.description) {
+                <p class="text-text-secondary truncate text-xs">{{ product.description }}</p>
+              }
+              @if (product.isActive) {
+                <lfx-badge label="Enabled" color="#22C55E" size="sm" />
+              } @else {
+                <lfx-badge label="Disabled" color="#EF4444" size="sm" />
+              }
+            </div>
+            @if (isSuperAdmin()) {
+              <lfx-dropdown-menu [items]="(productMenuItems() | mapGet: product.id) ?? []">
+                <button
+                  aria-label="Actions"
+                  class="text-text-muted hover:bg-surface-alt hover:text-text-primary shrink-0 cursor-pointer rounded p-1.5 transition-colors">
+                  <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+                </button>
+              </lfx-dropdown-menu>
+            }
+          </div>
+        </lfx-card>
+      }
     }
-  </lfx-table>
+  </div>
 </div>

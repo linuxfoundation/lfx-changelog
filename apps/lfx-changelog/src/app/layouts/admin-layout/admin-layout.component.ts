@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '@services/auth.service';
 import { ThemeService } from '@services/theme.service';
@@ -29,6 +29,14 @@ export class AdminLayoutComponent {
   protected readonly userMenuBottom = signal(0);
   protected readonly userMenuLeft = signal(0);
   protected readonly isDark = this.themeService.isDark;
+
+  public constructor() {
+    afterNextRender(() => {
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        this.sidebarCollapsed.set(true);
+      }
+    });
+  }
 
   protected toggleSidebar(): void {
     this.sidebarCollapsed.update((v) => !v);

@@ -84,7 +84,7 @@ export class ApiKeysPage {
   }
 
   public async openRevokeForRow(index: number) {
-    await this.keyRows.nth(index).locator('[data-testid="api-key-revoke-btn"]').click();
+    await this.keyRows.nth(index).locator('[data-testid="api-key-revoke-btn-desktop"]').click();
   }
 
   public async confirmRevoke() {

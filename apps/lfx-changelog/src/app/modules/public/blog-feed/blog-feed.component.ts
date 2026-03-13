@@ -1,40 +1,56 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
+import { PaginationComponent } from '@components/pagination/pagination.component';
 import { ProductPillComponent } from '@components/product-pill/product-pill.component';
 import { BlogService } from '@services/blog.service';
 import { BlogTypeLabelPipe } from '@shared/pipes/blog-type-label.pipe';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
-import { catchError, finalize, map, of } from 'rxjs';
+import { catchError, of, switchMap, tap } from 'rxjs';
 
 import type { Signal } from '@angular/core';
-import type { BlogPostWithRelations } from '@lfx-changelog/shared';
+import type { BlogPostWithRelations, PaginatedResponse } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-blog-feed',
-  imports: [RouterLink, CardComponent, ProductPillComponent, BlogTypeLabelPipe, DateFormatPipe],
+  imports: [RouterLink, CardComponent, PaginationComponent, ProductPillComponent, BlogTypeLabelPipe, DateFormatPipe],
   templateUrl: './blog-feed.component.html',
   styleUrl: './blog-feed.component.css',
 })
 export class BlogFeedComponent {
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly blogService = inject(BlogService);
 
   protected readonly loading = signal(true);
+  protected readonly currentPage = signal(1);
 
-  protected readonly posts: Signal<BlogPostWithRelations[]> = this.initPosts();
+  protected readonly paginatedResult: Signal<PaginatedResponse<BlogPostWithRelations>> = this.initPaginatedResult();
+  protected readonly posts = computed(() => this.paginatedResult().data);
+  protected readonly totalPages = computed(() => this.paginatedResult().totalPages);
+  protected readonly totalItems = computed(() => this.paginatedResult().total);
+  protected readonly pageSize = computed(() => this.paginatedResult().pageSize);
 
-  private initPosts(): Signal<BlogPostWithRelations[]> {
+  protected onPageChange(page: number): void {
+    this.currentPage.set(page);
+    if (isPlatformBrowser(this.platformId)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  private initPaginatedResult(): Signal<PaginatedResponse<BlogPostWithRelations>> {
+    const emptyResult: PaginatedResponse<BlogPostWithRelations> = { success: true, data: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
     return toSignal(
-      this.blogService.getPublished().pipe(
-        map((res) => res.data),
-        catchError(() => of([])),
-        finalize(() => this.loading.set(false))
+      toObservable(this.currentPage).pipe(
+        tap(() => this.loading.set(true)),
+        switchMap((page) => this.blogService.getPublished({ page }).pipe(catchError(() => of(emptyResult)))),
+        tap(() => this.loading.set(false))
       ),
-      { initialValue: [] }
+      { initialValue: emptyResult }
     );
   }
 }

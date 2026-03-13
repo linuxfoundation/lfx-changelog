@@ -652,3 +652,16 @@ body {
   background: rgba(37, 99, 235, 0.2);
   color: var(--color-text-primary);
 }
+
+/* ═══════════════════════════════════════════════
+   EDITOR ACTIONS — full-width buttons on mobile
+   ::ng-deep required to pierce lfx-button encapsulation
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 639px) {
+  /* stylelint-disable-next-line selector-pseudo-element-no-unknown */
+  .editor-actions ::ng-deep :is(lfx-button, a, button) {
+    display: block;
+    width: 100%;
+  }
+}

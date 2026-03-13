@@ -33,7 +33,7 @@
       @for (group of groupedByProduct(); track group.productId) {
         <div [attr.data-testid]="'repository-list-group-' + group.productId" class="border-border bg-surface overflow-hidden rounded-lg border">
           <!-- Product header -->
-          <div class="flex items-center gap-3 px-5 py-4">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5 sm:py-4">
             <button (click)="toggleGroup(group.productId)" class="text-text-secondary hover:text-text-primary transition-colors">
               <i
                 class="fa-solid fa-chevron-right w-4 text-center text-xs transition-transform duration-200"
@@ -46,7 +46,7 @@
             <span class="bg-surface-alt text-text-secondary rounded-full px-2 py-0.5 text-xs font-medium">
               {{ group.repos.length }} {{ group.repos.length === 1 ? 'repo' : 'repos' }}
             </span>
-            <span class="text-text-muted text-xs">{{ group.totalReleases }} releases</span>
+            <span class="text-text-muted hidden text-xs sm:inline">{{ group.totalReleases }} releases</span>
             <div class="ml-auto">
               <lfx-button variant="secondary" size="sm" [loading]="syncingProduct() | setIncludes: group.productId" (clicked)="syncProduct(group.productId)">
                 <i class="fa-solid fa-arrows-rotate text-xs"></i>
@@ -59,22 +59,29 @@
           @if (!(collapsedGroups() | setIncludes: group.productId)) {
             <div class="border-border border-t">
               @for (repo of group.repos; track repo.id) {
-                <div class="border-border flex items-center gap-4 px-5 py-3" [class.border-t]="!$first">
-                  <i class="fa-duotone fa-code-branch text-text-muted w-5 text-center text-sm"></i>
-                  <div class="min-w-0 flex-1">
-                    <a
-                      [href]="repo.htmlUrl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-brand-600 hover:text-brand-700 text-sm font-medium hover:underline">
-                      {{ repo.fullName }}
-                    </a>
-                    @if (repo.description) {
-                      <p class="text-text-muted mt-0.5 truncate text-xs">{{ repo.description }}</p>
-                    }
+                <div class="border-border space-y-2 px-4 py-3 sm:flex sm:items-center sm:gap-4 sm:space-y-0 sm:px-5" [class.border-t]="!$first">
+                  <div class="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+                    <i class="fa-duotone fa-code-branch text-text-muted mt-0.5 w-5 shrink-0 text-center text-sm sm:mt-0"></i>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-2">
+                        <a
+                          [href]="repo.htmlUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-brand-600 hover:text-brand-700 truncate text-sm font-medium hover:underline">
+                          {{ repo.fullName }}
+                        </a>
+                        @if (repo.isPrivate) {
+                          <span class="bg-warning-50 text-warning-700 hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium sm:inline">Private</span>
+                        }
+                      </div>
+                      @if (repo.description) {
+                        <p class="text-text-muted mt-0.5 truncate text-xs">{{ repo.description }}</p>
+                      }
+                    </div>
                   </div>
-                  <div class="flex items-center gap-6">
-                    <div class="text-right">
+                  <div class="space-y-2 pl-8 sm:flex sm:items-center sm:gap-4 sm:space-y-0 sm:pl-0">
+                    <div class="sm:text-right">
                       <div class="text-text-secondary text-xs font-medium">{{ repo.releaseCount }} releases</div>
                       @if (repo.lastSyncedAt) {
                         <div class="text-text-muted text-xs">Synced {{ repo.lastSyncedAt | timeAgo }}</div>
@@ -82,13 +89,12 @@
                         <div class="text-text-muted text-xs">Never synced</div>
                       }
                     </div>
-                    @if (repo.isPrivate) {
-                      <span class="bg-warning-50 text-warning-700 rounded-full px-2 py-0.5 text-xs font-medium">Private</span>
-                    }
-                    <lfx-button variant="ghost" size="sm" [loading]="syncingRepo() | setIncludes: repo.id" (clicked)="syncRepository(repo.id)">
-                      <i class="fa-solid fa-arrows-rotate text-xs"></i>
-                      Sync
-                    </lfx-button>
+                    <div class="flex justify-end sm:justify-start">
+                      <lfx-button variant="ghost" size="sm" [loading]="syncingRepo() | setIncludes: repo.id" (clicked)="syncRepository(repo.id)">
+                        <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                        Sync
+                      </lfx-button>
+                    </div>
                   </div>
                 </div>
               }

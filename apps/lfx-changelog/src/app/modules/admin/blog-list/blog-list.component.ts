@@ -6,8 +6,10 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
 import { ConfirmDialogComponent } from '@components/confirm-dialog/confirm-dialog.component';
 import { DropdownMenuComponent } from '@components/dropdown-menu/dropdown-menu.component';
+import { PaginationComponent } from '@components/pagination/pagination.component';
 import { SelectComponent } from '@components/select/select.component';
 import { StatusBadgeComponent } from '@components/status-badge/status-badge.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
@@ -31,7 +33,9 @@ import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.int
     ReactiveFormsModule,
     RouterLink,
     ButtonComponent,
+    CardComponent,
     DropdownMenuComponent,
+    PaginationComponent,
     SelectComponent,
     StatusBadgeComponent,
     TableComponent,

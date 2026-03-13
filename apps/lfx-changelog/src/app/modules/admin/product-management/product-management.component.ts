@@ -6,6 +6,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
 import { ConfirmDialogComponent } from '@components/confirm-dialog/confirm-dialog.component';
 import { DropdownMenuComponent } from '@components/dropdown-menu/dropdown-menu.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
@@ -23,7 +24,7 @@ import type { DropdownMenuItem } from '@shared/interfaces/form.interface';
 
 @Component({
   selector: 'lfx-product-management',
-  imports: [RouterLink, BadgeComponent, ButtonComponent, DropdownMenuComponent, TableComponent, TableColumnDirective, MapGetPipe],
+  imports: [RouterLink, BadgeComponent, ButtonComponent, CardComponent, DropdownMenuComponent, TableComponent, TableColumnDirective, MapGetPipe],
   templateUrl: './product-management.component.html',
   styleUrl: './product-management.component.css',
 })

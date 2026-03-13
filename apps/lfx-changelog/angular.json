@@ -70,8 +70,7 @@
               "@lfx-changelog/mcp-server",
               "@modelcontextprotocol/sdk",
               "@opensearch-project/opensearch",
-              "dd-trace",
-              "@linuxfoundation/lfx-ui-core"
+              "dd-trace"
             ]
           },
           "configurations": {
