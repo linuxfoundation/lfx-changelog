@@ -25,7 +25,7 @@ import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
 import { SearchService } from '../services/search.service';
 import { setupSwagger } from '../swagger';
-import { createApiKeyRateLimiter } from './rate-limit';
+import { createApiKeyRateLimiter, createAuthenticatedChatRateLimiter, createPublicChatRateLimiter } from './rate-limit';
 
 import type { Express, NextFunction, Request, Response } from 'express';
 
@@ -56,6 +56,9 @@ export function setupRoutes(app: Express): void {
   app.use('/webhooks', webhookRouter);
 
   // ── Public API routes (no auth required) ──────────────────────────────
+  if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
+    app.use('/public/api/chat', createPublicChatRateLimiter());
+  }
   app.use('/public/api/chat', sameOriginOnly, publicChatRouter);
   app.use('/public/api/blog', publicBlogRouter);
   app.use('/public/api/search', publicSearchRouter);
@@ -87,6 +90,9 @@ export function setupRoutes(app: Express): void {
   app.use('/api/blogs', blogRouter);
 
   // Chat is UI-only — same-origin + session auth only (no API key, no cross-origin)
+  if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
+    app.use('/api/chat', createAuthenticatedChatRateLimiter());
+  }
   app.use('/api/chat', sameOriginOnly, (req: Request, res: Response, next: NextFunction) => {
     if (req.authMethod === 'api_key') {
       res.status(403).json({ success: false, error: 'Chat endpoints require session authentication' });

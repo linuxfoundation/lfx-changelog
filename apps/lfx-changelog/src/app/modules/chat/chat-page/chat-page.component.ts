@@ -4,6 +4,7 @@
 import { Component, DestroyRef, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 
 import { ChatMessageComponent } from '../chat-message/chat-message.component';
@@ -29,6 +30,8 @@ export class ChatPageComponent {
   private readonly chatService = inject(ChatService);
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   public readonly mode = input<ChatAccessLevel>('public');
   public readonly messageControl = new FormControl('');
@@ -43,6 +46,7 @@ export class ChatPageComponent {
   protected readonly conversationTitle = this.chatService.conversationTitle;
   protected readonly conversations = this.chatService.conversations;
   protected readonly error = this.chatService.error;
+  protected readonly authRequired = this.chatService.authRequired;
   protected readonly authenticated = this.authService.authenticated;
 
   protected readonly showHistory = signal(false);
@@ -50,11 +54,25 @@ export class ChatPageComponent {
   protected readonly hasMessages = computed(() => this.messages().length > 0);
   protected readonly canSend: Signal<boolean> = this.initCanSend();
   protected readonly copy = computed<ChatCopy>(() => (this.mode() === 'admin' ? ADMIN_COPY : PUBLIC_COPY));
+  protected readonly loginUrl = computed(() => {
+    const cid = this.conversationId();
+    const returnTo = cid ? `/chat?cid=${cid}` : '/chat';
+    return `/login?returnTo=${encodeURIComponent(returnTo)}`;
+  });
 
   public constructor() {
     afterNextRender(() => {
       this.chatService.mode.set(this.mode());
       this.chatService.loadConversations();
+
+      // Restore conversation after login redirect (cid query param)
+      const cid = this.route.snapshot.queryParamMap.get('cid');
+      if (cid) {
+        this.chatService.loadConversation(cid);
+        this.autoScroll = true;
+        // Clean the query param from the URL
+        this.router.navigate([], { queryParams: {}, replaceUrl: true });
+      }
     });
     this.initAutoScroll();
   }

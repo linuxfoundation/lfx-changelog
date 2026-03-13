@@ -58,7 +58,8 @@
               "swagger-ui-express",
               "@datadog/browser-rum",
               "@datadog/browser-core",
-              "@datadog/browser-rum-core"
+              "@datadog/browser-rum-core",
+              "@linuxfoundation/lfx-ui-core"
             ],
             "externalDependencies": [
               "@anthropic-ai/claude-agent-sdk",

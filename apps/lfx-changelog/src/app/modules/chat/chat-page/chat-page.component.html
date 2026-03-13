@@ -128,43 +128,62 @@
       </div>
     }
 
-    <!-- Input area -->
-    <div class="border-border bg-surface/80 border-t px-4 pt-3 pb-4 backdrop-blur-sm sm:px-8 sm:pt-4 sm:pb-5">
-      <div class="mx-auto flex max-w-2xl items-center gap-2 sm:gap-3">
-        @if (mode() === 'admin' && authenticated()) {
-          <button
-            (click)="toggleHistory()"
-            class="text-text-muted hover:text-text-primary hover:bg-surface-alt flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition-all md:hidden"
-            [attr.aria-expanded]="showHistory()"
-            aria-controls="chat-history-sidebar"
-            title="Chat history">
-            <i class="fa-duotone fa-clock-rotate-left text-sm"></i>
-          </button>
-        }
-        <textarea
-          [formControl]="messageControl"
-          (keydown)="onKeydown($event)"
-          [placeholder]="copy().placeholder"
-          rows="1"
-          class="chat-textarea border-border bg-canvas text-text-primary placeholder:text-text-muted min-w-0 flex-1 resize-none rounded-2xl border px-4 py-3 text-sm shadow-sm sm:px-5 sm:py-3.5 dark:shadow-none"></textarea>
-        @if (streaming()) {
-          <button
-            (click)="abort()"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-500 text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md sm:h-12 sm:w-12"
-            title="Stop generating">
-            <i class="fa-solid fa-stop text-sm"></i>
-          </button>
-        } @else {
-          <button
-            (click)="send()"
-            [disabled]="!canSend()"
-            class="bg-brand-600 hover:bg-brand-700 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none sm:h-12 sm:w-12"
-            title="Send message">
-            <i class="fa-solid fa-paper-plane-top text-sm"></i>
-          </button>
-        }
+    <!-- Auth required prompt -->
+    @if (authRequired()) {
+      <div class="border-border bg-surface/80 border-t px-4 pt-4 pb-5 backdrop-blur-sm sm:px-8 sm:pt-5 sm:pb-6">
+        <div class="mx-auto flex max-w-2xl flex-col items-center gap-3 text-center">
+          <div class="bg-brand-50 flex h-10 w-10 items-center justify-center rounded-xl">
+            <i class="fa-duotone fa-right-to-bracket text-brand-500 text-base"></i>
+          </div>
+          <p class="text-text-primary text-sm font-medium">Sign in to continue the conversation</p>
+          <p class="text-text-secondary text-xs leading-relaxed">Create a free account to keep chatting and access your conversation history.</p>
+          <a
+            [href]="loginUrl()"
+            class="bg-brand-600 hover:bg-brand-700 inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md">
+            <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+            Sign in
+          </a>
+        </div>
       </div>
-      <p class="text-text-muted/70 mx-auto mt-1.5 max-w-2xl text-center text-[10px] sm:mt-2">AI can make mistakes. Verify important information.</p>
-    </div>
+    } @else {
+      <!-- Input area -->
+      <div class="border-border bg-surface/80 border-t px-4 pt-3 pb-4 backdrop-blur-sm sm:px-8 sm:pt-4 sm:pb-5">
+        <div class="mx-auto flex max-w-2xl items-center gap-2 sm:gap-3">
+          @if (mode() === 'admin' && authenticated()) {
+            <button
+              (click)="toggleHistory()"
+              class="text-text-muted hover:text-text-primary hover:bg-surface-alt flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition-all md:hidden"
+              [attr.aria-expanded]="showHistory()"
+              aria-controls="chat-history-sidebar"
+              title="Chat history">
+              <i class="fa-duotone fa-clock-rotate-left text-sm"></i>
+            </button>
+          }
+          <textarea
+            [formControl]="messageControl"
+            (keydown)="onKeydown($event)"
+            [placeholder]="copy().placeholder"
+            rows="1"
+            class="chat-textarea border-border bg-canvas text-text-primary placeholder:text-text-muted min-w-0 flex-1 resize-none rounded-2xl border px-4 py-3 text-sm shadow-sm sm:px-5 sm:py-3.5 dark:shadow-none"></textarea>
+          @if (streaming()) {
+            <button
+              (click)="abort()"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-500 text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md sm:h-12 sm:w-12"
+              title="Stop generating">
+              <i class="fa-solid fa-stop text-sm"></i>
+            </button>
+          } @else {
+            <button
+              (click)="send()"
+              [disabled]="!canSend()"
+              class="bg-brand-600 hover:bg-brand-700 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none sm:h-12 sm:w-12"
+              title="Send message">
+              <i class="fa-solid fa-paper-plane-top text-sm"></i>
+            </button>
+          }
+        </div>
+        <p class="text-text-muted/70 mx-auto mt-1.5 max-w-2xl text-center text-[10px] sm:mt-2">AI can make mistakes. Verify important information.</p>
+      </div>
+    }
   </div>
 </div>

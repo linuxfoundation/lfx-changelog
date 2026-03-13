@@ -28,6 +28,7 @@ export class ChatService {
   public readonly conversationTitle = signal('New conversation');
   public readonly conversations: Signal<ChatConversation[]> = this.initConversations();
   public readonly error = signal('');
+  public readonly authRequired = signal(false);
 
   private subscription: Subscription | null = null;
   private charBuffer = '';
@@ -35,6 +36,7 @@ export class ChatService {
 
   public sendMessage(message: string): void {
     this.error.set('');
+    this.authRequired.set(false);
 
     // Add user message to UI immediately
     this.messages.update((msgs) => [...msgs, { role: 'user', content: message }]);
@@ -106,11 +108,9 @@ export class ChatService {
   }
 
   public abort(): void {
-    this.flushCharBuffer();
+    this.stopStreaming();
     this.subscription?.unsubscribe();
     this.subscription = null;
-    this.streaming.set(false);
-    this.currentStatus.set('');
   }
 
   public reset(): void {
@@ -119,6 +119,7 @@ export class ChatService {
     this.conversationId.set(null);
     this.conversationTitle.set('New conversation');
     this.error.set('');
+    this.authRequired.set(false);
   }
 
   public newConversation(): void {
@@ -144,29 +145,49 @@ export class ChatService {
         this.currentStatus.set(event.data);
         break;
       case 'done':
-        this.flushCharBuffer();
-        this.streaming.set(false);
-        this.currentStatus.set('');
+        this.stopStreaming();
         // Refresh conversations list for admin mode
         if (this.mode() === 'admin') {
           this.loadConversations();
         }
         break;
+      case 'auth_required':
+        this.stopStreaming();
+        this.authRequired.set(true);
+        // Remove the empty assistant placeholder AND the optimistic user message
+        // (server rejected the request before persisting either)
+        this.removeTrailingPlaceholders(true);
+        break;
       case 'error':
-        this.flushCharBuffer();
+        this.stopStreaming();
         this.error.set(event.data);
-        this.streaming.set(false);
-        this.currentStatus.set('');
         // Remove the empty assistant message
-        this.messages.update((msgs) => {
-          const last = msgs[msgs.length - 1];
-          if (last && last.role === 'assistant' && !last.content) {
-            return msgs.slice(0, -1);
-          }
-          return msgs;
-        });
+        this.removeTrailingPlaceholders(false);
         break;
     }
+  }
+
+  /** Flush buffer and reset streaming state. */
+  private stopStreaming(): void {
+    this.flushCharBuffer();
+    this.streaming.set(false);
+    this.currentStatus.set('');
+  }
+
+  /** Remove trailing empty assistant (and optionally user) messages. */
+  private removeTrailingPlaceholders(includeUser: boolean): void {
+    this.messages.update((msgs) => {
+      const trimmed = [...msgs];
+      // Remove trailing empty assistant message
+      if (trimmed.length > 0 && trimmed[trimmed.length - 1].role === 'assistant' && !trimmed[trimmed.length - 1].content) {
+        trimmed.pop();
+      }
+      // Optionally remove the optimistic user message that was never persisted
+      if (includeUser && trimmed.length > 0 && trimmed[trimmed.length - 1].role === 'user') {
+        trimmed.pop();
+      }
+      return trimmed;
+    });
   }
 
   private toolCallToStatus(toolName: string): string {
