@@ -73,7 +73,7 @@
                   </div>
                   <!-- Actions (desktop inline, mobile below) -->
                   <div class="hidden shrink-0 sm:block">
-                    <lfx-button data-testid="api-key-revoke-btn" variant="ghost" size="sm" (clicked)="openRevoke(key)">
+                    <lfx-button data-testid="api-key-revoke-btn-desktop" variant="ghost" size="sm" (clicked)="openRevoke(key)">
                       <span class="text-red-500 opacity-60 transition-opacity group-hover:opacity-100">Revoke</span>
                     </lfx-button>
                   </div>
@@ -104,7 +104,7 @@
 
                 <!-- Revoke button (mobile only) -->
                 <div class="mt-3 sm:hidden">
-                  <lfx-button data-testid="api-key-revoke-btn" variant="ghost" size="sm" (clicked)="openRevoke(key)">
+                  <lfx-button data-testid="api-key-revoke-btn-mobile" variant="ghost" size="sm" (clicked)="openRevoke(key)">
                     <span class="text-red-500">Revoke</span>
                   </lfx-button>
                 </div>

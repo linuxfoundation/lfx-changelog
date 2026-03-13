@@ -12,7 +12,7 @@ import { ChangelogService } from '@services/changelog.service';
 import { ProductService } from '@services/product.service';
 import { SearchService } from '@services/search.service';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
-import { catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, ChangelogSearchHit, PaginatedResponse, PublicProduct, SearchResponse } from '@lfx-changelog/shared';
 
@@ -100,11 +100,9 @@ export class ChangelogFeedComponent {
       toObservable(this.fetchParams).pipe(
         tap(() => this.loading.set(true)),
         switchMap(({ productId, page }) =>
-          this.changelogService.getPublished({ ...(productId ? { productId } : {}), page }).pipe(
-            catchError(() => of(emptyResult)),
-            finalize(() => this.loading.set(false))
-          )
-        )
+          this.changelogService.getPublished({ ...(productId ? { productId } : {}), page }).pipe(catchError(() => of(emptyResult)))
+        ),
+        tap(() => this.loading.set(false))
       ),
       { initialValue: emptyResult }
     );

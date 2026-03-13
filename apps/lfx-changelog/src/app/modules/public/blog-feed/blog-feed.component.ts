@@ -11,7 +11,7 @@ import { ProductPillComponent } from '@components/product-pill/product-pill.comp
 import { BlogService } from '@services/blog.service';
 import { BlogTypeLabelPipe } from '@shared/pipes/blog-type-label.pipe';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
-import { catchError, finalize, of, switchMap, tap } from 'rxjs';
+import { catchError, of, switchMap, tap } from 'rxjs';
 
 import type { Signal } from '@angular/core';
 import type { BlogPostWithRelations, PaginatedResponse } from '@lfx-changelog/shared';
@@ -47,12 +47,8 @@ export class BlogFeedComponent {
     return toSignal(
       toObservable(this.currentPage).pipe(
         tap(() => this.loading.set(true)),
-        switchMap((page) =>
-          this.blogService.getPublished({ page }).pipe(
-            catchError(() => of(emptyResult)),
-            finalize(() => this.loading.set(false))
-          )
-        )
+        switchMap((page) => this.blogService.getPublished({ page }).pipe(catchError(() => of(emptyResult)))),
+        tap(() => this.loading.set(false))
       ),
       { initialValue: emptyResult }
     );
