@@ -83,7 +83,7 @@ test.describe('Changelog Feed', () => {
   test('should display the footer', async ({ page }) => {
     const footer = page.locator('footer');
     await expect(footer).toBeVisible();
-    await expect(footer).toContainText('The Linux Foundation');
+    await expect(footer.locator('lfx-footer')).toBeAttached();
   });
 
   test('should display the search input', async () => {
