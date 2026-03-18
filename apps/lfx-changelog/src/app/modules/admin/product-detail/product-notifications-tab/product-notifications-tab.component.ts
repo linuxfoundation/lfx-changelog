@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, inject, input, OnInit, signal, Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -21,7 +21,7 @@ import type { LoadingState } from '@shared/interfaces/loading-state.interface';
   templateUrl: './product-notifications-tab.component.html',
   styleUrl: './product-notifications-tab.component.css',
 })
-export class ProductNotificationsTabComponent implements OnInit {
+export class ProductNotificationsTabComponent {
   private readonly productService = inject(ProductService);
   private readonly userService = inject(UserService);
   private readonly toastService = inject(ToastService);
@@ -49,7 +49,7 @@ export class ProductNotificationsTabComponent implements OnInit {
       .map((u) => ({ label: `${u.name} (${u.email})`, value: u.id }));
   });
 
-  public ngOnInit(): void {
+  public constructor() {
     this.refresh$.next();
   }
 

@@ -53,10 +53,10 @@ router.get('/:id/activity', authorize({ scope: ApiKeyScope.PRODUCTS_READ, role: 
   productController.getActivity(req, res, next)
 );
 
-router.get('/:id/notify-users', authorize({ role: UserRole.PRODUCT_ADMIN }), (req, res, next) => productController.listNotifyUsers(req, res, next));
-router.post('/:id/notify-users', authorize({ role: UserRole.PRODUCT_ADMIN }), validate({ body: AddSlackNotifyUserRequestSchema }), (req, res, next) =>
+router.get('/:id/notify-users', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => productController.listNotifyUsers(req, res, next));
+router.post('/:id/notify-users', authorize({ role: UserRole.SUPER_ADMIN }), validate({ body: AddSlackNotifyUserRequestSchema }), (req, res, next) =>
   productController.addNotifyUser(req, res, next)
 );
-router.delete('/:id/notify-users/:userId', authorize({ role: UserRole.PRODUCT_ADMIN }), (req, res, next) => productController.removeNotifyUser(req, res, next));
+router.delete('/:id/notify-users/:userId', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => productController.removeNotifyUser(req, res, next));
 
 export default router;

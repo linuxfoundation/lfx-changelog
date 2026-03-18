@@ -411,9 +411,9 @@ export class ChangelogAgentService {
                 serverLogger.warn({ err, jobId }, 'Failed to record quality scores')
               );
 
-              // Notify configured users via Slack DM — manual triggers only (fire-and-forget)
-              if (updatedJob.trigger === 'manual' && updatedJob.changelogEntry && updatedJob.product) {
-                const entry = { ...updatedJob.changelogEntry, slug: updatedJob.changelogEntry.slug ?? '' };
+              // Notify configured users via Slack DM — release-triggered jobs only (fire-and-forget)
+              if (updatedJob.trigger === 'webhook_release' && updatedJob.changelogEntry && updatedJob.product) {
+                const entry = { id: updatedJob.changelogEntry.id, title: updatedJob.changelogEntry.title };
                 this.slackService
                   .sendDraftReadyDms(productId, entry, updatedJob.product.name)
                   .then(async (notified) => {

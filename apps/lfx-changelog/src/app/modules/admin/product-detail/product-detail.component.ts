@@ -7,6 +7,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TabsComponent } from '@components/tabs/tabs.component';
+import { AuthService } from '@services/auth.service';
 import { ProductService } from '@services/product.service';
 import { catchError, filter, first, map, of, startWith, switchMap } from 'rxjs';
 
@@ -18,10 +19,9 @@ import type { Product } from '@lfx-changelog/shared';
 import type { Tab } from '@shared/interfaces/form.interface';
 import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 
-const TABS: Tab[] = [
+const BASE_TABS: Tab[] = [
   { label: 'Overview', value: 'overview' },
   { label: 'Repositories', value: 'repositories' },
-  { label: 'Notifications', value: 'notifications' },
 ];
 
 @Component({
@@ -35,8 +35,10 @@ export class ProductDetailComponent {
   private readonly router = inject(Router);
   private readonly productService = inject(ProductService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AuthService);
 
-  protected readonly tabs = TABS;
+  protected readonly isSuperAdmin = this.authService.isSuperAdmin;
+  protected readonly tabs = computed<Tab[]>(() => (this.isSuperAdmin() ? [...BASE_TABS, { label: 'Notifications', value: 'notifications' }] : BASE_TABS));
   protected readonly activeTab = signal('overview');
   protected readonly callbackInstallationId = signal<string | null>(null);
 
@@ -54,7 +56,7 @@ export class ProductDetailComponent {
       )
       .subscribe((params) => {
         const tab = params.get('tab');
-        if (tab === 'repositories' || tab === 'overview' || tab === 'notifications') {
+        if (tab === 'repositories' || tab === 'overview' || (tab === 'notifications' && this.isSuperAdmin())) {
           this.activeTab.set(tab);
         }
         const installationId = params.get('installation_id');

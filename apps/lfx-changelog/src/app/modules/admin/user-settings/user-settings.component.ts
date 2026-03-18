@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, Signal, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, Signal, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -15,14 +15,14 @@ import { AuthService } from '@services/auth.service';
 import { DialogService } from '@services/dialog.service';
 import { IntegrationsService } from '@services/integrations.service';
 import { ToastService } from '@services/toast.service';
-import { BehaviorSubject, catchError, filter, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, filter, of, switchMap, take, tap } from 'rxjs';
 
 import type { SlackBotInstallation, SlackChannelOption, SlackIntegration } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
   selector: 'lfx-user-settings',
-  imports: [DatePipe, ReactiveFormsModule, ButtonComponent, CardComponent, SelectComponent, ApiKeysComponent],
+  imports: [DatePipe, ReactiveFormsModule, ButtonComponent, CardComponent, SelectComponent, ApiKeysComponent, DisconnectSlackDialogComponent],
   templateUrl: './user-settings.component.html',
   styleUrl: './user-settings.component.css',
 })
@@ -32,6 +32,7 @@ export class UserSettingsComponent {
   private readonly dialogService = inject(DialogService);
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly isSuperAdmin = this.authService.isSuperAdmin;
@@ -136,12 +137,18 @@ export class UserSettingsComponent {
 
   private initBotInstallation(): Signal<SlackBotInstallation | null> {
     return toSignal(
-      this.integrationsService.getBotInstallation().pipe(
-        tap(() => this.botLoading.set(false)),
-        catchError(() => {
-          this.botLoading.set(false);
-          return of(null);
-        })
+      toObservable(this.isSuperAdmin).pipe(
+        filter((is) => is),
+        take(1),
+        switchMap(() =>
+          this.integrationsService.getBotInstallation().pipe(
+            tap(() => this.botLoading.set(false)),
+            catchError(() => {
+              this.botLoading.set(false);
+              return of(null);
+            })
+          )
+        )
       ),
       { initialValue: null }
     );

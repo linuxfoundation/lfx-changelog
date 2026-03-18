@@ -165,7 +165,10 @@ export class WebhookController {
     const error = req.query['error'] as string | undefined;
 
     if (error) {
-      res.redirect('/admin/settings?slack_error=access_denied');
+      // Branch on state type so the correct error banner shows in the UI
+      const errorState = state ? this.slackService.verifyOAuthState(state) : null;
+      const param = errorState?.['type'] === 'bot' ? 'slack_bot_error' : 'slack_error';
+      res.redirect(`/admin/settings?${param}=access_denied`);
       return;
     }
 

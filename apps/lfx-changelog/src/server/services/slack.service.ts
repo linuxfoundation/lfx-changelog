@@ -217,7 +217,7 @@ export class SlackService {
    */
   public async getBotInstallation(): Promise<SlackBotInstallation | null> {
     const prisma = getPrismaClient();
-    const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' } });
+    const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' }, orderBy: { installedAt: 'desc' } });
     if (!installation) return null;
     return {
       id: installation.id,
@@ -428,7 +428,7 @@ export class SlackService {
    * Look up all Slack notify users for a product and send each a DM.
    * Individual failures are logged but do not abort the others.
    */
-  public async sendDraftReadyDms(productId: string, entry: { id: string; title: string; slug: string }, productName: string): Promise<string[]> {
+  public async sendDraftReadyDms(productId: string, entry: { id: string; title: string }, productName: string): Promise<string[]> {
     const prisma = getPrismaClient();
     const rows = await prisma.productSlackNotifyUser.findMany({
       where: { productId },
@@ -699,7 +699,7 @@ export class SlackService {
    */
   private async getFreshBotToken(): Promise<string> {
     const prisma = getPrismaClient();
-    const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' } });
+    const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' }, orderBy: { installedAt: 'desc' } });
 
     if (!installation) {
       throw new Error('No active Slack bot installation found — install the bot via Admin → Settings');
@@ -749,14 +749,13 @@ export class SlackService {
    * Resolves the Slack member ID via users.lookupByEmail, opens a DM channel,
    * then posts the message.
    */
-  private async sendDraftReadyDm(email: string, entry: { id: string; title: string; slug: string }, productName: string, token: string): Promise<void> {
+  private async sendDraftReadyDm(email: string, entry: { id: string; title: string }, productName: string, token: string): Promise<void> {
     const baseUrl = this.baseUrl;
 
     // 1. Resolve email → Slack member ID
-    const lookupRes = await fetch(`https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(email)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const lookupData = (await lookupRes.json()) as SlackApiResponse & { user?: { id: string } };
+    const lookupData = (await this.slackApiGet(`https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(email)}`, token)) as SlackApiResponse & {
+      user?: { id: string };
+    };
     if (!lookupData.ok || !lookupData.user) {
       throw new Error(`users.lookupByEmail failed for ${email}: ${lookupData.error ?? 'unknown error'}`);
     }
@@ -778,7 +777,7 @@ export class SlackService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `:rocket: *New draft ready for review — ${productName}*\n\nA new release was detected and the changelog agent has completed a draft for your review.\n\n*${entry.title}*`,
+            text: `:rocket: *New draft ready for review — ${productName}*\n\nA new GitHub release was detected and the changelog agent has completed a draft for your review.\n\n*${entry.title}*`,
           },
         },
         {
