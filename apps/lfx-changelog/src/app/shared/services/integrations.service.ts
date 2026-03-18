@@ -10,6 +10,7 @@ import type {
   GitHubInstallation,
   GitHubRepository,
   PostToSlackResponse,
+  SlackBotInstallation,
   SlackChannel,
   SlackChannelOption,
   SlackIntegration,
@@ -74,6 +75,27 @@ export class IntegrationsService {
   public connectSlack(): void {
     this.http
       .get<ApiResponse<{ url: string }>>('/api/slack/connect')
+      .pipe(
+        map((res) => res.data.url),
+        take(1)
+      )
+      .subscribe((url) => {
+        window.location.href = url;
+      });
+  }
+
+  // ── Slack Bot ────────────────────────────────────
+
+  public getBotInstallation(): Observable<SlackBotInstallation | null> {
+    return this.http.get<ApiResponse<SlackBotInstallation | null>>('/api/slack/bot-installation').pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public connectBot(): void {
+    this.http
+      .get<ApiResponse<{ url: string }>>('/api/slack/bot-connect')
       .pipe(
         map((res) => res.data.url),
         take(1)

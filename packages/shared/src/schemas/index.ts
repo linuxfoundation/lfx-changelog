@@ -92,7 +92,7 @@ export {
   OpenSearchQueryClauseSchema,
   OpenSearchSearchResponseSchema,
 } from './opensearch.schema.js';
-export { ProductSchema } from './product.schema.js';
+export { AddSlackNotifyUserRequestSchema, ProductSchema, ProductSlackNotifyUserSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
 export { RuntimeConfigSchema } from './runtime-config.schema.js';
 export {
@@ -115,6 +115,7 @@ export {
   SaveSlackChannelRequestSchema,
   SlackApiResponseSchema,
   SlackBlockSchema,
+  SlackBotInstallationSchema,
   SlackChannelOptionSchema,
   SlackChannelSchema,
   SlackIntegrationSchema,
@@ -212,7 +213,7 @@ export type {
   OpenSearchQueryClause,
   OpenSearchSearchResponse,
 } from './opensearch.schema.js';
-export type { Product } from './product.schema.js';
+export type { AddSlackNotifyUserRequest, Product, ProductSlackNotifyUser } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
 export type { RuntimeConfig } from './runtime-config.schema.js';
 export type {
@@ -236,6 +237,7 @@ export type {
   SaveSlackChannelRequest,
   SlackApiResponse,
   SlackBlock,
+  SlackBotInstallation,
   SlackChannel,
   SlackChannelOption,
   SlackIntegration,

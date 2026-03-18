@@ -22,6 +22,20 @@
       Failed to connect Slack: {{ error }}
     </div>
   }
+  @if (slackBotConnected()) {
+    <div
+      class="animate-fade-in flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
+      <i class="fa-solid fa-circle-check"></i>
+      Slack bot installed successfully! Draft-ready notifications are now active.
+    </div>
+  }
+  @if (slackBotError(); as error) {
+    <div
+      class="animate-fade-in flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      Failed to install Slack bot: {{ error }}
+    </div>
+  }
 
   <!-- API Keys section -->
   <div class="animate-fade-in-up [animation-delay:50ms]">
@@ -150,5 +164,73 @@
         </div>
       </div>
     </lfx-card>
+
+    <!-- Slack Bot Installation — super admins only -->
+    @if (isSuperAdmin()) {
+      <div class="mt-4">
+        <lfx-card>
+          <div class="flex items-start gap-3 sm:gap-4">
+            <div class="bg-surface-alt hidden h-12 w-12 shrink-0 items-center justify-center rounded-lg sm:flex">
+              <img src="/slack.svg" alt="Slack" width="28" height="28" />
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 class="text-text-primary flex items-center gap-2 text-base font-semibold">
+                    <img src="/slack.svg" alt="" width="18" height="18" class="sm:hidden" />
+                    Slack Bot
+                    <span class="bg-surface-alt text-text-muted rounded px-1.5 py-0.5 text-xs font-normal">Super Admin</span>
+                  </h3>
+                  <p class="text-text-secondary mt-0.5 text-sm">Install the LFX Changelog bot to send draft-ready DM notifications to users.</p>
+                </div>
+
+                @if (!botInstallation() && !botLoading()) {
+                  <lfx-button variant="primary" (clicked)="connectBot()">
+                    <img src="/slack.svg" alt="Slack" width="14" height="14" class="inline-block" />
+                    Install Bot
+                  </lfx-button>
+                }
+              </div>
+
+              @if (botLoading()) {
+                <div class="text-text-muted mt-4 flex items-center gap-2 text-sm">
+                  <i class="fa-solid fa-spinner fa-spin text-xs"></i>
+                  Loading bot status...
+                </div>
+              }
+
+              @if (botInstallation(); as bot) {
+                <div class="border-border mt-4 space-y-3 border-t pt-4">
+                  <div class="flex flex-col gap-2 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-text-muted">Workspace:</span>
+                      <span class="text-text-primary font-medium">{{ bot.teamName }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-text-muted">Installed:</span>
+                      <span class="text-text-primary">{{ bot.installedAt | date: 'MMM d, yyyy' }}</span>
+                    </div>
+                    <span
+                      class="inline-flex w-fit items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      <i class="fa-solid fa-circle text-[6px]"></i>
+                      Active
+                    </span>
+                  </div>
+                  <p class="text-text-muted text-xs">
+                    <i class="fa-solid fa-circle-info mr-1"></i>
+                    To reinstall or update bot scopes, click "Install Bot" again to re-authorize.
+                  </p>
+                  <lfx-button variant="secondary" size="sm" (clicked)="connectBot()">
+                    <img src="/slack.svg" alt="Slack" width="12" height="12" class="inline-block" />
+                    Reinstall Bot
+                  </lfx-button>
+                </div>
+              }
+            </div>
+          </div>
+        </lfx-card>
+      </div>
+    }
   </div>
 </div>

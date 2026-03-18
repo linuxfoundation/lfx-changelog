@@ -8,7 +8,7 @@ import { markdownToSlackMrkdwn, truncateSlackMrkdwn } from '../helpers/markdown-
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 
-import type { PostChangelogEntry, PostToSlackResponse, SlackApiResponse, SlackBlock } from '@lfx-changelog/shared';
+import type { PostChangelogEntry, PostToSlackResponse, SlackApiResponse, SlackBlock, SlackBotInstallation } from '@lfx-changelog/shared';
 import type { SlackChannel as PrismaSlackChannel, SlackIntegration as PrismaSlackIntegration } from '@prisma/client';
 
 export class SlackService {
@@ -39,6 +39,7 @@ export class SlackService {
     return process.env['BASE_URL'] || 'http://localhost:4204';
   }
   private readonly slackUserScopes = 'chat:write,channels:read,groups:read';
+  private readonly slackBotScopes = 'chat:write,im:write,users:read,users:read.email';
   private readonly tokenRefreshBufferMs = 5 * 60 * 1000; // Refresh 5 minutes before expiry
   private readonly stateTtlMs = 10 * 60 * 1000; // OAuth state expires after 10 minutes
 
@@ -130,6 +131,103 @@ export class SlackService {
 
     serverLogger.info({ userId, teamId: team.id, teamName: team.name }, 'Slack integration connected');
     return { userId, integrationId: integration.id };
+  }
+
+  // ── Bot installation ──────────────────────────────────────────────────────
+
+  /**
+   * Generate the Slack OAuth URL for installing the bot to a workspace.
+   * Uses bot scopes (scope=) and embeds type:'bot' in the signed state.
+   */
+  public getBotOAuthUrl(userId: string): string {
+    if (!this.slackClientId || !this.slackClientSecret) {
+      throw new ServiceUnavailableError('Slack OAuth is not configured — SLACK_CLIENT_ID and SLACK_CLIENT_SECRET must be set', {
+        operation: 'getBotOAuthUrl',
+        service: 'slack',
+      });
+    }
+    const state = this.signState({ type: 'bot', userId, ts: Date.now() });
+    const redirectUri = `${this.baseUrl}/webhooks/slack-callback`;
+    const params = new URLSearchParams({
+      client_id: this.slackClientId,
+      scope: this.slackBotScopes,
+      redirect_uri: redirectUri,
+      state,
+    });
+    return `https://slack.com/oauth/v2/authorize?${params.toString()}`;
+  }
+
+  /**
+   * Exchange the OAuth code from a bot installation callback for tokens.
+   * Upserts the installation (one row per team) with encrypted rotating tokens.
+   */
+  public async handleBotInstallCallback(code: string): Promise<void> {
+    const redirectUri = `${this.baseUrl}/webhooks/slack-callback`;
+    const tokenResponse = await this.slackApiFetch('https://slack.com/api/oauth.v2.access', {
+      client_id: this.slackClientId,
+      client_secret: this.slackClientSecret,
+      code,
+      redirect_uri: redirectUri,
+    });
+
+    if (!tokenResponse.ok) {
+      serverLogger.error({ error: tokenResponse.error }, 'Slack bot OAuth token exchange failed');
+      throw new Error(`Slack bot OAuth failed: ${tokenResponse.error}`);
+    }
+
+    const accessToken = tokenResponse['access_token'] as string;
+    const refreshToken = tokenResponse['refresh_token'] as string;
+    const expiresIn = tokenResponse['expires_in'] as number;
+    const botUserId = tokenResponse['bot_user_id'] as string;
+    const team = tokenResponse['team'] as { id: string; name: string };
+
+    if (!accessToken || !refreshToken) {
+      throw new Error('Slack bot OAuth response missing tokens — ensure token rotation is enabled in your Slack app settings');
+    }
+
+    const prisma = getPrismaClient();
+    await prisma.slackBotInstallation.upsert({
+      where: { teamId: team.id },
+      create: {
+        teamId: team.id,
+        teamName: team.name,
+        botUserId,
+        accessToken: this.encrypt(accessToken),
+        refreshToken: this.encrypt(refreshToken),
+        tokenExpiresAt: new Date(Date.now() + expiresIn * 1000),
+        scope: tokenResponse['scope'] as string,
+        status: 'active',
+      },
+      update: {
+        teamName: team.name,
+        botUserId,
+        accessToken: this.encrypt(accessToken),
+        refreshToken: this.encrypt(refreshToken),
+        tokenExpiresAt: new Date(Date.now() + expiresIn * 1000),
+        scope: tokenResponse['scope'] as string,
+        status: 'active',
+      },
+    });
+
+    serverLogger.info({ teamId: team.id, teamName: team.name }, 'Slack bot installed');
+  }
+
+  /**
+   * Returns the active bot installation (safe — no tokens), or null if not installed.
+   */
+  public async getBotInstallation(): Promise<SlackBotInstallation | null> {
+    const prisma = getPrismaClient();
+    const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' } });
+    if (!installation) return null;
+    return {
+      id: installation.id,
+      teamId: installation.teamId,
+      teamName: installation.teamName,
+      botUserId: installation.botUserId,
+      scope: installation.scope,
+      status: installation.status,
+      installedAt: installation.installedAt.toISOString(),
+    };
   }
 
   /**
@@ -322,6 +420,49 @@ export class SlackService {
 
     await prisma.slackIntegration.delete({ where: { id: integrationId } });
     serverLogger.info({ userId, integrationId }, 'Slack integration disconnected');
+  }
+
+  // ── Bot-token DM notifications ─────────────────────
+
+  /**
+   * Look up all Slack notify users for a product and send each a DM.
+   * Individual failures are logged but do not abort the others.
+   */
+  public async sendDraftReadyDms(productId: string, entry: { id: string; title: string; slug: string }, productName: string): Promise<string[]> {
+    const prisma = getPrismaClient();
+    const rows = await prisma.productSlackNotifyUser.findMany({
+      where: { productId },
+      include: { user: { select: { email: true, name: true } } },
+    });
+
+    if (rows.length === 0) return [];
+
+    let token: string;
+    try {
+      token = await this.getFreshBotToken();
+    } catch (err) {
+      serverLogger.warn({ err, productId }, 'No active bot installation — skipping draft-ready DMs');
+      return [];
+    }
+
+    const notified: string[] = [];
+    await Promise.allSettled(
+      rows.map(async (row) => {
+        try {
+          await this.sendDraftReadyDm(row.user.email, entry, productName, token);
+          notified.push(row.user.name || row.user.email);
+          serverLogger.info({ productId, email: row.user.email, entryId: entry.id }, 'Draft-ready DM sent');
+        } catch (err) {
+          serverLogger.warn({ err, productId, email: row.user.email }, 'Failed to send draft-ready DM');
+        }
+      })
+    );
+
+    return notified;
+  }
+
+  public verifyOAuthState(state: string): Record<string, unknown> | null {
+    return this.verifyState(state);
   }
 
   // ── Token refresh ─────────────────────────────────────────────────────────
@@ -548,5 +689,111 @@ export class SlackService {
       body: JSON.stringify(body),
     });
     return (await res.json()) as SlackApiResponse;
+  }
+
+  // ── Bot-token DM notifications ─────────────────────
+
+  /**
+   * Returns a fresh bot access token, refreshing if within the buffer window.
+   * Throws if no active bot installation exists.
+   */
+  private async getFreshBotToken(): Promise<string> {
+    const prisma = getPrismaClient();
+    const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' } });
+
+    if (!installation) {
+      throw new Error('No active Slack bot installation found — install the bot via Admin → Settings');
+    }
+
+    const now = Date.now();
+    if (installation.tokenExpiresAt.getTime() - now > this.tokenRefreshBufferMs) {
+      return this.decrypt(installation.accessToken);
+    }
+
+    serverLogger.info({ teamId: installation.teamId }, 'Refreshing Slack bot token');
+    const refreshToken = this.decrypt(installation.refreshToken);
+
+    const res = await this.slackApiFetch('https://slack.com/api/oauth.v2.access', {
+      client_id: this.slackClientId,
+      client_secret: this.slackClientSecret,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    });
+
+    if (!res.ok) {
+      serverLogger.error({ error: res.error, teamId: installation.teamId }, 'Slack bot token refresh failed');
+      if (res.error === 'invalid_refresh_token' || res.error === 'token_revoked' || res.error === 'invalid_auth') {
+        await prisma.slackBotInstallation.update({ where: { id: installation.id }, data: { status: 'revoked' } });
+      }
+      throw new Error(`Slack bot token refresh failed: ${res.error}`);
+    }
+
+    const newAccessToken = res['access_token'] as string;
+    const newRefreshToken = res['refresh_token'] as string;
+    const expiresIn = res['expires_in'] as number;
+
+    await prisma.slackBotInstallation.update({
+      where: { id: installation.id },
+      data: {
+        accessToken: this.encrypt(newAccessToken),
+        refreshToken: this.encrypt(newRefreshToken),
+        tokenExpiresAt: new Date(Date.now() + expiresIn * 1000),
+      },
+    });
+
+    return newAccessToken;
+  }
+
+  /**
+   * Send a "draft ready" DM to a single email address using the bot token.
+   * Resolves the Slack member ID via users.lookupByEmail, opens a DM channel,
+   * then posts the message.
+   */
+  private async sendDraftReadyDm(email: string, entry: { id: string; title: string; slug: string }, productName: string, token: string): Promise<void> {
+    const baseUrl = this.baseUrl;
+
+    // 1. Resolve email → Slack member ID
+    const lookupRes = await fetch(`https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(email)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const lookupData = (await lookupRes.json()) as SlackApiResponse & { user?: { id: string } };
+    if (!lookupData.ok || !lookupData.user) {
+      throw new Error(`users.lookupByEmail failed for ${email}: ${lookupData.error ?? 'unknown error'}`);
+    }
+    const slackUserId = lookupData.user.id;
+
+    // 2. Open DM channel
+    const openRes = await this.slackApiPost('https://slack.com/api/conversations.open', token, { users: slackUserId });
+    const channel = (openRes as SlackApiResponse & { channel?: { id: string } }).channel;
+    if (!openRes.ok || !channel) {
+      throw new Error(`conversations.open failed for ${email}: ${openRes.error ?? 'unknown error'}`);
+    }
+
+    // 3. Post message
+    const draftUrl = `${baseUrl}/admin/changelogs/${entry.id}/edit`;
+    await this.slackApiPost('https://slack.com/api/chat.postMessage', token, {
+      channel: channel.id,
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `:rocket: *New draft ready for review — ${productName}*\n\nA new release was detected and the changelog agent has completed a draft for your review.\n\n*${entry.title}*`,
+          },
+        },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: { type: 'plain_text', text: 'View Draft', emoji: true },
+              style: 'primary',
+              url: draftUrl,
+            },
+          ],
+        },
+      ],
+      text: `New draft ready for review — ${productName}: ${entry.title}`,
+    });
   }
 }

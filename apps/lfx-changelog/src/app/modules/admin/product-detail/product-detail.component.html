@@ -42,6 +42,9 @@
         @case ('repositories') {
           <lfx-product-repositories-tab [productId]="product.id" [callbackInstallationId]="callbackInstallationId()" />
         }
+        @case ('notifications') {
+          <lfx-product-notifications-tab [productId]="product.id" />
+        }
       }
     </div>
   </div>

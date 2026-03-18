@@ -10,6 +10,7 @@ import { TabsComponent } from '@components/tabs/tabs.component';
 import { ProductService } from '@services/product.service';
 import { catchError, filter, first, map, of, startWith, switchMap } from 'rxjs';
 
+import { ProductNotificationsTabComponent } from './product-notifications-tab/product-notifications-tab.component';
 import { ProductOverviewTabComponent } from './product-overview-tab/product-overview-tab.component';
 import { ProductRepositoriesTabComponent } from './product-repositories-tab/product-repositories-tab.component';
 
@@ -20,11 +21,12 @@ import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 const TABS: Tab[] = [
   { label: 'Overview', value: 'overview' },
   { label: 'Repositories', value: 'repositories' },
+  { label: 'Notifications', value: 'notifications' },
 ];
 
 @Component({
   selector: 'lfx-product-detail',
-  imports: [BadgeComponent, ButtonComponent, TabsComponent, ProductOverviewTabComponent, ProductRepositoriesTabComponent],
+  imports: [BadgeComponent, ButtonComponent, TabsComponent, ProductNotificationsTabComponent, ProductOverviewTabComponent, ProductRepositoriesTabComponent],
   templateUrl: './product-detail.component.html',
   styleUrl: './product-detail.component.css',
 })
@@ -52,7 +54,7 @@ export class ProductDetailComponent {
       )
       .subscribe((params) => {
         const tab = params.get('tab');
-        if (tab === 'repositories' || tab === 'overview') {
+        if (tab === 'repositories' || tab === 'overview' || tab === 'notifications') {
           this.activeTab.set(tab);
         }
         const installationId = params.get('installation_id');

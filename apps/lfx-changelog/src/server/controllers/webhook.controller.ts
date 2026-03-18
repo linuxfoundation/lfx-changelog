@@ -157,6 +157,7 @@ export class WebhookController {
 
   /**
    * GET /webhooks/slack-callback — Slack OAuth callback (unauthenticated).
+   * Handles both bot installation (state.type === 'bot') and user OAuth.
    */
   public async slackOAuthCallback(req: Request, res: Response): Promise<void> {
     const code = req.query['code'] as string | undefined;
@@ -173,13 +174,30 @@ export class WebhookController {
       return;
     }
 
-    try {
-      await this.slackService.handleOAuthCallback(code, state);
-      res.redirect('/admin/settings?slack_connected=true');
-    } catch (err) {
-      serverLogger.error({ err }, 'Slack OAuth callback failed');
-      const errorCode = this.classifyOAuthError(err);
-      res.redirect(`/admin/settings?slack_error=${errorCode}`);
+    const statePayload = this.slackService.verifyOAuthState(state);
+    if (!statePayload) {
+      res.redirect('/admin/settings?slack_error=invalid_state');
+      return;
+    }
+
+    if (statePayload['type'] === 'bot') {
+      try {
+        await this.slackService.handleBotInstallCallback(code);
+        res.redirect('/admin/settings?slack_bot_connected=true');
+      } catch (err) {
+        serverLogger.error({ err }, 'Slack bot install callback failed');
+        const errorCode = this.classifyOAuthError(err);
+        res.redirect(`/admin/settings?slack_bot_error=${errorCode}`);
+      }
+    } else {
+      try {
+        await this.slackService.handleOAuthCallback(code, state);
+        res.redirect('/admin/settings?slack_connected=true');
+      } catch (err) {
+        serverLogger.error({ err }, 'Slack user OAuth callback failed');
+        const errorCode = this.classifyOAuthError(err);
+        res.redirect(`/admin/settings?slack_error=${errorCode}`);
+      }
     }
   }
 

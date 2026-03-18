@@ -11,12 +11,13 @@ import { CardComponent } from '@components/card/card.component';
 import { SelectComponent } from '@components/select/select.component';
 import { ApiKeysComponent } from '@modules/admin/api-keys/api-keys.component';
 import { DisconnectSlackDialogComponent } from '@modules/admin/components/disconnect-slack-dialog/disconnect-slack-dialog.component';
+import { AuthService } from '@services/auth.service';
 import { DialogService } from '@services/dialog.service';
 import { IntegrationsService } from '@services/integrations.service';
 import { ToastService } from '@services/toast.service';
 import { BehaviorSubject, catchError, filter, of, switchMap, tap } from 'rxjs';
 
-import type { SlackChannelOption, SlackIntegration } from '@lfx-changelog/shared';
+import type { SlackBotInstallation, SlackChannelOption, SlackIntegration } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
@@ -30,11 +31,15 @@ export class UserSettingsComponent {
   private readonly toastService = inject(ToastService);
   private readonly dialogService = inject(DialogService);
   private readonly route = inject(ActivatedRoute);
+  private readonly authService = inject(AuthService);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
+
+  protected readonly isSuperAdmin = this.authService.isSuperAdmin;
 
   protected readonly loading = signal(true);
   protected readonly channelsLoading = signal(false);
   protected readonly savingChannel = signal(false);
+  protected readonly botLoading = signal(true);
 
   protected readonly channelControl = new FormControl('', { nonNullable: true });
 
@@ -42,6 +47,8 @@ export class UserSettingsComponent {
   private readonly queryParams = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly slackConnected = computed(() => this.queryParams().get('slack_connected') === 'true');
   protected readonly slackError = computed(() => this.queryParams().get('slack_error'));
+  protected readonly slackBotConnected = computed(() => this.queryParams().get('slack_bot_connected') === 'true');
+  protected readonly slackBotError = computed(() => this.queryParams().get('slack_bot_error'));
 
   // Integrations data
   protected readonly integrations = toSignal(
@@ -72,8 +79,15 @@ export class UserSettingsComponent {
     return defaultCh?.channelName ?? null;
   });
 
+  // Bot installation (super admin only)
+  protected readonly botInstallation: Signal<SlackBotInstallation | null> = this.initBotInstallation();
+
   protected connectSlack(): void {
     this.integrationsService.connectSlack();
+  }
+
+  protected connectBot(): void {
+    this.integrationsService.connectBot();
   }
 
   protected saveChannel(): void {
@@ -118,6 +132,19 @@ export class UserSettingsComponent {
         }
       },
     });
+  }
+
+  private initBotInstallation(): Signal<SlackBotInstallation | null> {
+    return toSignal(
+      this.integrationsService.getBotInstallation().pipe(
+        tap(() => this.botLoading.set(false)),
+        catchError(() => {
+          this.botLoading.set(false);
+          return of(null);
+        })
+      ),
+      { initialValue: null }
+    );
   }
 
   private initChannels(): Signal<SlackChannelOption[]> {

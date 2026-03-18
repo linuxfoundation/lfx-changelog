@@ -162,4 +162,44 @@ export class ProductService {
 
     await prisma.productRepository.delete({ where: { id: repoId } });
   }
+
+  // ── Slack notify users ──────────────────────────────
+
+  public async findNotifyUsers(productId: string) {
+    const prisma = getPrismaClient();
+    return prisma.productSlackNotifyUser.findMany({
+      where: { productId },
+      include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  public async addNotifyUser(productId: string, userId: string) {
+    const prisma = getPrismaClient();
+    await this.findById(productId);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundError(`User not found: ${userId}`, { operation: 'addNotifyUser', service: 'product' });
+    }
+    return prisma.productSlackNotifyUser.upsert({
+      where: { productId_userId: { productId, userId } },
+      create: { productId, userId },
+      update: {},
+      include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+    });
+  }
+
+  public async removeNotifyUser(productId: string, userId: string): Promise<void> {
+    const prisma = getPrismaClient();
+    await prisma.productSlackNotifyUser.deleteMany({ where: { productId, userId } });
+  }
+
+  public async findNotifyUserEmails(productId: string): Promise<string[]> {
+    const prisma = getPrismaClient();
+    const rows = await prisma.productSlackNotifyUser.findMany({
+      where: { productId },
+      include: { user: { select: { email: true } } },
+    });
+    return rows.map((r) => r.user.email);
+  }
 }
