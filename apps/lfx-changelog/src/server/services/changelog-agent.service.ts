@@ -15,6 +15,7 @@ import { AgentMemoryService } from './agent-memory.service';
 import { ChangelogService } from './changelog.service';
 import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
+import { SlackService } from './slack.service';
 
 import type { AgentJobTrigger, GitHubCommit, GitHubPullRequest, ProgressLogEntry } from '@lfx-changelog/shared';
 
@@ -22,6 +23,7 @@ export class ChangelogAgentService {
   private readonly changelogService = new ChangelogService();
   private readonly githubService = new GitHubService();
   private readonly agentMemoryService = new AgentMemoryService();
+  private readonly slackService = new SlackService();
   private readonly activeControllers = new Map<string, AbortController>();
 
   /**
@@ -399,7 +401,7 @@ export class ChangelogAgentService {
                   outputTokens: message.usage['output_tokens'],
                   progressLog,
                 },
-                include: { changelogEntry: { select: { id: true, title: true, status: true } } },
+                include: { changelogEntry: { select: { id: true, title: true, slug: true, status: true } }, product: { select: { name: true } } },
               });
               serverLogger.info({ jobId, productId, durationMs, numTurns: message.num_turns }, 'Agent job completed successfully');
               agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
@@ -408,6 +410,28 @@ export class ChangelogAgentService {
               this.recordScoresFromProgressLog(jobId, productId, progressLog).catch((err) =>
                 serverLogger.warn({ err, jobId }, 'Failed to record quality scores')
               );
+
+              // Notify configured users via Slack DM — release-triggered jobs only (fire-and-forget)
+              if (updatedJob.trigger === 'webhook_release' && updatedJob.changelogEntry && updatedJob.product) {
+                const entry = { id: updatedJob.changelogEntry.id, title: updatedJob.changelogEntry.title };
+                this.slackService
+                  .sendDraftReadyDms(productId, entry, updatedJob.product.name)
+                  .then(async (notified) => {
+                    if (notified.length === 0) return;
+                    const dmEntry: ProgressLogEntry = {
+                      timestamp: new Date().toISOString(),
+                      type: 'text',
+                      summary: `Slack DM sent to: ${notified.join(', ')}`,
+                    };
+                    await prisma.agentJob.update({
+                      where: { id: jobId },
+                      data: { progressLog: [...progressLog, dmEntry] },
+                    });
+                    agentJobEmitter.emit(jobId, { type: 'progress', data: dmEntry });
+                  })
+                  .catch((err) => serverLogger.warn({ err, jobId, productId }, 'Failed to send draft-ready DMs'));
+              }
+
               this.emitTerminalEvents(jobId, {
                 durationMs,
                 numTurns: message.num_turns,

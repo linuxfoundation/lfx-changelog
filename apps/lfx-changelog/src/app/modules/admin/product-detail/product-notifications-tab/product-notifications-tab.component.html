@@ -1,0 +1,55 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <lfx-card>
+    <div class="mb-4">
+      <h3 class="text-text-primary text-sm font-semibold">Draft-Ready Notifications</h3>
+      <p class="text-text-muted mt-1 text-xs">These users will receive a Slack DM when the agent completes a new changelog draft for this product.</p>
+    </div>
+
+    <!-- Add user row -->
+    <div class="flex items-end gap-3">
+      <div class="min-w-0 flex-1">
+        <lfx-select label="Add user" [options]="userOptions()" [formControl]="userControl" [searchable]="true" placeholder="Search by name or email..." />
+      </div>
+      <lfx-button variant="primary" [loading]="adding()" [disabled]="!userControl.value" (clicked)="addUser()"> Add </lfx-button>
+    </div>
+
+    <!-- User list -->
+    <div class="mt-4">
+      @if (loading()) {
+        <div class="text-text-muted flex items-center gap-2 py-4 text-sm">
+          <i class="fa-duotone fa-spinner-third animate-spin text-sm"></i>
+          Loading…
+        </div>
+      } @else if (notifyUsers().length === 0) {
+        <p class="text-text-muted py-4 text-sm">No users configured. Add one above.</p>
+      } @else {
+        <ul class="divide-border divide-y">
+          @for (entry of notifyUsers(); track entry.id) {
+            <li class="flex items-center justify-between gap-4 py-3">
+              <div class="flex min-w-0 items-center gap-3">
+                @if (entry.user.avatarUrl) {
+                  <img [src]="entry.user.avatarUrl" [alt]="entry.user.name" class="h-7 w-7 flex-shrink-0 rounded-full object-cover" />
+                } @else {
+                  <div
+                    class="bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                    {{ entry.user.name?.charAt(0)?.toUpperCase() || '?' }}
+                  </div>
+                }
+                <div class="min-w-0">
+                  <p class="text-text-primary truncate text-sm font-medium">{{ entry.user.name }}</p>
+                  <p class="text-text-muted truncate text-xs">{{ entry.user.email }}</p>
+                </div>
+              </div>
+              <lfx-button variant="ghost" size="sm" [loading]="removingId() === entry.userId" (clicked)="removeUser(entry.userId)">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </lfx-button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </lfx-card>
+</div>

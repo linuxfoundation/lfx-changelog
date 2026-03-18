@@ -7,7 +7,7 @@ import { serverLogger } from '../server-logger';
 import { GitHubService } from '../services/github.service';
 import { ProductService } from '../services/product.service';
 
-import type { GitHubCommit, GitHubPullRequest, GitHubRelease, LinkRepositoryRequest, ProductActivity } from '@lfx-changelog/shared';
+import type { AddSlackNotifyUserRequest, GitHubCommit, GitHubPullRequest, GitHubRelease, LinkRepositoryRequest, ProductActivity } from '@lfx-changelog/shared';
 
 export class ProductController {
   private readonly productService = new ProductService();
@@ -140,6 +140,39 @@ export class ProductController {
 
       const activity: ProductActivity = { releases: allReleases, pullRequests: allPulls, commits: allCommits };
       res.json({ success: true, data: activity });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Slack notify users ──────────────────────────────
+
+  public async listNotifyUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const users = await this.productService.findNotifyUsers(req.params['id'] as string);
+      res.json({ success: true, data: users });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async addNotifyUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const productId = req.params['id'] as string;
+      const { userId } = req.body as AddSlackNotifyUserRequest;
+      const entry = await this.productService.addNotifyUser(productId, userId);
+      res.status(201).json({ success: true, data: entry });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async removeNotifyUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const productId = req.params['id'] as string;
+      const userId = req.params['userId'] as string;
+      await this.productService.removeNotifyUser(productId, userId);
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

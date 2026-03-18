@@ -89,4 +89,30 @@ export class SlackController {
       next(error);
     }
   }
+
+  // ── Bot installation ──────────────────────────────────────────────────────
+
+  /**
+   * GET /api/slack/bot-connect — returns the OAuth URL for installing the bot.
+   */
+  public async getBotConnect(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const url = this.slackService.getBotOAuthUrl(req.dbUser!.id);
+      res.json({ success: true, data: { url } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/slack/bot-installation — returns the active bot installation status (no tokens).
+   */
+  public async getBotInstallation(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const installation = await this.slackService.getBotInstallation();
+      res.json({ success: true, data: installation });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

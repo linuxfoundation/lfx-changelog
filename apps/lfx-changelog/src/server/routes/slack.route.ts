@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { SaveSlackChannelRequestSchema } from '@lfx-changelog/shared';
+import { SaveSlackChannelRequestSchema, UserRole } from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { SlackController } from '../controllers/slack.controller';
@@ -23,5 +23,10 @@ router.post('/integrations/:id/channels', authorize({ oauthOnly: true }), valida
 );
 
 router.delete('/integrations/:id', authorize({ oauthOnly: true }), (req, res, next) => slackController.disconnect(req, res, next));
+
+router.get('/bot-connect', authorize({ oauthOnly: true, role: UserRole.SUPER_ADMIN }), (req, res, next) => slackController.getBotConnect(req, res, next));
+router.get('/bot-installation', authorize({ oauthOnly: true, role: UserRole.SUPER_ADMIN }), (req, res, next) =>
+  slackController.getBotInstallation(req, res, next)
+);
 
 export default router;

@@ -91,7 +91,8 @@ model Product {
   changelogViews      ChangelogView[]
   agentJobs           AgentJob[]
   agentMemory         AgentMemory?
-  blogProducts    BlogProduct[]
+  blogProducts        BlogProduct[]
+  slackNotifyUsers    ProductSlackNotifyUser[]
 
   @@map("products")
 }
@@ -180,6 +181,7 @@ model User {
   chatConversations   ChatConversation[]
   slackIntegrations   SlackIntegration[]
   blogs               Blog[]
+  slackNotifyUsers    ProductSlackNotifyUser[]
 
   @@map("users")
 }
@@ -302,6 +304,36 @@ model SlackNotification {
 
   @@unique([slackChannelId, changelogEntryId])
   @@map("slack_notifications")
+}
+
+model SlackBotInstallation {
+  id             String   @id @default(uuid())
+  teamId         String   @unique @map("team_id")
+  teamName       String   @map("team_name")
+  botUserId      String   @map("bot_user_id")
+  accessToken    String   @map("access_token")
+  refreshToken   String   @map("refresh_token")
+  tokenExpiresAt DateTime @map("token_expires_at")
+  scope          String
+  status         String   @default("active")
+  installedAt    DateTime @default(now()) @map("installed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("slack_bot_installations")
+}
+
+model ProductSlackNotifyUser {
+  id        String   @id @default(uuid())
+  productId String   @map("product_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@map("product_slack_notify_users")
 }
 
 model AutoChangelogLock {

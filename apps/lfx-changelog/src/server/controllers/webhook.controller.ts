@@ -157,6 +157,7 @@ export class WebhookController {
 
   /**
    * GET /webhooks/slack-callback — Slack OAuth callback (unauthenticated).
+   * Handles both bot installation (state.type === 'bot') and user OAuth.
    */
   public async slackOAuthCallback(req: Request, res: Response): Promise<void> {
     const code = req.query['code'] as string | undefined;
@@ -164,7 +165,10 @@ export class WebhookController {
     const error = req.query['error'] as string | undefined;
 
     if (error) {
-      res.redirect('/admin/settings?slack_error=access_denied');
+      // Branch on state type so the correct error banner shows in the UI
+      const errorState = state ? this.slackService.verifyOAuthState(state) : null;
+      const param = errorState?.['type'] === 'bot' ? 'slack_bot_error' : 'slack_error';
+      res.redirect(`/admin/settings?${param}=access_denied`);
       return;
     }
 
@@ -173,13 +177,30 @@ export class WebhookController {
       return;
     }
 
-    try {
-      await this.slackService.handleOAuthCallback(code, state);
-      res.redirect('/admin/settings?slack_connected=true');
-    } catch (err) {
-      serverLogger.error({ err }, 'Slack OAuth callback failed');
-      const errorCode = this.classifyOAuthError(err);
-      res.redirect(`/admin/settings?slack_error=${errorCode}`);
+    const statePayload = this.slackService.verifyOAuthState(state);
+    if (!statePayload) {
+      res.redirect('/admin/settings?slack_error=invalid_state');
+      return;
+    }
+
+    if (statePayload['type'] === 'bot') {
+      try {
+        await this.slackService.handleBotInstallCallback(code);
+        res.redirect('/admin/settings?slack_bot_connected=true');
+      } catch (err) {
+        serverLogger.error({ err }, 'Slack bot install callback failed');
+        const errorCode = this.classifyOAuthError(err);
+        res.redirect(`/admin/settings?slack_bot_error=${errorCode}`);
+      }
+    } else {
+      try {
+        await this.slackService.handleOAuthCallback(code, state);
+        res.redirect('/admin/settings?slack_connected=true');
+      } catch (err) {
+        serverLogger.error({ err }, 'Slack user OAuth callback failed');
+        const errorCode = this.classifyOAuthError(err);
+        res.redirect(`/admin/settings?slack_error=${errorCode}`);
+      }
     }
   }
 

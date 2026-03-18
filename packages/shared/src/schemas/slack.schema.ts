@@ -93,6 +93,20 @@ export const SlackBlockSchema = z
 
 export type SlackBlock = z.infer<typeof SlackBlockSchema>;
 
+export const SlackBotInstallationSchema = z
+  .object({
+    id: z.string().uuid(),
+    teamId: z.string(),
+    teamName: z.string(),
+    botUserId: z.string(),
+    scope: z.string(),
+    status: z.string(),
+    installedAt: z.string(),
+  })
+  .openapi('SlackBotInstallation');
+
+export type SlackBotInstallation = z.infer<typeof SlackBotInstallationSchema>;
+
 export const SlackApiResponseSchema = z
   .object({
     ok: z.boolean(),

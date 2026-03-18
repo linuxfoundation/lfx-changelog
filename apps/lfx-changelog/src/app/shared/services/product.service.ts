@@ -6,12 +6,14 @@ import { inject, Injectable } from '@angular/core';
 import { map, take } from 'rxjs';
 
 import type {
+  AddSlackNotifyUserRequest,
   ApiResponse,
   CreateProductRequest,
   LinkRepositoryRequest,
   Product,
   ProductActivity,
   ProductRepository,
+  ProductSlackNotifyUser,
   PublicProduct,
   UpdateProductRequest,
 } from '@lfx-changelog/shared';
@@ -73,5 +75,20 @@ export class ProductService {
       map((res) => res.data),
       take(1)
     );
+  }
+
+  public getNotifyUsers(productId: string): Observable<ProductSlackNotifyUser[]> {
+    return this.http.get<ApiResponse<ProductSlackNotifyUser[]>>(`/api/products/${productId}/notify-users`).pipe(map((res) => res.data));
+  }
+
+  public addNotifyUser(productId: string, data: AddSlackNotifyUserRequest): Observable<ProductSlackNotifyUser> {
+    return this.http.post<ApiResponse<ProductSlackNotifyUser>>(`/api/products/${productId}/notify-users`, data).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public removeNotifyUser(productId: string, userId: string): Observable<HttpResponse<unknown>> {
+    return this.http.delete(`/api/products/${productId}/notify-users/${userId}`, { observe: 'response' }).pipe(take(1));
   }
 }

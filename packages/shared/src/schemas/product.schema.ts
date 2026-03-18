@@ -22,3 +22,24 @@ export const ProductSchema = z
   .openapi('Product');
 
 export type Product = z.infer<typeof ProductSchema>;
+
+export const ProductSlackNotifyUserSchema = z
+  .object({
+    id: z.string().uuid(),
+    productId: z.string().uuid(),
+    userId: z.string().uuid(),
+    createdAt: z.string(),
+    user: z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      email: z.string(),
+      avatarUrl: z.string().nullable(),
+    }),
+  })
+  .openapi('ProductSlackNotifyUser');
+
+export type ProductSlackNotifyUser = z.infer<typeof ProductSlackNotifyUserSchema>;
+
+export const AddSlackNotifyUserRequestSchema = z.object({ userId: z.string().uuid() }).openapi('AddSlackNotifyUserRequest');
+
+export type AddSlackNotifyUserRequest = z.infer<typeof AddSlackNotifyUserRequestSchema>;

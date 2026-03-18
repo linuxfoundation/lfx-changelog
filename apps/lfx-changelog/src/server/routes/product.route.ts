@@ -1,7 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ApiKeyScope, CreateProductRequestSchema, LinkRepositoryRequestSchema, UpdateProductRequestSchema, UserRole } from '@lfx-changelog/shared';
+import {
+  AddSlackNotifyUserRequestSchema,
+  ApiKeyScope,
+  CreateProductRequestSchema,
+  LinkRepositoryRequestSchema,
+  UpdateProductRequestSchema,
+  UserRole,
+} from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { ProductController } from '../controllers/product.controller';
@@ -45,5 +52,11 @@ router.delete('/:id/repositories/:repoId', authorize({ scope: ApiKeyScope.PRODUC
 router.get('/:id/activity', authorize({ scope: ApiKeyScope.PRODUCTS_READ, role: UserRole.SUPER_ADMIN }), noCacheMiddleware, (req, res, next) =>
   productController.getActivity(req, res, next)
 );
+
+router.get('/:id/notify-users', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => productController.listNotifyUsers(req, res, next));
+router.post('/:id/notify-users', authorize({ role: UserRole.SUPER_ADMIN }), validate({ body: AddSlackNotifyUserRequestSchema }), (req, res, next) =>
+  productController.addNotifyUser(req, res, next)
+);
+router.delete('/:id/notify-users/:userId', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => productController.removeNotifyUser(req, res, next));
 
 export default router;
