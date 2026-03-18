@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -81,7 +81,7 @@ export class ChangelogDetailComponent {
     this.router.navigate([], { queryParams: { postToSlack: null }, queryParamsHandling: 'merge', replaceUrl: true });
 
     toObservable(this.entry)
-      .pipe(filter(Boolean), first())
+      .pipe(takeUntilDestroyed(), filter(Boolean), first())
       .subscribe(() => this.openSlackDialog());
   }
 }
