@@ -6,6 +6,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
+import { AuthService } from '@services/auth.service';
 import { DialogService } from '@services/dialog.service';
 import { IntegrationsService } from '@services/integrations.service';
 import { catchError, concat, filter, map, of, switchMap, tap } from 'rxjs';
@@ -21,12 +22,15 @@ import type { SlackDialogState } from '@shared/interfaces/slack.interface';
   styleUrl: './post-to-slack-dialog.component.css',
 })
 export class PostToSlackDialogComponent {
+  private readonly authService = inject(AuthService);
   private readonly integrationsService = inject(IntegrationsService);
   protected readonly dialogService = inject(DialogService);
 
   public readonly changelogId = input.required<string>();
   public readonly changelogTitle = input('');
   public readonly onPosted = input<(channelName: string) => void>();
+
+  protected readonly isAdmin = this.authService.isAdmin;
 
   protected readonly channelControl = new FormControl('', { nonNullable: true });
   protected readonly posting = signal(false);
@@ -93,6 +97,8 @@ export class PostToSlackDialogComponent {
   private initState() {
     const loadingState: SlackDialogState = { loading: true, integration: null };
     const empty: SlackDialogState = { loading: false, integration: null };
+
+    if (!this.isAdmin()) return signal(empty);
 
     // Component is created when dialog opens — load immediately
     return toSignal(

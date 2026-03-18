@@ -28,6 +28,9 @@ export class AuthService {
     return roles.filter((r) => r.productId !== null).map((r) => r.productId as string);
   });
 
+  /** Whether the user has any admin/editor role (global or product-scoped). */
+  public readonly isAdmin = computed(() => this.hasGlobalAccess() || this.accessibleProductIds().length > 0);
+
   /** Whether the user can write (edit/publish/delete) changelogs for a given product. */
   public canEditProduct(productId: string): boolean {
     return this.hasGlobalAccess() || this.accessibleProductIds().includes(productId);
