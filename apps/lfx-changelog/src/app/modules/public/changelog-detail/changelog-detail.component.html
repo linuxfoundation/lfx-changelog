@@ -62,7 +62,7 @@
           </div>
         </lfx-card>
 
-        @if (isAuthenticated()) {
+        @if (isAdmin()) {
           <div class="flex w-full">
             <lfx-button data-testid="changelog-detail-slack-btn" variant="secondary" [fluid]="true" (clicked)="openSlackDialog()">
               <img src="/slack.svg" alt="Slack" width="14" height="14" class="inline-block" />

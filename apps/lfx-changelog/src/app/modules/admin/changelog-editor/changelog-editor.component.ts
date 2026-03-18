@@ -189,7 +189,7 @@ export class ChangelogEditorComponent {
         next: (entry) => {
           this.publishing.set(false);
           this.toastService.success('Entry published!');
-          this.router.navigate(['/entry', entry.slug]);
+          this.router.navigate(['/entry', entry.slug], { queryParams: { postToSlack: true } });
         },
         error: () => {
           this.publishing.set(false);

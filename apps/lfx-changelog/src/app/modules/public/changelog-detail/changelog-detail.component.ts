@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
@@ -13,7 +13,7 @@ import { AuthService } from '@services/auth.service';
 import { ChangelogService } from '@services/changelog.service';
 import { DialogService } from '@services/dialog.service';
 import { format } from 'date-fns';
-import { catchError, of, tap } from 'rxjs';
+import { catchError, filter, first, of, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-changelog-detail',
@@ -23,13 +23,14 @@ import { catchError, of, tap } from 'rxjs';
 })
 export class ChangelogDetailComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly changelogService = inject(ChangelogService);
   private readonly dialogService = inject(DialogService);
 
   protected readonly loading = signal(true);
 
-  protected readonly isAuthenticated = computed(() => this.authService.authenticated());
+  protected readonly isAdmin = this.authService.isAdmin;
 
   protected readonly entry = toSignal(
     this.changelogService.getPublishedById(this.route.snapshot.paramMap.get('slug') ?? '').pipe(
@@ -57,9 +58,13 @@ export class ChangelogDetailComponent {
     return format(new Date(e.createdAt), 'MMMM d, yyyy');
   });
 
+  public constructor() {
+    this.initPostToSlackFromQueryParam();
+  }
+
   protected openSlackDialog(): void {
     const e = this.entry();
-    if (!e) return;
+    if (!e || !this.isAdmin()) return;
 
     this.dialogService.open({
       title: 'Post to Slack',
@@ -67,5 +72,16 @@ export class ChangelogDetailComponent {
       component: PostToSlackDialogComponent,
       inputs: { changelogId: e.id, changelogTitle: e.title },
     });
+  }
+
+  private initPostToSlackFromQueryParam(): void {
+    if (this.route.snapshot.queryParamMap.get('postToSlack') !== 'true') return;
+
+    // Strip the query param so refresh doesn't re-trigger
+    this.router.navigate([], { queryParams: { postToSlack: null }, queryParamsHandling: 'merge', replaceUrl: true });
+
+    toObservable(this.entry)
+      .pipe(takeUntilDestroyed(), filter(Boolean), first())
+      .subscribe(() => this.openSlackDialog());
   }
 }
