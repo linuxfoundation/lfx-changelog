@@ -16,13 +16,27 @@ export const ALLOWED_CHANGELOG_TOOLS = [
   'mcp__changelog-tools__validate_changelog_draft',
 ] as const;
 
-/** Read-only Atlassian tools the agent is allowed to call. */
+/** Read-only Atlassian tools the agent is allowed to call (auto-approved for permissions). */
 export const ALLOWED_ATLASSIAN_TOOLS = [
   'mcp__atlassian__getJiraIssue',
   'mcp__atlassian__searchJiraIssuesUsingJql',
   'mcp__atlassian__getConfluencePage',
   'mcp__atlassian__getPagesInConfluenceSpace',
   'mcp__atlassian__getConfluenceSpaces',
+] as const;
+
+/** Atlassian tools the agent must NOT use — removed from the model's context entirely. */
+export const DISALLOWED_ATLASSIAN_TOOLS = [
+  'mcp__atlassian__atlassianUserInfo',
+  'mcp__atlassian__getTransitionsForJiraIssue',
+  'mcp__atlassian__getJiraIssueRemoteIssueLinks',
+  'mcp__atlassian__getVisibleJiraProjects',
+  'mcp__atlassian__getJiraProjectIssueTypesMetadata',
+  'mcp__atlassian__getJiraIssueTypeMetaWithFields',
+  'mcp__atlassian__lookupJiraAccountId',
+  'mcp__atlassian__getIssueLinkTypes',
+  'mcp__atlassian__getTeamworkGraphContext',
+  'mcp__atlassian__getTeamworkGraphObject',
 ] as const;
 
 export const AGENT_SYSTEM_PROMPT = `You are a changelog writer for LFX, a suite of tools by the Linux Foundation.
@@ -69,6 +83,7 @@ If a "Memory & Learned Preferences" section is provided in the user prompt:
 
 ## Atlassian Integration
 If an "Atlassian References Detected" section is provided in the user prompt:
+- You may ONLY use these Atlassian tools: \`getJiraIssue\`, \`searchJiraIssuesUsingJql\`, \`getConfluencePage\`, \`getPagesInConfluenceSpace\`, \`getConfluenceSpaces\`. Do NOT call any other Atlassian tools.
 - Use \`getJiraIssue\` to fetch context for all referenced Jira issues. Focus on issue summary, description, and acceptance criteria.
 - Use \`getConfluencePage\` ONLY when Confluence page IDs or URLs are explicitly referenced in the activity data.
 - Use Jira context to write more accurate, user-focused descriptions and correctly categorize changes. Jira issues often contain the "why" behind a change that commit messages lack.

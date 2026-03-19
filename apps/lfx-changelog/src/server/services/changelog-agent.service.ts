@@ -5,7 +5,14 @@ import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk'
 import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 import { z } from 'zod';
 
-import { AGENT_CONFIG, AGENT_CRITIC_PROMPT, AGENT_SYSTEM_PROMPT, ALLOWED_ATLASSIAN_TOOLS, ALLOWED_CHANGELOG_TOOLS } from '../constants/agent.constants';
+import {
+  AGENT_CONFIG,
+  AGENT_CRITIC_PROMPT,
+  AGENT_SYSTEM_PROMPT,
+  ALLOWED_ATLASSIAN_TOOLS,
+  ALLOWED_CHANGELOG_TOOLS,
+  DISALLOWED_ATLASSIAN_TOOLS,
+} from '../constants/agent.constants';
 import { AgentServiceError } from '../errors';
 import { buildActivityContext } from '../helpers/activity-context.helper';
 import { extractAtlassianReferences, formatAtlassianHints } from '../helpers/atlassian-reference.helper';
@@ -338,6 +345,8 @@ export class ChangelogAgentService {
       const timeout = setTimeout(() => abortController.abort(), AGENT_CONFIG.TIMEOUT_MS);
 
       try {
+        const mcpServers = this.buildMcpServers(mcpServer);
+
         const queryIterator = query({
           prompt: userPrompt,
           options: {
@@ -345,9 +354,10 @@ export class ChangelogAgentService {
             model: AGENT_CONFIG.MODEL,
             maxTurns: AGENT_CONFIG.MAX_TURNS,
             allowedTools: [...ALLOWED_CHANGELOG_TOOLS, ...ALLOWED_ATLASSIAN_TOOLS],
+            disallowedTools: [...DISALLOWED_ATLASSIAN_TOOLS],
             permissionMode: 'bypassPermissions',
             allowDangerouslySkipPermissions: true,
-            mcpServers: this.buildMcpServers(mcpServer),
+            mcpServers,
             abortController,
             env: {
               PATH: process.env['PATH'] || '/usr/local/bin:/usr/bin:/bin',
