@@ -540,9 +540,9 @@ export class ChangelogAgentService {
       'changelog-tools': mcpServer,
     };
 
-    const atlassianEmail = process.env['ATLASSIAN_MCP_EMAIL'];
-    const atlassianToken = process.env['ATLASSIAN_MCP_API_TOKEN'];
-    const atlassianUrl = process.env['ATLASSIAN_MCP_URL'] || 'https://mcp.atlassian.com/v1/mcp';
+    const atlassianEmail = process.env['ATLASSIAN_EMAIL'];
+    const atlassianToken = process.env['ATLASSIAN_API_KEY'];
+    const atlassianUrl = process.env['ATLASSIAN_URL'] || 'https://mcp.atlassian.com/v1/mcp';
 
     if (atlassianEmail && atlassianToken) {
       servers['atlassian'] = {
@@ -554,7 +554,7 @@ export class ChangelogAgentService {
       };
       serverLogger.info({ url: atlassianUrl }, 'Atlassian MCP server configured for agent');
     } else {
-      serverLogger.debug('Atlassian MCP not configured — ATLASSIAN_MCP_EMAIL or ATLASSIAN_MCP_API_TOKEN not set');
+      serverLogger.debug('Atlassian MCP not configured — ATLASSIAN_EMAIL or ATLASSIAN_API_KEY not set');
     }
 
     return servers;
