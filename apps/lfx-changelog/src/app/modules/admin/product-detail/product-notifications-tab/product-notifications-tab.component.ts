@@ -7,6 +7,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { SelectComponent } from '@components/select/select.component';
+import { InitialPipe } from '@pipes/initial.pipe';
 import { ProductService } from '@services/product.service';
 import { ToastService } from '@services/toast.service';
 import { UserService } from '@services/user.service';
@@ -17,7 +18,7 @@ import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 
 @Component({
   selector: 'lfx-product-notifications-tab',
-  imports: [ButtonComponent, CardComponent, SelectComponent, ReactiveFormsModule],
+  imports: [ButtonComponent, CardComponent, SelectComponent, ReactiveFormsModule, InitialPipe],
   templateUrl: './product-notifications-tab.component.html',
   styleUrl: './product-notifications-tab.component.css',
 })
