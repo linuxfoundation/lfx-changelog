@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, DestroyRef, inject, input, signal, Signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -11,7 +11,7 @@ import { InitialPipe } from '@pipes/initial.pipe';
 import { ProductService } from '@services/product.service';
 import { ToastService } from '@services/toast.service';
 import { UserService } from '@services/user.service';
-import { catchError, map, of, startWith, Subject, switchMap } from 'rxjs';
+import { catchError, map, merge, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { ProductSlackNotifyUser } from '@lfx-changelog/shared';
 import type { LoadingState } from '@shared/interfaces/loading-state.interface';
@@ -49,10 +49,6 @@ export class ProductNotificationsTabComponent {
       .filter((u) => !existing.has(u.id))
       .map((u) => ({ label: `${u.name} (${u.email})`, value: u.id }));
   });
-
-  public constructor() {
-    this.refresh$.next();
-  }
 
   protected addUser(): void {
     const userId = this.userControl.value;
@@ -96,7 +92,7 @@ export class ProductNotificationsTabComponent {
 
   private initNotifyUsersState(): Signal<LoadingState<ProductSlackNotifyUser[]>> {
     return toSignal(
-      this.refresh$.pipe(
+      merge(toObservable(this.productId), this.refresh$).pipe(
         switchMap(() =>
           this.productService.getNotifyUsers(this.productId()).pipe(
             map((data) => ({ data, loading: false })),
