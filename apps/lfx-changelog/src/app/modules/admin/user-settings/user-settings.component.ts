@@ -22,7 +22,7 @@ import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
   selector: 'lfx-user-settings',
-  imports: [DatePipe, ReactiveFormsModule, ButtonComponent, CardComponent, SelectComponent, ApiKeysComponent, DisconnectSlackDialogComponent],
+  imports: [DatePipe, ReactiveFormsModule, ButtonComponent, CardComponent, SelectComponent, ApiKeysComponent],
   templateUrl: './user-settings.component.html',
   styleUrl: './user-settings.component.css',
 })
