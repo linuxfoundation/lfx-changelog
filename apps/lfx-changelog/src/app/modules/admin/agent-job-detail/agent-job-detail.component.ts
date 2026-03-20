@@ -102,6 +102,14 @@ export class AgentJobDetailComponent {
         return { ...job, progressLog: [...job.progressLog, event.data] };
       case 'status':
         return { ...job, status: event.data.status };
+      case 'stats':
+        return {
+          ...job,
+          durationMs: event.data.durationMs,
+          numTurns: event.data.numTurns,
+          promptTokens: event.data.promptTokens,
+          outputTokens: event.data.outputTokens,
+        };
       case 'result':
         return {
           ...job,

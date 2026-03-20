@@ -5,6 +5,13 @@ import rateLimit from 'express-rate-limit';
 
 import type { Express, RequestHandler } from 'express';
 
+/** Normalizes IPv6 addresses to prevent bypass via different representations. */
+function normalizeIp(ip: string | undefined): string {
+  const raw = ip ?? 'unknown';
+  // Strip ::ffff: prefix from IPv4-mapped IPv6 addresses
+  return raw.startsWith('::ffff:') ? raw.slice(7) : raw;
+}
+
 /**
  * Creates the API-key rate limiter instance (1000 req/hour per key).
  * Exported so `setupRoutes` can register it after `hybridAuthMiddleware`,
@@ -32,7 +39,7 @@ export function createPublicChatRateLimiter(): RequestHandler {
     limit: 3,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => req.ip ?? 'unknown',
+    keyGenerator: (req) => normalizeIp(req.ip),
     message: { error: 'Too many chat requests. Please wait a moment before trying again.' },
   });
 }
@@ -43,7 +50,7 @@ export function createAuthenticatedChatRateLimiter(): RequestHandler {
     limit: 15,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => req.dbUser?.id ?? req.ip ?? 'unknown',
+    keyGenerator: (req) => req.dbUser?.id ?? normalizeIp(req.ip),
     message: { error: 'Too many chat requests. Please wait a moment before trying again.' },
   });
 }
@@ -66,7 +73,7 @@ export function setupRateLimiting(app: Express): void {
     limit: 100,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => req.ip ?? 'unknown',
+    keyGenerator: (req) => normalizeIp(req.ip),
     message: { error: 'Too many requests, please try again later.' },
   });
   app.use('/public/api', apiRateLimiter);

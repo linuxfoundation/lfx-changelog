@@ -3,7 +3,7 @@
 
 import './setup.js';
 
-export { AgentJobSSEEventSchema, AgentJobSSEEventTypeSchema, AgentJobSSEResultSchema } from './agent-job-sse.schema.js';
+export { AgentJobSSEEventSchema, AgentJobSSEEventTypeSchema, AgentJobSSEResultSchema, AgentJobSSEStatsSchema } from './agent-job-sse.schema.js';
 export {
   AgentJobChangelogSchema,
   AgentJobDetailSchema,
@@ -122,7 +122,7 @@ export {
 } from './slack.schema.js';
 export { UserRoleAssignmentSchema, UserSchema } from './user.schema.js';
 
-export type { AgentJobSSEEvent, AgentJobSSEEventType, AgentJobSSEResult } from './agent-job-sse.schema.js';
+export type { AgentJobSSEEvent, AgentJobSSEEventType, AgentJobSSEResult, AgentJobSSEStats } from './agent-job-sse.schema.js';
 export type {
   AgentJob,
   AgentJobDetail,

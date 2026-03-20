@@ -136,6 +136,9 @@ export class WebhookController {
     // Respond 200 immediately — AI generation runs async in the background
     res.status(200).json({ ok: true });
 
+    // Skip agent trigger for deletions — only published/edited releases should generate changelogs
+    if (event === 'release' && body.action === 'deleted') return;
+
     // Derive trigger type for agent jobs
     const triggerMap: Record<string, AgentJobTrigger> = {
       push: 'webhook_push',
@@ -211,7 +214,7 @@ export class WebhookController {
     const action = body['action'] as string | undefined;
 
     if (event === 'release') {
-      return ['published', 'created', 'edited', 'deleted'].includes(action || '');
+      return ['published', 'edited', 'deleted'].includes(action || '');
     }
 
     if (event === 'push') {
