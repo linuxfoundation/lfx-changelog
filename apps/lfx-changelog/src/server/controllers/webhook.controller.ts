@@ -109,15 +109,22 @@ export class WebhookController {
 
     serverLogger.info({ event, action: body.action, repoFullName, productCount: productRepos.length }, 'Processing GitHub webhook event');
 
-    // Handle release upsert synchronously (fast, idempotent)
+    // Handle release upsert/delete synchronously (fast, idempotent)
     if (event === 'release' && body.release) {
       const releasePayload = body.release as GitHubWebhookReleasePayload;
       for (const productRepo of productRepos) {
-        await this.githubService.upsertReleaseFromWebhook(productRepo.id, releasePayload);
-        serverLogger.info(
-          { repoFullName, tag: releasePayload.tag_name, action: body.action, productId: productRepo.productId },
-          'Upserted release via webhook'
-        );
+        if (body.action === 'deleted') {
+          await prisma.gitHubRelease.deleteMany({
+            where: { repositoryId: productRepo.id, githubId: releasePayload.id },
+          });
+          serverLogger.info({ repoFullName, tag: releasePayload.tag_name, productId: productRepo.productId }, 'Deleted release via webhook');
+        } else {
+          await this.githubService.upsertReleaseFromWebhook(productRepo.id, releasePayload);
+          serverLogger.info(
+            { repoFullName, tag: releasePayload.tag_name, action: body.action, productId: productRepo.productId },
+            'Upserted release via webhook'
+          );
+        }
 
         await prisma.productRepository.update({
           where: { id: productRepo.id },
@@ -128,6 +135,9 @@ export class WebhookController {
 
     // Respond 200 immediately — AI generation runs async in the background
     res.status(200).json({ ok: true });
+
+    // Skip agent trigger for deletions — only published/edited releases should generate changelogs
+    if (event === 'release' && body.action === 'deleted') return;
 
     // Derive trigger type for agent jobs
     const triggerMap: Record<string, AgentJobTrigger> = {
@@ -204,7 +214,7 @@ export class WebhookController {
     const action = body['action'] as string | undefined;
 
     if (event === 'release') {
-      return ['published', 'edited'].includes(action || '');
+      return ['published', 'edited', 'deleted'].includes(action || '');
     }
 
     if (event === 'push') {

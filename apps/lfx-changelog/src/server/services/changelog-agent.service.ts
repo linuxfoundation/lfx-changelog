@@ -38,7 +38,7 @@ export class ChangelogAgentService {
    * Creates an AgentJob record, pre-fetches GitHub data, then delegates to the agent.
    * Returns the job ID.
    */
-  public async runAgentForProduct(productId: string, trigger: AgentJobTrigger): Promise<string> {
+  public async runAgentForProduct(productId: string, trigger: AgentJobTrigger, retryCount = 0): Promise<string> {
     const prisma = getPrismaClient();
     const now = new Date();
     const staleThreshold = new Date(now.getTime() - STALE_LOCK_MS);
@@ -67,10 +67,13 @@ export class ChangelogAgentService {
         select: { id: true },
       });
       if (!existingJob) {
-        // Stale lock with no active job — clean up and retry
+        // Stale lock with no active job — clean up and retry (once)
+        if (retryCount > 0) {
+          throw new AgentServiceError('Stale lock could not be cleared after retry', { operation: 'runAgentForProduct' });
+        }
         serverLogger.warn({ productId, trigger }, 'Stale lock found with no active job — cleaning up and retrying');
         await prisma.autoChangelogLock.delete({ where: { productId } }).catch(() => undefined);
-        return this.runAgentForProduct(productId, trigger);
+        return this.runAgentForProduct(productId, trigger, retryCount + 1);
       }
       return existingJob.id;
     }
@@ -118,10 +121,10 @@ export class ChangelogAgentService {
         if (err instanceof Error && err.message === 'Operation aborted') return;
         throw err;
       };
-      process.once('unhandledRejection', suppressAbort);
+      process.on('unhandledRejection', suppressAbort);
       controller.abort();
-      // Remove the handler after the microtask queue drains
-      queueMicrotask(() => process.removeListener('unhandledRejection', suppressAbort));
+      // Remove after I/O phase — the SDK rejection fires within the current tick
+      setImmediate(() => process.removeListener('unhandledRejection', suppressAbort));
     }
 
     // Emit SSE events so the frontend updates in real time
@@ -441,6 +444,12 @@ export class ChangelogAgentService {
                 agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
               }
             }
+
+            // Flush error entries to DB for catch-up on refresh
+            await prisma.agentJob.update({
+              where: { id: jobId },
+              data: { progressLog },
+            });
           }
 
           // Handle final result

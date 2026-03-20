@@ -295,6 +295,12 @@ export class BlogAgentService {
                 agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
               }
             }
+
+            // Flush error entries to DB for catch-up on refresh
+            await prisma.agentJob.update({
+              where: { id: jobId },
+              data: { progressLog },
+            });
           }
 
           if ('subtype' in message && message.type === 'result') {
