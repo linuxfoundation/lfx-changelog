@@ -109,22 +109,15 @@ export class WebhookController {
 
     serverLogger.info({ event, action: body.action, repoFullName, productCount: productRepos.length }, 'Processing GitHub webhook event');
 
-    // Handle release upsert/delete synchronously (fast, idempotent)
+    // Handle release upsert synchronously (fast, idempotent)
     if (event === 'release' && body.release) {
       const releasePayload = body.release as GitHubWebhookReleasePayload;
       for (const productRepo of productRepos) {
-        if (body.action === 'deleted') {
-          await prisma.gitHubRelease.deleteMany({
-            where: { repositoryId: productRepo.id, githubId: releasePayload.id },
-          });
-          serverLogger.info({ repoFullName, tag: releasePayload.tag_name, productId: productRepo.productId }, 'Deleted release via webhook');
-        } else {
-          await this.githubService.upsertReleaseFromWebhook(productRepo.id, releasePayload);
-          serverLogger.info(
-            { repoFullName, tag: releasePayload.tag_name, action: body.action, productId: productRepo.productId },
-            'Upserted release via webhook'
-          );
-        }
+        await this.githubService.upsertReleaseFromWebhook(productRepo.id, releasePayload);
+        serverLogger.info(
+          { repoFullName, tag: releasePayload.tag_name, action: body.action, productId: productRepo.productId },
+          'Upserted release via webhook'
+        );
 
         await prisma.productRepository.update({
           where: { id: productRepo.id },
@@ -211,7 +204,7 @@ export class WebhookController {
     const action = body['action'] as string | undefined;
 
     if (event === 'release') {
-      return ['published', 'created', 'edited', 'deleted'].includes(action || '');
+      return ['published', 'edited'].includes(action || '');
     }
 
     if (event === 'push') {
