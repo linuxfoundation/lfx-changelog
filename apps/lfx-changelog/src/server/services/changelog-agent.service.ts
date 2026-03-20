@@ -67,9 +67,10 @@ export class ChangelogAgentService {
         select: { id: true },
       });
       if (!existingJob) {
-        throw new AgentServiceError('Agent job is already in progress but no active job record was found', {
-          operation: 'runAgentForProduct',
-        });
+        // Stale lock with no active job — clean up and retry
+        serverLogger.warn({ productId, trigger }, 'Stale lock found with no active job — cleaning up and retrying');
+        await prisma.autoChangelogLock.delete({ where: { productId } }).catch(() => undefined);
+        return this.runAgentForProduct(productId, trigger);
       }
       return existingJob.id;
     }
@@ -109,10 +110,18 @@ export class ChangelogAgentService {
       return;
     }
 
-    // Abort the controller if it exists (stops the agent query iterator)
+    // Abort the controller if it exists (stops the agent query iterator).
+    // The SDK may reject an internal write promise on abort — suppress it since this is expected.
     const controller = this.activeControllers.get(jobId);
     if (controller) {
+      const suppressAbort = (err: unknown): void => {
+        if (err instanceof Error && err.message === 'Operation aborted') return;
+        throw err;
+      };
+      process.once('unhandledRejection', suppressAbort);
       controller.abort();
+      // Remove the handler after the microtask queue drains
+      queueMicrotask(() => process.removeListener('unhandledRejection', suppressAbort));
     }
 
     // Emit SSE events so the frontend updates in real time
@@ -369,16 +378,30 @@ export class ChangelogAgentService {
           },
         });
 
+        let numTurns = 0;
+        let promptTokens = 0;
+        let outputTokens = 0;
+
         for await (const message of queryIterator) {
           // Log progress entries
           if (message.type === 'assistant') {
+            numTurns++;
+            promptTokens += message.message.usage?.input_tokens ?? 0;
+            outputTokens += message.message.usage?.output_tokens ?? 0;
+
+            // Emit running stats so the UI updates incrementally
+            agentJobEmitter.emit(jobId, {
+              type: 'stats',
+              data: { durationMs: Date.now() - startTime, numTurns, promptTokens, outputTokens },
+            });
+
             for (const block of message.message.content) {
               if (block.type === 'tool_use') {
                 const entry: ProgressLogEntry = {
                   timestamp: new Date().toISOString(),
                   type: 'tool_call',
                   tool: block.name,
-                  summary: `Called ${block.name}`,
+                  summary: this.buildToolCallSummary(block.name, block.input as Record<string, unknown>),
                   args: block.input as ProgressLogEntry['args'],
                 };
                 progressLog.push(entry);
@@ -388,6 +411,31 @@ export class ChangelogAgentService {
                   timestamp: new Date().toISOString(),
                   type: 'text',
                   summary: block.text.slice(0, 500),
+                };
+                progressLog.push(entry);
+                agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
+              }
+            }
+
+            // Flush progress to DB so refreshing clients get catch-up data
+            await prisma.agentJob.update({
+              where: { id: jobId },
+              data: { progressLog },
+            });
+          }
+
+          // Log tool result errors (e.g. Atlassian MCP failures, tool timeouts)
+          if (message.type === 'user' && Array.isArray((message.message as { content?: unknown }).content)) {
+            for (const block of (message.message as { content: { type: string; is_error?: boolean; content?: unknown; tool_use_id?: string }[] }).content) {
+              if (block.type === 'tool_result' && block.is_error) {
+                const errorText = Array.isArray(block.content)
+                  ? block.content.map((c: { text?: string }) => c.text || '').join(' ')
+                  : String(block.content || 'Unknown error');
+                serverLogger.warn({ jobId, productId, toolUseId: block.tool_use_id, error: errorText }, 'Agent tool call returned an error');
+                const entry: ProgressLogEntry = {
+                  timestamp: new Date().toISOString(),
+                  type: 'error',
+                  summary: `Tool error: ${errorText.slice(0, 500)}`,
                 };
                 progressLog.push(entry);
                 agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
@@ -568,6 +616,37 @@ export class ChangelogAgentService {
     }
 
     return servers;
+  }
+
+  private buildToolCallSummary(toolName: string, args: Record<string, unknown>): string {
+    const shortName = toolName.replace(/^mcp__[^_]+__/, '');
+
+    // Atlassian tools — surface the key identifier
+    if (toolName.includes('__atlassian__')) {
+      // Find a Jira issue key in any arg value (e.g. issueIdOrKey, issue_key, issueKey)
+      const jiraKeyPattern = /^[A-Z][A-Z0-9]+-\d+$/;
+      const jiraKey = Object.values(args).find((v) => typeof v === 'string' && jiraKeyPattern.test(v));
+      if (jiraKey) return `Fetching Jira issue ${jiraKey}`;
+      if (args['jql']) return `Searching Jira: ${String(args['jql']).slice(0, 100)}`;
+      // Find a Confluence page/space identifier
+      const pageId = args['page_id'] || args['pageId'] || args['pageID'];
+      if (pageId) return `Fetching Confluence page ${pageId}`;
+      const spaceKey = args['space_key'] || args['spaceKey'];
+      if (spaceKey) return `Listing pages in Confluence space ${spaceKey}`;
+      return `Called ${shortName}`;
+    }
+
+    // Changelog tools — surface relevant context
+    if (toolName.includes('__changelog-tools__')) {
+      if (shortName === 'search_past_changelogs') return `Searching past changelogs${args['limit'] ? ` (limit: ${args['limit']})` : ''}`;
+      if (shortName === 'create_changelog_draft' && args['title']) return `Creating draft: "${args['title']}"`;
+      if (shortName === 'update_changelog_draft') return `Updating draft${args['title'] ? `: "${args['title']}"` : ''}`;
+      if (shortName === 'validate_changelog_draft') return 'Running critic validation';
+      if (shortName === 'get_latest_version') return 'Getting latest version';
+      return `Called ${shortName}`;
+    }
+
+    return `Called ${shortName}`;
   }
 
   private buildUserPrompt(context: {

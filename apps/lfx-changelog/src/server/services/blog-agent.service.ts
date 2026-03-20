@@ -234,15 +234,28 @@ export class BlogAgentService {
           },
         });
 
+        let numTurns = 0;
+        let promptTokens = 0;
+        let outputTokens = 0;
+
         for await (const message of queryIterator) {
           if (message.type === 'assistant') {
+            numTurns++;
+            promptTokens += message.message.usage?.input_tokens ?? 0;
+            outputTokens += message.message.usage?.output_tokens ?? 0;
+
+            agentJobEmitter.emit(jobId, {
+              type: 'stats',
+              data: { durationMs: Date.now() - startTime, numTurns, promptTokens, outputTokens },
+            });
+
             for (const block of message.message.content) {
               if (block.type === 'tool_use') {
                 const entry: ProgressLogEntry = {
                   timestamp: new Date().toISOString(),
                   type: 'tool_call',
                   tool: block.name,
-                  summary: `Called ${block.name}`,
+                  summary: this.buildToolCallSummary(block.name, block.input as Record<string, unknown>),
                   args: block.input as ProgressLogEntry['args'],
                 };
                 progressLog.push(entry);
@@ -252,6 +265,31 @@ export class BlogAgentService {
                   timestamp: new Date().toISOString(),
                   type: 'text',
                   summary: block.text.slice(0, 500),
+                };
+                progressLog.push(entry);
+                agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
+              }
+            }
+
+            // Flush progress to DB so refreshing clients get catch-up data
+            await prisma.agentJob.update({
+              where: { id: jobId },
+              data: { progressLog },
+            });
+          }
+
+          // Log tool result errors (e.g. MCP failures, tool timeouts)
+          if (message.type === 'user' && Array.isArray((message.message as { content?: unknown }).content)) {
+            for (const block of (message.message as { content: { type: string; is_error?: boolean; content?: unknown; tool_use_id?: string }[] }).content) {
+              if (block.type === 'tool_result' && block.is_error) {
+                const errorText = Array.isArray(block.content)
+                  ? block.content.map((c: { text?: string }) => c.text || '').join(' ')
+                  : String(block.content || 'Unknown error');
+                serverLogger.warn({ jobId, toolUseId: block.tool_use_id, error: errorText }, 'Blog agent tool call returned an error');
+                const entry: ProgressLogEntry = {
+                  timestamp: new Date().toISOString(),
+                  type: 'error',
+                  summary: `Tool error: ${errorText.slice(0, 500)}`,
                 };
                 progressLog.push(entry);
                 agentJobEmitter.emit(jobId, { type: 'progress', data: entry });
@@ -362,6 +400,21 @@ export class BlogAgentService {
     agentJobEmitter.emit(jobId, { type: 'result', data: result });
     agentJobEmitter.emit(jobId, { type: 'done', data: '' });
     agentJobEmitter.removeAllForJob(jobId);
+  }
+
+  private buildToolCallSummary(toolName: string, args: Record<string, unknown>): string {
+    const shortName = toolName.replace(/^mcp__[^_]+__/, '');
+
+    if (toolName.includes('__blog-tools__')) {
+      if (shortName === 'get_changelogs_for_period') return `Fetching changelogs for ${args['month'] || 'period'}`;
+      if (shortName === 'search_past_blogs' && args['query']) return `Searching past blogs: "${args['query']}"`;
+      if (shortName === 'create_blog_draft' && args['title']) return `Creating draft: "${args['title']}"`;
+      if (shortName === 'update_blog_draft') return `Updating draft${args['title'] ? `: "${args['title']}"` : ''}`;
+      if (shortName === 'validate_blog_draft') return 'Running critic validation';
+      return `Called ${shortName}`;
+    }
+
+    return `Called ${shortName}`;
   }
 
   private buildUserPrompt(context: {
