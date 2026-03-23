@@ -15,8 +15,4 @@ import type { RoadmapIdea } from '@lfx-changelog/shared';
 export class RoadmapCardComponent {
   public readonly idea = input.required<RoadmapIdea>();
   public readonly cardClick = output<string>();
-
-  protected onClick(): void {
-    this.cardClick.emit(this.idea().jiraKey);
-  }
 }

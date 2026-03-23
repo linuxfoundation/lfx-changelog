@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <button
-  (click)="onClick()"
+  (click)="cardClick.emit(idea().jiraKey)"
   class="bg-canvas border-border hover:border-brand-300 group w-full cursor-pointer rounded-lg border p-3 text-left transition-all hover:shadow-sm">
   <!-- Summary -->
   <p class="text-text-primary group-hover:text-brand-700 dark:group-hover:text-brand-400 text-[13px] leading-snug font-medium transition-colors">

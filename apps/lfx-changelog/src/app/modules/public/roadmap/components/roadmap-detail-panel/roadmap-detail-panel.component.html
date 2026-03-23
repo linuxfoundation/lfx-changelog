@@ -163,7 +163,7 @@
               </div>
             } @else if (comments().length > 0) {
               <div class="mt-3 space-y-4">
-                @for (comment of comments(); track comment.createdAt) {
+                @for (comment of comments(); track $index) {
                   <div class="bg-surface-alt rounded-lg p-3">
                     <div class="flex items-center gap-2">
                       @if (comment.author?.avatarUrl) {

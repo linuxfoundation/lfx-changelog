@@ -26,7 +26,7 @@ import type {
   RoadmapPerson,
 } from '@lfx-changelog/shared';
 
-export class RoadmapService {
+class RoadmapService {
   private activeCache: RoadmapCacheEntry | null = null;
   private completedCache: RoadmapCacheEntry | null = null;
   private activeFetchPromise: Promise<RoadmapBoardResponse> | null = null;
@@ -55,12 +55,9 @@ export class RoadmapService {
     let found = this.findIdea(active, jiraKey);
 
     if (!found) {
-      // Only search completed if it's already cached (don't trigger a fetch just for a lookup)
+      // Only search completed if it's already cached — don't trigger a Jira fetch just for a single lookup
       if (this.completedCache && Date.now() - this.completedCache.fetchedAt < ROADMAP_CACHE_TTL_MS) {
         found = this.findIdea(this.completedCache.data, jiraKey);
-      } else {
-        const completed = await this.getCachedCompleted();
-        found = this.findIdea(completed, jiraKey);
       }
     }
 
@@ -113,7 +110,7 @@ export class RoadmapService {
     const columnValues = ROADMAP_ACTIVE_COLUMNS.map((c) => `"${c}"`).join(', ');
     const jql = `project = ${JIRA_ROADMAP_PROJECT_KEY} AND issuetype = Idea AND cf[${roadmapFieldId}] IN (${columnValues}) ORDER BY rank ASC`;
 
-    this.activeFetchPromise = this.fetchFromJira(jql, ROADMAP_ACTIVE_COLUMNS as unknown as string[])
+    this.activeFetchPromise = this.fetchFromJira(jql, [...ROADMAP_ACTIVE_COLUMNS])
       .then((data) => {
         this.activeCache = { data, fetchedAt: Date.now() };
         this.activeFetchPromise = null;
@@ -144,7 +141,7 @@ export class RoadmapService {
     const columnValues = ROADMAP_COMPLETED_COLUMNS.map((c) => `"${c}"`).join(', ');
     const jql = `project = ${JIRA_ROADMAP_PROJECT_KEY} AND issuetype = Idea AND cf[${roadmapFieldId}] IN (${columnValues}) ORDER BY rank ASC`;
 
-    this.completedFetchPromise = this.fetchFromJira(jql, ROADMAP_COMPLETED_COLUMNS as unknown as string[])
+    this.completedFetchPromise = this.fetchFromJira(jql, [...ROADMAP_COMPLETED_COLUMNS])
       .then((data) => {
         this.completedCache = { data, fetchedAt: Date.now() };
         this.completedFetchPromise = null;
@@ -304,3 +301,5 @@ export class RoadmapService {
     }
   }
 }
+
+export const roadmapService = new RoadmapService();

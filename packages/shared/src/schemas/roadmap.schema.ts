@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 
-import { ROADMAP_COLUMNS } from '../constants/roadmap.constant.js';
+import { JIRA_ROADMAP_FIELDS as JIRA_ROADMAP_FIELD_IDS, ROADMAP_COLUMNS } from '../constants/roadmap.constant.js';
 
 export const RoadmapColumnSchema = z.enum(ROADMAP_COLUMNS).openapi('RoadmapColumn');
 
@@ -107,7 +107,7 @@ export type JiraUser = {
   emailAddress?: string;
 };
 
-export type JiraIssueFields = Record<string, any> & {
+export type JiraIssueFields = {
   summary?: string;
   status?: { name: string };
   description?: Record<string, unknown> | null;
@@ -117,6 +117,20 @@ export type JiraIssueFields = Record<string, any> & {
   assignee?: JiraUser | null;
   created?: string;
   updated?: string;
+  /** Roadmap column (single select) — customfield_10141 */
+  [JIRA_ROADMAP_FIELD_IDS.ROADMAP]?: JiraOption | null;
+  /** Teams (multi-select) — customfield_10145 */
+  [JIRA_ROADMAP_FIELD_IDS.TEAMS]?: JiraOption[];
+  /** Goals (multi-select) — customfield_10140 */
+  [JIRA_ROADMAP_FIELD_IDS.GOALS]?: JiraOption[];
+  /** Category (single select) — customfield_10152 */
+  [JIRA_ROADMAP_FIELD_IDS.CATEGORY]?: JiraOption | null;
+  /** Value score — customfield_10153 */
+  [JIRA_ROADMAP_FIELD_IDS.VALUE]?: number | null;
+  /** Effort score — customfield_10154 */
+  [JIRA_ROADMAP_FIELD_IDS.EFFORT]?: number | null;
+  /** Impact score — customfield_10134 */
+  [JIRA_ROADMAP_FIELD_IDS.IMPACT]?: number | null;
 };
 
 export type JiraIssue = {
