@@ -1,0 +1,102 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-5">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <div class="flex items-center gap-3">
+        <div class="from-brand-600 to-accent-indigo flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br shadow-sm">
+          <i class="fa-duotone fa-map text-sm text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-text-primary font-display text-2xl font-bold tracking-tight">Product Roadmap</h1>
+          <p class="text-text-muted mt-0.5 text-xs">Ideas and features across LFX products</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      @if (totalIdeas() > 0) {
+        <span class="text-text-muted text-xs tabular-nums">{{ totalIdeas() }} ideas</span>
+        <span class="bg-border h-3 w-px"></span>
+      }
+      @if (board().lastFetchedAt) {
+        <span class="text-text-muted flex items-center gap-1.5 text-xs">
+          <i class="fa-duotone fa-arrows-rotate text-[10px]"></i>
+          Synced from Jira
+        </span>
+      }
+    </div>
+  </div>
+
+  <!-- Team filter pills -->
+  @if (board().teams.length > 0) {
+    <div class="border-border flex flex-wrap items-center gap-2 border-t pt-4">
+      <span class="text-text-muted mr-1 text-xs font-medium tracking-wider uppercase">Team</span>
+      @for (team of board().teams; track team) {
+        <button
+          (click)="toggleTeam(team)"
+          [class]="
+            selectedTeam() === team
+              ? 'bg-brand-600 border-transparent text-white shadow-sm'
+              : 'bg-surface border-border text-text-secondary hover:border-brand-300 hover:text-text-primary'
+          "
+          class="rounded-full border px-3 py-1 text-xs font-medium transition-all">
+          {{ team | teamDisplayName }}
+        </button>
+      }
+      @if (selectedTeam()) {
+        <button (click)="toggleTeam(selectedTeam())" class="text-text-muted hover:text-brand-600 ml-1 flex items-center gap-1 text-xs transition-colors">
+          <i class="fa-solid fa-xmark text-[10px]"></i>
+          Clear
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Loading state -->
+  @if (loading()) {
+    <div class="roadmap-grid-3">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="bg-surface border-border animate-pulse rounded-xl border p-4">
+          <div class="bg-surface-alt mb-4 h-6 w-24 rounded"></div>
+          <div class="space-y-3">
+            <div class="bg-surface-alt hidden h-20 rounded-lg md:block"></div>
+            <div class="bg-surface-alt h-20 rounded-lg"></div>
+            <div class="bg-surface-alt hidden h-16 rounded-lg md:block"></div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- Kanban board -->
+    <div [class]="showCompleted() ? 'roadmap-grid-5' : 'roadmap-grid-3'" role="region" aria-label="Roadmap kanban board">
+      @for (column of activeColumns(); track column.name; let first = $first) {
+        <lfx-roadmap-column [columnName]="column.name" [ideas]="column.ideas" [initiallyExpanded]="first" (cardClick)="openDetail($event)" />
+      }
+    </div>
+
+    <!-- Show completed toggle -->
+    <button
+      (click)="toggleCompleted()"
+      class="text-text-secondary hover:text-text-primary mt-1 flex items-center gap-1.5 text-xs font-medium transition-colors">
+      @if (showCompleted()) {
+        <i class="fa-duotone fa-eye-slash text-[10px]"></i>
+        Hide completed
+        @if (completedCount() > 0) {
+          ({{ completedCount() }})
+        }
+      } @else {
+        <i class="fa-duotone fa-eye text-[10px]"></i>
+        Show completed
+        @if (completedCount() > 0) {
+          ({{ completedCount() }})
+        }
+      }
+    </button>
+  }
+</div>
+
+<!-- Detail panel -->
+<lfx-roadmap-detail-panel [(visible)]="detailPanelVisible" [jiraKey]="selectedIdeaKey()" />

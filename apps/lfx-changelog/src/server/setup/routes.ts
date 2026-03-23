@@ -19,6 +19,7 @@ import publicBlogRouter from '../routes/public-blog.route';
 import publicChangelogRouter from '../routes/public-changelog.route';
 import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
+import publicRoadmapRouter from '../routes/public-roadmap.route';
 import publicSearchRouter from '../routes/public-search.route';
 import slackRouter from '../routes/slack.route';
 import userRouter from '../routes/user.route';
@@ -64,6 +65,7 @@ export function setupRoutes(app: Express): void {
   app.use('/public/api/search', publicSearchRouter);
   app.use('/public/api/changelogs', publicChangelogRouter);
   app.use('/public/api/products', publicProductRouter);
+  app.use('/public/api/roadmap', publicRoadmapRouter);
 
   // ── MCP (Model Context Protocol) — public, stateless HTTP transport ───
   app.use('/mcp', mcpRouter);

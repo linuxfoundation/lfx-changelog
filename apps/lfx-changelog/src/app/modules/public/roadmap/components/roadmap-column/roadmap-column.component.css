@@ -1,0 +1,66 @@
+/* Copyright The Linux Foundation and each contributor to LFX. */
+/* SPDX-License-Identifier: MIT */
+
+.column-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.column-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.column-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.column-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+/* Desktop: chevron hidden, header not interactive, cards always visible */
+.collapse-chevron {
+  display: none;
+}
+
+.column-header {
+  cursor: default;
+}
+
+.column-cards {
+  max-height: 70vh;
+}
+
+/* Mobile: accordion behavior */
+@media (max-width: 767px) {
+  .collapse-chevron {
+    display: inline-block;
+  }
+
+  .column-header {
+    cursor: pointer;
+  }
+
+  .column-cards {
+    max-height: none;
+    overflow: visible;
+    transition:
+      grid-template-rows 0.25s ease-out,
+      opacity 0.2s ease-out;
+  }
+
+  /* Use a wrapper technique: collapsed hides cards */
+  .roadmap-column {
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+
+  .mobile-collapsed {
+    display: none;
+  }
+
+  .mobile-expanded {
+    display: flex;
+  }
+}

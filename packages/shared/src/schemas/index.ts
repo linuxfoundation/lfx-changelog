@@ -94,6 +94,15 @@ export {
 } from './opensearch.schema.js';
 export { AddSlackNotifyUserRequestSchema, ProductSchema, ProductSlackNotifyUserSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
+export {
+  RoadmapBoardResponseSchema,
+  RoadmapColumnSchema,
+  RoadmapCommentSchema,
+  RoadmapIdeaDetailSchema,
+  RoadmapIdeaSchema,
+  RoadmapPersonSchema,
+  RoadmapQueryParamsSchema,
+} from './roadmap.schema.js';
 export { RuntimeConfigSchema } from './runtime-config.schema.js';
 export {
   BlogDocumentSchema,
@@ -215,6 +224,25 @@ export type {
 } from './opensearch.schema.js';
 export type { AddSlackNotifyUserRequest, Product, ProductSlackNotifyUser } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
+export type {
+  AdfMark,
+  AdfNode,
+  JiraComment,
+  JiraCommentsResponse,
+  JiraIssue,
+  JiraIssueFields,
+  JiraOption,
+  JiraSearchResponse,
+  JiraUser,
+  RoadmapBoardResponse,
+  RoadmapCacheEntry,
+  RoadmapColumn,
+  RoadmapComment,
+  RoadmapIdea,
+  RoadmapIdeaDetail,
+  RoadmapPerson,
+  RoadmapQueryParams,
+} from './roadmap.schema.js';
 export type { RuntimeConfig } from './runtime-config.schema.js';
 export type {
   BlogDocument,

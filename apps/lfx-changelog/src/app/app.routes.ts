@@ -32,6 +32,10 @@ export const routes: Routes = [
         loadComponent: () => import('@modules/public/blog-detail/blog-detail.component').then((m) => m.BlogDetailComponent),
       },
       {
+        path: 'roadmap',
+        loadComponent: () => import('@modules/public/roadmap/roadmap-board/roadmap-board.component').then((m) => m.RoadmapBoardComponent),
+      },
+      {
         path: 'chat',
         loadComponent: () => import('@modules/public/public-chat/public-chat.component').then((m) => m.PublicChatComponent),
       },

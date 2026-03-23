@@ -1,0 +1,35 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div [class]="'roadmap-column bg-surface border-border flex min-w-0 flex-col rounded-xl border border-t-[3px] ' + style().border">
+  <!-- Column header (tappable on mobile) -->
+  <button (click)="toggleCollapse()" class="column-header flex w-full items-center justify-between px-3.5 py-3 text-left">
+    <div class="flex items-center gap-2">
+      <span [class]="'flex h-5 w-5 items-center justify-center rounded ' + style().badge">
+        <i [class]="style().icon + ' text-[10px]'"></i>
+      </span>
+      <h2 class="text-text-primary text-sm font-semibold">{{ columnName() }}</h2>
+    </div>
+    <div class="flex items-center gap-2">
+      <span [class]="'rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums ' + style().badge">
+        {{ ideas().length }}
+      </span>
+      <i
+        [class]="
+          'collapse-chevron fa-solid fa-chevron-down text-text-muted text-[10px] transition-transform duration-200 ' + (isCollapsed() ? '' : 'rotate-180')
+        "></i>
+    </div>
+  </button>
+
+  <!-- Cards (collapsible on mobile, always visible on desktop) -->
+  <div [class]="'column-cards column-scroll flex flex-col gap-2 overflow-y-auto px-2.5 pb-2.5 ' + (isCollapsed() ? 'mobile-collapsed' : 'mobile-expanded')">
+    @for (idea of ideas(); track idea.jiraKey) {
+      <lfx-roadmap-card [idea]="idea" (cardClick)="onCardClick($event)" />
+    } @empty {
+      <div class="text-text-muted flex flex-col items-center gap-2 py-8 text-center">
+        <i class="fa-duotone fa-inbox text-xl opacity-40"></i>
+        <span class="text-xs">No ideas yet</span>
+      </div>
+    }
+  </div>
+</div>

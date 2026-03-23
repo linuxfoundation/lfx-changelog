@@ -26,6 +26,13 @@
             Blogs
           </a>
           <a
+            data-testid="public-layout-roadmap-link"
+            routerLink="/roadmap"
+            routerLinkActive="bg-surface-alt text-text-primary"
+            class="text-text-secondary hover:bg-surface-alt hover:text-text-primary rounded-lg px-3 py-1.5 text-sm font-medium transition-colors">
+            Roadmap
+          </a>
+          <a
             data-testid="public-layout-chat-link"
             routerLink="/chat"
             routerLinkActive="bg-surface-alt text-text-primary"
@@ -120,6 +127,14 @@
             class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
             <i class="fa-duotone fa-newspaper text-xs"></i>
             Blogs
+          </a>
+          <a
+            routerLink="/roadmap"
+            routerLinkActive="bg-surface-alt text-text-primary"
+            (click)="closeMobileMenu()"
+            class="text-text-secondary hover:bg-surface-alt hover:text-text-primary flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors">
+            <i class="fa-duotone fa-map text-xs"></i>
+            Roadmap
           </a>
           <a
             routerLink="/chat"
