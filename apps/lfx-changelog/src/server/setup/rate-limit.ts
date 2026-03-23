@@ -1,15 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
-import type { Express, RequestHandler } from 'express';
+import type { Express, Request, RequestHandler } from 'express';
 
-/** Normalizes IPv6 addresses to prevent bypass via different representations. */
-function normalizeIp(ip: string | undefined): string {
-  const raw = ip ?? 'unknown';
-  // Strip ::ffff: prefix from IPv4-mapped IPv6 addresses
-  return raw.startsWith('::ffff:') ? raw.slice(7) : raw;
+/** Extracts and normalizes the client IP using express-rate-limit's IPv6-safe helper. */
+function ipKey(req: Request): string {
+  return ipKeyGenerator(req.ip ?? 'unknown');
 }
 
 /**
@@ -39,7 +37,7 @@ export function createPublicChatRateLimiter(): RequestHandler {
     limit: 3,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => normalizeIp(req.ip),
+    keyGenerator: ipKey,
     message: { error: 'Too many chat requests. Please wait a moment before trying again.' },
   });
 }
@@ -50,7 +48,7 @@ export function createAuthenticatedChatRateLimiter(): RequestHandler {
     limit: 15,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => req.dbUser?.id ?? normalizeIp(req.ip),
+    keyGenerator: (req) => req.dbUser?.id ?? ipKey(req),
     message: { error: 'Too many chat requests. Please wait a moment before trying again.' },
   });
 }
@@ -73,7 +71,7 @@ export function setupRateLimiting(app: Express): void {
     limit: 100,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    keyGenerator: (req) => normalizeIp(req.ip),
+    keyGenerator: ipKey,
     message: { error: 'Too many requests, please try again later.' },
   });
   app.use('/public/api', apiRateLimiter);

@@ -8,6 +8,18 @@ export { BOT_EMAIL, BOT_NAME, DEFAULT_LOOKBACK_DAYS, STALE_LOCK_MS } from './bot
 export { GITHUB_APP_INSTALL_URL, GITHUB_APP_SLUG } from './github.constant.js';
 export { BLOGS_INDEX, BULK_BATCH_SIZE, CHANGELOGS_INDEX, MAX_PAGE_SIZE } from './opensearch.constant.js';
 export { PRODUCTS } from './products.constant.js';
+export {
+  JIRA_ROADMAP_FETCH_FIELDS,
+  JIRA_ROADMAP_FIELDS,
+  JIRA_ROADMAP_PROJECT_KEY,
+  JIRA_SITE_URL,
+  ROADMAP_ACTIVE_COLUMNS,
+  ROADMAP_CACHE_TTL_MS,
+  ROADMAP_COLUMNS,
+  ROADMAP_COLUMN_ORDER,
+  ROADMAP_COMPLETED_COLUMNS,
+  ROADMAP_TEAM_DISPLAY_NAMES,
+} from './roadmap.constant.js';
 export { ROLE_HIERARCHY } from './role-hierarchy.constant.js';
 
 export type { ApiKeyScopeMetadata } from '../schemas/api-key.schema.js';

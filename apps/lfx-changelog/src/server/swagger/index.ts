@@ -14,6 +14,7 @@ import { changelogRegistry } from './paths/changelogs.path';
 import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
 import { publicProductRegistry } from './paths/public-products.path';
+import { publicRoadmapRegistry } from './paths/public-roadmap.path';
 import { releaseRegistry } from './paths/releases.path';
 import { searchRegistry } from './paths/search.path';
 import { userRegistry } from './paths/users.path';
@@ -45,6 +46,7 @@ const allRegistries = [
   releaseRegistry,
   userRegistry,
   agentJobRegistry,
+  publicRoadmapRegistry,
 ];
 
 // Collect all definitions from all registries
@@ -68,6 +70,7 @@ const document = generator.generateDocument({
     { name: 'Public - Products', description: 'No authentication required' },
     { name: 'Public - Changelogs', description: 'No authentication required' },
     { name: 'Public - Blog', description: 'Blog posts — no authentication required' },
+    { name: 'Public - Roadmap', description: 'Product roadmap from Jira — no authentication required' },
     { name: 'Public - Search', description: 'Full-text search — no authentication required' },
 
     { name: 'Products', description: 'Authentication required' },

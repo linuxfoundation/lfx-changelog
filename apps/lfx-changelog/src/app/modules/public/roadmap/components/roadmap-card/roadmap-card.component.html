@@ -1,0 +1,42 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<button
+  (click)="cardClick.emit(idea().jiraKey)"
+  class="bg-canvas border-border hover:border-brand-300 group w-full cursor-pointer rounded-lg border p-3 text-left transition-all hover:shadow-sm">
+  <!-- Summary -->
+  <p class="text-text-primary group-hover:text-brand-700 dark:group-hover:text-brand-400 text-[13px] leading-snug font-medium transition-colors">
+    {{ idea().summary }}
+  </p>
+
+  <!-- Metadata row -->
+  @if (idea().teams.length > 0 || idea().goals.length > 0) {
+    <div class="mt-2 flex flex-wrap items-center gap-1">
+      @for (team of idea().teams; track team) {
+        <span class="bg-surface-alt text-text-secondary rounded px-1.5 py-0.5 text-[10px] font-medium">
+          {{ team | teamDisplayName }}
+        </span>
+      }
+      @for (goal of idea().goals; track goal) {
+        <span class="bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400 rounded px-1.5 py-0.5 text-[10px] font-medium">
+          {{ goal }}
+        </span>
+      }
+    </div>
+  }
+
+  <!-- Scores row -->
+  @if (idea().impact !== null || idea().effort !== null || idea().votes > 0) {
+    <div class="text-text-muted mt-2 flex items-center gap-3 text-[10px]">
+      @if (idea().impact !== null) {
+        <span class="flex items-center gap-0.5" title="Impact"> <i class="fa-duotone fa-arrow-trend-up"></i> {{ idea().impact }} </span>
+      }
+      @if (idea().effort !== null) {
+        <span class="flex items-center gap-0.5" title="Effort"> <i class="fa-duotone fa-wrench"></i> {{ idea().effort }} </span>
+      }
+      @if (idea().votes > 0) {
+        <span class="flex items-center gap-0.5" title="Votes"> <i class="fa-duotone fa-thumbs-up"></i> {{ idea().votes }} </span>
+      }
+    </div>
+  }
+</button>

@@ -1,0 +1,210 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (visible()) {
+  <!-- Backdrop -->
+  <div (click)="onBackdropClick($event)" class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <!-- Slide-in panel -->
+    <div class="bg-surface border-border animate-slide-in-right absolute inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l shadow-xl">
+      <!-- Header -->
+      <div class="border-border flex items-center justify-between border-b px-6 py-4">
+        <div class="flex items-center gap-2.5">
+          <div class="from-brand-600 to-accent-indigo flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br">
+            <i class="fa-duotone fa-lightbulb text-xs text-white"></i>
+          </div>
+          <h2 class="text-text-primary font-display text-base font-semibold">Idea Details</h2>
+        </div>
+        <button
+          (click)="close()"
+          class="text-text-muted hover:text-text-primary hover:bg-surface-alt flex h-8 w-8 items-center justify-center rounded-lg transition-all"
+          aria-label="Close panel">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto p-6">
+        @if (loading()) {
+          <div class="animate-pulse space-y-4">
+            <div class="bg-surface-alt h-6 w-3/4 rounded-lg"></div>
+            <div class="bg-surface-alt h-4 w-1/2 rounded-lg"></div>
+            <div class="bg-surface-alt h-32 rounded-lg"></div>
+          </div>
+        } @else if (idea(); as idea) {
+          <!-- Summary -->
+          <h3 class="text-text-primary font-display text-xl leading-snug font-bold">{{ idea.summary }}</h3>
+
+          <!-- Status badge + key -->
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <span class="bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 rounded-full px-3 py-1 text-xs font-medium">
+              {{ idea.roadmapColumn }}
+            </span>
+            <span class="bg-surface-alt text-text-muted rounded-full px-2.5 py-1 font-mono text-[10px]">{{ idea.jiraKey }}</span>
+          </div>
+
+          <!-- Teams & Goals -->
+          @if (idea.teams.length > 0 || idea.goals.length > 0) {
+            <div class="mt-4 flex flex-wrap gap-1.5">
+              @for (team of idea.teams; track team) {
+                <span class="bg-surface-alt text-text-secondary rounded-full px-2.5 py-1 text-xs font-medium">
+                  <i class="fa-duotone fa-users text-[10px] opacity-50"></i>
+                  {{ team | teamDisplayName }}
+                </span>
+              }
+              @for (goal of idea.goals; track goal) {
+                <span class="bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400 rounded-full px-2.5 py-1 text-xs font-medium">
+                  <i class="fa-duotone fa-bullseye text-[10px] opacity-50"></i>
+                  {{ goal }}
+                </span>
+              }
+            </div>
+          }
+
+          <!-- People -->
+          @if (idea.reporter || idea.assignee || idea.creator) {
+            <div class="border-border mt-5 flex flex-wrap gap-4 border-t pt-4">
+              @if (idea.reporter) {
+                <div class="flex items-center gap-2">
+                  @if (idea.reporter.avatarUrl) {
+                    <img [src]="idea.reporter.avatarUrl" [alt]="idea.reporter.name" class="h-6 w-6 rounded-full" />
+                  } @else {
+                    <div class="bg-surface-alt text-text-muted flex h-6 w-6 items-center justify-center rounded-full text-[10px]">
+                      <i class="fa-duotone fa-user"></i>
+                    </div>
+                  }
+                  <div>
+                    <div class="text-text-muted text-[10px] tracking-wider uppercase">Reporter</div>
+                    <div class="text-text-primary text-xs font-medium">{{ idea.reporter.name }}</div>
+                  </div>
+                </div>
+              }
+              @if (idea.assignee) {
+                <div class="flex items-center gap-2">
+                  @if (idea.assignee.avatarUrl) {
+                    <img [src]="idea.assignee.avatarUrl" [alt]="idea.assignee.name" class="h-6 w-6 rounded-full" />
+                  } @else {
+                    <div class="bg-surface-alt text-text-muted flex h-6 w-6 items-center justify-center rounded-full text-[10px]">
+                      <i class="fa-duotone fa-user"></i>
+                    </div>
+                  }
+                  <div>
+                    <div class="text-text-muted text-[10px] tracking-wider uppercase">Assignee</div>
+                    <div class="text-text-primary text-xs font-medium">{{ idea.assignee.name }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Metrics -->
+          @if (idea.impact !== null || idea.effort !== null || idea.value !== null || idea.votes > 0) {
+            <div class="border-border mt-5 flex gap-2 border-t pt-4">
+              @if (idea.impact !== null) {
+                <div class="bg-surface-alt flex-1 rounded-lg px-3 py-2.5 text-center">
+                  <div class="text-text-muted text-[10px] font-medium tracking-wider uppercase">Impact</div>
+                  <div class="text-text-primary mt-0.5 text-base font-semibold tabular-nums">
+                    {{ idea.impact }}<span class="text-text-muted text-[10px]">/5</span>
+                  </div>
+                </div>
+              }
+              @if (idea.effort !== null) {
+                <div class="bg-surface-alt flex-1 rounded-lg px-3 py-2.5 text-center">
+                  <div class="text-text-muted text-[10px] font-medium tracking-wider uppercase">Effort</div>
+                  <div class="text-text-primary mt-0.5 text-base font-semibold tabular-nums">
+                    {{ idea.effort }}<span class="text-text-muted text-[10px]">/5</span>
+                  </div>
+                </div>
+              }
+              @if (idea.value !== null) {
+                <div class="bg-surface-alt flex-1 rounded-lg px-3 py-2.5 text-center">
+                  <div class="text-text-muted text-[10px] font-medium tracking-wider uppercase">Value</div>
+                  <div class="text-text-primary mt-0.5 text-base font-semibold tabular-nums">
+                    {{ idea.value }}<span class="text-text-muted text-[10px]">/5</span>
+                  </div>
+                </div>
+              }
+              @if (idea.votes > 0) {
+                <div class="bg-surface-alt flex-1 rounded-lg px-3 py-2.5 text-center">
+                  <div class="text-text-muted text-[10px] font-medium tracking-wider uppercase">Votes</div>
+                  <div class="text-text-primary mt-0.5 text-base font-semibold tabular-nums">{{ idea.votes }}</div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Category -->
+          @if (idea.category) {
+            <div class="mt-4">
+              <span class="text-text-muted text-[10px] font-medium tracking-wider uppercase">Category</span>
+              <p class="text-text-secondary mt-1 text-sm">{{ idea.category }}</p>
+            </div>
+          }
+
+          <!-- Description (ADF rendered) -->
+          @if (idea.descriptionAdf) {
+            <div class="border-border mt-5 border-t pt-4">
+              <span class="text-text-muted text-[10px] font-medium tracking-wider uppercase">Description</span>
+              <div class="prose-themed mt-2 text-sm leading-relaxed" [innerHTML]="idea.descriptionAdf | adfToHtml"></div>
+            </div>
+          }
+
+          <!-- Comments -->
+          <div class="border-border mt-5 border-t pt-4">
+            <span class="text-text-muted text-[10px] font-medium tracking-wider uppercase">
+              Comments
+              @if (!commentsLoading() && comments().length > 0) {
+                ({{ comments().length }})
+              }
+            </span>
+            @if (commentsLoading()) {
+              <div class="mt-3 space-y-3">
+                <div class="bg-surface-alt h-16 animate-pulse rounded-lg"></div>
+                <div class="bg-surface-alt h-12 animate-pulse rounded-lg"></div>
+              </div>
+            } @else if (comments().length > 0) {
+              <div class="mt-3 space-y-4">
+                @for (comment of comments(); track $index) {
+                  <div class="bg-surface-alt rounded-lg p-3">
+                    <div class="flex items-center gap-2">
+                      @if (comment.author?.avatarUrl) {
+                        <img [src]="comment.author!.avatarUrl" [alt]="comment.author!.name" class="h-5 w-5 rounded-full" />
+                      } @else {
+                        <div class="bg-canvas text-text-muted flex h-5 w-5 items-center justify-center rounded-full text-[9px]">
+                          <i class="fa-duotone fa-user"></i>
+                        </div>
+                      }
+                      <span class="text-text-primary text-xs font-medium">{{ comment.author?.name ?? 'Unknown' }}</span>
+                      <span class="text-text-muted text-[10px]">{{ comment.createdAt | date: 'MMM d, yyyy' }}</span>
+                    </div>
+                    @if (comment.bodyAdf) {
+                      <div class="prose-themed mt-2 text-xs leading-relaxed" [innerHTML]="comment.bodyAdf | adfToHtml"></div>
+                    }
+                  </div>
+                }
+              </div>
+            } @else {
+              <p class="text-text-muted mt-2 text-xs">No comments yet</p>
+            }
+          </div>
+
+          <!-- Jira link -->
+          <div class="border-border mt-6 border-t pt-4">
+            <a
+              [href]="idea.jiraUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="bg-brand-600 hover:bg-brand-700 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md">
+              <i class="fa-brands fa-jira"></i>
+              View in Jira
+            </a>
+          </div>
+        } @else {
+          <div class="text-text-muted flex flex-col items-center gap-2 py-12 text-center">
+            <i class="fa-duotone fa-ghost text-2xl opacity-40"></i>
+            <span class="text-sm">Idea not found</span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
