@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, input, output, signal } from '@angular/core';
-import { ROADMAP_COLUMN_ORDER } from '@lfx-changelog/shared';
 import { RoadmapCardComponent } from '../roadmap-card/roadmap-card.component';
 
 import type { RoadmapIdea } from '@lfx-changelog/shared';
@@ -62,7 +61,6 @@ export class RoadmapColumnComponent {
 
   protected readonly collapsed = signal<boolean | null>(null);
   protected readonly style = computed(() => COLUMN_STYLES[this.columnName()] ?? DEFAULT_STYLE);
-  protected readonly sortOrder = computed(() => ROADMAP_COLUMN_ORDER[this.columnName()] ?? 99);
 
   protected readonly isCollapsed = computed(() => {
     const explicit = this.collapsed();

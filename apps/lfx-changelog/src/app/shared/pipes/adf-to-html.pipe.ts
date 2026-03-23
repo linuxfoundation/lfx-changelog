@@ -26,7 +26,8 @@ export class AdfToHtmlPipe implements PipeTransform {
         return `<p>${this.renderNodes(node.content ?? [])}</p>`;
 
       case 'heading': {
-        const level = node.attrs?.['level'] ?? 3;
+        const rawLevel = Number.parseInt(String(node.attrs?.['level'] ?? 3), 10);
+        const level = Number.isInteger(rawLevel) && rawLevel >= 1 && rawLevel <= 6 ? rawLevel : 3;
         return `<h${level}>${this.renderNodes(node.content ?? [])}</h${level}>`;
       }
 
@@ -107,8 +108,11 @@ export class AdfToHtmlPipe implements PipeTransform {
           text = `<s>${text}</s>`;
           break;
         case 'link': {
-          const href = this.escapeHtml(String(mark.attrs?.['href'] ?? ''));
-          text = `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+          const rawHref = String(mark.attrs?.['href'] ?? '');
+          if (/^https?:\/\/|^mailto:/i.test(rawHref)) {
+            const href = this.escapeHtml(rawHref);
+            text = `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+          }
           break;
         }
       }

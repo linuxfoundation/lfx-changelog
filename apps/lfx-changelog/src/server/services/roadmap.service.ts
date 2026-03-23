@@ -76,7 +76,8 @@ export class RoadmapService {
 
   /** Only allow keys from the roadmap project to prevent leaking data from other Jira projects. */
   private isValidProjectKey(jiraKey: string): boolean {
-    return jiraKey.startsWith(`${JIRA_ROADMAP_PROJECT_KEY}-`);
+    const pattern = new RegExp(`^${JIRA_ROADMAP_PROJECT_KEY}-\\d+$`);
+    return pattern.test(jiraKey);
   }
 
   private filterByTeam(board: RoadmapBoardResponse, team: string): RoadmapBoardResponse {
@@ -108,8 +109,9 @@ export class RoadmapService {
       return this.activeFetchPromise;
     }
 
+    const roadmapFieldId = JIRA_ROADMAP_FIELDS.ROADMAP.replace(/\D/g, '');
     const columnValues = ROADMAP_ACTIVE_COLUMNS.map((c) => `"${c}"`).join(', ');
-    const jql = `project = ${JIRA_ROADMAP_PROJECT_KEY} AND issuetype = Idea AND cf[10141] IN (${columnValues}) ORDER BY rank ASC`;
+    const jql = `project = ${JIRA_ROADMAP_PROJECT_KEY} AND issuetype = Idea AND cf[${roadmapFieldId}] IN (${columnValues}) ORDER BY rank ASC`;
 
     this.activeFetchPromise = this.fetchFromJira(jql, ROADMAP_ACTIVE_COLUMNS as unknown as string[])
       .then((data) => {
@@ -138,8 +140,9 @@ export class RoadmapService {
       return this.completedFetchPromise;
     }
 
+    const roadmapFieldId = JIRA_ROADMAP_FIELDS.ROADMAP.replace(/\D/g, '');
     const columnValues = ROADMAP_COMPLETED_COLUMNS.map((c) => `"${c}"`).join(', ');
-    const jql = `project = ${JIRA_ROADMAP_PROJECT_KEY} AND issuetype = Idea AND cf[10141] IN (${columnValues}) ORDER BY rank ASC`;
+    const jql = `project = ${JIRA_ROADMAP_PROJECT_KEY} AND issuetype = Idea AND cf[${roadmapFieldId}] IN (${columnValues}) ORDER BY rank ASC`;
 
     this.completedFetchPromise = this.fetchFromJira(jql, ROADMAP_COMPLETED_COLUMNS as unknown as string[])
       .then((data) => {
@@ -200,7 +203,7 @@ export class RoadmapService {
       const data = (await res.json()) as JiraSearchResponse;
       allIssues.push(...(data.issues ?? []));
       nextPageToken = data.nextPageToken;
-      isLast = data.isLast !== false;
+      isLast = data.isLast ?? !data.nextPageToken;
     }
 
     serverLogger.info({ count: allIssues.length }, 'Fetched roadmap ideas from Jira');
@@ -281,7 +284,7 @@ export class RoadmapService {
     try {
       const baseUrl = `https://api.atlassian.com/ex/jira/${cloudId}`;
       const auth = `Basic ${Buffer.from(`${email}:${apiKey}`).toString('base64')}`;
-      const url = `${baseUrl}/rest/api/3/issue/${jiraKey}/comment?orderBy=-created&maxResults=50`;
+      const url = `${baseUrl}/rest/api/3/issue/${encodeURIComponent(jiraKey)}/comment?orderBy=-created&maxResults=50`;
 
       const res = await fetch(url, {
         headers: { Authorization: auth, Accept: 'application/json' },
