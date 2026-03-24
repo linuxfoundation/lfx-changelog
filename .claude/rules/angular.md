@@ -1,14 +1,12 @@
-# LFX Changelog — Project Rules
-
-## Project Overview
-
-Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changelog`, shared package at `packages/shared` (`@lfx-changelog/shared`), MCP server at `packages/mcp-server`. Express 5 backend, PostgreSQL + Prisma ORM, Auth0, OpenSearch, Slack OAuth, GitHub App webhooks, Datadog APM/RUM. See `docs/` for feature-level documentation.
-
+---
+paths:
+  - 'apps/lfx-changelog/src/**'
+  - 'packages/shared/src/**'
 ---
 
-## Angular Component Rules
+# Angular Component Rules
 
-### File Structure
+## File Structure
 
 - **NEVER inline templates or CSS** — always use separate `.html` and `.css` files (`templateUrl` / `styleUrl`), never `template:` or `styles:` in the component decorator
 - **Components/directives in own subfolder** — e.g. `shared/components/button/button.component.ts`
@@ -17,7 +15,7 @@ Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changel
 - Prefix: `lfx`
 - Use Angular 20 patterns: standalone components, signal-based inputs/outputs (`input()`, `output()`, `model()`), `computed()`, zoneless
 
-### Forms — ALWAYS Use ReactiveFormsModule (CRITICAL)
+## Forms — ALWAYS Use ReactiveFormsModule (CRITICAL)
 
 **ALWAYS use ReactiveFormsModule** for any form inputs:
 
@@ -75,7 +73,7 @@ export class InputComponent implements ControlValueAccessor {
 <input (input)="title.set($event.target.value)" />
 ```
 
-### Template Rules (CRITICAL)
+## Template Rules (CRITICAL)
 
 **NEVER use functions in HTML templates** — use signals, computed values, or pipes:
 
@@ -93,26 +91,9 @@ export class InputComponent implements ControlValueAccessor {
 }
 ```
 
-**ALWAYS use Tailwind CSS in HTML first** instead of custom CSS classes:
+## Signal Patterns
 
-```html
-<!-- CORRECT - Tailwind classes -->
-<div class="border-border bg-surface flex items-center gap-4 rounded-lg border p-4">
-  <!-- AVOID - custom CSS class -->
-  <div class="my-custom-card"></div>
-</div>
-```
-
-Only use custom `.css` when absolutely necessary:
-
-- Complex animations (`@keyframes`)
-- Pseudo-element styling that Tailwind can't handle
-- Prose/markdown content styling (e.g. `prose-themed` class)
-- State-based styling with complex selectors
-
-### Signal Patterns
-
-#### 1. WritableSignals — Initialize directly for simple values
+### 1. WritableSignals — Initialize directly for simple values
 
 ```typescript
 public loading = signal(false);
@@ -120,7 +101,7 @@ public count = signal(0);
 public items = signal<string[]>([]);
 ```
 
-#### 2. Model Signals — Use for two-way binding on presentational props
+### 2. Model Signals — Use for two-way binding on presentational props
 
 For properties that require two-way binding (e.g., dialog visibility), use `model()`:
 
@@ -138,7 +119,7 @@ export class DialogComponent {
 
 **Note:** `model()` is for non-form two-way binding (dialogs, tabs, toggles). For form values, always use `FormControl` with `ReactiveFormsModule`.
 
-#### 3. Computed/toSignal — Use private init functions for complex logic
+### 3. Computed/toSignal — Use private init functions for complex logic
 
 ```typescript
 export class MyComponent {
@@ -157,7 +138,7 @@ export class MyComponent {
 }
 ```
 
-#### 4. Avoid effect() — Use toObservable Instead (CRITICAL)
+### 4. Avoid effect() — Use toObservable Instead (CRITICAL)
 
 `effect()` triggers whenever ANY signal in the component updates, not just the signals read inside the effect. This causes unintended re-executions.
 
@@ -196,7 +177,7 @@ public constructor() {
 - Syncing to external systems that need ALL changes
 - Simple one-liner side effects with no conditions
 
-#### 5. Component structure order
+### 5. Component structure order
 
 1. Private injections (with `readonly`)
 2. Public fields from inputs/dialog data (with `readonly`)
@@ -208,50 +189,9 @@ public constructor() {
 8. Private initializer functions (grouped together)
 9. Other private helper methods
 
-#### 6. Interface placement
+### 6. Interface placement
 
 - **Shared interfaces** in `packages/shared/src/interfaces/` — exported via `@lfx-changelog/shared`
 - **App-specific interfaces** in `apps/lfx-changelog/src/app/shared/interfaces/`
 - Group related interfaces in domain-specific files (e.g., `product.interface.ts`, `user.interface.ts`)
 - Never define interfaces inside component files — move them to the shared folder
-
----
-
-## Styling
-
-- **Tailwind CSS v4** — CSS-first config via `@theme` block in `styles.css`, no `tailwind.config.js`
-- **`.css` files only** — no SCSS (Tailwind v4 CSS-first approach makes SCSS unnecessary)
-- **Semantic color tokens** — use `bg-surface`, `text-text-primary`, `border-border` etc. (defined as CSS custom properties that swap in `.dark {}` block)
-- **Light mode default** — dark mode toggled via `.dark` class on `<html>`
-
----
-
-## Prisma Migrations (CRITICAL)
-
-When creating Prisma migrations, **always use `--create-only` first** to avoid checksum mismatches:
-
-1. `yarn prisma migrate dev --create-only --name <migration_name>` — generates the SQL file without applying
-2. Add the license header to the generated `migration.sql` file:
-
-   ```sql
-   -- Copyright The Linux Foundation and each contributor to LFX.
-   -- SPDX-License-Identifier: MIT
-   ```
-
-3. `yarn prisma migrate dev` — applies the migration (checksum now includes the header)
-
-**NEVER** run `yarn prisma migrate dev --name <name>` directly — it generates and applies in one step, meaning the checksum won't include the license header and modifying the file afterward causes integrity errors on production deploys.
-
-**`migration_lock.toml`** is auto-managed by Prisma and overwritten on every migration command. After running any migration, check if its license header was stripped and re-add it if needed:
-
-```toml
-# Copyright The Linux Foundation and each contributor to LFX.
-# SPDX-License-Identifier: MIT
-```
-
----
-
-## Tooling Preferences
-
-- **Always use `yarn`** instead of `npx` (e.g., `yarn prisma generate`, NOT `npx prisma generate`)
-- **Always use `docker compose`** instead of `docker-compose`
