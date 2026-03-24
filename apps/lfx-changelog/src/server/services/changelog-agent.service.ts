@@ -434,7 +434,7 @@ export class ChangelogAgentService {
                 const errorText = Array.isArray(block.content)
                   ? block.content.map((c: { text?: string }) => c.text || '').join(' ')
                   : String(block.content || 'Unknown error');
-                serverLogger.warn({ jobId, productId, toolUseId: block.tool_use_id, error: errorText }, 'Agent tool call returned an error');
+                serverLogger.warn({ jobId, productId, toolUseId: block.tool_use_id, errorMessage: errorText }, 'Agent tool call returned an error');
                 const entry: ProgressLogEntry = {
                   timestamp: new Date().toISOString(),
                   type: 'error',
@@ -474,7 +474,7 @@ export class ChangelogAgentService {
               agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
 
               // Record quality scores from critic (fire-and-forget)
-              this.recordScoresFromProgressLog(jobId, productId, progressLog).catch((err) =>
+              this.recordScoresFromProgressLog(jobId, productId, updatedJob.changelogEntry?.id ?? null, progressLog).catch((err) =>
                 serverLogger.warn({ err, jobId }, 'Failed to record quality scores')
               );
 
@@ -689,6 +689,7 @@ export class ChangelogAgentService {
 
   private createMcpTools(jobId: string, productId: string, botUserId: string, productSlug: string, activityContext: string) {
     const changelogService = this.changelogService;
+    const agentMemoryService = this.agentMemoryService;
 
     const searchPastChangelogs = tool(
       'search_past_changelogs',
@@ -846,6 +847,32 @@ export class ChangelogAgentService {
             }
           }
 
+          // Try to extract and record quality scores from the critic response
+          try {
+            // Handle pure JSON or JSON wrapped in markdown code fences
+            const jsonMatch = criticResponse.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, criticResponse];
+            const raw = JSON.parse(jsonMatch[1]!.trim());
+            const CriticResponseSchema = z.object({
+              scores: z.object({
+                accuracy: z.number().min(1).max(5),
+                clarity: z.number().min(1).max(5),
+                tone: z.number().min(1).max(5),
+                completeness: z.number().min(1).max(5),
+              }),
+              overall: z.number().min(1).max(5),
+            });
+            const parseResult = CriticResponseSchema.safeParse(raw);
+            if (parseResult.success) {
+              const { scores, overall } = parseResult.data;
+              const qualityScore = { ...scores, overall };
+              await agentMemoryService.recordQualityScores(jobId, productId, qualityScore);
+              await prisma.changelogEntry.update({ where: { id: args.draftId }, data: { qualityScore } });
+              serverLogger.info({ jobId, productId, draftId: args.draftId, overall }, 'Recorded quality scores from critic');
+            }
+          } catch {
+            serverLogger.debug({ jobId, productId }, 'Could not extract quality scores from critic response');
+          }
+
           return { content: [{ type: 'text' as const, text: criticResponse }] };
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : 'Critic query failed';
@@ -865,7 +892,7 @@ export class ChangelogAgentService {
    * Walks the progress log to find critic scores from validate_changelog_draft.
    * Looks for a text entry after the tool call that contains valid JSON scores.
    */
-  private async recordScoresFromProgressLog(jobId: string, productId: string, progressLog: ProgressLogEntry[]): Promise<void> {
+  private async recordScoresFromProgressLog(jobId: string, productId: string, changelogId: string | null, progressLog: ProgressLogEntry[]): Promise<void> {
     const CriticResponseSchema = z.object({
       scores: z.object({
         accuracy: z.number().min(1).max(5),
@@ -889,7 +916,14 @@ export class ChangelogAgentService {
             const parseResult = CriticResponseSchema.safeParse(raw);
             if (parseResult.success) {
               const { scores, overall } = parseResult.data;
-              await this.agentMemoryService.recordQualityScores(jobId, productId, { ...scores, overall });
+              const qualityScore = { ...scores, overall };
+              await this.agentMemoryService.recordQualityScores(jobId, productId, qualityScore);
+
+              // Denormalize onto the changelog entry for admin UI display
+              if (changelogId) {
+                const prisma = getPrismaClient();
+                await prisma.changelogEntry.update({ where: { id: changelogId }, data: { qualityScore } });
+              }
               return;
             }
           } catch {

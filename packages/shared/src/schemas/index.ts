@@ -15,7 +15,13 @@ export {
   AgentJobWithProductSchema,
   ProgressLogEntrySchema,
 } from './agent-job.schema.js';
-export { AgentMemoryDataSchema, CorrectionEntrySchema, QualityScoreEntrySchema, StylePreferencesSchema } from './agent-memory.schema.js';
+export {
+  AgentMemoryDataSchema,
+  CorrectionEntrySchema,
+  QualityScoreDataSchema,
+  QualityScoreEntrySchema,
+  StylePreferencesSchema,
+} from './agent-memory.schema.js';
 export {
   AiChangelogMetadataSchema,
   AiProductSummarySchema,
@@ -141,7 +147,7 @@ export type {
   AgentJobWithProduct,
   ProgressLogEntry,
 } from './agent-job.schema.js';
-export type { AgentMemoryData, CorrectionEntry, QualityScoreEntry, StylePreferences } from './agent-memory.schema.js';
+export type { AgentMemoryData, CorrectionEntry, QualityScoreData, QualityScoreEntry, StylePreferences } from './agent-memory.schema.js';
 export type {
   AiChangelogMetadata,
   AiProductSummary,

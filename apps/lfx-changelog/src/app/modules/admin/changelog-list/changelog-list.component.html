@@ -79,6 +79,34 @@
         <lfx-status-badge [status]="entry.status" />
       </ng-template>
 
+      <ng-template lfxColumn="Score" let-entry>
+        @if (entry.qualityScore; as qs) {
+          <lfx-badge [label]="qs.overall.toFixed(1) + '/5'" [color]="qs.overall | qualityScoreColor" size="sm" [hasTooltip]="true">
+            <div tooltip class="w-40">
+              <p class="text-text-secondary mb-1.5 text-[10px] font-semibold tracking-wider uppercase">Quality Breakdown</p>
+              <div class="flex items-center justify-between py-0.5 text-xs">
+                <span class="text-text-secondary">Accuracy</span>
+                <span class="font-medium">{{ qs.accuracy }}/5</span>
+              </div>
+              <div class="flex items-center justify-between py-0.5 text-xs">
+                <span class="text-text-secondary">Clarity</span>
+                <span class="font-medium">{{ qs.clarity }}/5</span>
+              </div>
+              <div class="flex items-center justify-between py-0.5 text-xs">
+                <span class="text-text-secondary">Tone</span>
+                <span class="font-medium">{{ qs.tone }}/5</span>
+              </div>
+              <div class="flex items-center justify-between py-0.5 text-xs">
+                <span class="text-text-secondary">Completeness</span>
+                <span class="font-medium">{{ qs.completeness }}/5</span>
+              </div>
+            </div>
+          </lfx-badge>
+        } @else {
+          <span class="text-text-muted text-xs">N/A</span>
+        }
+      </ng-template>
+
       <ng-template lfxColumn="Version" let-entry>
         <span class="text-text-secondary text-sm">{{ entry.version ? 'v' + entry.version : '—' }}</span>
       </ng-template>
@@ -130,6 +158,11 @@
               <p class="text-text-secondary text-xs">{{ entry.productId | productName: products() }}</p>
               <div class="flex flex-wrap items-center gap-2">
                 <lfx-status-badge [status]="entry.status" />
+                @if (entry.qualityScore; as qs) {
+                  <lfx-badge [label]="qs.overall.toFixed(1) + '/5'" [color]="qs.overall | qualityScoreColor" size="sm" />
+                } @else {
+                  <span class="text-text-muted text-xs">N/A</span>
+                }
                 <span class="text-text-secondary text-xs">{{ entry.version ? 'v' + entry.version : '' }}</span>
                 <span class="text-text-muted text-xs">{{ entry.updatedAt | dateFormat }}</span>
               </div>

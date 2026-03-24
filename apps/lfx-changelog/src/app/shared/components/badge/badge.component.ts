@@ -12,6 +12,7 @@ export class BadgeComponent {
   public readonly label = input.required<string>();
   public readonly color = input<string>('#3B82F6');
   public readonly size = input<'sm' | 'md'>('md');
+  public readonly hasTooltip = input(false);
 
   protected readonly bgStyle = computed(() => {
     const hex = this.color();

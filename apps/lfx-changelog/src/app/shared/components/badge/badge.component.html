@@ -2,8 +2,16 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <span
-  class="inline-flex items-center gap-1 rounded-full font-medium"
+  class="group relative inline-flex items-center gap-1 rounded-full font-medium"
   [class]="size() === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'"
+  [class.cursor-default]="hasTooltip()"
   [style]="bgStyle()">
   {{ label() }}
+
+  @if (hasTooltip()) {
+    <div
+      class="bg-surface border-border text-text-primary pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden -translate-x-1/2 rounded-lg border p-2.5 shadow-lg group-hover:block">
+      <ng-content select="[tooltip]" />
+    </div>
+  }
 </span>
