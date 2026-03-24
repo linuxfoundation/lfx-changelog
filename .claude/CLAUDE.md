@@ -19,6 +19,7 @@ Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changel
 
 ## Tooling Preferences
 
-- **Always use `yarn`** instead of `npx` (e.g., `yarn prisma generate`, NOT `npx prisma generate`)
+- **Prefer `yarn` workspace scripts/binaries over `npx`** when the tool is in the monorepo deps (e.g., `yarn prisma generate` instead of `npx prisma generate`)
+  - `npx` is allowed for one-off tools not in the workspace or when required by upstream docs/CI (e.g., `npx playwright`, `npx @modelcontextprotocol/inspector`, `npx tsx`)
 - **Always use `docker compose`** instead of `docker-compose`
 - **Use `yarn lint` to lint** — not `yarn eslint`

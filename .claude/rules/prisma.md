@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'prisma/**'
+  - 'apps/lfx-changelog/prisma/**'
   - 'packages/shared/src/schemas/**'
   - 'apps/lfx-changelog/src/server/**'
 ---
