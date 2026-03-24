@@ -92,7 +92,7 @@ yarn prisma migrate dev
 yarn prisma migrate status
 ```
 
-> **Important:** Always use `--create-only` first to avoid checksum mismatches. See the `CLAUDE.md` section on Prisma migrations for the full workflow.
+> **Important:** Always use `--create-only` first to avoid checksum mismatches. See `.claude/rules/prisma.md` for the full workflow.
 
 ## Manual Migrations (Remote Database)
 
