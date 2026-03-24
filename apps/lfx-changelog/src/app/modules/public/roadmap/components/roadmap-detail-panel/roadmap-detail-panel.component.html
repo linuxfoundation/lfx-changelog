@@ -3,9 +3,16 @@
 
 @if (visible()) {
   <!-- Backdrop -->
-  <div (click)="onBackdropClick($event)" class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" role="dialog" aria-modal="true">
+  <div
+    data-testid="roadmap-detail-backdrop"
+    (click)="onBackdropClick($event)"
+    class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true">
     <!-- Slide-in panel -->
-    <div class="bg-surface border-border animate-slide-in-right absolute inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l shadow-xl">
+    <div
+      data-testid="roadmap-detail-panel"
+      class="bg-surface border-border animate-slide-in-right absolute inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l shadow-xl">
       <!-- Header -->
       <div class="border-border flex items-center justify-between border-b px-6 py-4">
         <div class="flex items-center gap-2.5">
@@ -15,6 +22,7 @@
           <h2 class="text-text-primary font-display text-base font-semibold">Idea Details</h2>
         </div>
         <button
+          data-testid="roadmap-detail-close"
           (click)="close()"
           class="text-text-muted hover:text-text-primary hover:bg-surface-alt flex h-8 w-8 items-center justify-center rounded-lg transition-all"
           aria-label="Close panel">
@@ -25,21 +33,25 @@
       <!-- Content -->
       <div class="flex-1 overflow-y-auto p-6">
         @if (loading()) {
-          <div class="animate-pulse space-y-4">
+          <div data-testid="roadmap-detail-loading" class="animate-pulse space-y-4">
             <div class="bg-surface-alt h-6 w-3/4 rounded-lg"></div>
             <div class="bg-surface-alt h-4 w-1/2 rounded-lg"></div>
             <div class="bg-surface-alt h-32 rounded-lg"></div>
           </div>
         } @else if (idea(); as idea) {
           <!-- Summary -->
-          <h3 class="text-text-primary font-display text-xl leading-snug font-bold">{{ idea.summary }}</h3>
+          <h3 data-testid="roadmap-detail-summary" class="text-text-primary font-display text-xl leading-snug font-bold">{{ idea.summary }}</h3>
 
           <!-- Status badge + key -->
           <div class="mt-3 flex flex-wrap items-center gap-2">
-            <span class="bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 rounded-full px-3 py-1 text-xs font-medium">
+            <span
+              data-testid="roadmap-detail-column"
+              class="bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 rounded-full px-3 py-1 text-xs font-medium">
               {{ idea.roadmapColumn }}
             </span>
-            <span class="bg-surface-alt text-text-muted rounded-full px-2.5 py-1 font-mono text-[10px]">{{ idea.jiraKey }}</span>
+            <span data-testid="roadmap-detail-key" class="bg-surface-alt text-text-muted rounded-full px-2.5 py-1 font-mono text-[10px]">{{
+              idea.jiraKey
+            }}</span>
           </div>
 
           <!-- Teams & Goals -->
@@ -142,14 +154,14 @@
 
           <!-- Description (ADF rendered) -->
           @if (idea.descriptionAdf) {
-            <div class="border-border mt-5 border-t pt-4">
+            <div data-testid="roadmap-detail-description" class="border-border mt-5 border-t pt-4">
               <span class="text-text-muted text-[10px] font-medium tracking-wider uppercase">Description</span>
               <div class="prose-themed mt-2 text-sm leading-relaxed" [innerHTML]="idea.descriptionAdf | adfToHtml"></div>
             </div>
           }
 
           <!-- Comments -->
-          <div class="border-border mt-5 border-t pt-4">
+          <div data-testid="roadmap-detail-comments" class="border-border mt-5 border-t pt-4">
             <span class="text-text-muted text-[10px] font-medium tracking-wider uppercase">
               Comments
               @if (!commentsLoading() && comments().length > 0) {
@@ -199,7 +211,7 @@
             </a>
           </div>
         } @else {
-          <div class="text-text-muted flex flex-col items-center gap-2 py-12 text-center">
+          <div data-testid="roadmap-detail-not-found" class="text-text-muted flex flex-col items-center gap-2 py-12 text-center">
             <i class="fa-duotone fa-ghost text-2xl opacity-40"></i>
             <span class="text-sm">Idea not found</span>
           </div>

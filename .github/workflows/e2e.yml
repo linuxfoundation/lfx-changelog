@@ -54,6 +54,7 @@ jobs:
           secret-ids: |
             AUTH0, /cloudops/managed-secrets/auth0/LFX_Changelog
             AUTH0_COOKIE_SECRET, /cloudops/managed-secrets/cloud/changelog/auth0_secret
+            ATLASSIAN, /cloudops/managed-secrets/cloud/changelog/atlassian_api
 
       - name: Set up non-sensitive environment variables
         run: |
@@ -67,7 +68,6 @@ jobs:
           echo "OPENSEARCH_URL=http://localhost:9202" >> "$GITHUB_ENV"
           echo "SKIP_RATE_LIMIT=true" >> "$GITHUB_ENV"
           echo "CI=true" >> "$GITHUB_ENV"
-
           # Slack OAuth (random values for e2e — tests verify auth/validation, not real Slack calls)
           echo "SLACK_CLIENT_ID=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
           echo "SLACK_CLIENT_SECRET=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
@@ -94,6 +94,7 @@ jobs:
           E2E_PRODUCT_ADMIN_EMAIL: ${{ secrets.E2E_PRODUCT_ADMIN_EMAIL }}
           E2E_EDITOR_EMAIL: ${{ secrets.E2E_EDITOR_EMAIL }}
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          ATLASSIAN_CLOUD_ID: ${{ secrets.ATLASSIAN_CLOUD_ID }}
         run: |
           # Parse Auth0 app credentials from JSON secret
           AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id')
@@ -150,6 +151,28 @@ jobs:
           echo "E2E_PRODUCT_ADMIN_EMAIL=$E2E_PRODUCT_ADMIN_EMAIL" >> "$GITHUB_ENV"
           echo "E2E_EDITOR_EMAIL=$E2E_EDITOR_EMAIL" >> "$GITHUB_ENV"
           echo "E2E_USER_EMAIL=$E2E_USER_EMAIL" >> "$GITHUB_ENV"
+
+          # Parse Atlassian / Jira credentials from AWS secret (required for roadmap tests)
+          ATLASSIAN_EMAIL_VALUE=$(echo "$ATLASSIAN" | jq -r '.atlassian_email')
+          ATLASSIAN_API_KEY_VALUE=$(echo "$ATLASSIAN" | jq -r '.atlassian_api_key')
+
+          if [ -z "$ATLASSIAN_EMAIL_VALUE" ] || [ "$ATLASSIAN_EMAIL_VALUE" = "null" ]; then
+            echo "::error::Failed to parse atlassian_email from AWS secret"
+            exit 1
+          fi
+          if [ -z "$ATLASSIAN_API_KEY_VALUE" ] || [ "$ATLASSIAN_API_KEY_VALUE" = "null" ]; then
+            echo "::error::Failed to parse atlassian_api_key from AWS secret"
+            exit 1
+          fi
+
+          echo "::add-mask::$ATLASSIAN_EMAIL_VALUE"
+          echo "::add-mask::$ATLASSIAN_API_KEY_VALUE"
+
+          echo "ATLASSIAN_EMAIL=$ATLASSIAN_EMAIL_VALUE" >> "$GITHUB_ENV"
+          echo "ATLASSIAN_API_KEY=$ATLASSIAN_API_KEY_VALUE" >> "$GITHUB_ENV"
+
+          echo "::add-mask::$ATLASSIAN_CLOUD_ID"
+          echo "ATLASSIAN_CLOUD_ID=$ATLASSIAN_CLOUD_ID" >> "$GITHUB_ENV"
 
       - name: Install Playwright Chromium
         run: npx playwright install chromium --with-deps

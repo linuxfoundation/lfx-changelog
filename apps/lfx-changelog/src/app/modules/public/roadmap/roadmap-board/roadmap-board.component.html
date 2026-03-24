@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="space-y-5">
+<div class="space-y-5" data-testid="roadmap-board">
   <!-- Header -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
     <div>
@@ -10,7 +10,7 @@
           <i class="fa-duotone fa-map text-sm text-white"></i>
         </div>
         <div>
-          <h1 class="text-text-primary font-display text-2xl font-bold tracking-tight">Product Roadmap</h1>
+          <h1 data-testid="roadmap-heading" class="text-text-primary font-display text-2xl font-bold tracking-tight">Product Roadmap</h1>
           <p class="text-text-muted mt-0.5 text-xs">Ideas and features across LFX products</p>
         </div>
       </div>
@@ -18,11 +18,11 @@
 
     <div class="flex items-center gap-3">
       @if (totalIdeas() > 0) {
-        <span class="text-text-muted text-xs tabular-nums">{{ totalIdeas() }} ideas</span>
+        <span data-testid="roadmap-total-ideas" class="text-text-muted text-xs tabular-nums">{{ totalIdeas() }} ideas</span>
         <span class="bg-border h-3 w-px"></span>
       }
       @if (board().lastFetchedAt) {
-        <span class="text-text-muted flex items-center gap-1.5 text-xs">
+        <span data-testid="roadmap-synced-label" class="text-text-muted flex items-center gap-1.5 text-xs">
           <i class="fa-duotone fa-arrows-rotate text-[10px]"></i>
           Synced from Jira
         </span>
@@ -32,10 +32,11 @@
 
   <!-- Team filter pills -->
   @if (board().teams.length > 0) {
-    <div class="border-border flex flex-wrap items-center gap-2 border-t pt-4">
+    <div data-testid="roadmap-team-filters" class="border-border flex flex-wrap items-center gap-2 border-t pt-4">
       <span class="text-text-muted mr-1 text-xs font-medium tracking-wider uppercase">Team</span>
       @for (team of board().teams; track team) {
         <button
+          [attr.data-testid]="'roadmap-team-pill-' + team"
           (click)="toggleTeam(team)"
           [class]="
             selectedTeam() === team
@@ -47,7 +48,10 @@
         </button>
       }
       @if (selectedTeam()) {
-        <button (click)="toggleTeam(selectedTeam())" class="text-text-muted hover:text-brand-600 ml-1 flex items-center gap-1 text-xs transition-colors">
+        <button
+          data-testid="roadmap-team-clear"
+          (click)="toggleTeam(selectedTeam())"
+          class="text-text-muted hover:text-brand-600 ml-1 flex items-center gap-1 text-xs transition-colors">
           <i class="fa-solid fa-xmark text-[10px]"></i>
           Clear
         </button>
@@ -57,7 +61,7 @@
 
   <!-- Loading state -->
   @if (loading()) {
-    <div class="roadmap-grid-3">
+    <div data-testid="roadmap-loading" class="roadmap-grid-3">
       @for (i of [1, 2, 3]; track i) {
         <div class="bg-surface border-border animate-pulse rounded-xl border p-4">
           <div class="bg-surface-alt mb-4 h-6 w-24 rounded"></div>
@@ -71,7 +75,7 @@
     </div>
   } @else {
     <!-- Kanban board -->
-    <div [class]="showCompleted() ? 'roadmap-grid-5' : 'roadmap-grid-3'" role="region" aria-label="Roadmap kanban board">
+    <div data-testid="roadmap-kanban" [class]="showCompleted() ? 'roadmap-grid-5' : 'roadmap-grid-3'" role="region" aria-label="Roadmap kanban board">
       @for (column of activeColumns(); track column.name; let first = $first) {
         <lfx-roadmap-column [columnName]="column.name" [ideas]="column.ideas" [initiallyExpanded]="first" (cardClick)="openDetail($event)" />
       }
@@ -79,6 +83,7 @@
 
     <!-- Show completed toggle -->
     <button
+      data-testid="roadmap-toggle-completed"
       (click)="toggleCompleted()"
       class="text-text-secondary hover:text-text-primary mt-1 flex items-center gap-1.5 text-xs font-medium transition-colors">
       @if (showCompleted()) {
