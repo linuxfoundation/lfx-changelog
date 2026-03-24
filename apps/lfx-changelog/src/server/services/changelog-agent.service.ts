@@ -16,6 +16,7 @@ import {
 import { AgentServiceError } from '../errors';
 import { buildActivityContext } from '../helpers/activity-context.helper';
 import { extractAtlassianReferences, formatAtlassianHints } from '../helpers/atlassian-reference.helper';
+import { parseCriticScores } from '../helpers/critic-response.helper';
 import { serverLogger } from '../server-logger';
 import { agentJobEmitter } from './agent-job-emitter.service';
 import { AgentMemoryService } from './agent-memory.service';
@@ -473,11 +474,6 @@ export class ChangelogAgentService {
               serverLogger.info({ jobId, productId, durationMs, numTurns: message.num_turns }, 'Agent job completed successfully');
               agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
 
-              // Record quality scores from critic (fire-and-forget)
-              this.recordScoresFromProgressLog(jobId, productId, updatedJob.changelogEntry?.id ?? null, progressLog).catch((err) =>
-                serverLogger.warn({ err, jobId }, 'Failed to record quality scores')
-              );
-
               // Notify configured users via Slack DM — release-triggered jobs only (fire-and-forget)
               if (updatedJob.trigger === 'webhook_release' && updatedJob.changelogEntry && updatedJob.product) {
                 const entry = { id: updatedJob.changelogEntry.id, title: updatedJob.changelogEntry.title };
@@ -847,30 +843,12 @@ export class ChangelogAgentService {
             }
           }
 
-          // Try to extract and record quality scores from the critic response
-          try {
-            // Handle pure JSON or JSON wrapped in markdown code fences
-            const jsonMatch = criticResponse.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, criticResponse];
-            const raw = JSON.parse(jsonMatch[1]!.trim());
-            const CriticResponseSchema = z.object({
-              scores: z.object({
-                accuracy: z.number().min(1).max(5),
-                clarity: z.number().min(1).max(5),
-                tone: z.number().min(1).max(5),
-                completeness: z.number().min(1).max(5),
-              }),
-              overall: z.number().min(1).max(5),
-            });
-            const parseResult = CriticResponseSchema.safeParse(raw);
-            if (parseResult.success) {
-              const { scores, overall } = parseResult.data;
-              const qualityScore = { ...scores, overall };
-              await agentMemoryService.recordQualityScores(jobId, productId, qualityScore);
-              await prisma.changelogEntry.update({ where: { id: args.draftId }, data: { qualityScore } });
-              serverLogger.info({ jobId, productId, draftId: args.draftId, overall }, 'Recorded quality scores from critic');
-            }
-          } catch {
-            serverLogger.debug({ jobId, productId }, 'Could not extract quality scores from critic response');
+          // Extract and record quality scores from the critic response
+          const qualityScore = parseCriticScores(criticResponse);
+          if (qualityScore) {
+            await agentMemoryService.recordQualityScores(jobId, productId, qualityScore);
+            await prisma.changelogEntry.update({ where: { id: args.draftId }, data: { qualityScore } });
+            serverLogger.info({ jobId, productId, draftId: args.draftId, overall: qualityScore.overall }, 'Recorded quality scores from critic');
           }
 
           return { content: [{ type: 'text' as const, text: criticResponse }] };
@@ -886,53 +864,5 @@ export class ChangelogAgentService {
       name: 'changelog-tools',
       tools: [searchPastChangelogs, createChangelogDraft, updateChangelogDraft, getLatestVersion, validateChangelogDraft],
     });
-  }
-
-  /**
-   * Walks the progress log to find critic scores from validate_changelog_draft.
-   * Looks for a text entry after the tool call that contains valid JSON scores.
-   */
-  private async recordScoresFromProgressLog(jobId: string, productId: string, changelogId: string | null, progressLog: ProgressLogEntry[]): Promise<void> {
-    const CriticResponseSchema = z.object({
-      scores: z.object({
-        accuracy: z.number().min(1).max(5),
-        clarity: z.number().min(1).max(5),
-        tone: z.number().min(1).max(5),
-        completeness: z.number().min(1).max(5),
-      }),
-      overall: z.number().min(1).max(5),
-    });
-
-    for (let i = 0; i < progressLog.length; i++) {
-      const entry = progressLog[i];
-      if (entry.type !== 'tool_call' || entry.tool !== 'validate_changelog_draft') continue;
-
-      // The critic response appears as a subsequent text entry
-      for (let j = i + 1; j < progressLog.length; j++) {
-        const nextEntry = progressLog[j];
-        if (nextEntry.type === 'text' && nextEntry.summary) {
-          try {
-            const raw = JSON.parse(nextEntry.summary);
-            const parseResult = CriticResponseSchema.safeParse(raw);
-            if (parseResult.success) {
-              const { scores, overall } = parseResult.data;
-              const qualityScore = { ...scores, overall };
-              await this.agentMemoryService.recordQualityScores(jobId, productId, qualityScore);
-
-              // Denormalize onto the changelog entry for admin UI display
-              if (changelogId) {
-                const prisma = getPrismaClient();
-                await prisma.changelogEntry.update({ where: { id: changelogId }, data: { qualityScore } });
-              }
-              return;
-            }
-          } catch {
-            // Not valid JSON — continue looking
-          }
-        }
-        // Stop searching if we hit another tool call
-        if (nextEntry.type === 'tool_call') break;
-      }
-    }
   }
 }

@@ -81,7 +81,7 @@
 
       <ng-template lfxColumn="Score" let-entry>
         @if (entry.qualityScore; as qs) {
-          <lfx-badge [label]="qs.overall.toFixed(1) + '/5'" [color]="qs.overall | qualityScoreColor" size="sm" [hasTooltip]="true">
+          <lfx-badge [label]="qs.overall | qualityScoreLabel" [color]="qs.overall | qualityScoreColor" size="sm" [hasTooltip]="true">
             <div tooltip class="w-40">
               <p class="text-text-secondary mb-1.5 text-[10px] font-semibold tracking-wider uppercase">Quality Breakdown</p>
               <div class="flex items-center justify-between py-0.5 text-xs">
@@ -159,7 +159,7 @@
               <div class="flex flex-wrap items-center gap-2">
                 <lfx-status-badge [status]="entry.status" />
                 @if (entry.qualityScore; as qs) {
-                  <lfx-badge [label]="qs.overall.toFixed(1) + '/5'" [color]="qs.overall | qualityScoreColor" size="sm" />
+                  <lfx-badge [label]="qs.overall | qualityScoreLabel" [color]="qs.overall | qualityScoreColor" size="sm" />
                 } @else {
                   <span class="text-text-muted text-xs">N/A</span>
                 }

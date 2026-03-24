@@ -26,6 +26,7 @@ import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { MapGetPipe } from '@shared/pipes/map-get.pipe';
 import { ProductNamePipe } from '@shared/pipes/product-name.pipe';
 import { QualityScoreColorPipe } from '@shared/pipes/quality-score-color.pipe';
+import { QualityScoreLabelPipe } from '@shared/pipes/quality-score-label.pipe';
 import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, take, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
@@ -49,6 +50,7 @@ import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.int
     MapGetPipe,
     ProductNamePipe,
     QualityScoreColorPipe,
+    QualityScoreLabelPipe,
   ],
   templateUrl: './changelog-list.component.html',
   styleUrl: './changelog-list.component.css',
