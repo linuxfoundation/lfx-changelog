@@ -3,7 +3,7 @@
 
 # Public Product Roadmap
 
-The LFX Changelog includes a public-facing product roadmap that displays ideas from Jira in a kanban board layout. Roadmap data is **fetched from Jira and cached server-side** (no database persistence) with a 5-minute TTL, so displayed data may lag behind Jira by several minutes.
+The LFX Changelog includes a public-facing product roadmap that displays ideas from Jira in a kanban board layout. Roadmap data is **fetched from Jira and cached server-side** (no database persistence) with a 5-minute TTL and is also cacheable by browsers and intermediaries via HTTP `Cache-Control` headers (`max-age=300`, `stale-while-revalidate=60`). In edge cases, this layered caching can cause the displayed data to lag behind Jira by up to roughly 10--11 minutes.
 
 ## Overview
 
@@ -260,7 +260,7 @@ apps/lfx-changelog/e2e/
 │   └── roadmap-board.page.ts          # Playwright page object
 └── specs/
     ├── public/
-    │   └── roadmap-board.spec.ts      # UI tests (24 tests)
+    │   └── roadmap-board.spec.ts      # UI tests
     └── api/
-        └── public-roadmap.api.spec.ts # API contract tests (18 tests)
+        └── public-roadmap.api.spec.ts # API contract tests
 ```
