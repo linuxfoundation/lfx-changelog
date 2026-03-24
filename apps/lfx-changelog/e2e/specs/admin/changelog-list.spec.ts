@@ -32,8 +32,9 @@ test.describe('Changelog List', () => {
     await expect(headers.nth(0)).toContainText('Title');
     await expect(headers.nth(1)).toContainText('Product');
     await expect(headers.nth(2)).toContainText('Status');
-    await expect(headers.nth(3)).toContainText('Version');
-    await expect(headers.nth(4)).toContainText('Updated');
+    await expect(headers.nth(3)).toContainText('Score');
+    await expect(headers.nth(4)).toContainText('Version');
+    await expect(headers.nth(5)).toContainText('Updated');
   });
 
   test('should display the new entry button', async () => {
