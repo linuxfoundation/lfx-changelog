@@ -220,6 +220,29 @@ lfx-changelog::part(date) {
 }
 ```
 
+## Local Development
+
+To test the widget locally against your dev server:
+
+1. Start the backend:
+
+   ```bash
+   yarn start
+   ```
+
+2. Build the widget (from the widget package directory):
+
+   ```bash
+   cd packages/changelog-widget
+   yarn build
+   ```
+
+3. Open `packages/changelog-widget/test.html` in your browser.
+
+The test page includes light/dark theme demos, CSS custom property overrides, and an error state scenario — all pointed at `http://localhost:4204`.
+
+For live-reload during development, run `yarn dev` in the widget package to watch for source changes and rebuild automatically.
+
 ## SSR Compatibility
 
 The widget is SSR-safe. On the server, `customElements.define()` is skipped (guarded by `typeof window !== 'undefined'`). The element renders nothing during SSR and hydrates on the client.

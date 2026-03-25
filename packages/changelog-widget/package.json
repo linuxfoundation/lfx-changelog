@@ -18,6 +18,13 @@
   "files": [
     "dist"
   ],
+  "keywords": [
+    "changelog",
+    "widget",
+    "web-component",
+    "lfx",
+    "linux-foundation"
+  ],
   "sideEffects": true,
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

@@ -58,7 +58,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs?: Record<string
 }
 
 export function renderCard(entry: ChangelogEntry, baseUrl: string): HTMLElement {
-  const entryUrl = `${baseUrl}/entry/${entry.slug || entry.id}`;
+  const entryUrl = `${baseUrl}/entry/${encodeURIComponent(entry.slug || entry.id)}`;
   const date = entry.publishedAt ? formatDate(entry.publishedAt) : formatDate(entry.createdAt);
 
   const metaChildren: (Node | string)[] = [];

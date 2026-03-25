@@ -74,8 +74,12 @@ export class LfxChangelogElement extends SafeHTMLElement {
     if (oldValue === newValue) return;
 
     if (name === 'product' || name === 'limit' || name === 'base-url') {
-      if (this.isConnected && this.product) {
+      if (!this.isConnected) return;
+      if (this.product) {
         this.loadChangelogs();
+      } else {
+        this.abortController?.abort();
+        this.showError('Missing required "product" attribute');
       }
     }
     // Theme changes are handled via CSS :host([theme="dark"]) — no re-render needed
