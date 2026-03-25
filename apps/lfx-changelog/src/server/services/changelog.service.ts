@@ -24,6 +24,7 @@ export class ChangelogService {
 
     const where: Prisma.ChangelogEntryWhereInput = { status: 'published', product: { isActive: true } };
     if (params.productId) where.productId = params.productId;
+    if (params.productSlug) where.product = { isActive: true, slug: params.productSlug };
     if (params.query) {
       where.OR = [{ title: { contains: params.query, mode: 'insensitive' } }, { description: { contains: params.query, mode: 'insensitive' } }];
     }
