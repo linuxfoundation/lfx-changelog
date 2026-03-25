@@ -4,6 +4,24 @@
 <span
   class="inline-flex items-center gap-1 rounded-full font-medium"
   [class]="size() === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'"
+  [class.cursor-default]="hasTooltip()"
+  [attr.tabindex]="hasTooltip() ? '0' : null"
+  cdkOverlayOrigin
+  #trigger="cdkOverlayOrigin"
+  (mouseenter)="showTooltip()"
+  (mouseleave)="hideTooltip()"
+  (focus)="showTooltip()"
+  (blur)="hideTooltip()"
   [style]="bgStyle()">
   {{ label() }}
 </span>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="trigger"
+  [cdkConnectedOverlayOpen]="hasTooltip() && isTooltipOpen()"
+  [cdkConnectedOverlayPositions]="positions">
+  <div role="tooltip" class="bg-surface border-border text-text-primary pointer-events-none rounded-lg border p-2.5 shadow-lg">
+    <ng-content select="[tooltip]" />
+  </div>
+</ng-template>

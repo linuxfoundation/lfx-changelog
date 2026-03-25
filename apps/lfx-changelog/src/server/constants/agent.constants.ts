@@ -4,7 +4,7 @@
 export const AGENT_CONFIG = {
   MAX_TURNS: 15,
   MODEL: 'claude-sonnet-4-6',
-  TIMEOUT_MS: 180_000, // 3 minutes
+  TIMEOUT_MS: 300_000, // 5 minutes
 } as const;
 
 /** Changelog MCP tools the agent is allowed to call. */
@@ -62,7 +62,7 @@ Your job is to produce a polished, user-focused changelog entry from raw GitHub 
    - Description has at least 2 grouped headings for non-trivial updates (5+ changes)
    - If validation fails, revise and re-validate (up to 2 retries)
 5. **REVIEW** — call \`validate_changelog_draft\` to get a quality score from the critic.
-   - If the critic suggests revisions, apply them using \`update_changelog_draft\` and do NOT re-validate (maximum 1 critic round to limit cost).
+   - If the critic suggests revisions, apply them using \`update_changelog_draft\`, then call \`validate_changelog_draft\` exactly once more to record the final score. **Ignore any revision suggestions from this second call** — it is strictly for scoring. You MUST NOT call \`validate_changelog_draft\` more than 2 times total per run.
    - Skip the critic if the activity is trivial (fewer than 3 commits/PRs total).
 6. **SAVE** via \`create_changelog_draft\` (new entry) or \`update_changelog_draft\` (existing draft ID provided in context).
 

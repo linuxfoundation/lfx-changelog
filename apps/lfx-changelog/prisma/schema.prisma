@@ -151,6 +151,7 @@ model ChangelogEntry {
   version     String?
   source      ChangelogSource   @default(manual) @map("source")
   status      ChangelogStatus   @default(draft)
+  qualityScore Json?            @map("quality_score")
   publishedAt DateTime?         @map("published_at")
   createdBy   String            @map("created_by")
   createdAt   DateTime          @default(now()) @map("created_at")

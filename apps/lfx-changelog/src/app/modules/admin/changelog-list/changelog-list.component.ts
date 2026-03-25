@@ -5,6 +5,7 @@ import { Component, computed, DestroyRef, inject, signal, Signal } from '@angula
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ConfirmDialogComponent } from '@components/confirm-dialog/confirm-dialog.component';
@@ -24,6 +25,8 @@ import { ToastService } from '@services/toast.service';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { MapGetPipe } from '@shared/pipes/map-get.pipe';
 import { ProductNamePipe } from '@shared/pipes/product-name.pipe';
+import { QualityScoreColorPipe } from '@shared/pipes/quality-score-color.pipe';
+import { QualityScoreLabelPipe } from '@shared/pipes/quality-score-label.pipe';
 import { BehaviorSubject, catchError, combineLatest, map, of, startWith, switchMap, take, tap } from 'rxjs';
 
 import type { ChangelogEntryWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
@@ -34,6 +37,7 @@ import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.int
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    BadgeComponent,
     ButtonComponent,
     CardComponent,
     DropdownMenuComponent,
@@ -45,6 +49,8 @@ import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.int
     DateFormatPipe,
     MapGetPipe,
     ProductNamePipe,
+    QualityScoreColorPipe,
+    QualityScoreLabelPipe,
   ],
   templateUrl: './changelog-list.component.html',
   styleUrl: './changelog-list.component.css',

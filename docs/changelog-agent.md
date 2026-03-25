@@ -184,6 +184,29 @@ All automated changelogs are attributed to a dedicated bot user:
 - **Name:** LFX Changelog Bot
 - Created on-demand via `upsert` if it doesn't exist
 
+## Quality Scores
+
+The agent's critic (`validate_changelog_draft`) assigns quality scores to each automated draft on a 1–5 scale across four dimensions: **accuracy**, **clarity**, **tone**, and **completeness**, plus an **overall** score.
+
+### Storage
+
+Scores are stored in two places:
+
+- **`AgentMemory.qualityScores`** — rolling window of last 20 scores per product, used for prompt injection and trend analysis
+- **`ChangelogEntry.qualityScore`** — denormalized JSON on each automated entry, used for admin UI display
+
+### Admin UI Display
+
+The admin changelog list (`/admin/changelogs`) shows a **Score** column with a colored badge:
+
+- **Green** (≥ 4.0): High quality
+- **Yellow** (≥ 3.0): Acceptable quality
+- **Red** (< 3.0): Needs improvement
+
+Hovering over the badge shows a tooltip with the per-dimension breakdown. Manual entries show "N/A".
+
+> **Important:** Quality scores are never exposed through public API endpoints (`/public/api/changelogs`). They are admin-only.
+
 ## Concurrency (Rerun-Once)
 
 The `AutoChangelogLock` table prevents duplicate agent runs and ensures no webhook activity is missed. When a webhook arrives while an agent job is already running for the same product, the system marks the lock as `pending_rerun` instead of starting a second concurrent job.

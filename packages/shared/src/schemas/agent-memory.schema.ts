@@ -32,18 +32,21 @@ export const CorrectionEntrySchema = z
   })
   .openapi('CorrectionEntry');
 
-export const QualityScoreEntrySchema = z
+export const QualityScoreDataSchema = z
   .object({
-    recordedAt: z.string(),
-    jobId: z.string().uuid(),
     accuracy: z.number().min(1).max(5),
     clarity: z.number().min(1).max(5),
     tone: z.number().min(1).max(5),
     completeness: z.number().min(1).max(5),
     overall: z.number().min(1).max(5),
-    wasEdited: z.boolean(),
   })
-  .openapi('QualityScoreEntry');
+  .openapi('QualityScoreData');
+
+export const QualityScoreEntrySchema = QualityScoreDataSchema.extend({
+  recordedAt: z.string(),
+  jobId: z.string().uuid(),
+  wasEdited: z.boolean(),
+}).openapi('QualityScoreEntry');
 
 export const AgentMemoryDataSchema = z
   .object({
@@ -56,5 +59,6 @@ export const AgentMemoryDataSchema = z
 
 export type StylePreferences = z.infer<typeof StylePreferencesSchema>;
 export type CorrectionEntry = z.infer<typeof CorrectionEntrySchema>;
+export type QualityScoreData = z.infer<typeof QualityScoreDataSchema>;
 export type QualityScoreEntry = z.infer<typeof QualityScoreEntrySchema>;
 export type AgentMemoryData = z.infer<typeof AgentMemoryDataSchema>;

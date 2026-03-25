@@ -16,6 +16,7 @@ import {
 import { AgentServiceError } from '../errors';
 import { buildActivityContext } from '../helpers/activity-context.helper';
 import { extractAtlassianReferences, formatAtlassianHints } from '../helpers/atlassian-reference.helper';
+import { parseCriticScores } from '../helpers/critic-response.helper';
 import { serverLogger } from '../server-logger';
 import { agentJobEmitter } from './agent-job-emitter.service';
 import { AgentMemoryService } from './agent-memory.service';
@@ -434,7 +435,7 @@ export class ChangelogAgentService {
                 const errorText = Array.isArray(block.content)
                   ? block.content.map((c: { text?: string }) => c.text || '').join(' ')
                   : String(block.content || 'Unknown error');
-                serverLogger.warn({ jobId, productId, toolUseId: block.tool_use_id, error: errorText }, 'Agent tool call returned an error');
+                serverLogger.warn({ jobId, productId, toolUseId: block.tool_use_id, errorMessage: errorText }, 'Agent tool call returned an error');
                 const entry: ProgressLogEntry = {
                   timestamp: new Date().toISOString(),
                   type: 'error',
@@ -472,11 +473,6 @@ export class ChangelogAgentService {
               });
               serverLogger.info({ jobId, productId, durationMs, numTurns: message.num_turns }, 'Agent job completed successfully');
               agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
-
-              // Record quality scores from critic (fire-and-forget)
-              this.recordScoresFromProgressLog(jobId, productId, progressLog).catch((err) =>
-                serverLogger.warn({ err, jobId }, 'Failed to record quality scores')
-              );
 
               // Notify configured users via Slack DM — release-triggered jobs only (fire-and-forget)
               if (updatedJob.trigger === 'webhook_release' && updatedJob.changelogEntry && updatedJob.product) {
@@ -689,6 +685,7 @@ export class ChangelogAgentService {
 
   private createMcpTools(jobId: string, productId: string, botUserId: string, productSlug: string, activityContext: string) {
     const changelogService = this.changelogService;
+    const agentMemoryService = this.agentMemoryService;
 
     const searchPastChangelogs = tool(
       'search_past_changelogs',
@@ -846,6 +843,14 @@ export class ChangelogAgentService {
             }
           }
 
+          // Extract and record quality scores from the critic response
+          const qualityScore = parseCriticScores(criticResponse);
+          if (qualityScore) {
+            await agentMemoryService.recordQualityScores(jobId, productId, qualityScore);
+            await prisma.changelogEntry.update({ where: { id: args.draftId }, data: { qualityScore } });
+            serverLogger.info({ jobId, productId, draftId: args.draftId, overall: qualityScore.overall }, 'Recorded quality scores from critic');
+          }
+
           return { content: [{ type: 'text' as const, text: criticResponse }] };
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : 'Critic query failed';
@@ -859,46 +864,5 @@ export class ChangelogAgentService {
       name: 'changelog-tools',
       tools: [searchPastChangelogs, createChangelogDraft, updateChangelogDraft, getLatestVersion, validateChangelogDraft],
     });
-  }
-
-  /**
-   * Walks the progress log to find critic scores from validate_changelog_draft.
-   * Looks for a text entry after the tool call that contains valid JSON scores.
-   */
-  private async recordScoresFromProgressLog(jobId: string, productId: string, progressLog: ProgressLogEntry[]): Promise<void> {
-    const CriticResponseSchema = z.object({
-      scores: z.object({
-        accuracy: z.number().min(1).max(5),
-        clarity: z.number().min(1).max(5),
-        tone: z.number().min(1).max(5),
-        completeness: z.number().min(1).max(5),
-      }),
-      overall: z.number().min(1).max(5),
-    });
-
-    for (let i = 0; i < progressLog.length; i++) {
-      const entry = progressLog[i];
-      if (entry.type !== 'tool_call' || entry.tool !== 'validate_changelog_draft') continue;
-
-      // The critic response appears as a subsequent text entry
-      for (let j = i + 1; j < progressLog.length; j++) {
-        const nextEntry = progressLog[j];
-        if (nextEntry.type === 'text' && nextEntry.summary) {
-          try {
-            const raw = JSON.parse(nextEntry.summary);
-            const parseResult = CriticResponseSchema.safeParse(raw);
-            if (parseResult.success) {
-              const { scores, overall } = parseResult.data;
-              await this.agentMemoryService.recordQualityScores(jobId, productId, { ...scores, overall });
-              return;
-            }
-          } catch {
-            // Not valid JSON — continue looking
-          }
-        }
-        // Stop searching if we hit another tool call
-        if (nextEntry.type === 'tool_call') break;
-      }
-    }
   }
 }

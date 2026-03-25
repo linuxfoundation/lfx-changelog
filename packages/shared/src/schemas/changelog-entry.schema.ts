@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { ChangelogSource } from '../enums/changelog-source.enum.js';
 import { ChangelogStatus } from '../enums/changelog-status.enum.js';
+import { QualityScoreDataSchema } from './agent-memory.schema.js';
 import { ProductSchema } from './product.schema.js';
 import { UserSchema } from './user.schema.js';
 
@@ -18,6 +19,7 @@ export const ChangelogEntrySchema = z
     version: z.string().nullable(),
     source: z.nativeEnum(ChangelogSource).optional(),
     status: z.nativeEnum(ChangelogStatus),
+    qualityScore: QualityScoreDataSchema.nullable().optional(),
     publishedAt: z.string().nullable(),
     createdBy: z.string(),
     createdAt: z.string(),
