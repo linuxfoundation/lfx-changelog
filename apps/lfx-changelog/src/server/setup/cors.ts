@@ -14,14 +14,14 @@ import type { Express, NextFunction, Request, Response } from 'express';
  * - `/api` — conditional CORS for API-key requests (excluding chat)
  */
 export function setupCors(app: Express): void {
-  // Public API — external consumers; chat routes are same-origin only
+  // Public API — open CORS for embeddable widget consumers; chat routes are same-origin only
   app.use('/public/api', (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith('/chat')) {
       next();
       return;
     }
     cors({
-      origin: getCorsOrigins(),
+      origin: '*',
       methods: ['GET', 'HEAD', 'OPTIONS'],
       maxAge: 86400,
     })(req, res, next);

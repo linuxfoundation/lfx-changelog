@@ -107,6 +107,39 @@ test.describe('Public Changelogs API', () => {
       }
     });
 
+    test('should support productSlug filtering', async () => {
+      const res = await api.get('/public/api/changelogs?productSlug=e2e-security');
+      const body = await res.json();
+
+      expect(body.success).toBe(true);
+      expect(body.data.length).toBeGreaterThan(0);
+      for (const entry of body.data) {
+        expect(entry.product.slug).toBe('e2e-security');
+      }
+    });
+
+    test('should return empty results for non-existent productSlug', async () => {
+      const res = await api.get('/public/api/changelogs?productSlug=non-existent-product');
+      const body = await res.json();
+
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveLength(0);
+      expect(body.total).toBe(0);
+    });
+
+    test('should support productSlug with pagination', async () => {
+      const res = await api.get('/public/api/changelogs?productSlug=e2e-easycla&page=1&limit=2');
+      const body = await res.json();
+
+      expect(body.success).toBe(true);
+      expect(body.page).toBe(1);
+      expect(body.pageSize).toBe(2);
+      expect(body.data.length).toBeLessThanOrEqual(2);
+      for (const entry of body.data) {
+        expect(entry.product.slug).toBe('e2e-easycla');
+      }
+    });
+
     test('should include product and author relations', async () => {
       const res = await api.get('/public/api/changelogs');
       const body = await res.json();

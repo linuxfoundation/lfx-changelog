@@ -7,6 +7,7 @@ import { z } from 'zod';
 export const ChangelogQueryParamsSchema = z
   .object({
     productId: z.string().uuid().optional().openapi({ description: 'Filter by product ID' }),
+    productSlug: z.string().optional().openapi({ description: 'Filter by product slug' }),
     status: z.string().optional().openapi({ description: 'Filter by status (draft, published)' }),
     query: z.string().optional().openapi({ description: 'Text search keywords to filter by title or description' }),
     page: z.coerce.number().int().min(1).optional().openapi({ description: 'Page number' }),
