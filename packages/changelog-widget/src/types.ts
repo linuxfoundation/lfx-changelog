@@ -8,13 +8,14 @@ export type ChangelogEntry = {
   description: string;
   version: string | null;
   status: string;
-  publishedAt: string | null;
-  createdAt: string;
+  publishedAt: string | Date | null;
+  createdAt: string | Date;
   product?: {
     id: string;
     name: string;
     slug: string;
     description: string | null;
+    faIcon?: string | null;
   };
   author?: {
     id: string;

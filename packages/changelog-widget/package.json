@@ -31,10 +31,10 @@
     "access": "public"
   },
   "scripts": {
-    "build": "vite build && tsc --emitDeclarationOnly --outDir dist",
-    "build:development": "vite build && tsc --emitDeclarationOnly --outDir dist",
-    "build:production": "vite build && tsc --emitDeclarationOnly --outDir dist",
-    "build:staging": "vite build && tsc --emitDeclarationOnly --outDir dist",
+    "build": "vite build && tsc --emitDeclarationOnly --outDir dist && tsc -p tsconfig.check.json",
+    "build:development": "vite build && tsc --emitDeclarationOnly --outDir dist && tsc -p tsconfig.check.json",
+    "build:production": "vite build && tsc --emitDeclarationOnly --outDir dist && tsc -p tsconfig.check.json",
+    "build:staging": "vite build && tsc --emitDeclarationOnly --outDir dist && tsc -p tsconfig.check.json",
     "dev": "vite build --watch",
     "lint": "echo 'No linter configured yet'"
   },
@@ -43,6 +43,7 @@
     "marked": "^15.0.0"
   },
   "devDependencies": {
+    "@lfx-changelog/shared": "workspace:*",
     "typescript": "5.8.3",
     "vite": "^6.3.0"
   }

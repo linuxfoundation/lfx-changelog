@@ -2294,6 +2294,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@linuxfoundation/lfx-changelog@workspace:packages/changelog-widget"
   dependencies:
+    "@lfx-changelog/shared": "workspace:*"
     dompurify: "npm:^3.2.0"
     marked: "npm:^15.0.0"
     typescript: "npm:5.8.3"

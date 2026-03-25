@@ -59,13 +59,15 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs?: Record<string
 
 export function renderCard(entry: ChangelogEntry, baseUrl: string): HTMLElement {
   const entryUrl = `${baseUrl}/entry/${encodeURIComponent(entry.slug || entry.id)}`;
-  const date = entry.publishedAt ? formatDate(entry.publishedAt) : formatDate(entry.createdAt);
+  const rawDate = entry.publishedAt ?? entry.createdAt;
+  const dateStr = String(rawDate);
+  const date = formatDate(dateStr);
 
   const metaChildren: (Node | string)[] = [];
   if (entry.version) {
     metaChildren.push(el('span', { part: 'version', class: 'lfx-version' }, [`v${entry.version}`]));
   }
-  metaChildren.push(el('time', { part: 'date', class: 'lfx-date', datetime: entry.publishedAt || entry.createdAt }, [date]));
+  metaChildren.push(el('time', { part: 'date', class: 'lfx-date', datetime: dateStr }, [date]));
 
   const link = el('a', { class: 'lfx-card-link', href: entryUrl, target: '_blank', rel: 'noopener noreferrer' }, [
     el('div', { part: 'meta', class: 'lfx-meta' }, metaChildren),
