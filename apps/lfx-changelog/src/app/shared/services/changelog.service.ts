@@ -77,6 +77,7 @@ export class ChangelogService {
   private buildParams(params?: ChangelogQueryParams): HttpParams {
     let httpParams = new HttpParams();
     if (params?.productId) httpParams = httpParams.set('productId', params.productId);
+    if (params?.productSlug) httpParams = httpParams.set('productSlug', params.productSlug);
     if (params?.status) httpParams = httpParams.set('status', params.status);
     if (params?.page) httpParams = httpParams.set('page', params.page.toString());
     if (params?.limit) httpParams = httpParams.set('limit', params.limit.toString());

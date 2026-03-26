@@ -17,8 +17,9 @@ publicChangelogRegistry.registerPath({
   request: {
     query: z.object({
       page: z.coerce.number().optional().openapi({ description: 'Page number (default: 1)' }),
-      pageSize: z.coerce.number().optional().openapi({ description: 'Items per page (default: 10)' }),
+      limit: z.coerce.number().optional().openapi({ description: 'Items per page (default: 20)' }),
       productId: z.string().optional().openapi({ description: 'Filter by product ID' }),
+      productSlug: z.string().optional().openapi({ description: 'Filter by product slug (e.g., "insights", "easycla")' }),
     }),
   },
   responses: {

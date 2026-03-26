@@ -92,6 +92,26 @@ test.describe('Public Changelogs API', () => {
       expect(page2Body.totalPages).toBe(Math.ceil(PUBLISHED_COUNT / 2));
     });
 
+    test('should support productSlug filtering', async () => {
+      const res = await api.get('/public/api/changelogs?productSlug=e2e-easycla');
+      const body = await res.json();
+
+      expect(body.success).toBe(true);
+      expect(body.data.length).toBeGreaterThan(0);
+      for (const entry of body.data) {
+        expect(entry.product.slug).toBe('e2e-easycla');
+      }
+    });
+
+    test('should return empty data for non-existent productSlug', async () => {
+      const res = await api.get('/public/api/changelogs?productSlug=does-not-exist');
+      const body = await res.json();
+
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveLength(0);
+      expect(body.total).toBe(0);
+    });
+
     test('should support productId filtering', async () => {
       // First, get products to find a valid ID
       const productsRes = await api.get('/public/api/products');

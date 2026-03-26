@@ -20,6 +20,7 @@ export class ChangelogController {
     try {
       const result = await this.changelogService.findPublished({
         productId: req.query['productId'] as string | undefined,
+        productSlug: req.query['productSlug'] as string | undefined,
         page: req.query['page'] ? parseInt(req.query['page'] as string, 10) : undefined,
         limit: req.query['limit'] ? parseInt(req.query['limit'] as string, 10) : undefined,
       });

@@ -9,14 +9,21 @@ import type { Express, NextFunction, Request, Response } from 'express';
 
 /**
  * Registers all CORS strategies:
- * - `/public/api` — allowed origins for external consumers (excluding chat)
+ * - `/public/api/changelogs`, `/public/api/products` — open to all origins (widget consumers)
+ * - `/public/api/*` (remaining) — restricted to app origin
  * - `/mcp` — open to all origins (AI clients)
  * - `/api` — conditional CORS for API-key requests (excluding chat)
  */
 export function setupCors(app: Express): void {
-  // Public API — external consumers; chat routes are same-origin only
+  // Widget-consumed routes — open CORS for embeddable widget on any origin
+  const widgetCors = cors({ origin: '*', methods: ['GET', 'HEAD', 'OPTIONS'], maxAge: 86400 });
+  app.use('/public/api/changelogs', widgetCors);
+  app.use('/public/api/products', widgetCors);
+
+  // Remaining public API routes (search, blogs, chat, etc.) — restricted to app origin
   app.use('/public/api', (req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/chat')) {
+    // Skip paths already handled by widgetCors above to avoid double-applying
+    if (req.path.startsWith('/changelogs') || req.path.startsWith('/products')) {
       next();
       return;
     }
