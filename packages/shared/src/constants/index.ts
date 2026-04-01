@@ -21,5 +21,6 @@ export {
   ROADMAP_TEAM_DISPLAY_NAMES,
 } from './roadmap.constant.js';
 export { ROLE_HIERARCHY } from './role-hierarchy.constant.js';
+export { DEFAULT_OG_IMAGE, DEFAULT_SEO_DESCRIPTION, SITE_NAME } from './seo.constant.js';
 
 export type { ApiKeyScopeMetadata } from '../schemas/api-key.schema.js';

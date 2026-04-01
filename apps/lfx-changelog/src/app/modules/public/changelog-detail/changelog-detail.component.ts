@@ -12,8 +12,12 @@ import { ProductPillComponent } from '@components/product-pill/product-pill.comp
 import { AuthService } from '@services/auth.service';
 import { ChangelogService } from '@services/changelog.service';
 import { DialogService } from '@services/dialog.service';
+import { SeoService } from '@services/seo.service';
+import { stripMarkdown } from '@shared/utils/strip-markdown';
 import { format } from 'date-fns';
 import { catchError, filter, first, of, tap } from 'rxjs';
+
+import type { ChangelogEntryWithRelations } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-changelog-detail',
@@ -27,6 +31,7 @@ export class ChangelogDetailComponent {
   private readonly authService = inject(AuthService);
   private readonly changelogService = inject(ChangelogService);
   private readonly dialogService = inject(DialogService);
+  private readonly seoService = inject(SeoService);
 
   protected readonly loading = signal(true);
 
@@ -34,7 +39,10 @@ export class ChangelogDetailComponent {
 
   protected readonly entry = toSignal(
     this.changelogService.getPublishedById(this.route.snapshot.paramMap.get('slug') ?? '').pipe(
-      tap(() => this.loading.set(false)),
+      tap((entry) => {
+        this.loading.set(false);
+        this.setSeo(entry);
+      }),
       catchError(() => {
         this.loading.set(false);
         return of(undefined);
@@ -83,5 +91,18 @@ export class ChangelogDetailComponent {
     toObservable(this.entry)
       .pipe(takeUntilDestroyed(), filter(Boolean), first())
       .subscribe(() => this.openSlackDialog());
+  }
+
+  private setSeo(entry: ChangelogEntryWithRelations): void {
+    const productName = entry.product?.name;
+    const title = productName ? `${entry.title} — ${productName}` : entry.title;
+    this.seoService.setPageMeta({
+      title,
+      description: stripMarkdown(entry.description).slice(0, 160),
+      url: `/entry/${entry.slug || entry.id}`,
+      type: 'article',
+      publishedAt: entry.publishedAt || undefined,
+      author: entry.author?.name,
+    });
   }
 }

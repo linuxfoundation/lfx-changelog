@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { Component, computed, inject, PLATFORM_ID, signal, type Signal } from '@angular/core';
+import { Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
@@ -11,9 +11,11 @@ import { TimelineItemComponent } from '@components/timeline-item/timeline-item.c
 import { ChangelogService } from '@services/changelog.service';
 import { ProductService } from '@services/product.service';
 import { SearchService } from '@services/search.service';
+import { SeoService } from '@services/seo.service';
 import { DateFormatPipe } from '@shared/pipes/date-format.pipe';
 import { catchError, combineLatest, debounceTime, distinctUntilChanged, of, startWith, switchMap, tap } from 'rxjs';
 
+import type { Signal } from '@angular/core';
 import type { ChangelogEntryWithRelations, ChangelogSearchHit, PaginatedResponse, PublicProduct, SearchResponse } from '@lfx-changelog/shared';
 
 @Component({
@@ -27,6 +29,7 @@ export class ChangelogFeedComponent {
   private readonly productService = inject(ProductService);
   private readonly changelogService = inject(ChangelogService);
   private readonly searchService = inject(SearchService);
+  private readonly seoService = inject(SeoService);
 
   protected readonly products = toSignal(this.productService.getPublic(), { initialValue: [] as PublicProduct[] });
   protected readonly selectedProduct = signal<string>('');
@@ -49,6 +52,14 @@ export class ChangelogFeedComponent {
     if (!response) return [];
     return response.hits.map((hit) => this.mapSearchHitToEntry(hit));
   });
+
+  public constructor() {
+    this.seoService.setPageMeta({
+      title: 'Changelog',
+      description: 'Stay up to date with the latest changes across LFX products.',
+      url: '/',
+    });
+  }
 
   protected toggleProduct(productId: string): void {
     this.selectedProduct.update((v) => (v === productId ? '' : productId));

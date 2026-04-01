@@ -67,6 +67,7 @@ export function setupSsr(app: Express): void {
     const runtimeConfig: RuntimeConfig = {
       dataDogRumClientId: process.env['DD_RUM_CLIENT_ID'] || '',
       dataDogRumApplicationId: process.env['DD_RUM_APPLICATION_ID'] || '',
+      baseUrl: (process.env['BASE_URL'] || 'http://localhost:4204').replace(/\/+$/, ''),
     };
 
     angularApp
