@@ -3,4 +3,4 @@
 
 export const SITE_NAME = 'LFX Changelog';
 export const DEFAULT_SEO_DESCRIPTION = 'Stay up to date with the latest changes across LFX products';
-export const DEFAULT_OG_IMAGE = '/assets/og-default.png';
+export const DEFAULT_OG_IMAGE = '/logo_lfx.svg';

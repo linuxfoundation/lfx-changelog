@@ -12,7 +12,7 @@ import type { PageMetaOptions } from '@shared/interfaces/seo.interface';
 export class SeoService {
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
-  private readonly baseUrl = getRuntimeConfig(inject(TransferState)).baseUrl || '';
+  private readonly baseUrl = (getRuntimeConfig(inject(TransferState)).baseUrl || '').replace(/\/+$/, '');
 
   public setPageMeta(options: PageMetaOptions): void {
     const pageTitle = `${options.title} — ${SITE_NAME}`;
