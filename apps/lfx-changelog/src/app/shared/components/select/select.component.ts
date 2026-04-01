@@ -3,7 +3,6 @@
 
 import { Component, computed, ElementRef, inject, input, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { SetIncludesPipe } from '@shared/pipes/set-includes.pipe';
 
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
@@ -11,7 +10,7 @@ export type { SelectOption };
 
 @Component({
   selector: 'lfx-select',
-  imports: [SetIncludesPipe],
+  imports: [],
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: SelectComponent, multi: true }],
   host: {
     '(document:click)': 'onDocumentClick($event)',
@@ -57,13 +56,7 @@ export class SelectComponent implements ControlValueAccessor {
     return `${labels.length} selected`;
   });
 
-  protected readonly selectedSet = computed(() => {
-    if (this.multiple()) {
-      return new Set(this.selectedValues());
-    }
-    const v = this.value();
-    return v ? new Set([v]) : new Set<string>();
-  });
+  protected readonly selectedValueSet = computed(() => new Set(this.selectedValues()));
 
   protected readonly filteredOptions = computed(() => {
     const query = this.searchQuery().toLowerCase();
@@ -75,7 +68,7 @@ export class SelectComponent implements ControlValueAccessor {
     if (this.multiple()) {
       this.selectedValues.set(Array.isArray(value) ? value : []);
     } else {
-      this.value.set((value as string) ?? '');
+      this.value.set(Array.isArray(value) ? '' : (value ?? ''));
     }
   }
 

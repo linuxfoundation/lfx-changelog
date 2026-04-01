@@ -56,6 +56,11 @@ export class AddUserDialogComponent {
     const isSuperAdmin = role === UserRole.SUPER_ADMIN;
     const productIds = isSuperAdmin ? undefined : this.productIdsControl.value;
 
+    if (!isSuperAdmin && (!productIds || productIds.length === 0)) {
+      this.error.set('Please select at least one product.');
+      return;
+    }
+
     this.userService.create({ email, name, role, productIds: productIds?.length ? productIds : undefined }).subscribe({
       next: () => {
         this.toastService.success('User added');

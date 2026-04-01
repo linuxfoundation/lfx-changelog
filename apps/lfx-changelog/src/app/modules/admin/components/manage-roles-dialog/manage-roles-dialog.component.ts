@@ -63,8 +63,19 @@ export class ManageRolesDialogComponent implements OnInit {
 
     const role = this.newRoleControl.value;
     const isSuperAdmin = role === UserRole.SUPER_ADMIN;
-    const productIds = isSuperAdmin ? [''] : this.newProductIdsControl.value;
 
+    if (isSuperAdmin) {
+      this.userService.assignRole(user.id, role, null).subscribe({
+        next: () => {
+          this.toastService.success('Role assigned');
+          this.dialogService.close('changed');
+        },
+        error: () => this.toastService.error('Failed to assign role'),
+      });
+      return;
+    }
+
+    const productIds = this.newProductIdsControl.value;
     if (!productIds.length) return;
 
     this.userService.batchAssignRoles(user.id, role, productIds).subscribe({

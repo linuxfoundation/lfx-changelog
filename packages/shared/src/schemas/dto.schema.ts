@@ -76,7 +76,7 @@ export type AssignRoleRequest = z.infer<typeof AssignRoleRequestSchema>;
 
 export const BatchAssignRoleRequestSchema = z
   .object({
-    productIds: z.array(z.string()),
+    productIds: z.array(z.string().uuid()).min(1),
     role: z.nativeEnum(UserRole),
   })
   .openapi('BatchAssignRoleRequest');
@@ -89,8 +89,9 @@ export const CreateUserRequestSchema = z
     name: z.string().min(1),
     role: z.nativeEnum(UserRole),
     productId: z.string().optional(),
-    productIds: z.array(z.string()).optional(),
+    productIds: z.array(z.string().uuid()).min(1).optional(),
   })
+  .refine((data) => !(data.productId && data.productIds), { message: 'productId and productIds cannot be used together', path: ['productIds'] })
   .openapi('CreateUserRequest');
 
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;

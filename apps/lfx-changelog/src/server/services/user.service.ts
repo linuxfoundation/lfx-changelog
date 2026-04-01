@@ -50,7 +50,7 @@ export class UserService {
           data: resolvedProductIds.map((pid) => ({
             userId: user.id,
             role: data.role as PrismaUserRole,
-            productId: pid ?? null,
+            productId: pid || null,
           })),
         });
         return tx.user.findUniqueOrThrow({
