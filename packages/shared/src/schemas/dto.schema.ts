@@ -74,12 +74,22 @@ export const AssignRoleRequestSchema = z
 
 export type AssignRoleRequest = z.infer<typeof AssignRoleRequestSchema>;
 
+export const BatchAssignRoleRequestSchema = z
+  .object({
+    productIds: z.array(z.string()),
+    role: z.nativeEnum(UserRole),
+  })
+  .openapi('BatchAssignRoleRequest');
+
+export type BatchAssignRoleRequest = z.infer<typeof BatchAssignRoleRequestSchema>;
+
 export const CreateUserRequestSchema = z
   .object({
     email: z.string().email(),
     name: z.string().min(1),
     role: z.nativeEnum(UserRole),
     productId: z.string().optional(),
+    productIds: z.array(z.string()).optional(),
   })
   .openapi('CreateUserRequest');
 

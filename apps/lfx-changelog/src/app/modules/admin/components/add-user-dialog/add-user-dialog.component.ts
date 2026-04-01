@@ -31,7 +31,7 @@ export class AddUserDialogComponent {
   protected readonly emailControl = new FormControl('', { nonNullable: true });
   protected readonly nameControl = new FormControl('', { nonNullable: true });
   protected readonly roleControl = new FormControl(UserRole.EDITOR, { nonNullable: true });
-  protected readonly productControl = new FormControl('', { nonNullable: true });
+  protected readonly productIdsControl = new FormControl<string[]>([], { nonNullable: true });
 
   protected readonly error = signal('');
 
@@ -44,10 +44,7 @@ export class AddUserDialogComponent {
   protected readonly selectedRole = toSignal(this.roleControl.valueChanges, { initialValue: UserRole.EDITOR });
   protected readonly isSuperAdmin: Signal<boolean> = computed(() => this.selectedRole() === UserRole.SUPER_ADMIN);
 
-  protected readonly productOptions: Signal<SelectOption[]> = computed(() => [
-    { label: 'Global (all products)', value: '' },
-    ...this.products().map((p) => ({ label: p.name, value: p.id })),
-  ]);
+  protected readonly productOptions: Signal<SelectOption[]> = computed(() => this.products().map((p) => ({ label: p.name, value: p.id })));
 
   protected create(): void {
     const email = this.emailControl.value.trim();
@@ -57,9 +54,9 @@ export class AddUserDialogComponent {
 
     this.error.set('');
     const isSuperAdmin = role === UserRole.SUPER_ADMIN;
-    const productId = isSuperAdmin ? undefined : this.productControl.value || undefined;
+    const productIds = isSuperAdmin ? undefined : this.productIdsControl.value;
 
-    this.userService.create({ email, name, role, productId }).subscribe({
+    this.userService.create({ email, name, role, productIds: productIds?.length ? productIds : undefined }).subscribe({
       next: () => {
         this.toastService.success('User added');
         this.dialogService.close('created');

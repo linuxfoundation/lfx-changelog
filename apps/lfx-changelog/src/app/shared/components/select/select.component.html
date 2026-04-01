@@ -17,9 +17,29 @@
       role="combobox"
       [attr.aria-expanded]="isOpen()"
       aria-haspopup="listbox">
-      <span class="truncate" [class]="selectedLabel() ? 'text-text-primary' : 'text-text-muted'">
-        {{ selectedLabel() || placeholder() }}
-      </span>
+      @if (multiple()) {
+        @if (selectedValues().length === 0) {
+          <span class="text-text-muted truncate">{{ placeholder() }}</span>
+        } @else if (selectedLabels().length <= 2) {
+          <span class="flex min-w-0 flex-wrap gap-1">
+            @for (lbl of selectedLabels(); track lbl) {
+              <span
+                class="bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium">
+                {{ lbl }}
+                <i
+                  class="fa-solid fa-xmark cursor-pointer text-[8px] opacity-60 hover:opacity-100"
+                  (click)="removeSelectedValue(selectedValues()[$index], $event)"></i>
+              </span>
+            }
+          </span>
+        } @else {
+          <span class="text-text-primary truncate">{{ multiDisplayText() }}</span>
+        }
+      } @else {
+        <span class="truncate" [class]="selectedLabel() ? 'text-text-primary' : 'text-text-muted'">
+          {{ selectedLabel() || placeholder() }}
+        </span>
+      }
       <i class="fa-solid fa-chevron-down text-text-muted text-[10px] transition-transform duration-200" [class.rotate-180]="isOpen()"></i>
     </button>
 
@@ -48,16 +68,16 @@
               (mouseenter)="focusedIndex.set(i)"
               class="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors duration-100"
               [class]="
-                value() === opt.value
+                (selectedSet() | setIncludes: opt.value)
                   ? 'bg-brand-50 text-brand-700 font-medium'
                   : focusedIndex() === i
                     ? 'bg-surface-alt text-text-primary'
                     : 'text-text-secondary hover:bg-surface-alt hover:text-text-primary'
               "
               role="option"
-              [attr.aria-selected]="value() === opt.value">
+              [attr.aria-selected]="selectedSet() | setIncludes: opt.value">
               <span class="truncate">{{ opt.label }}</span>
-              @if (value() === opt.value) {
+              @if (selectedSet() | setIncludes: opt.value) {
                 <i class="fa-solid fa-check text-brand-600 text-[10px]"></i>
               }
             </button>

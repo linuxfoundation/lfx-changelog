@@ -15,10 +15,12 @@
   @if (!isSuperAdmin()) {
     <lfx-select
       data-testid="add-user-product-select"
-      label="Product"
+      label="Products"
       [options]="productOptions()"
-      [formControl]="productControl"
-      placeholder="Select product..." />
+      [formControl]="productIdsControl"
+      [multiple]="true"
+      [searchable]="true"
+      placeholder="Select products..." />
   }
   <div class="flex justify-end gap-2 pt-2">
     <lfx-button variant="secondary" size="sm" (clicked)="dialogService.close()">Cancel</lfx-button>
