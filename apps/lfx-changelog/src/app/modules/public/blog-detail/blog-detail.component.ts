@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CardComponent } from '@components/card/card.component';
@@ -26,15 +26,10 @@ export class BlogDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly blogService = inject(BlogService);
   private readonly seoService = inject(SeoService);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
 
   protected readonly post = this.initPost();
-
-  public constructor() {
-    this.destroyRef.onDestroy(() => this.seoService.resetToDefaults());
-  }
 
   private initPost() {
     const slug = this.route.snapshot.paramMap.get('slug') ?? '';

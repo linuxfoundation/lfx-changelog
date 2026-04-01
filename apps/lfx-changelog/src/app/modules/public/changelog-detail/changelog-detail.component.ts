@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
@@ -32,7 +32,6 @@ export class ChangelogDetailComponent {
   private readonly changelogService = inject(ChangelogService);
   private readonly dialogService = inject(DialogService);
   private readonly seoService = inject(SeoService);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
 
@@ -68,7 +67,6 @@ export class ChangelogDetailComponent {
   });
 
   public constructor() {
-    this.destroyRef.onDestroy(() => this.seoService.resetToDefaults());
     this.initPostToSlackFromQueryParam();
   }
 

@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
@@ -26,7 +26,6 @@ export class ProductChangelogComponent {
   private readonly productService = inject(ProductService);
   private readonly changelogService = inject(ChangelogService);
   private readonly seoService = inject(SeoService);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly products = toSignal(this.productService.getPublic(), { initialValue: [] as PublicProduct[] });
   protected readonly loading = signal(true);
@@ -36,10 +35,6 @@ export class ProductChangelogComponent {
   protected readonly product = computed(() => this.products().find((p) => p.slug === this.slug()));
 
   protected readonly entries: Signal<ChangelogEntryWithRelations[]> = this.initEntries();
-
-  public constructor() {
-    this.destroyRef.onDestroy(() => this.seoService.resetToDefaults());
-  }
 
   private initEntries(): Signal<ChangelogEntryWithRelations[]> {
     return toSignal(

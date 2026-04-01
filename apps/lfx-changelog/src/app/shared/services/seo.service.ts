@@ -49,18 +49,4 @@ export class SeoService {
       this.meta.updateTag({ property: 'article:author', content: options.author });
     }
   }
-
-  public resetToDefaults(): void {
-    this.title.setTitle(SITE_NAME);
-    this.meta.updateTag({ name: 'description', content: DEFAULT_SEO_DESCRIPTION });
-    this.meta.updateTag({ property: 'og:title', content: SITE_NAME });
-    this.meta.updateTag({ property: 'og:description', content: DEFAULT_SEO_DESCRIPTION });
-    this.meta.updateTag({ property: 'og:type', content: 'website' });
-    this.meta.updateTag({ property: 'og:site_name', content: SITE_NAME });
-    this.meta.updateTag({ property: 'og:image', content: `${this.baseUrl}${DEFAULT_OG_IMAGE}` });
-
-    this.meta.removeTag("property='og:url'");
-    this.meta.removeTag("property='article:published_time'");
-    this.meta.removeTag("property='article:author'");
-  }
 }
