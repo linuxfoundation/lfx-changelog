@@ -10,6 +10,7 @@ const RUNTIME_CONFIG_KEY = makeStateKey<RuntimeConfig>('runtimeConfig');
 const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   dataDogRumClientId: '',
   dataDogRumApplicationId: '',
+  baseUrl: '',
 };
 
 export function getRuntimeConfig(transferState: TransferState): RuntimeConfig {

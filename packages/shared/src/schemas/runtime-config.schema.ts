@@ -7,6 +7,7 @@ export const RuntimeConfigSchema = z
   .object({
     dataDogRumClientId: z.string(),
     dataDogRumApplicationId: z.string(),
+    baseUrl: z.string(),
   })
   .openapi('RuntimeConfig');
 
