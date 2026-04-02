@@ -76,7 +76,10 @@ export class ManageRolesDialogComponent implements OnInit {
     }
 
     const productIds = this.newProductIdsControl.value;
-    if (!productIds.length) return;
+    if (!productIds.length) {
+      this.toastService.error('Please select at least one product');
+      return;
+    }
 
     this.userService.batchAssignRoles(user.id, role, productIds).subscribe({
       next: () => {

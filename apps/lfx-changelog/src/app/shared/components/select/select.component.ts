@@ -190,7 +190,7 @@ export class SelectComponent implements ControlValueAccessor {
   }
 
   private updateDropdownPosition(): void {
-    const trigger = this.elRef.nativeElement.querySelector('button');
+    const trigger = this.elRef.nativeElement.querySelector('[role="combobox"]');
     if (!trigger) return;
     this.triggerWidth.set(trigger.getBoundingClientRect().width);
   }

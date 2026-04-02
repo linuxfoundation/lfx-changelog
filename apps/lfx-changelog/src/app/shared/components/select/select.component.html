@@ -7,17 +7,24 @@
   }
   <div>
     <!-- Trigger -->
-    <button
-      type="button"
-      [disabled]="disabled()"
-      (click)="toggle()"
-      (keydown)="onKeydown($event)"
-      class="bg-surface focus:border-brand-500 focus:ring-brand-500/20 flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-all duration-200 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-      [class]="error() ? 'border-red-400' : isOpen() ? 'border-brand-500 ring-brand-500/20 ring-2' : 'border-border hover:border-border-strong'"
-      role="combobox"
-      [attr.aria-expanded]="isOpen()"
-      aria-haspopup="listbox">
-      @if (multiple()) {
+    @if (multiple()) {
+      <div
+        [attr.tabindex]="disabled() ? -1 : 0"
+        (click)="toggle()"
+        (keydown)="onKeydown($event)"
+        class="bg-surface focus:border-brand-500 focus:ring-brand-500/20 flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-all duration-200 focus:ring-2 focus:outline-none"
+        [class]="
+          disabled()
+            ? 'cursor-not-allowed opacity-50'
+            : error()
+              ? 'border-red-400'
+              : isOpen()
+                ? 'border-brand-500 ring-brand-500/20 ring-2'
+                : 'border-border hover:border-border-strong'
+        "
+        role="combobox"
+        [attr.aria-expanded]="isOpen()"
+        aria-haspopup="listbox">
         @if (selectedValues().length === 0) {
           <span class="text-text-muted truncate">{{ placeholder() }}</span>
         } @else if (selectedLabels().length <= 2) {
@@ -39,13 +46,25 @@
         } @else {
           <span class="text-text-primary truncate">{{ multiDisplayText() }}</span>
         }
-      } @else {
+        <i class="fa-solid fa-chevron-down text-text-muted text-[10px] transition-transform duration-200" [class.rotate-180]="isOpen()"></i>
+      </div>
+    } @else {
+      <button
+        type="button"
+        [disabled]="disabled()"
+        (click)="toggle()"
+        (keydown)="onKeydown($event)"
+        class="bg-surface focus:border-brand-500 focus:ring-brand-500/20 flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-all duration-200 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        [class]="error() ? 'border-red-400' : isOpen() ? 'border-brand-500 ring-brand-500/20 ring-2' : 'border-border hover:border-border-strong'"
+        role="combobox"
+        [attr.aria-expanded]="isOpen()"
+        aria-haspopup="listbox">
         <span class="truncate" [class]="selectedLabel() ? 'text-text-primary' : 'text-text-muted'">
           {{ selectedLabel() || placeholder() }}
         </span>
-      }
-      <i class="fa-solid fa-chevron-down text-text-muted text-[10px] transition-transform duration-200" [class.rotate-180]="isOpen()"></i>
-    </button>
+        <i class="fa-solid fa-chevron-down text-text-muted text-[10px] transition-transform duration-200" [class.rotate-180]="isOpen()"></i>
+      </button>
+    }
 
     <!-- Dropdown (fixed to escape overflow containers) -->
     @if (isOpen()) {
