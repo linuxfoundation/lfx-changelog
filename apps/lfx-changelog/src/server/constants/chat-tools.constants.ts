@@ -59,20 +59,6 @@ export const CHAT_TOOLS_PUBLIC: OpenAIFunctionTool[] = [
       },
     },
   },
-  {
-    type: 'function',
-    function: {
-      name: 'get_blog_detail',
-      description: 'Get the full content of a specific blog post by its ID. Use this to read the complete body when the search excerpt is not enough.',
-      parameters: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'The blog post UUID' },
-        },
-        required: ['id'],
-      },
-    },
-  },
 ];
 
 export const CHAT_TOOLS_ADMIN: OpenAIFunctionTool[] = [
