@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { AssignRoleRequestSchema, CreateUserRequestSchema, UserRole } from '@lfx-changelog/shared';
+import { AssignRoleRequestSchema, BatchAssignRoleRequestSchema, CreateUserRequestSchema, UserRole } from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { UserController } from '../controllers/user.controller';
@@ -18,6 +18,9 @@ router.post('/', authorize({ role: UserRole.SUPER_ADMIN }), validate({ body: Cre
 );
 router.post('/:id/roles', authorize({ role: UserRole.PRODUCT_ADMIN }), validate({ body: AssignRoleRequestSchema }), (req, res, next) =>
   userController.assignRole(req, res, next)
+);
+router.post('/:id/roles/batch', authorize({ role: UserRole.PRODUCT_ADMIN }), validate({ body: BatchAssignRoleRequestSchema }), (req, res, next) =>
+  userController.batchAssignRoles(req, res, next)
 );
 router.delete('/:id/roles/:roleId', authorize({ role: UserRole.PRODUCT_ADMIN }), (req, res, next) => userController.removeRole(req, res, next));
 

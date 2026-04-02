@@ -59,4 +59,11 @@ export class UserManagementPage {
     await selectLocator.locator('button[role="combobox"]').click();
     await selectLocator.locator(`button[role="option"]`, { hasText: optionLabel }).click();
   }
+
+  public async selectMultiOption(selectLocator: Locator, optionLabel: string) {
+    const combobox = selectLocator.locator('[role="combobox"]');
+    await combobox.click();
+    await selectLocator.locator(`button[role="option"]`, { hasText: optionLabel }).click();
+    await combobox.click();
+  }
 }

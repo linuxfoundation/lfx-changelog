@@ -10,6 +10,7 @@ export type { SelectOption };
 
 @Component({
   selector: 'lfx-select',
+  imports: [],
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: SelectComponent, multi: true }],
   host: {
     '(document:click)': 'onDocumentClick($event)',
@@ -27,8 +28,10 @@ export class SelectComponent implements ControlValueAccessor {
   public readonly error = input<string>('');
   public readonly placeholder = input<string>('Select...');
   public readonly searchable = input(false);
+  public readonly multiple = input(false);
 
   protected readonly value = signal('');
+  protected readonly selectedValues = signal<string[]>([]);
   protected readonly disabled = signal(false);
   protected readonly isOpen = signal(false);
   protected readonly focusedIndex = signal(-1);
@@ -40,17 +43,36 @@ export class SelectComponent implements ControlValueAccessor {
     return selected?.label ?? '';
   });
 
+  protected readonly selectedLabels = computed(() => {
+    const vals = this.selectedValues();
+    const opts = this.options();
+    return vals.map((v) => opts.find((o) => o.value === v)?.label ?? v);
+  });
+
+  protected readonly multiDisplayText = computed(() => {
+    const labels = this.selectedLabels();
+    if (labels.length === 0) return '';
+    if (labels.length <= 2) return labels.join(', ');
+    return `${labels.length} selected`;
+  });
+
+  protected readonly selectedValueSet = computed(() => new Set(this.selectedValues()));
+
   protected readonly filteredOptions = computed(() => {
     const query = this.searchQuery().toLowerCase();
     if (!query) return this.options();
     return this.options().filter((o) => o.label.toLowerCase().includes(query));
   });
 
-  public writeValue(value: string): void {
-    this.value.set(value ?? '');
+  public writeValue(value: string | string[]): void {
+    if (this.multiple()) {
+      this.selectedValues.set(Array.isArray(value) ? value : []);
+    } else {
+      this.value.set(Array.isArray(value) ? '' : (value ?? ''));
+    }
   }
 
-  public registerOnChange(fn: (value: string) => void): void {
+  public registerOnChange(fn: (value: string | string[]) => void): void {
     this.onChange = fn;
   }
 
@@ -67,16 +89,41 @@ export class SelectComponent implements ControlValueAccessor {
     this.isOpen.update((v) => !v);
     if (this.isOpen()) {
       this.searchQuery.set('');
-      const currentIndex = this.filteredOptions().findIndex((o) => o.value === this.value());
-      this.focusedIndex.set(currentIndex);
+      if (!this.multiple()) {
+        const currentIndex = this.filteredOptions().findIndex((o) => o.value === this.value());
+        this.focusedIndex.set(currentIndex);
+      } else {
+        this.focusedIndex.set(0);
+      }
       this.updateDropdownPosition();
+      if (this.searchable()) {
+        setTimeout(() => this.elRef.nativeElement.querySelector('input[type="text"]')?.focus());
+      }
     }
   }
 
   protected selectOption(option: SelectOption): void {
-    this.value.set(option.value);
-    this.onChange(option.value);
-    this.isOpen.set(false);
+    if (this.multiple()) {
+      this.selectedValues.update((vals) => {
+        const exists = vals.includes(option.value);
+        const updated = exists ? vals.filter((v) => v !== option.value) : [...vals, option.value];
+        this.onChange(updated);
+        return updated;
+      });
+    } else {
+      this.value.set(option.value);
+      this.onChange(option.value);
+      this.isOpen.set(false);
+    }
+  }
+
+  protected removeSelectedValue(val: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.selectedValues.update((vals) => {
+      const updated = vals.filter((v) => v !== val);
+      this.onChange(updated);
+      return updated;
+    });
   }
 
   protected onKeydown(event: KeyboardEvent): void {
@@ -143,12 +190,12 @@ export class SelectComponent implements ControlValueAccessor {
   }
 
   private updateDropdownPosition(): void {
-    const trigger = this.elRef.nativeElement.querySelector('button');
+    const trigger = this.elRef.nativeElement.querySelector('[role="combobox"]');
     if (!trigger) return;
     this.triggerWidth.set(trigger.getBoundingClientRect().width);
   }
 
-  private onChange: (value: string) => void = () => {
+  private onChange: (value: string | string[]) => void = () => {
     void 0;
   };
 

@@ -33,6 +33,13 @@ export class UserService {
     );
   }
 
+  public batchAssignRoles(userId: string, role: string, productIds: string[]): Observable<User> {
+    return this.http.post<ApiResponse<User>>(`/api/users/${userId}/roles/batch`, { role, productIds }).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
   public removeRole(userId: string, roleId: string): Observable<HttpResponse<unknown>> {
     return this.http.delete(`/api/users/${userId}/roles/${roleId}`, { observe: 'response' }).pipe(take(1));
   }

@@ -33,7 +33,7 @@ export class ManageRolesDialogComponent implements OnInit {
   public readonly products = input.required<Product[]>();
 
   protected readonly newRoleControl = new FormControl('', { nonNullable: true });
-  protected readonly newProductControl = new FormControl('', { nonNullable: true });
+  protected readonly newProductIdsControl = new FormControl<string[]>([], { nonNullable: true });
 
   protected readonly roles = signal<UserRoleAssignment[]>([]);
   private modified = false;
@@ -47,12 +47,11 @@ export class ManageRolesDialogComponent implements OnInit {
   protected readonly newSelectedRole = toSignal(this.newRoleControl.valueChanges, { initialValue: '' });
   protected readonly newRoleIsSuperAdmin: Signal<boolean> = computed(() => this.newSelectedRole() === UserRole.SUPER_ADMIN);
 
-  protected readonly productOptions: Signal<SelectOption[]> = computed(() => [
-    { label: 'Global (all products)', value: '' },
-    ...this.products()
+  protected readonly productOptions: Signal<SelectOption[]> = computed(() =>
+    this.products()
       .filter((p) => p.isActive)
-      .map((p) => ({ label: p.name, value: p.id })),
-  ]);
+      .map((p) => ({ label: p.name, value: p.id }))
+  );
 
   public ngOnInit(): void {
     this.roles.set(this.user().roles ?? []);
@@ -62,10 +61,30 @@ export class ManageRolesDialogComponent implements OnInit {
     const user = this.user();
     if (!user || !this.newRoleControl.value) return;
 
-    const productId = this.newRoleControl.value === UserRole.SUPER_ADMIN ? null : this.newProductControl.value || null;
-    this.userService.assignRole(user.id, this.newRoleControl.value, productId).subscribe({
+    const role = this.newRoleControl.value;
+    const isSuperAdmin = role === UserRole.SUPER_ADMIN;
+
+    if (isSuperAdmin) {
+      this.userService.assignRole(user.id, role, null).subscribe({
+        next: () => {
+          this.toastService.success('Role assigned');
+          this.dialogService.close('changed');
+        },
+        error: () => this.toastService.error('Failed to assign role'),
+      });
+      return;
+    }
+
+    const productIds = this.newProductIdsControl.value;
+    if (!productIds.length) {
+      this.toastService.error('Please select at least one product');
+      return;
+    }
+
+    this.userService.batchAssignRoles(user.id, role, productIds).subscribe({
       next: () => {
-        this.toastService.success('Role assigned');
+        const count = productIds.length;
+        this.toastService.success(count === 1 ? 'Role assigned' : `Role assigned to ${count} products`);
         this.dialogService.close('changed');
       },
       error: () => this.toastService.error('Failed to assign role'),

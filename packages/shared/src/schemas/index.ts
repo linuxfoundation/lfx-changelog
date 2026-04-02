@@ -66,6 +66,7 @@ export {
 } from './chat.schema.js';
 export {
   AssignRoleRequestSchema,
+  BatchAssignRoleRequestSchema,
   CreateBlogPostRequestSchema,
   CreateChangelogEntryRequestSchema,
   CreateProductRequestSchema,
@@ -196,6 +197,7 @@ export type {
 } from './chat.schema.js';
 export type {
   AssignRoleRequest,
+  BatchAssignRoleRequest,
   CreateBlogPostRequest,
   CreateChangelogEntryRequest,
   CreateProductRequest,

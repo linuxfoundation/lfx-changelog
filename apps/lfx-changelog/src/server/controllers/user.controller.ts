@@ -7,7 +7,7 @@ import { NextFunction, Request, Response } from 'express';
 
 import { UserService } from '../services/user.service';
 
-import type { CreateUserRequest } from '@lfx-changelog/shared';
+import type { BatchAssignRoleRequest, CreateUserRequest } from '@lfx-changelog/shared';
 
 function mapUser(prismaUser: PrismaUser & { userRoleAssignments?: any[] }) {
   const { userRoleAssignments, ...rest } = prismaUser;
@@ -36,8 +36,8 @@ export class UserController {
 
   public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, name, role, productId } = req.body as CreateUserRequest;
-      const user = await this.userService.createWithRole({ email, name, role, productId });
+      const { email, name, role, productId, productIds } = req.body as CreateUserRequest;
+      const user = await this.userService.createWithRole({ email, name, role, productId, productIds });
       res.status(201).json({ success: true, data: mapUser(user) });
     } catch (error) {
       next(error);
@@ -54,6 +54,16 @@ export class UserController {
       }
       const assignment = await this.userService.assignRole(req.params['id'] as string, role, productId ?? null);
       res.status(201).json({ success: true, data: assignment });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async batchAssignRoles(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { role, productIds } = req.body as BatchAssignRoleRequest;
+      const user = await this.userService.assignRoles(req.params['id'] as string, role, productIds);
+      res.status(201).json({ success: true, data: mapUser(user) });
     } catch (error) {
       next(error);
     }

@@ -33,19 +33,25 @@ export class UserService {
     }
   }
 
-  public async createWithRole(data: { email: string; name: string; role: string; productId?: string }): Promise<PrismaUser> {
+  public async createWithRole(data: { email: string; name: string; role: string; productId?: string; productIds?: string[] }): Promise<PrismaUser> {
     const prisma = getPrismaClient();
+    let resolvedProductIds: (string | null)[] = [null];
+    if (data.productIds?.length) {
+      resolvedProductIds = data.productIds;
+    } else if (data.productId) {
+      resolvedProductIds = [data.productId];
+    }
     try {
       return await prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
           data: { email: data.email, name: data.name },
         });
-        await tx.userRoleAssignment.create({
-          data: {
+        await tx.userRoleAssignment.createMany({
+          data: resolvedProductIds.map((pid) => ({
             userId: user.id,
             role: data.role as PrismaUserRole,
-            productId: data.productId ?? null,
-          },
+            productId: pid || null,
+          })),
         });
         return tx.user.findUniqueOrThrow({
           where: { id: user.id },
@@ -99,6 +105,22 @@ export class UserService {
       },
       include: { product: true },
     });
+  }
+
+  public async assignRoles(userId: string, role: string, productIds: string[]): Promise<PrismaUser> {
+    const prisma = getPrismaClient();
+    await this.findById(userId);
+    await prisma.$transaction(async (tx) => {
+      await tx.userRoleAssignment.createMany({
+        data: productIds.map((pid) => ({
+          userId,
+          role: role as PrismaUserRole,
+          productId: pid || null,
+        })),
+        skipDuplicates: true,
+      });
+    });
+    return this.findById(userId);
   }
 
   public async removeRole(roleId: string): Promise<void> {

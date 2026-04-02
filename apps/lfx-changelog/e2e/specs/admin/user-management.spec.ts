@@ -91,7 +91,7 @@ test.describe('User Management', () => {
     await userPage.addUserEmailInput.locator('input').fill(`e2e-ui-${Date.now()}@example.com`);
     await userPage.addUserNameInput.locator('input').fill('E2E UI Test User');
     await userPage.selectOption(userPage.addUserRoleSelect, 'Editor');
-    await userPage.selectOption(userPage.addUserProductSelect, 'E2E EasyCLA');
+    await userPage.selectMultiOption(userPage.addUserProductSelect, 'E2E EasyCLA');
     await userPage.addUserCreateBtn.click();
 
     await expect(userPage.addUserDialog).not.toBeVisible();
@@ -106,7 +106,7 @@ test.describe('User Management', () => {
     await userPage.addUserEmailInput.locator('input').fill(TEST_USERS[0]!.email);
     await userPage.addUserNameInput.locator('input').fill('Duplicate User');
     await userPage.selectOption(userPage.addUserRoleSelect, 'Editor');
-    await userPage.selectOption(userPage.addUserProductSelect, 'E2E EasyCLA');
+    await userPage.selectMultiOption(userPage.addUserProductSelect, 'E2E EasyCLA');
     await userPage.addUserCreateBtn.click();
 
     await expect(userPage.addUserError).toBeVisible();
@@ -121,7 +121,7 @@ test.describe('User Management', () => {
       await expect(userPage.addUserDialog).toBeVisible();
       await userPage.selectOption(userPage.addUserRoleSelect, 'Editor');
 
-      await userPage.addUserProductSelect.locator('button[role="combobox"]').click();
+      await userPage.addUserProductSelect.locator('[role="combobox"]').click();
 
       const disabledOption = userPage.addUserProductSelect.locator('button[role="option"]', { hasText: targetProduct.name });
       await expect(disabledOption).not.toBeVisible();
@@ -144,7 +144,7 @@ test.describe('User Management', () => {
       await expect(userPage.roleDialog).toBeVisible();
 
       await userPage.selectOption(userPage.roleSelect, 'Editor');
-      await userPage.productSelect.locator('button[role="combobox"]').click();
+      await userPage.productSelect.locator('[role="combobox"]').click();
       await userPage.productSelect.locator('button[role="option"]').first().waitFor({ state: 'visible' });
 
       const disabledOption = userPage.productSelect.locator('button[role="option"]', { hasText: targetProduct.name });
