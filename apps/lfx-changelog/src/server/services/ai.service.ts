@@ -674,8 +674,8 @@ export class AiService {
   private async chatGetBlogDetail(args: GetBlogDetailToolArgs, callerContext: ChatCallerContext): Promise<string> {
     const post = await this.blogService.findById(args.id);
 
-    // Public users can only see published posts
-    if (callerContext.accessLevel !== 'admin' && post.status !== 'published') {
+    // Public users can only see fully published posts (status + publishedAt)
+    if (callerContext.accessLevel !== 'admin' && (post.status !== 'published' || !post.publishedAt)) {
       return JSON.stringify({ error: 'Blog post not found' });
     }
 
@@ -698,7 +698,7 @@ export class AiService {
     const { id, ...updates } = args;
 
     // Ensure at least one field is being updated
-    const hasUpdate = updates.title || updates.excerpt || updates.description;
+    const hasUpdate = updates.title !== undefined || updates.excerpt !== undefined || updates.description !== undefined;
     if (!hasUpdate) {
       return JSON.stringify({ error: 'No fields to update. Provide at least one of: title, excerpt, description.' });
     }

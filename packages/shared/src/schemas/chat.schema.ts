@@ -107,12 +107,16 @@ export const GetBlogDetailToolArgsSchema = z.object({
 
 export type GetBlogDetailToolArgs = z.infer<typeof GetBlogDetailToolArgsSchema>;
 
-export const UpdateBlogToolArgsSchema = z.object({
-  id: z.string(),
-  title: z.string().optional(),
-  excerpt: z.string().optional(),
-  description: z.string().optional(),
-});
+export const UpdateBlogToolArgsSchema = z
+  .object({
+    id: z.string(),
+    title: z.string().optional(),
+    excerpt: z.string().optional(),
+    description: z.string().optional(),
+  })
+  .refine((data) => data.title !== undefined || data.excerpt !== undefined || data.description !== undefined, {
+    message: 'At least one of "title", "excerpt", or "description" must be provided.',
+  });
 
 export type UpdateBlogToolArgs = z.infer<typeof UpdateBlogToolArgsSchema>;
 
