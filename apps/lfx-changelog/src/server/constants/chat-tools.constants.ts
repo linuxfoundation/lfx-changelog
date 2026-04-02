@@ -118,4 +118,37 @@ export const CHAT_TOOLS_ADMIN: OpenAIFunctionTool[] = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'get_blog_detail',
+      description:
+        'Get the full content of a specific blog post by its ID, including drafts. Use this to read the complete body when the search excerpt is not enough. ALWAYS call this before proposing edits so you have the full content.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The blog post UUID' },
+        },
+        required: ['id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_blog',
+      description:
+        "Update a blog post's content. You can update the title, excerpt, and/or description (body). IMPORTANT: Always show the user what you plan to change and wait for their explicit confirmation before calling this tool.",
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'The blog post UUID' },
+          title: { type: 'string', description: 'New title (omit to keep unchanged)' },
+          excerpt: { type: 'string', description: 'New excerpt/summary (omit to keep unchanged)' },
+          description: { type: 'string', description: 'New full body content in markdown (omit to keep unchanged)' },
+        },
+        required: ['id'],
+      },
+    },
+  },
 ];

@@ -15,6 +15,7 @@ import { CHAT_TOOLS_ADMIN, CHAT_TOOLS_PUBLIC } from '../constants/chat-tools.con
 import { CHAT_CONFIG, CHAT_SYSTEM_PROMPT_ADMIN, CHAT_SYSTEM_PROMPT_PUBLIC } from '../constants/chat.constants';
 import { AiServiceError } from '../errors';
 import { serverLogger } from '../server-logger';
+import { BlogService } from './blog.service';
 import { ChangelogService } from './changelog.service';
 import { ProductService } from './product.service';
 import { SearchService } from './search.service';
@@ -25,6 +26,7 @@ import type {
   BlogSearchHit,
   ChangelogSearchHit,
   ChatSSEEvent,
+  GetBlogDetailToolArgs,
   GetChangelogDetailToolArgs,
   OpenAIChatMessage,
   OpenAIChatRequest,
@@ -36,10 +38,12 @@ import type {
   PublicChangelogEntry,
   SearchToolArgs,
   StreamDeltaChunk,
+  UpdateBlogToolArgs,
 } from '@lfx-changelog/shared';
 import type { ChatCallerContext, StreamResult } from '../interfaces/chat.interface';
 
 export class AiService {
+  private readonly blogService = new BlogService();
   private readonly productService = new ProductService();
   private readonly changelogService = new ChangelogService();
   private readonly searchService = new SearchService();
@@ -308,6 +312,14 @@ export class AiService {
         }
         case 'get_changelog_detail':
           return await this.chatGetChangelogDetail(parsedArgs as GetChangelogDetailToolArgs, callerContext);
+        case 'get_blog_detail':
+          return await this.chatGetBlogDetail(parsedArgs as GetBlogDetailToolArgs, callerContext);
+        case 'update_blog': {
+          if (accessLevel !== 'admin') {
+            return JSON.stringify({ error: 'Only admins can update blog posts' });
+          }
+          return await this.chatUpdateBlog(parsedArgs as UpdateBlogToolArgs);
+        }
         default:
           return JSON.stringify({ error: `Unknown tool: ${name}` });
       }
@@ -656,6 +668,107 @@ export class AiService {
     } catch (error) {
       serverLogger.warn({ err: error }, 'Blog search failed in chat tool');
       return JSON.stringify({ error: 'Blog search failed — please try again later' });
+    }
+  }
+
+  private async chatGetBlogDetail(args: GetBlogDetailToolArgs, callerContext: ChatCallerContext): Promise<string> {
+    const post = await this.blogService.findById(args.id);
+
+    // Public users can only see fully published posts (status + publishedAt)
+    if (callerContext.accessLevel !== 'admin' && (post.status !== 'published' || !post.publishedAt)) {
+      return JSON.stringify({ error: 'Blog post not found' });
+    }
+
+    const serialized = this.serializeBlogPost(post);
+
+    // For admin users, enrich with style reference from recent published blogs
+    if (callerContext.accessLevel === 'admin') {
+      const styleReference = await this.fetchBlogStyleReference(args.id);
+      if (styleReference) {
+        const parsed = JSON.parse(serialized) as Record<string, unknown>;
+        parsed['styleReference'] = styleReference;
+        return JSON.stringify(parsed);
+      }
+    }
+
+    return serialized;
+  }
+
+  private async chatUpdateBlog(args: UpdateBlogToolArgs): Promise<string> {
+    const { id, ...updates } = args;
+
+    // Ensure at least one field is being updated
+    const hasUpdate = updates.title !== undefined || updates.excerpt !== undefined || updates.description !== undefined;
+    if (!hasUpdate) {
+      return JSON.stringify({ error: 'No fields to update. Provide at least one of: title, excerpt, description.' });
+    }
+
+    const updated = await this.blogService.update(id, updates);
+    return JSON.stringify({
+      success: true,
+      post: {
+        id: updated.id,
+        title: updated.title,
+        slug: updated.slug,
+        excerpt: updated.excerpt,
+        status: updated.status,
+      },
+    });
+  }
+
+  private serializeBlogPost(post: {
+    id: string;
+    slug: string;
+    title: string;
+    excerpt: string | null;
+    description: string;
+    type: string;
+    status: string;
+    publishedAt: unknown;
+    createdAt: unknown;
+    author?: unknown;
+    products?: unknown;
+  }): string {
+    return JSON.stringify({
+      id: post.id,
+      slug: post.slug,
+      title: post.title,
+      excerpt: post.excerpt,
+      description: post.description,
+      type: post.type,
+      status: post.status,
+      publishedAt: post.publishedAt,
+      createdAt: post.createdAt,
+      author: post.author,
+      products: post.products,
+    });
+  }
+
+  /**
+   * Fetches excerpts from recent published blogs as style reference for the AI.
+   * Mirrors the blog agent's `search_past_blogs` tool — gives the chat AI
+   * examples of the team's established tone and structure.
+   */
+  private async fetchBlogStyleReference(excludeId: string): Promise<{ note: string; recentBlogs: object[] } | null> {
+    try {
+      const result = await this.blogService.findPublished({ type: 'monthly_roundup', limit: 3, page: 1 });
+      const recentBlogs = result.data
+        .filter((b) => b.id !== excludeId)
+        .slice(0, 2)
+        .map((b) => ({
+          title: b.title,
+          excerpt: b.excerpt,
+          descriptionPreview: b.description?.slice(0, 500) || null,
+        }));
+
+      if (recentBlogs.length === 0) return null;
+
+      return {
+        note: 'These are recent published blogs for style reference. Match their tone, structure, and voice when suggesting edits.',
+        recentBlogs,
+      };
+    } catch {
+      return null;
     }
   }
 
