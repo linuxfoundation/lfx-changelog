@@ -101,6 +101,21 @@ export const GetChangelogDetailToolArgsSchema = z.object({
 
 export type GetChangelogDetailToolArgs = z.infer<typeof GetChangelogDetailToolArgsSchema>;
 
+export const GetBlogDetailToolArgsSchema = z.object({
+  id: z.string(),
+});
+
+export type GetBlogDetailToolArgs = z.infer<typeof GetBlogDetailToolArgsSchema>;
+
+export const UpdateBlogToolArgsSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  excerpt: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export type UpdateBlogToolArgs = z.infer<typeof UpdateBlogToolArgsSchema>;
+
 // --- Streaming types ---
 
 /** Shape of a streaming delta tool_call chunk from the OpenAI API. */

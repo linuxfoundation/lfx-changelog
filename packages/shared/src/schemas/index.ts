@@ -58,11 +58,13 @@ export {
   ChatMessageSchema,
   ChatMessageUISchema,
   ChatSSEEventSchema,
+  GetBlogDetailToolArgsSchema,
   GetChangelogDetailToolArgsSchema,
   SearchToolArgsSchema,
   SendChatMessageRequestSchema,
   StreamDeltaChunkSchema,
   StreamDeltaToolCallSchema,
+  UpdateBlogToolArgsSchema,
 } from './chat.schema.js';
 export {
   AssignRoleRequestSchema,
@@ -189,11 +191,13 @@ export type {
   ChatMessageUI,
   ChatSSEEvent,
   ChatSSEEventType,
+  GetBlogDetailToolArgs,
   GetChangelogDetailToolArgs,
   SearchToolArgs,
   SendChatMessageRequest,
   StreamDeltaChunk,
   StreamDeltaToolCall,
+  UpdateBlogToolArgs,
 } from './chat.schema.js';
 export type {
   AssignRoleRequest,
