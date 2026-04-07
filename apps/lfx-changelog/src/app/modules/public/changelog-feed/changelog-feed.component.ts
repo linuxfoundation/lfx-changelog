@@ -5,6 +5,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ChangelogCardComponent } from '@components/changelog-card/changelog-card.component';
 import { PaginationComponent } from '@components/pagination/pagination.component';
 import { TimelineItemComponent } from '@components/timeline-item/timeline-item.component';
@@ -26,19 +27,35 @@ import type { ChangelogEntryWithRelations, ChangelogSearchHit, PaginatedResponse
 })
 export class ChangelogFeedComponent {
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly productService = inject(ProductService);
   private readonly changelogService = inject(ChangelogService);
   private readonly searchService = inject(SearchService);
   private readonly seoService = inject(SeoService);
 
+  private readonly productSlugFromQuery = signal(this.route.snapshot.queryParamMap.get('product') ?? '');
   protected readonly products = toSignal(this.productService.getPublic(), { initialValue: [] as PublicProduct[] });
   protected readonly selectedProduct = signal<string>('');
   protected readonly loading = signal(true);
   protected readonly searchControl = new FormControl('');
   protected readonly searchValue = toSignal(this.searchControl.valueChanges.pipe(startWith('')), { initialValue: '' });
   protected readonly currentPage = signal(1);
+  protected readonly activeProductId = computed(() => {
+    const manual = this.selectedProduct();
+    if (manual) return manual;
+    const slug = this.productSlugFromQuery();
+    if (!slug) return '';
+    return this.products().find((p) => p.slug === slug)?.id ?? '';
+  });
 
-  private readonly fetchParams = computed(() => ({ productId: this.selectedProduct(), page: this.currentPage() }));
+  private readonly fetchParams = computed(() => {
+    const productId = this.selectedProduct();
+    const slug = this.productSlugFromQuery();
+    if (productId) return { productId, productSlug: undefined, page: this.currentPage() };
+    if (slug) return { productId: undefined, productSlug: slug, page: this.currentPage() };
+    return { productId: undefined, productSlug: undefined, page: this.currentPage() };
+  });
   protected readonly paginatedResult: Signal<PaginatedResponse<ChangelogEntryWithRelations>> = this.initPaginatedResult();
   protected readonly publishedEntries = computed(() => this.paginatedResult().data);
   protected readonly totalPages = computed(() => this.paginatedResult().totalPages);
@@ -62,7 +79,16 @@ export class ChangelogFeedComponent {
   }
 
   protected toggleProduct(productId: string): void {
-    this.selectedProduct.update((v) => (v === productId ? '' : productId));
+    const isActive = this.activeProductId() === productId;
+    if (isActive) {
+      this.selectedProduct.set('');
+      this.productSlugFromQuery.set('');
+      this.updateQueryParam(null);
+    } else {
+      this.selectedProduct.set(productId);
+      const slug = this.products().find((p) => p.id === productId)?.slug;
+      this.updateQueryParam(slug ?? null);
+    }
     this.currentPage.set(1);
   }
 
@@ -110,8 +136,10 @@ export class ChangelogFeedComponent {
     return toSignal(
       toObservable(this.fetchParams).pipe(
         tap(() => this.loading.set(true)),
-        switchMap(({ productId, page }) =>
-          this.changelogService.getPublished({ ...(productId ? { productId } : {}), page }).pipe(catchError(() => of(emptyResult)))
+        switchMap(({ productId, productSlug, page }) =>
+          this.changelogService
+            .getPublished({ ...(productId ? { productId } : {}), ...(productSlug ? { productSlug } : {}), page })
+            .pipe(catchError(() => of(emptyResult)))
         ),
         tap(() => this.loading.set(false))
       ),
@@ -119,9 +147,13 @@ export class ChangelogFeedComponent {
     );
   }
 
+  private updateQueryParam(productSlug: string | null): void {
+    this.router.navigate([], { queryParams: { product: productSlug }, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
   private initSearchResponse(): Signal<SearchResponse<ChangelogSearchHit> | null> {
     return toSignal(
-      combineLatest([this.searchControl.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), toObservable(this.selectedProduct)]).pipe(
+      combineLatest([this.searchControl.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), toObservable(this.activeProductId)]).pipe(
         switchMap(([query, productId]) => {
           const q = (query || '').trim();
           if (!q) return of(null);
