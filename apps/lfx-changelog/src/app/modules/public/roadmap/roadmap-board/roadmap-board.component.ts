@@ -4,11 +4,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ROADMAP_ACTIVE_COLUMNS, ROADMAP_COLUMNS, ROADMAP_TEAM_DISPLAY_NAMES } from '@lfx-changelog/shared';
+import { ROADMAP_ACTIVE_COLUMNS, ROADMAP_COLUMNS, ROADMAP_TEAM_DISPLAY_NAMES, slugify } from '@lfx-changelog/shared';
 import { ProductService } from '@services/product.service';
 import { RoadmapService } from '@services/roadmap.service';
 import { TeamDisplayNamePipe } from '@shared/pipes/team-display-name.pipe';
-import { catchError, combineLatest, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, filter, of, switchMap, tap } from 'rxjs';
 import { RoadmapColumnComponent } from '../components/roadmap-column/roadmap-column.component';
 import { RoadmapDetailPanelComponent } from '../components/roadmap-detail-panel/roadmap-detail-panel.component';
 
@@ -83,7 +83,7 @@ export class RoadmapBoardComponent {
 
   private teamToProductSlug(team: string): string {
     const displayName = ROADMAP_TEAM_DISPLAY_NAMES[team] ?? team;
-    return this.products().find((p) => p.name.toLowerCase() === displayName.toLowerCase())?.slug ?? displayName.toLowerCase().replace(/\s+/g, '-');
+    return this.products().find((p) => p.name.toLowerCase() === displayName.toLowerCase())?.slug ?? slugify(displayName);
   }
 
   private updateQueryParam(productSlug: string | null): void {
@@ -105,6 +105,7 @@ export class RoadmapBoardComponent {
   private initBoard(): Signal<RoadmapBoardResponse> {
     return toSignal(
       combineLatest([toObservable(this.effectiveTeam), toObservable(this.showCompleted)]).pipe(
+        filter(([team]) => !this.productSlugFromQuery() || !!team),
         tap(() => this.loading.set(true)),
         switchMap(([team, includeCompleted]) => this.roadmapService.getBoard(team || undefined, includeCompleted).pipe(catchError(() => of(EMPTY_BOARD)))),
         tap(() => this.loading.set(false))
