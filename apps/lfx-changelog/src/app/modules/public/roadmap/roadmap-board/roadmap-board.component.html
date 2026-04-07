@@ -39,7 +39,7 @@
           [attr.data-testid]="'roadmap-team-pill-' + team"
           (click)="toggleTeam(team)"
           [class]="
-            selectedTeam() === team
+            effectiveTeam() === team
               ? 'bg-brand-600 border-transparent text-white shadow-sm'
               : 'bg-surface border-border text-text-secondary hover:border-brand-300 hover:text-text-primary'
           "
@@ -47,10 +47,10 @@
           {{ team | teamDisplayName }}
         </button>
       }
-      @if (selectedTeam()) {
+      @if (effectiveTeam()) {
         <button
           data-testid="roadmap-team-clear"
-          (click)="toggleTeam(selectedTeam())"
+          (click)="toggleTeam(effectiveTeam())"
           class="text-text-muted hover:text-brand-600 ml-1 flex items-center gap-1 text-xs transition-colors">
           <i class="fa-solid fa-xmark text-[10px]"></i>
           Clear
