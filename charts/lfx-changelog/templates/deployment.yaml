@@ -15,12 +15,14 @@ spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
+      app.kubernetes.io/name: {{ .Chart.Name }}
       {{- include "lfx-changelog.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
         {{- include "lfx-changelog.podAnnotations" . | nindent 8 }}
       labels:
+        app.kubernetes.io/name: {{ .Chart.Name }}
         {{- include "lfx-changelog.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
