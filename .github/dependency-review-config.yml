@@ -1,0 +1,22 @@
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+# Configuration for actions/dependency-review-action.
+# Allow-list of dependencies whose license declarations are non-SPDX or proprietary
+# but have been reviewed and approved for use in this repo.
+
+fail-on-severity: high
+
+# Per-package allow-list. Each entry is a Package URL (purl).
+# Anthropic ships the Claude Agent SDK and its platform-specific native binaries
+# under their commercial Terms of Service. The packages declare their license
+# as the non-SPDX string "SEE LICENSE IN LICENSE.md", which GitHub normalizes to
+# `LicenseRef-bad-see-license-in-license.md`. The actual license file points to
+# https://code.claude.com/docs/en/legal-and-compliance.
+allow-dependencies-licenses:
+  - 'pkg:npm/%40anthropic-ai/claude-agent-sdk'
+  - 'pkg:npm/%40anthropic-ai/claude-agent-sdk-darwin-arm64'
+  - 'pkg:npm/%40anthropic-ai/claude-agent-sdk-darwin-x64'
+  - 'pkg:npm/%40anthropic-ai/claude-agent-sdk-linux-arm64'
+  - 'pkg:npm/%40anthropic-ai/claude-agent-sdk-linux-x64'
+  - 'pkg:npm/%40anthropic-ai/claude-agent-sdk-win32-x64'
