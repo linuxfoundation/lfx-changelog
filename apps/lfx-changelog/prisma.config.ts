@@ -7,17 +7,6 @@ import 'dotenv/config';
 import { defineConfig } from 'prisma/config';
 import { buildConnectionString } from './src/server/helpers/build-connection-string';
 
-// Tolerate missing DB env vars at config load so `prisma generate` (run from postinstall
-// during CI/fresh installs) succeeds without real credentials. Migrate/seed/db-push
-// surface the real requirement when they attempt to connect.
-function resolveDatasourceUrl(): string {
-  try {
-    return buildConnectionString();
-  } catch {
-    return 'postgresql://unset:unset@localhost:5432/unset';
-  }
-}
-
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
@@ -25,6 +14,6 @@ export default defineConfig({
     seed: 'yarn tsx prisma/seed.ts',
   },
   datasource: {
-    url: resolveDatasourceUrl(),
+    url: buildConnectionString(),
   },
 });
