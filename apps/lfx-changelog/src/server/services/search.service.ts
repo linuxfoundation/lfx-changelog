@@ -8,6 +8,7 @@ import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 
 import type { AggregationContainer } from '@opensearch-project/opensearch/api/_types/_common.aggregations.js';
+import type { Hit } from '@opensearch-project/opensearch/api/_types/_core.search.js';
 
 import type {
   BlogDocument,
@@ -403,7 +404,10 @@ export class SearchService {
     const hitsObj = response.body.hits;
     const total = typeof hitsObj.total === 'number' ? hitsObj.total : (hitsObj.total as { value: number }).value;
 
-    const hits = hitsObj.hits.map((hit) => {
+    // OpenSearch v3.6.0 ships a broken HitsMetadata type (Hit & X[] drops Hit fields under iteration).
+    // Reassigning to Hit[] works because every Hit field is optional, so the array part is assignable.
+    const rawHits: Hit[] = hitsObj.hits;
+    const hits = rawHits.map((hit) => {
       const source = hit._source as ChangelogDocument | BlogDocument;
       const highlight = hit.highlight || {};
       return {
