@@ -4,7 +4,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
 
-config({ path: '.env.e2e' });
+config({ path: '.env.e2e', quiet: true });
 
 const baseURL = 'http://localhost:4204';
 
