@@ -17,8 +17,7 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
-    "test:report": "playwright show-report",
-    "postinstall": "prisma generate"
+    "test:report": "playwright show-report"
   },
   "private": true,
   "dependencies": {
