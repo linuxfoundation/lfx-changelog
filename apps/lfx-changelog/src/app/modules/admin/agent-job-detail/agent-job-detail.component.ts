@@ -6,6 +6,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
+import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
 import { TimelineItemComponent } from '@components/timeline-item/timeline-item.component';
 import { AgentJobService } from '@services/agent-job.service';
 import { AgentStatusColorPipe } from '@shared/pipes/agent-status-color.pipe';
@@ -26,6 +27,7 @@ import type { AgentJobDetail, AgentJobSSEEvent } from '@lfx-changelog/shared';
     RouterLink,
     BadgeComponent,
     ButtonComponent,
+    MarkdownRendererComponent,
     TimelineItemComponent,
     AgentStatusColorPipe,
     AgentStatusLabelPipe,

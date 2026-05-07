@@ -196,6 +196,7 @@ export class ChangelogAgentService {
     const prisma = getPrismaClient();
     const startTime = Date.now();
     const progressLog: ProgressLogEntry[] = [];
+    let timedOut = false;
 
     try {
       // Mark as running
@@ -355,7 +356,10 @@ export class ChangelogAgentService {
       // 10. Run the agent
       const abortController = new AbortController();
       this.activeControllers.set(jobId, abortController);
-      const timeout = setTimeout(() => abortController.abort(), AGENT_CONFIG.TIMEOUT_MS);
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        abortController.abort();
+      }, AGENT_CONFIG.TIMEOUT_MS);
 
       try {
         const mcpServers = this.buildMcpServers(mcpServer);
@@ -547,7 +551,8 @@ export class ChangelogAgentService {
       }
 
       const durationMs = Date.now() - startTime;
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const rawMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = timedOut ? `Agent job timed out after ${Math.round(AGENT_CONFIG.TIMEOUT_MS / 1000)}s` : rawMessage;
 
       const errorEntry: ProgressLogEntry = {
         timestamp: new Date().toISOString(),
@@ -568,7 +573,7 @@ export class ChangelogAgentService {
         },
       });
 
-      serverLogger.error({ err, jobId, productId, durationMs }, 'Agent job failed');
+      serverLogger.error({ err, jobId, productId, durationMs, timedOut }, timedOut ? 'Agent job timed out' : 'Agent job failed');
       agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'failed' } });
       agentJobEmitter.emit(jobId, { type: 'error', data: errorMessage });
       this.emitTerminalEvents(jobId, {
