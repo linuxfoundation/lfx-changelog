@@ -4,7 +4,7 @@
 export const AGENT_CONFIG = {
   MAX_TURNS: 15,
   MODEL: 'claude-sonnet-4-6',
-  TIMEOUT_MS: 300_000, // 5 minutes
+  TIMEOUT_MS: 600_000, // 10 minutes
 } as const;
 
 /** Changelog MCP tools the agent is allowed to call. */

@@ -5,7 +5,8 @@ import { Component, computed, inject, input, SecurityContext } from '@angular/co
 import { DomSanitizer } from '@angular/platform-browser';
 import { marked, type Tokens } from 'marked';
 
-const CALLOUT_REGEX = /^\s*<p>\[!(STATS|HIGHLIGHT|MILESTONE)\]\s*\n?(.*?)<\/p>/s;
+// Separator after `[!TYPE]` is `\n` when breaks=false and `<br>` when breaks=true; match either.
+const CALLOUT_REGEX = /^\s*<p>\[!(STATS|HIGHLIGHT|MILESTONE)\]\s*(?:<br\s*\/?>)?\s*(.*?)<\/p>/s;
 
 marked.use({
   renderer: {
@@ -31,11 +32,12 @@ export class MarkdownRendererComponent {
   private readonly sanitizer = inject(DomSanitizer);
 
   public readonly content = input<string>('');
+  public readonly breaks = input<boolean>(false);
 
   protected readonly renderedHtml = computed(() => {
     const raw = this.content();
     if (!raw) return '';
-    const html = marked.parse(raw, { async: false }) as string;
+    const html = marked.parse(raw, { async: false, breaks: this.breaks() }) as string;
     return this.sanitizer.sanitize(SecurityContext.HTML, html) ?? '';
   });
 }
