@@ -378,6 +378,8 @@ export class ChangelogAgentService {
               NODE_EXTRA_CA_CERTS: process.env['NODE_EXTRA_CA_CERTS'],
               ANTHROPIC_BASE_URL: baseUrl,
               ANTHROPIC_API_KEY: apiKey,
+              // Strict LiteLLM proxy rejects the SDK's experimental `context_management` field. See BerriAI/litellm#25931.
+              CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: '1',
             },
           },
         });
@@ -833,6 +835,8 @@ export class ChangelogAgentService {
                 NODE_EXTRA_CA_CERTS: process.env['NODE_EXTRA_CA_CERTS'],
                 ANTHROPIC_BASE_URL: baseUrl,
                 ANTHROPIC_API_KEY: apiKey,
+                // Strict LiteLLM proxy rejects the SDK's experimental `context_management` field. See BerriAI/litellm#25931.
+                CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: '1',
               },
             },
           })) {
