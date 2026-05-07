@@ -5,7 +5,8 @@ import { Component, computed, inject, input, SecurityContext } from '@angular/co
 import { DomSanitizer } from '@angular/platform-browser';
 import { marked, type Tokens } from 'marked';
 
-const CALLOUT_REGEX = /^\s*<p>\[!(STATS|HIGHLIGHT|MILESTONE)\]\s*\n?(.*?)<\/p>/s;
+// Separator after `[!TYPE]` is `\n` when breaks=false and `<br>` when breaks=true; match either.
+const CALLOUT_REGEX = /^\s*<p>\[!(STATS|HIGHLIGHT|MILESTONE)\]\s*(?:<br\s*\/?>)?\s*(.*?)<\/p>/s;
 
 marked.use({
   renderer: {
