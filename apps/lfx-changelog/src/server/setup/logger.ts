@@ -8,14 +8,24 @@ import { reqSerializer, resSerializer, serverLogger } from '../server-logger';
 import type { Express, Request } from 'express';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+// Resolve dd-trace once at module-load time so the hot mixin path avoids
+// repeated require() indirection. null means the module is absent.
+let _ddTracer: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  _ddTracer = require('dd-trace');
+} catch {
+  // module absent — no-op
+}
+
 /**
  * Registers the Pino HTTP logger with custom serializers to avoid leaking
  * sessions/headers. Silences health-probe and static-asset noise.
  *
  * The mixin injects active dd-trace span context (dd.trace_id, dd.span_id,
  * dd.service) into every HTTP log line so Datadog can correlate logs with
- * APM traces. Falls back to an empty object when dd-trace is unavailable
- * (e.g. local development).
+ * APM traces. Falls back to an empty object when no active span exists
+ * (e.g. dd-trace is present but not initialized in local development).
  */
 export function setupLogger(app: Express): void {
   app.use(
@@ -27,10 +37,9 @@ export function setupLogger(app: Express): void {
         res: resSerializer,
       },
       mixin: () => {
+        if (!_ddTracer) return {};
         try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const tracer = require('dd-trace');
-          const span = tracer.scope().active();
+          const span = _ddTracer.scope().active();
           if (span) {
             const context = span.context();
             return {
@@ -40,7 +49,7 @@ export function setupLogger(app: Express): void {
             };
           }
         } catch {
-          // dd-trace not available outside production
+          // Unexpected error from the span context API; degrade gracefully.
         }
         return {};
       },

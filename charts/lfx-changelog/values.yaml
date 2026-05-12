@@ -95,6 +95,10 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ''
 
+# The Datadog log auto-discovery annotation is applied via ArgoCD deployment
+# overlay rather than baked into the chart defaults (see lfx-v2-argocd). To
+# enable it for other environments, set:
+#   ad.datadoghq.com/lfx-changelog.logs: '[{"source":"nodejs","service":"lfx-changelog"}]'
 podAnnotations: {}
 
 podLabels: {}
