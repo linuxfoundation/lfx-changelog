@@ -4,20 +4,10 @@
 import pinoHttp from 'pino-http';
 
 import { reqSerializer, resSerializer, serverLogger } from '../server-logger';
+import { ddTracer } from './tracer';
 
 import type { Express, Request } from 'express';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-
-// Resolve dd-trace once at module-load time so the hot mixin path avoids
-// repeated require() indirection. null means the module is absent.
-let _ddTracer: any = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  _ddTracer = require('dd-trace');
-} catch (err: unknown) {
-  // Only swallow MODULE_NOT_FOUND — rethrow unexpected load-time errors.
-  if ((err as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND') throw err;
-}
 
 /**
  * Registers the Pino HTTP logger with custom serializers to avoid leaking
@@ -38,9 +28,9 @@ export function setupLogger(app: Express): void {
         res: resSerializer,
       },
       mixin: () => {
-        if (!_ddTracer) return {};
+        if (!ddTracer) return {};
         try {
-          const span = _ddTracer.scope().active();
+          const span = ddTracer.scope().active();
           if (span) {
             const context = span.context();
             return {
