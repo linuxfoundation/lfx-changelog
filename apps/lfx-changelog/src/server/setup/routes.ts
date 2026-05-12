@@ -44,16 +44,24 @@ export function setupRoutes(app: Express): void {
   // ── Readiness check ───────────────────────────────────────────────────
   // /readyz returns 200 only when dependencies are reachable (e.g., OpenSearch)
   app.get('/readyz', async (_req: Request, res: Response) => {
+    let timerId: ReturnType<typeof setTimeout> | undefined;
     try {
       if (process.env['OPENSEARCH_URL']) {
-        const opensearchUp = await Promise.race([new SearchService().ping(), new Promise<false>((resolve) => setTimeout(() => resolve(false), 1_000))]);
+        const opensearchUp = await Promise.race([
+          new SearchService().ping(),
+          new Promise<false>((resolve) => {
+            timerId = setTimeout(() => resolve(false), 1_000);
+          }),
+        ]);
+        clearTimeout(timerId);
         if (!opensearchUp) {
           res.status(503).json({ status: 'error', error: 'OpenSearch is unavailable' });
           return;
         }
       }
       res.json({ status: 'ok' });
-    } catch (error) {
+    } catch {
+      clearTimeout(timerId);
       res.status(503).json({ status: 'error', error: 'Service is not ready' });
     }
   });
