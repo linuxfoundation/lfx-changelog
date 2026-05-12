@@ -95,8 +95,7 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ''
 
-podAnnotations:
-  ad.datadoghq.com/lfx-changelog.logs: '[{"source":"nodejs","service":"lfx-changelog"}]'
+podAnnotations: {}
 
 podLabels: {}
 
