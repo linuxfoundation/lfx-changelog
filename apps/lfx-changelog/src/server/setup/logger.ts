@@ -10,7 +10,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 /**
  * Registers the Pino HTTP logger with custom serializers to avoid leaking
- * sessions/headers. Silences `/health` and `/assets` noise.
+ * sessions/headers. Silences health-probe and static-asset noise.
  */
 export function setupLogger(app: Express): void {
   app.use(
@@ -34,7 +34,7 @@ export function setupLogger(app: Express): void {
       autoLogging: {
         ignore: (req) => {
           const url = (req as Request).originalUrl || (req as Request).url;
-          return url === '/health' || url.startsWith('/assets');
+          return url === '/health' || url === '/livez' || url === '/readyz' || url.startsWith('/assets');
         },
       },
     })
