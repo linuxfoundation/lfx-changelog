@@ -14,8 +14,9 @@ let _ddTracer: any = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   _ddTracer = require('dd-trace');
-} catch {
-  // module absent — no-op
+} catch (err: unknown) {
+  // Only swallow MODULE_NOT_FOUND — rethrow unexpected load-time errors.
+  if ((err as NodeJS.ErrnoException).code !== 'MODULE_NOT_FOUND') throw err;
 }
 
 /**
