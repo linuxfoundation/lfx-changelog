@@ -12,10 +12,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
  * Registers the Pino HTTP logger with custom serializers to avoid leaking
  * sessions/headers. Silences health-probe and static-asset noise.
  *
- * dd-trace injects trace context (dd.trace_id, dd.span_id) into the pino
- * logger's context when logInjection is enabled. The serializers below
- * preserve those injected fields by avoiding any transformation of the
- * root log object — they only define how to serialize the req/res fields.
+ * The mixin injects active dd-trace span context (dd.trace_id, dd.span_id,
+ * dd.service) into every HTTP log line so Datadog can correlate logs with
+ * APM traces. Falls back to an empty object when dd-trace is unavailable
+ * (e.g. local development).
  */
 export function setupLogger(app: Express): void {
   app.use(
@@ -26,8 +26,22 @@ export function setupLogger(app: Express): void {
         req: reqSerializer,
         res: resSerializer,
       },
-      // Mixin to preserve dd-trace injected fields in every HTTP log
       mixin: () => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const tracer = require('dd-trace');
+          const span = tracer.scope().active();
+          if (span) {
+            const context = span.context();
+            return {
+              'dd.trace_id': context.toTraceId(),
+              'dd.span_id': context.toSpanId(),
+              'dd.service': 'lfx-changelog',
+            };
+          }
+        } catch {
+          // dd-trace not available outside production
+        }
         return {};
       },
       customSuccessMessage: (req: IncomingMessage, res: ServerResponse, responseTime: number) => {
