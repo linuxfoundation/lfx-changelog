@@ -34,7 +34,7 @@ export function setupLogger(app: Express): void {
       autoLogging: {
         ignore: (req) => {
           const url = (req as Request).originalUrl || (req as Request).url;
-          return url === '/health' || url.startsWith('/assets');
+          return url === '/health' || url === '/livez' || url === '/readyz' || url.startsWith('/assets');
         },
       },
     })

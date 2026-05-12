@@ -35,6 +35,29 @@ import type { Express, NextFunction, Request, Response } from 'express';
  * health check, swagger, webhooks, public API, MCP, protected API pipeline, and error handlers.
  */
 export function setupRoutes(app: Express): void {
+  // ── Liveness check ────────────────────────────────────────────────────
+  // /livez returns 200 immediately if the process is alive (no dependency checks)
+  app.get('/livez', (_req: Request, res: Response) => {
+    res.json({ status: 'ok' });
+  });
+
+  // ── Readiness check ───────────────────────────────────────────────────
+  // /readyz returns 200 only when dependencies are reachable (e.g., OpenSearch)
+  app.get('/readyz', async (_req: Request, res: Response) => {
+    try {
+      if (process.env['OPENSEARCH_URL']) {
+        const opensearchUp = await Promise.race([new SearchService().ping(), new Promise<false>((resolve) => setTimeout(() => resolve(false), 1_000))]);
+        if (!opensearchUp) {
+          res.status(503).json({ status: 'error', error: 'OpenSearch is unavailable' });
+          return;
+        }
+      }
+      res.json({ status: 'ok' });
+    } catch (error) {
+      res.status(503).json({ status: 'error', error: 'Service is not ready' });
+    }
+  });
+
   // ── Health check ──────────────────────────────────────────────────────
   app.get('/health', async (_req: Request, res: Response) => {
     let opensearchStatus: 'connected' | 'unavailable' | 'not_configured' = 'not_configured';
