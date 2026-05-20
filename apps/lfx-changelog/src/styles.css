@@ -219,8 +219,8 @@ body {
     transition:
       transform 120ms cubic-bezier(0.22, 1, 0.36, 1),
       box-shadow 120ms cubic-bezier(0.22, 1, 0.36, 1),
-      background-color 150ms ease-out;
-    will-change: transform, box-shadow;
+      background-color 150ms ease-out,
+      color 150ms ease-out;
   }
 
   /* Dark-mode token remap. The :where() wrapper survives Tailwind v4's
@@ -235,13 +235,23 @@ body {
     --btn-rim: rgba(255, 255, 255, 0.12); /* dark-only rim glow below */
   }
 
+  /* Outline (not box-shadow ring) so we don't clobber the multi-layer
+     thickness shadow. color-mix gives us a translucent brand tint that
+     auto-adapts to dark mode via the variable. The :not(:focus-visible)
+     suppression pattern means: keep the native focus outline as the
+     fallback (older browsers without :focus-visible/color-mix support
+     still get an accessible focus ring), and only hide it when the
+     browser supports :focus-visible — in which case the rule below
+     paints our custom ring for keyboard focus only. */
   .btn:focus {
+    outline: 2px solid color-mix(in srgb, var(--color-brand-500) 40%, transparent);
+    outline-offset: 2px;
+  }
+
+  .btn:focus:not(:focus-visible) {
     outline: none;
   }
 
-  /* Outline (not box-shadow ring) so we don't clobber the multi-layer
-     thickness shadow. color-mix gives us a translucent brand tint that
-     auto-adapts to dark mode via the variable. */
   .btn:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--color-brand-500) 40%, transparent);
     outline-offset: 2px;
