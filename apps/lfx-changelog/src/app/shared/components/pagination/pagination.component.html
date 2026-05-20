@@ -11,12 +11,12 @@
       </p>
     }
 
-    <nav class="flex items-center gap-1">
+    <nav class="flex items-center gap-1.5">
       <!-- Previous -->
       <button
         data-testid="pagination-prev"
         type="button"
-        class="text-text-muted hover:bg-surface-alt hover:text-text-secondary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40"
+        class="btn btn-secondary inline-flex h-8 w-8 items-center justify-center rounded-md text-sm disabled:pointer-events-none disabled:opacity-40"
         [disabled]="!hasPrevious()"
         (click)="goToPage(currentPage() - 1)">
         <i class="fa-solid fa-chevron-left text-xs"></i>
@@ -31,8 +31,8 @@
             [attr.data-testid]="'pagination-page-' + page"
             [attr.aria-current]="page === currentPage() ? 'page' : null"
             type="button"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium transition-colors"
-            [class]="page === currentPage() ? 'bg-brand-600 text-white' : 'text-text-muted hover:bg-surface-alt hover:text-text-secondary'"
+            class="btn inline-flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium"
+            [class]="page === currentPage() ? 'btn-primary' : 'btn-secondary'"
             (click)="goToPage(page)">
             {{ page }}
           </button>
@@ -43,7 +43,7 @@
       <button
         data-testid="pagination-next"
         type="button"
-        class="text-text-muted hover:bg-surface-alt hover:text-text-secondary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-40"
+        class="btn btn-secondary inline-flex h-8 w-8 items-center justify-center rounded-md text-sm disabled:pointer-events-none disabled:opacity-40"
         [disabled]="!hasNext()"
         (click)="goToPage(currentPage() + 1)">
         <i class="fa-solid fa-chevron-right text-xs"></i>

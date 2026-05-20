@@ -72,21 +72,21 @@
             <a
               data-testid="public-layout-admin-btn"
               routerLink="/admin"
-              class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+              class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium">
               Admin
             </a>
           } @else if (authenticated()) {
             <a
               data-testid="public-layout-logout-btn"
               href="/logout"
-              class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+              class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium">
               Logout
             </a>
           } @else {
             <a
               data-testid="public-layout-login-btn"
               href="/login"
-              class="bg-brand-600 hover:bg-brand-700 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md">
+              class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium">
               Login
             </a>
           }

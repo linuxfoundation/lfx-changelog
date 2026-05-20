@@ -5,13 +5,13 @@
   [type]="type()"
   [disabled]="disabled() || loading()"
   (click)="clicked.emit($event)"
-  class="focus:ring-brand-500/40 focus:ring-offset-surface inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+  class="btn inline-flex items-center justify-center gap-2 rounded-lg font-medium"
   [class.w-full]="fluid()"
   [class]="
-    (variant() === 'primary' ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-sm hover:shadow-md' : '') +
-    (variant() === 'secondary' ? 'border-border bg-surface text-text-primary hover:bg-surface-alt hover:border-border-strong border' : '') +
-    (variant() === 'ghost' ? 'text-text-secondary hover:bg-surface-alt hover:text-text-primary' : '') +
-    (variant() === 'danger' ? 'bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md' : '') +
+    (variant() === 'primary' ? 'btn-primary' : '') +
+    (variant() === 'secondary' ? 'btn-secondary' : '') +
+    (variant() === 'ghost' ? 'btn-ghost' : '') +
+    (variant() === 'danger' ? 'btn-danger' : '') +
     ' ' +
     (size() === 'sm' ? 'px-3 py-1.5 text-xs' : '') +
     (size() === 'md' ? 'px-4 py-2 text-sm' : '') +

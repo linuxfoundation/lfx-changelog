@@ -137,9 +137,7 @@
           </div>
           <p class="text-text-primary text-sm font-medium">Sign in to continue the conversation</p>
           <p class="text-text-secondary text-xs leading-relaxed">Create a free account to keep chatting and access your conversation history.</p>
-          <a
-            [href]="loginUrl()"
-            class="bg-brand-600 hover:bg-brand-700 inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md">
+          <a [href]="loginUrl()" class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-medium">
             <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
             Sign in
           </a>
@@ -168,7 +166,7 @@
           @if (streaming()) {
             <button
               (click)="abort()"
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-500 text-white shadow-sm transition-all hover:bg-red-600 hover:shadow-md sm:h-12 sm:w-12"
+              class="btn btn-danger flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl sm:h-12 sm:w-12"
               title="Stop generating">
               <i class="fa-solid fa-stop text-sm"></i>
             </button>
@@ -176,7 +174,7 @@
             <button
               (click)="send()"
               [disabled]="!canSend()"
-              class="bg-brand-600 hover:bg-brand-700 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none sm:h-12 sm:w-12"
+              class="btn btn-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl disabled:opacity-30 sm:h-12 sm:w-12"
               title="Send message">
               <i class="fa-solid fa-paper-plane-top text-sm"></i>
             </button>

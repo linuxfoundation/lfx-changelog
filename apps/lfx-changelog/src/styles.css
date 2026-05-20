@@ -50,6 +50,11 @@
   --color-brand-600: #2563eb;
   --color-brand-700: #1d4ed8;
 
+  /* ── Danger (destructive actions) ── */
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+
   /* ── Category colors ── */
   --color-bug-fix: #dc2626;
   --color-new-feature: #059669;
@@ -128,6 +133,10 @@
   --color-brand-600: #0ea5e9;
   --color-brand-700: #0284c7;
 
+  --color-danger-600: #ef4444;
+  --color-danger-700: #dc2626;
+  --color-danger-800: #b91c1c;
+
   --color-bug-fix: #f87171;
   --color-new-feature: #34d399;
   --color-improvement: #60a5fa;
@@ -177,6 +186,184 @@ body {
   backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
   border: 1px solid var(--color-border-strong);
+}
+
+/* ═══════════════════════════════════════════════
+   BUTTON
+   Design-system primitive — works on <button>, <a>,
+   or any element. Hard bottom-edge shadow = "thickness".
+   On :active we translate down by exactly that
+   thickness and collapse the shadow to zero, so the
+   button reads as physically pressing into the page.
+
+   Wrapped in @layer components so Tailwind utilities
+   in @layer utilities can still override (e.g. a
+   consumer that wants `disabled:opacity-30` instead).
+   ═══════════════════════════════════════════════ */
+
+@layer components {
+  .btn {
+    /* Component-scoped tokens — single source of truth for the button
+       family. Tweak these here once, the entire system updates. Dark
+       mode remaps the role-named values via the :where() selector
+       below; variant rules below reference these as var(--btn-*). */
+    --btn-text-on-fill: #ffffff;
+    --btn-thickness: 4px; /* bottom-edge shadow depth = press translate distance */
+    --btn-hover-shade: 10%; /* how much to darken filled bgs on hover; keeps edge ring distinct */
+    --btn-highlight: rgba(255, 255, 255, 0.22); /* top sheen on filled variants */
+    --btn-sheen: rgba(255, 255, 255, 0.7); /* top sheen on light-bg secondary */
+    --btn-press-inset: rgba(0, 0, 0, 0.25); /* press depth on filled variants */
+    --btn-press-inset-subtle: rgba(0, 0, 0, 0.06); /* press depth on light-bg variants */
+
+    cursor: pointer;
+    transition:
+      transform 120ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 120ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 150ms ease-out;
+    will-change: transform, box-shadow;
+  }
+
+  /* Dark-mode token remap. The :where() wrapper survives Tailwind v4's
+     @variant-aware layer compilation (a plain `.dark .btn` selector
+     gets the .dark prefix stripped). */
+  .btn:where(.dark, .dark *) {
+    --btn-highlight: rgba(255, 255, 255, 0.18);
+    --btn-sheen: rgba(255, 255, 255, 0.08);
+    --btn-press-inset: rgba(0, 0, 0, 0.4);
+    --btn-press-inset-subtle: rgba(0, 0, 0, 0.45);
+    --btn-edge: rgba(255, 255, 255, 0.18); /* dark-only edge ring */
+    --btn-rim: rgba(255, 255, 255, 0.12); /* dark-only rim glow below */
+  }
+
+  .btn:focus {
+    outline: none;
+  }
+
+  /* Outline (not box-shadow ring) so we don't clobber the multi-layer
+     thickness shadow. color-mix gives us a translucent brand tint that
+     auto-adapts to dark mode via the variable. */
+  .btn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-brand-500) 40%, transparent);
+    outline-offset: 2px;
+  }
+
+  .btn:active:not(:disabled) {
+    transition-duration: 60ms;
+  }
+
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* ── Primary ──────────────────────────────────── */
+  /* No soft drop shadow — every variant has the same vertical visual
+     footprint (just the hard --btn-thickness rim below). A colored glow
+     here would make primary extend ~9px past its measured bottom edge
+     and break alignment with neighboring secondary/danger buttons. */
+  .btn-primary {
+    background-color: var(--color-brand-600);
+    color: var(--btn-text-on-fill);
+    box-shadow:
+      inset 0 0 0 1px var(--color-brand-700),
+      inset 0 1px 0 0 var(--btn-highlight),
+      0 var(--btn-thickness) 0 0 var(--color-brand-700);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-brand-600), black var(--btn-hover-shade));
+    transform: translateY(-1px);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(var(--btn-thickness));
+    box-shadow:
+      inset 0 0 0 1px var(--color-brand-700),
+      inset 0 2px 3px 0 var(--btn-press-inset),
+      0 0 0 0 var(--color-brand-700);
+  }
+
+  /* ── Secondary ────────────────────────────────── */
+  .btn-secondary {
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    box-shadow:
+      inset 0 0 0 1px var(--color-border-strong),
+      inset 0 1px 0 0 var(--btn-sheen),
+      0 var(--btn-thickness) 0 0 var(--color-border-strong);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-surface-alt);
+    transform: translateY(-1px);
+  }
+  .btn-secondary:active:not(:disabled) {
+    transform: translateY(var(--btn-thickness));
+    box-shadow:
+      inset 0 0 0 1px var(--color-border-strong),
+      inset 0 2px 3px 0 var(--btn-press-inset-subtle),
+      0 0 0 0 var(--color-border-strong);
+  }
+
+  /* Dark-mode secondary: in light mode "elevation" reads as a darker
+     shadow below the button, but on a near-black canvas there's nowhere
+     darker to go — so we flip the metaphor and use rim-light: a faint
+     bright band below the button suggesting ambient light hitting its
+     underside. The --btn-rim / --btn-edge tokens are defined only in
+     the dark remap above, so they only resolve inside these rules. */
+  .btn-secondary:where(.dark, .dark *) {
+    background-color: var(--color-surface-raised);
+    box-shadow:
+      inset 0 0 0 1px var(--btn-edge),
+      inset 0 1px 0 0 var(--btn-sheen),
+      0 var(--btn-thickness) 0 0 var(--btn-rim);
+  }
+  .btn-secondary:where(.dark, .dark *):hover:not(:disabled) {
+    background-color: var(--color-surface-overlay);
+  }
+  .btn-secondary:where(.dark, .dark *):active:not(:disabled) {
+    box-shadow:
+      inset 0 0 0 1px var(--btn-edge),
+      inset 0 2px 4px 0 var(--btn-press-inset-subtle),
+      0 0 0 0 transparent;
+  }
+
+  /* ── Danger ───────────────────────────────────── */
+  .btn-danger {
+    background-color: var(--color-danger-600);
+    color: var(--btn-text-on-fill);
+    box-shadow:
+      inset 0 0 0 1px var(--color-danger-800),
+      inset 0 1px 0 0 var(--btn-highlight),
+      0 var(--btn-thickness) 0 0 var(--color-danger-800);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-danger-600), black var(--btn-hover-shade));
+    transform: translateY(-1px);
+  }
+  .btn-danger:active:not(:disabled) {
+    transform: translateY(var(--btn-thickness));
+    box-shadow:
+      inset 0 0 0 1px var(--color-danger-800),
+      inset 0 2px 3px 0 var(--btn-press-inset),
+      0 0 0 0 var(--color-danger-800);
+  }
+
+  /* ── Ghost ────────────────────────────────────── */
+  /* Ghost is intentionally flat — it's a tertiary affordance used inline
+     (icon-only buttons in toolbars, "cancel" next to a primary, etc.).
+     Giving it the same raised treatment would compete with the primary. */
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--color-text-secondary);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--color-surface-alt);
+    color: var(--color-text-primary);
+  }
+  .btn-ghost:active:not(:disabled) {
+    transform: translateY(1px);
+    background-color: var(--color-surface-alt);
+  }
 }
 
 /* ═══════════════════════════════════════════════
