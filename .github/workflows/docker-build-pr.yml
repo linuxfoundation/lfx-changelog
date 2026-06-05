@@ -1,17 +1,23 @@
+---
 # Copyright The Linux Foundation and each contributor to LFX.
 # SPDX-License-Identifier: MIT
----
+
 name: Deploy Branch to Development
 
 on:
   pull_request:
-    types: [closed, labeled, unlabeled, synchronize]
+    types: [opened, reopened, closed, labeled, unlabeled, synchronize]
+
+# Coalesce events per PR: rapid pushes cancel any in-flight build so only the
+# latest revision is built. A close or unlabel event also cancels in-flight
+# builds; build-and-push skips via its `if:` guard on those events, so only
+# the cleanup-on-close job runs to tear down the deployment.
+concurrency:
+  group: docker-build-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
-  packages: write
-  pull-requests: write
-  issues: write
 
 env:
   REGISTRY: ghcr.io
@@ -27,16 +33,21 @@ jobs:
       github.event.pull_request.head.repo.fork == false &&
       contains(github.event.pull_request.labels.*.name, 'deploy-preview')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+      issues: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -44,7 +55,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9  # v6.1.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -62,7 +73,7 @@ jobs:
 
       - name: Build and push Docker image
         id: docker-build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
         with:
           context: .
           push: true
@@ -74,75 +85,96 @@ jobs:
           build-args: |
             BUILD_ENV=dev
 
+      # Script lives at .github/scripts/comment-deployment-status.js — it
+      # was extracted from an inline `script:` block so that ESLint and
+      # editors can treat it as first-class JavaScript. See
+      # .github/scripts/README.md for the invocation contract.
       - name: Comment deployment URL on PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         with:
           script: |
-            const prNumber = process.env.PR_NUMBER;
-            const deploymentUrl = `https://changelog-pr-${prNumber}.dev.v2.cluster.linuxfound.info`;
-            const comment = `## 🚀 Deployment Status
-
-            Your branch has been deployed to: ${deploymentUrl}
-
-            **Deployment Details:**
-            - Environment: Development
-            - Namespace: changelog-pr-${prNumber}
-            - ArgoCD App: changelog-pr-${prNumber}
-
-            The deployment will be automatically removed when this PR is closed.`;
-
-            // Check if we already commented
-            const comments = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-
-            const botComment = comments.data.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('## 🚀 Deployment Status')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                comment_id: botComment.id,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            } else {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            }
+            const script = require('./.github/scripts/comment-deployment-status.js');
+            await script({ github, context });
 
   cleanup-on-close:
+    # Skip for fork PRs: the GITHUB_TOKEN is read-only on fork events, so the
+    # comment and GHCR delete API calls would 403. Build-and-push already
+    # excludes forks, so there is nothing to clean up for them anyway.
     if: >
+      github.event.pull_request.head.repo.fork == false &&
       (
         (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'deploy-preview')) ||
         (github.event.action == 'unlabeled' && github.event.label.name == 'deploy-preview')
       )
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+      issues: write
+
     steps:
+      # Sparse checkout of just .github/scripts/ — the cleanup job only
+      # needs the helper script files, not the full repo. This keeps the
+      # cleanup job fast (~2s) while still letting us require() the
+      # extracted comment script below. Uses cone mode (the action's
+      # default), which is the recommended pattern for directory-scoped
+      # sparse checkouts and unambiguously includes the directory's
+      # contents.
+      - name: Checkout scripts only
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          sparse-checkout: .github/scripts
+
+      # Best-effort deletion of the per-PR image tag from GHCR. Without this,
+      # `changelog-pr-N` tags accumulate indefinitely and consume registry
+      # storage. Failures are logged but do not fail the job, so the PR
+      # comment below is always posted.
+      - name: Delete PR container image from GHCR
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          PACKAGE_NAME=$(echo "${REPO_NAME}" | tr '[:upper:]' '[:lower:]')
+          TAG="changelog-pr-${PR_NUMBER}"
+
+          # Detect whether the repo owner is a user or an organization so we
+          # call the correct GHCR package API path.
+          OWNER_TYPE=$(gh api "users/${OWNER}" --jq '.type' 2>/dev/null || echo "Organization")
+          if [ "$OWNER_TYPE" = "Organization" ]; then
+            API_BASE="/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions"
+          else
+            API_BASE="/users/${OWNER}/packages/container/${PACKAGE_NAME}/versions"
+          fi
+
+          echo "Searching GHCR for versions tagged '${TAG}'..."
+          VERSION_IDS=$(gh api --paginate "${API_BASE}" \
+            --jq "[.[] | select(.metadata.container.tags[]? == \"${TAG}\") | .id] | .[]" || echo "")
+
+          if [ -z "$VERSION_IDS" ]; then
+            echo "No GHCR versions found for tag '${TAG}'. Nothing to delete."
+            exit 0
+          fi
+
+          while IFS= read -r VERSION_ID; do
+            [ -z "$VERSION_ID" ] && continue
+            echo "Deleting GHCR version ${VERSION_ID} (tag: ${TAG})"
+            gh api -X DELETE "${API_BASE}/${VERSION_ID}" \
+              || echo "Warning: failed to delete version ${VERSION_ID}"
+          done <<< "$VERSION_IDS"
+
+      # Script lives at .github/scripts/comment-deployment-removed.js.
       - name: Comment removal on PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         with:
           script: |
-            const prNumber = process.env.PR_NUMBER;
-            const comment = `## 🧹 Deployment Removed
-
-            The deployment for PR #${prNumber} has been removed.`;
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            const script = require('./.github/scripts/comment-deployment-removed.js');
+            await script({ github, context });

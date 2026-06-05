@@ -1,0 +1,183 @@
+---
+# Copyright The Linux Foundation and each contributor to LFX.
+# SPDX-License-Identifier: MIT
+
+# Dependabot configuration for keeping pinned dependencies up to date.
+#
+# For SHA-pinned GitHub Actions (the format we use across .github/workflows/),
+# Dependabot reads the `# vX.Y.Z` comment after each SHA pin to determine the
+# current version and opens a PR with both the SHA and the comment updated
+# when a newer release ships.
+#
+# Reference:
+#   https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot
+#   https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+
+updates:
+  # SHA-pinned GitHub Actions across all workflows in .github/workflows/.
+  # Grouped by vendor so we get one PR per vendor per week rather than one
+  # PR per action per week.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 10
+    groups:
+      docker-actions:
+        patterns:
+          - "docker/*"
+      aws-actions:
+        patterns:
+          - "aws-actions/*"
+      actions-org:
+        patterns:
+          - "actions/*"
+      sigstore-and-slsa:
+        patterns:
+          - "sigstore/*"
+          - "slsa-framework/*"
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "ci"
+      include: scope
+    reviewers:
+      - asithade
+      - jordane
+
+  # Node base image in the root Dockerfile (currently node:22-alpine).
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: "build"
+      include: scope
+    reviewers:
+      - asithade
+      - jordane
+
+  # npm packages at the monorepo root (lint/format/release tooling shared
+  # across workspaces). Each Yarn workspace has its own entry below so that
+  # workspace-scoped grouping rules apply correctly.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    groups:
+      eslint:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "globals"
+      prettier:
+        patterns:
+          - "prettier"
+          - "prettier-plugin-*"
+    labels:
+      - dependencies
+      - npm
+    commit-message:
+      prefix: "chore"
+      include: scope
+    reviewers:
+      - asithade
+      - jordane
+
+  # npm packages in the Angular application workspace.
+  - package-ecosystem: npm
+    directory: /apps/lfx-changelog
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 10
+    groups:
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-eslint/*"
+          - "@angular-devkit/*"
+          - "angular-eslint"
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+      typescript-eslint:
+        patterns:
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
+      primeng:
+        patterns:
+          - "primeng"
+          - "primeflex"
+          - "primeicons"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+    labels:
+      - dependencies
+      - npm
+    commit-message:
+      prefix: "chore"
+      include: scope
+    reviewers:
+      - asithade
+      - jordane
+
+  # npm packages in the shared library workspace.
+  - package-ecosystem: npm
+    directory: /packages/shared
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - npm
+    commit-message:
+      prefix: "chore"
+      include: scope
+    reviewers:
+      - asithade
+      - jordane
+
+  # npm packages in the MCP server workspace.
+  - package-ecosystem: npm
+    directory: /packages/mcp-server
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - npm
+    commit-message:
+      prefix: "chore"
+      include: scope
+    reviewers:
+      - asithade
+      - jordane

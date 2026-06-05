@@ -12,6 +12,7 @@
     "start:server": "turbo run start:server",
     "format": "prettier --write \"**/*.{ts,js,html,css,md,json}\"",
     "format:check": "prettier --check \"**/*.{ts,js,html,css,md,json}\"",
+    "lint:scripts": "eslint .github/scripts",
     "markdownlint": "markdownlint-cli2 \"*.md\" \"apps/lfx-changelog/*.md\"",
     "markdownlint:fix": "markdownlint-cli2 --fix \"*.md\" \"apps/lfx-changelog/*.md\"",
     "db:generate": "yarn workspace lfx-changelog run prisma generate",
@@ -24,6 +25,9 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "globals": "^17.6.0",
     "husky": "^9.1.7",
     "markdownlint-cli2": "^0.22.1",
     "prettier": "^3.8.3",
