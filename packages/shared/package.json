@@ -48,7 +48,7 @@
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "5.8.3"
+    "typescript": "6.0.3"
   },
   "peerDependencies": {
     "@asteasolutions/zod-to-openapi": "^8.0.0",
