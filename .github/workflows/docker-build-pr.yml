@@ -119,12 +119,14 @@ jobs:
       # Sparse checkout of just .github/scripts/ — the cleanup job only
       # needs the helper script files, not the full repo. This keeps the
       # cleanup job fast (~2s) while still letting us require() the
-      # extracted comment script below.
+      # extracted comment script below. Uses cone mode (the action's
+      # default), which is the recommended pattern for directory-scoped
+      # sparse checkouts and unambiguously includes the directory's
+      # contents.
       - name: Checkout scripts only
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           sparse-checkout: .github/scripts
-          sparse-checkout-cone-mode: false
 
       # Best-effort deletion of the per-PR image tag from GHCR. Without this,
       # `changelog-pr-N` tags accumulate indefinitely and consume registry
