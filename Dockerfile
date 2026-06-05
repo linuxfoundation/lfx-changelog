@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 ARG BUILD_ENV=prod
 
@@ -34,7 +34,7 @@ RUN yarn workspace lfx-changelog prisma generate
 RUN yarn turbo run build:${BUILD_ENV} --filter=lfx-changelog
 
 # Production stage
-FROM node:22-alpine
+FROM node:26-alpine
 
 # OCI image labels
 LABEL org.opencontainers.image.title="LFX Changelog"
