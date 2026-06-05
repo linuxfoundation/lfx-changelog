@@ -5,7 +5,9 @@ apiVersion: v2
 name: lfx-changelog
 description: A Helm chart for LFX Changelog - Angular SSR application with Express backend
 type: application
-version: 0.1.4
+# "Placeholder. The release tag (without the leading v) is injected by the
+# release-helm-chart job in .github/workflows/docker-build-tag.yml."
+version: 0.0.1
 appVersion: 'latest'
 keywords:
   - lfx

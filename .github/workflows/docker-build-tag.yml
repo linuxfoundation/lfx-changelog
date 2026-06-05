@@ -1,3 +1,4 @@
+---
 # Copyright The Linux Foundation and each contributor to LFX.
 # SPDX-License-Identifier: MIT
 
@@ -10,26 +11,51 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  packages: write
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   COSIGN_VERSION: v2.5.3
   HELM_VERSION: v3.18.4
+  YQ_VERSION: v4.53.2
+  YQ_SHA256: d56bf5c6819e8e696340c312bd70f849dc1678a7cda9c2ad63eebd906371d56b
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write  # required for cosign keyless signing of the image
     outputs:
       app_version: ${{ steps.prepare.outputs.app_version }}
       chart_name: ${{ steps.prepare.outputs.chart_name }}
       chart_version: ${{ steps.prepare.outputs.chart_version }}
+      image_name: ${{ steps.image-info.outputs.image_name }}
+      image_digest: ${{ steps.docker-build.outputs.digest }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+
+      # The mikefarah/yq binary is preinstalled on GitHub-hosted ubuntu-latest
+      # runners, but that is undocumented behavior and not part of the runner
+      # image contract — it could be removed in a future image without warning.
+      # We also can't fall back to `apt-get install yq`, since Ubuntu's apt
+      # repos ship a different tool (Python-based kislyuk/yq) with incompatible
+      # syntax, which would silently change the meaning of the yq calls below.
+      # Installing the pinned mikefarah/yq release directly guarantees the
+      # correct tool, a reproducible version, and works on self-hosted runners.
+      - name: Install yq
+        run: |
+          set -euo pipefail
+          YQ_BINARY="yq_linux_amd64"
+          YQ_URL="https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}"
+          curl -fsSL "$YQ_URL" -o /tmp/yq
+          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
+          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
+          rm -f /tmp/yq
+          yq --version
 
       - name: Prepare versions and chart name
         id: prepare
@@ -37,20 +63,23 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          APP_VERSION=$(echo "$REF_NAME" | sed 's/v//g')
+          VERSION="${REF_NAME#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Tag '$REF_NAME' is not a valid SemVer (expected vX.Y.Z[-pre][+build])" >&2
+            exit 1
+          fi
           CHART_NAME="$(yq '.name' charts/*/Chart.yaml)"
-          CHART_VERSION="$(yq '.version' charts/*/Chart.yaml)"
           {
-            echo "app_version=$APP_VERSION"
+            echo "app_version=$VERSION"
             echo "chart_name=$CHART_NAME"
-            echo "chart_version=$CHART_VERSION"
+            echo "chart_version=$VERSION"
           } >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -58,7 +87,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9  # v6.1.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -76,7 +105,8 @@ jobs:
             com.github.actions.workflow=${{ github.workflow }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        id: docker-build
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
         with:
           context: .
           push: true
@@ -85,8 +115,41 @@ jobs:
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Emit SLSA build provenance and an SPDX SBOM as in-toto
+          # attestations alongside the image. These help downstream consumers
+          # verify how the image was built and inspect its dependencies.
+          provenance: mode=max
+          sbom: true
           build-args: |
             BUILD_ENV=prod
+
+      # Lowercase the image reference because GHCR requires lowercase repo
+      # paths, but ${{ github.repository }} preserves the original case.
+      - name: Compute lowercase image reference
+        id: image-info
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          IMAGE_REF=$(echo "${REGISTRY}/${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')
+          echo "image_name=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159  # v3.9.2
+        with:
+          cosign-release: "${{ env.COSIGN_VERSION }}"
+
+      # Sign the container image with keyless cosign so that consumers can
+      # verify provenance using `cosign verify --certificate-identity-regexp
+      # 'https://github.com/${{ github.repository }}/.github/workflows/.+'`.
+      - name: Sign the container image in GHCR
+        env:
+          IMAGE: ${{ steps.image-info.outputs.image_name }}
+          DIGEST: ${{ steps.docker-build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${IMAGE}@${DIGEST}"
 
   release-helm-chart:
     needs: build-and-push
@@ -100,7 +163,7 @@ jobs:
       image_name: ${{ steps.publish-ghcr.outputs.image_name }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
 
       - name: Publish Chart to GHCR
         id: publish-ghcr
@@ -120,7 +183,7 @@ jobs:
           cosign-release: "${{ env.COSIGN_VERSION }}"
 
       - name: Login to GitHub
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee  # v4.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
