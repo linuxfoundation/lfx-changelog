@@ -37,10 +37,11 @@ Your branch has been deployed to: ${deploymentUrl}
 
 The deployment will be automatically removed when this PR is closed.`;
 
-  const { data: comments } = await github.rest.issues.listComments({
+  const comments = await github.paginate(github.rest.issues.listComments, {
     issue_number: context.issue.number,
     owner: context.repo.owner,
     repo: context.repo.repo,
+    per_page: 100,
   });
 
   const existing = comments.find((c) => c.user.type === 'Bot' && c.body.includes(HEADER));
