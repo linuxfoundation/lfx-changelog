@@ -199,9 +199,13 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('yarn.lock') }}-chromium
 
+      # OS packages are always installed; only the browser download is cached.
+      - name: Install Playwright system dependencies
+        run: npx playwright install-deps chromium
+
       - name: Install Playwright Chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium --with-deps
+        run: npx playwright install chromium
 
       - name: Run Playwright tests
         working-directory: apps/lfx-changelog

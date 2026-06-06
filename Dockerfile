@@ -50,7 +50,7 @@ LABEL org.opencontainers.image.source="https://github.com/linuxfoundation/lfx-ch
 
 # Install Claude Code CLI (required by @anthropic-ai/claude-agent-sdk for agent subprocess).
 # Pin to a specific version for reproducible builds.
-RUN npm install -g @anthropic-ai/claude-code@2.1.165 \
+RUN npm install -g @anthropic-ai/claude-code@2.1.70 \
     && addgroup -S appgroup \
     && adduser -S appuser -G appgroup
 

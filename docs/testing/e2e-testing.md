@@ -388,9 +388,10 @@ The `e2e` job in `.github/workflows/e2e.yml` runs on every push to `main` and on
 10. Build workspace packages (`yarn turbo run build --filter=@lfx-changelog/mcp-server`)
 11. Set sensitive environment variables (test user credentials)
 12. Cache Playwright browsers (`~/.cache/ms-playwright`, keyed on `yarn.lock`)
-13. Install Playwright Chromium (skipped on cache hit)
-14. `yarn playwright test` (from `apps/lfx-changelog`)
-15. `docker compose down postgres-test opensearch-test` (cleanup, runs even on failure)
+13. Install Playwright system dependencies (`playwright install-deps chromium`)
+14. Install Playwright Chromium browser (skipped on cache hit)
+15. `yarn playwright test` (from `apps/lfx-changelog`)
+16. `docker compose down postgres-test opensearch-test` (cleanup, runs even on failure)
 
 ## Adding New Tests
 
