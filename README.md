@@ -57,7 +57,7 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 ## Prerequisites
 
 - **Node.js** >= 26
-- **Yarn** 4.12.0 (managed via Corepack; on Node.js 25+, install Corepack first with `npm install -g corepack`)
+- **Yarn** 4.12.0 (managed via Corepack; on Node.js 25+, install Corepack first with `npm install -g corepack@0.34.6`)
 - **Docker** and **Docker Compose** (for PostgreSQL)
 
 ## Getting Started
@@ -67,7 +67,7 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 ```bash
 git clone https://github.com/linuxfoundation/lfx-changelog.git
 cd lfx-changelog
-npm install -g corepack  # required on Node.js 25+
+npm install -g corepack@0.34.6  # required on Node.js 25+
 corepack enable
 yarn install
 ```

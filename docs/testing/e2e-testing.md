@@ -29,7 +29,7 @@ yarn test:report
 ## Prerequisites
 
 - **Docker** — test database runs as a `postgres-test` container
-- **Node.js 26** with Corepack enabled (for Yarn 4; on Node.js 25+, run `npm install -g corepack` first)
+- **Node.js 26** with Corepack enabled (for Yarn 4; on Node.js 25+, run `npm install -g corepack@0.34.6` first)
 - **Auth0 test credentials** — stored in `.env.e2e` locally or GitHub Secrets in CI
 - **Playwright Chromium** — install with `npx playwright install chromium --with-deps`
 
@@ -377,15 +377,17 @@ See `.github/workflows/e2e.yml` for the full pipeline.
 The `e2e` job in `.github/workflows/e2e.yml` runs on every push to `main` and on pull requests:
 
 1. Checkout code
-2. Setup Node.js 26 + install and enable Corepack
-3. `yarn install --immutable`
-4. `yarn workspace lfx-changelog prisma generate`
-5. Configure AWS credentials (OIDC federation)
-6. Read Auth0 secrets from AWS Secrets Manager
-7. Set environment variables (non-sensitive + test user credentials)
-8. Install Playwright Chromium
-9. `yarn playwright test` (from `apps/lfx-changelog`)
-10. `docker compose down postgres-test` (cleanup, runs even on failure)
+2. Setup Node.js 26
+3. Install and enable Corepack (`corepack@0.34.6`)
+4. Configure Yarn cache via `actions/setup-node`
+5. `yarn install --immutable`
+6. `yarn workspace lfx-changelog prisma generate`
+7. Configure AWS credentials (OIDC federation)
+8. Read Auth0 secrets from AWS Secrets Manager
+9. Set environment variables (non-sensitive + test user credentials)
+10. Install Playwright Chromium
+11. `yarn playwright test` (from `apps/lfx-changelog`)
+12. `docker compose down postgres-test` (cleanup, runs even on failure)
 
 ## Adding New Tests
 

@@ -10,7 +10,7 @@ ARG BUILD_ENV=prod
 
 # Node 25+ no longer bundles Corepack in official distributions (nodejs/node#55488).
 # This project uses Yarn 4 via Corepack (see packageManager in package.json).
-RUN npm install -g corepack && corepack enable
+RUN npm install -g corepack@0.34.6 && corepack enable
 
 WORKDIR /app
 
