@@ -29,7 +29,7 @@ yarn test:report
 ## Prerequisites
 
 - **Docker** — test database runs as a `postgres-test` container
-- **Node.js 22** with Corepack enabled (for Yarn 4)
+- **Node.js 26** with Corepack enabled (for Yarn 4; on Node.js 25+, run `npm install -g corepack` first)
 - **Auth0 test credentials** — stored in `.env.e2e` locally or GitHub Secrets in CI
 - **Playwright Chromium** — install with `npx playwright install chromium --with-deps`
 
@@ -374,10 +374,10 @@ See `.github/workflows/ci.yml` for the full pipeline.
 
 ## CI Pipeline
 
-The `e2e` job in `.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
+The `e2e` job in `.github/workflows/e2e.yml` runs on every push to `main` and on pull requests:
 
 1. Checkout code
-2. Enable Corepack + setup Node.js 22
+2. Setup Node.js 26 + install and enable Corepack
 3. `yarn install --immutable`
 4. `yarn workspace lfx-changelog prisma generate`
 5. Configure AWS credentials (OIDC federation)

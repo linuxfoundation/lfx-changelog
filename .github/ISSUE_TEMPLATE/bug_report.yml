@@ -94,7 +94,7 @@ body:
       placeholder: |
         - OS: macOS 15.3
         - Browser: Chrome 131
-        - Node.js: 22.x
+        - Node.js: 26.x
         - Deployment: local / dev / production
     validations:
       required: false

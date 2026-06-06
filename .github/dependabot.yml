@@ -51,7 +51,7 @@ updates:
       - asithade
       - jordane
 
-  # Node base image in the root Dockerfile (currently node:22-alpine).
+  # Node base image in the root Dockerfile (currently node:26-alpine).
   - package-ecosystem: docker
     directory: /
     schedule:
