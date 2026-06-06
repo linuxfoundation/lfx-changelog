@@ -370,7 +370,7 @@ In CI, credentials come from two sources:
 - **AWS Secrets Manager** — Auth0 client ID, client secret, cookie secret
 - **GitHub Secrets** — Test user usernames, passwords, and Auth0 IDs
 
-See `.github/workflows/ci.yml` for the full pipeline.
+See `.github/workflows/e2e.yml` for the full pipeline.
 
 ## CI Pipeline
 
