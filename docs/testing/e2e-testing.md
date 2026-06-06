@@ -381,13 +381,15 @@ The `e2e` job in `.github/workflows/e2e.yml` runs on every push to `main` and on
 3. Install and enable Corepack (`corepack@0.34.6`)
 4. Configure Yarn cache via `actions/setup-node`
 5. `yarn install --immutable`
-6. `yarn workspace lfx-changelog prisma generate`
-7. Configure AWS credentials (OIDC federation)
-8. Read Auth0 secrets from AWS Secrets Manager
-9. Set environment variables (non-sensitive + test user credentials)
-10. Install Playwright Chromium
-11. `yarn playwright test` (from `apps/lfx-changelog`)
-12. `docker compose down postgres-test` (cleanup, runs even on failure)
+6. Configure AWS credentials (OIDC federation)
+7. Read Auth0 + Atlassian secrets from AWS Secrets Manager
+8. Set non-sensitive environment variables
+9. `yarn workspace lfx-changelog prisma generate`
+10. Build workspace packages (`yarn turbo run build --filter=@lfx-changelog/mcp-server`)
+11. Set sensitive environment variables (test user credentials)
+12. Install Playwright Chromium
+13. `yarn playwright test` (from `apps/lfx-changelog`)
+14. `docker compose down postgres-test` (cleanup, runs even on failure)
 
 ## Adding New Tests
 
