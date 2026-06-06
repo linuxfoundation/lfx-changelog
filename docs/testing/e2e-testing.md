@@ -389,7 +389,7 @@ The `e2e` job in `.github/workflows/e2e.yml` runs on every push to `main` and on
 11. Set sensitive environment variables (test user credentials)
 12. Install Playwright Chromium
 13. `yarn playwright test` (from `apps/lfx-changelog`)
-14. `docker compose down postgres-test` (cleanup, runs even on failure)
+14. `docker compose down postgres-test opensearch-test` (cleanup, runs even on failure)
 
 ## Adding New Tests
 
