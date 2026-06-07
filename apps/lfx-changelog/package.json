@@ -28,7 +28,7 @@
     "@angular/forms": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
     "@angular/platform-server": "^20.3.0",
-    "@angular/router": "^20.3.0",
+    "@angular/router": "^22.0.0",
     "@angular/ssr": "^20.3.14",
     "@anthropic-ai/claude-agent-sdk": "^0.2.128",
     "@asteasolutions/zod-to-openapi": "^8.5.0",
