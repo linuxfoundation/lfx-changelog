@@ -585,17 +585,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@angular/router@npm:^20.3.0":
-  version: 20.3.16
-  resolution: "@angular/router@npm:20.3.16"
+"@angular/router@npm:^22.0.0":
+  version: 22.0.0
+  resolution: "@angular/router@npm:22.0.0"
   dependencies:
     tslib: "npm:^2.3.0"
   peerDependencies:
-    "@angular/common": 20.3.16
-    "@angular/core": 20.3.16
-    "@angular/platform-browser": 20.3.16
+    "@angular/common": 22.0.0
+    "@angular/core": 22.0.0
+    "@angular/platform-browser": 22.0.0
     rxjs: ^6.5.3 || ^7.4.0
-  checksum: 10c0/d081337d843ba87e16980fae0fa123b38c55caf2ce7523e98a386a5ead81c55ab762fb17415eedf5316639613e6c0466e452f83a11bb65e05e0307db0f71e94a
+  checksum: 10c0/571b19b1034615d98180072c3b6b39addcdf1107cfc7da0c35cc3d82cd0a3bf88329c96a572ffc566b6160c304ce4b874f82c61a087156d534cbc0da5ef14788
   languageName: node
   linkType: hard
 
@@ -7999,7 +7999,7 @@ __metadata:
     "@angular/forms": "npm:^20.3.0"
     "@angular/platform-browser": "npm:^20.3.0"
     "@angular/platform-server": "npm:^20.3.0"
-    "@angular/router": "npm:^20.3.0"
+    "@angular/router": "npm:^22.0.0"
     "@angular/ssr": "npm:^20.3.14"
     "@anthropic-ai/claude-agent-sdk": "npm:^0.2.128"
     "@asteasolutions/zod-to-openapi": "npm:^8.5.0"
