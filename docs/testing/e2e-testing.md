@@ -29,7 +29,7 @@ yarn test:report
 ## Prerequisites
 
 - **Docker** — test database runs as a `postgres-test` container
-- **Node.js 22** with Corepack enabled (for Yarn 4)
+- **Node.js 26** with Corepack enabled (for Yarn 4; on Node.js 25+, run `npm install -g corepack@0.34.6` first)
 - **Auth0 test credentials** — stored in `.env.e2e` locally or GitHub Secrets in CI
 - **Playwright Chromium** — install with `npx playwright install chromium --with-deps`
 
@@ -370,22 +370,28 @@ In CI, credentials come from two sources:
 - **AWS Secrets Manager** — Auth0 client ID, client secret, cookie secret
 - **GitHub Secrets** — Test user usernames, passwords, and Auth0 IDs
 
-See `.github/workflows/ci.yml` for the full pipeline.
+See `.github/workflows/e2e.yml` for the full pipeline.
 
 ## CI Pipeline
 
-The `e2e` job in `.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
+The `e2e` job in `.github/workflows/e2e.yml` runs on every push to `main` and on pull requests:
 
 1. Checkout code
-2. Enable Corepack + setup Node.js 22
-3. `yarn install --immutable`
-4. `yarn workspace lfx-changelog prisma generate`
-5. Configure AWS credentials (OIDC federation)
-6. Read Auth0 secrets from AWS Secrets Manager
-7. Set environment variables (non-sensitive + test user credentials)
-8. Install Playwright Chromium
-9. `yarn playwright test` (from `apps/lfx-changelog`)
-10. `docker compose down postgres-test` (cleanup, runs even on failure)
+2. Setup Node.js 26
+3. Install and enable Corepack (`corepack@0.34.6`)
+4. Configure Yarn cache via `actions/setup-node`
+5. `yarn install --immutable`
+6. Configure AWS credentials (OIDC federation)
+7. Read Auth0 + Atlassian secrets from AWS Secrets Manager
+8. Set non-sensitive environment variables
+9. `yarn workspace lfx-changelog prisma generate`
+10. Build workspace packages (`yarn turbo run build --filter=@lfx-changelog/mcp-server`)
+11. Set sensitive environment variables (test user credentials)
+12. Cache Playwright browsers (`~/.cache/ms-playwright`, keyed on `yarn.lock`)
+13. Install Playwright system dependencies (`playwright install-deps chromium`)
+14. Install Playwright Chromium browser (skipped on cache hit)
+15. `yarn playwright test` (from `apps/lfx-changelog`)
+16. `docker compose down postgres-test opensearch-test` (cleanup, runs even on failure)
 
 ## Adding New Tests
 
