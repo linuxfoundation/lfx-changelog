@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
 import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
-import { TEST_PRODUCTS } from '../../helpers/test-data.js';
+import { TEST_PRODUCTS, PROJECT_SERVICE_PRODUCT_METADATA } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
 
@@ -147,6 +147,26 @@ test.describe('Protected Products API (/api/products)', () => {
       // VERIFY DELETED
       const verifyRes = await superAdminApi.get(`/api/products/${productId}`);
       expect(verifyRes.status()).toBe(404);
+    });
+
+    test('create product with LFX V2 Project Service metadata (super_admin)', async () => {
+      const createRes = await superAdminApi.post('/api/products', {
+        data: {
+          name: PROJECT_SERVICE_PRODUCT_METADATA.name,
+          slug: 'api-test-lfx-v2-project-service',
+          description: PROJECT_SERVICE_PRODUCT_METADATA.description,
+          faIcon: PROJECT_SERVICE_PRODUCT_METADATA.faIcon,
+        },
+      });
+      expect(createRes.status()).toBe(201);
+
+      const created = (await createRes.json()).data;
+      expect(created.name).toBe(PROJECT_SERVICE_PRODUCT_METADATA.name);
+      expect(created.slug).toBe('api-test-lfx-v2-project-service');
+      expect(created.description).toBe(PROJECT_SERVICE_PRODUCT_METADATA.description);
+      expect(created.faIcon).toBe(PROJECT_SERVICE_PRODUCT_METADATA.faIcon);
+
+      await superAdminApi.delete(`/api/products/${created.id}`);
     });
   });
 

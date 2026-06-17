@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { createUnauthenticatedContext } from '../../helpers/api.helper.js';
 import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
-import { TEST_PRODUCTS } from '../../helpers/test-data.js';
+import { TEST_PRODUCTS, PROJECT_SERVICE_PRODUCT_METADATA } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
 
@@ -50,6 +50,17 @@ test.describe('GET /public/api/products', () => {
     expect(product.slug).toBe(TEST_PRODUCTS[0]!.slug);
     expect(product.description).toBe(TEST_PRODUCTS[0]!.description);
     expect(product.faIcon).toBe(TEST_PRODUCTS[0]!.faIcon);
+  });
+
+  test('should expose LFX V2 Project Service with approved catalog metadata', async () => {
+    const res = await api.get('/public/api/products');
+    const body = await res.json();
+    const product = body.data.find((p: any) => p.slug === 'e2e-lfx-v2-project-service');
+
+    expect(product).toBeDefined();
+    expect(product.name).toBe(PROJECT_SERVICE_PRODUCT_METADATA.name);
+    expect(product.description).toBe(PROJECT_SERVICE_PRODUCT_METADATA.description);
+    expect(product.faIcon).toBe(PROJECT_SERVICE_PRODUCT_METADATA.faIcon);
   });
 
   test('should NOT expose internal fields', async () => {

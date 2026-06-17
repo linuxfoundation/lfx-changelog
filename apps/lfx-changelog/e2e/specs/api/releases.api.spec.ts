@@ -3,6 +3,7 @@
 
 import { expect, test } from '@playwright/test';
 import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
+import { TEST_PRODUCTS } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
 
@@ -131,6 +132,20 @@ test.describe('Releases API (/api/releases)', () => {
       const fakeRepoId = '00000000-0000-0000-0000-000000000000';
       const res = await superAdminApi.post(`/api/releases/sync/repo/${fakeRepoId}`);
       expect(res.status()).toBe(404);
+    });
+
+    test('super admin can POST /api/releases/sync/:productId (200)', async () => {
+      const listRes = await superAdminApi.get('/api/products');
+      const products = (await listRes.json()).data;
+      const product = products.find((p: { slug: string }) => p.slug === TEST_PRODUCTS[0]!.slug);
+      expect(product).toBeDefined();
+
+      const res = await superAdminApi.post(`/api/releases/sync/${product.id}`);
+      expect(res.status()).toBe(200);
+
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(typeof body.data.synced).toBe('number');
     });
   });
 });

@@ -69,7 +69,7 @@ When a `release` event arrives via webhook, the release is upserted or deleted i
 
 ### 2. Manual Full Sync
 
-Triggered from the admin UI for a specific product. Fetches up to 100 releases per repository via the GitHub API and upserts them all.
+Triggered from the admin UI for a specific product. Fetches up to 100 releases per repository via the GitHub API and upserts only releases published on or after the repository link time (`ProductRepository.createdAt`). Releases predating the connection are skipped and logged; this prevents historical backfill when a repo with many existing tags is first linked.
 
 ### Release Data Model
 

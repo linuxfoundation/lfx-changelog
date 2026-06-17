@@ -94,11 +94,26 @@ export const TEST_PRODUCTS: CreateProductRequest[] = [
     description: 'E2E test product for Insights',
     faIcon: 'fa-duotone fa-chart-mixed',
   },
+  {
+    name: 'LFX V2 Project Service',
+    slug: 'e2e-lfx-v2-project-service',
+    description:
+      'RESTful API for creating, reading, updating, and deleting projects within the LFX platform, with built-in authorization and audit capabilities.',
+    faIcon: 'fa-duotone fa-diagram-project',
+  },
 ];
+
+export const PROJECT_SERVICE_PRODUCT_METADATA = {
+  name: 'LFX V2 Project Service',
+  description:
+    'RESTful API for creating, reading, updating, and deleting projects within the LFX platform, with built-in authorization and audit capabilities.',
+  faIcon: 'fa-duotone fa-diagram-project',
+} as const;
 
 export const TEST_ROLE_ASSIGNMENTS: TestRoleAssignment[] = [
   { userIndex: 1, productSlug: 'e2e-easycla', role: UserRole.PRODUCT_ADMIN },
   { userIndex: 2, productSlug: 'e2e-easycla', role: UserRole.EDITOR },
+  { userIndex: 1, productSlug: 'e2e-lfx-v2-project-service', role: UserRole.PRODUCT_ADMIN },
 ];
 
 export const TEST_BLOG_POSTS: TestBlogPost[] = [

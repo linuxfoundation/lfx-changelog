@@ -7,7 +7,7 @@ A centralized changelog platform for [LFX](https://lfx.linuxfoundation.org/) pro
 ### Public
 
 - 📰 **Changelog feed** — filterable timeline of published entries across all LFX products
-- 📦 **Per-product views** — dedicated changelog pages for each of the 9 LFX products
+- 📦 **Per-product views** — dedicated changelog pages for each of the 10 LFX products
 - 🔗 **Pretty URLs** — human-readable slugs (e.g., `/entry/security-march-2026-patches`)
 - 🔍 **Full-text search** — OpenSearch-powered with fuzzy matching, highlighting, and product faceting
 - 👁️ **Changelog views** — unseen-count tracking so external LFX apps can show notification badges

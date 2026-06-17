@@ -391,9 +391,22 @@ export class GitHubService {
     const releases = await this.getRepositoryReleases(repo.githubInstallationId, repo.owner, repo.name, repo.fullName, 100);
 
     const prisma = getPrismaClient();
+    const connectionTime = repo.createdAt;
     let synced = 0;
+    let skipped = 0;
 
     for (const release of releases) {
+      if (!release.published_at) {
+        skipped++;
+        continue;
+      }
+
+      const publishedAt = new Date(release.published_at);
+      if (publishedAt < connectionTime) {
+        skipped++;
+        continue;
+      }
+
       await prisma.gitHubRelease.upsert({
         where: {
           repositoryId_githubId: {
@@ -434,7 +447,7 @@ export class GitHubService {
       data: { lastSyncedAt: new Date() },
     });
 
-    serverLogger.info({ repo: repo.fullName, synced }, 'Synced releases for repository');
+    serverLogger.info({ repo: repo.fullName, synced, skipped, connectionTime }, 'Synced releases for repository');
     return synced;
   }
 

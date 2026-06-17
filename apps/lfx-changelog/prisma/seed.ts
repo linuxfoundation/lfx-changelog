@@ -69,6 +69,13 @@ const products = [
     description: 'Collect and manage community data',
     faIcon: 'fa-duotone fa-users',
   },
+  {
+    name: 'LFX V2 Project Service',
+    slug: 'lfx-v2-project-service',
+    description:
+      'RESTful API for creating, reading, updating, and deleting projects within the LFX platform, with built-in authorization and audit capabilities.',
+    faIcon: 'fa-duotone fa-diagram-project',
+  },
 ];
 
 const users = [
