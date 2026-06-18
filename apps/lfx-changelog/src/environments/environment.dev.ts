@@ -7,6 +7,6 @@ export const environment = {
   datadog: {
     site: 'datadoghq.com',
     service: 'lfx-changelog',
-    env: 'dev',
+    env: 'development',
   },
 };
