@@ -28,6 +28,7 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/component: blog-scheduler
+            tags.datadoghq.com/service: {{ include "lfx-changelog.name" . }}
         spec:
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
