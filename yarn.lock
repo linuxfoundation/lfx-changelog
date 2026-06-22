@@ -8033,7 +8033,7 @@ __metadata:
     helmet: "npm:^8.1.0"
     jsonwebtoken: "npm:^9.0.3"
     marked: "npm:^18.0.3"
-    ngx-cookie-service-ssr: "npm:^21.3.1"
+    ngx-cookie-service-ssr: "npm:^22.0.0"
     pg: "npm:^8.20.0"
     pino: "npm:^10.3.1"
     pino-http: "npm:^11.0.0"
@@ -9134,16 +9134,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ngx-cookie-service-ssr@npm:^21.3.1":
-  version: 21.3.1
-  resolution: "ngx-cookie-service-ssr@npm:21.3.1"
+"ngx-cookie-service-ssr@npm:^22.0.0":
+  version: 22.0.0
+  resolution: "ngx-cookie-service-ssr@npm:22.0.0"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
-    "@angular/common": ^21.0.0
-    "@angular/core": ^21.0.0
-    "@angular/ssr": ^21.0.0
-  checksum: 10c0/b73b92805ecc349fa89ea19274fb5ad27eaeda2005e07a7fc07f63d7617fe29dad712d8755b381a9dea9ea484d5f95f421b242ac6bb700ae9e5d65402153b8da
+    "@angular/common": ^22.0.0
+    "@angular/core": ^22.0.0
+    "@angular/ssr": ^22.0.0
+  checksum: 10c0/65f125bd821b4d3827eff04326da70797126e237aabb0c59fca5fb3718c41c383db03d111d608d9f53e5465e4c514f8d61b4004651f808167cf2318db411ae39
   languageName: node
   linkType: hard
 
