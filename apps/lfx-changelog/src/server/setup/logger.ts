@@ -4,20 +4,11 @@
 import pinoHttp from 'pino-http';
 
 import { reqSerializer, resSerializer, serverLogger } from '../server-logger';
-import { ddTracer } from './tracer';
+import { context, trace } from './tracer';
 
 import type { Express, Request } from 'express';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-/**
- * Registers the Pino HTTP logger with custom serializers to avoid leaking
- * sessions/headers. Silences health-probe and static-asset noise.
- *
- * The mixin injects active dd-trace span context (dd.trace_id, dd.span_id,
- * dd.service) into every HTTP log line so Datadog can correlate logs with
- * APM traces. Falls back to an empty object when no active span exists
- * (e.g. dd-trace is present but not initialized in local development).
- */
 export function setupLogger(app: Express): void {
   app.use(
     pinoHttp({
@@ -28,19 +19,18 @@ export function setupLogger(app: Express): void {
         res: resSerializer,
       },
       mixin: () => {
-        if (!ddTracer) return {};
         try {
-          const span = ddTracer.scope().active();
+          const span = trace.getSpan(context.active());
           if (span) {
-            const context = span.context();
+            const ctx = span.spanContext();
             return {
-              'dd.trace_id': context.toTraceId(),
-              'dd.span_id': context.toSpanId(),
-              'dd.service': 'lfx-changelog',
+              trace_id: ctx.traceId,
+              span_id: ctx.spanId,
+              trace_flags: ctx.traceFlags.toString(16).padStart(2, '0'),
             };
           }
         } catch {
-          // Unexpected error from the span context API; degrade gracefully.
+          // Degrade gracefully when no active span.
         }
         return {};
       },

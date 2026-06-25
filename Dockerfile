@@ -83,6 +83,9 @@ COPY --from=builder /app/packages/mcp-server/dist ./packages/mcp-server/dist
 # Copy built application
 COPY --from=builder /app/apps/lfx-changelog/dist/lfx-changelog ./dist/lfx-changelog
 
+# Copy OTel initializer (loaded via --import before the app bundle)
+COPY --from=builder /app/apps/lfx-changelog/otel.mjs ./otel.mjs
+
 # Copy entrypoint
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
@@ -94,4 +97,4 @@ USER appuser
 EXPOSE 4000
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["node", "dist/lfx-changelog/server/server.mjs"]
+CMD ["node", "--import", "./otel.mjs", "dist/lfx-changelog/server/server.mjs"]
