@@ -17,12 +17,15 @@ const resource = resourceFromAttributes({
   [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: process.env.NODE_ENV ?? 'development',
 });
 
+// Normalize the OTLP base URL: treat empty/whitespace as unset, strip trailing slash.
+const otlpBase = (process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim() || 'http://localhost:4318').replace(/\/$/, '');
+
 const traceExporter = new OTLPTraceExporter({
-  url: `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4318'}/v1/traces`,
+  url: `${otlpBase}/v1/traces`,
 });
 
 const metricExporter = new OTLPMetricExporter({
-  url: `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4318'}/v1/metrics`,
+  url: `${otlpBase}/v1/metrics`,
 });
 
 const sdk = new NodeSDK({

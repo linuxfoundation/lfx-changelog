@@ -210,11 +210,10 @@ environment:
   OTEL_SERVICE_NAME:
     value: 'lfx-changelog'
 
-  # OTLP endpoint — Datadog Agent's OTLP receiver on the node.
-  # Should be set to http://<hostIP>:4318 via environment-specific overlay
-  # using the Kubernetes downward API for the node IP.
-  OTEL_EXPORTER_OTLP_ENDPOINT:
-    value: ''
+  # OTEL_EXPORTER_OTLP_ENDPOINT is intentionally absent here.
+  # Set it in the per-environment ArgoCD overlay to http://<hostIP>:4318
+  # using the Kubernetes downward API for the node IP. When unset, otel.mjs
+  # defaults to http://localhost:4318 (no-op in production).
 
   OTEL_RESOURCE_ATTRIBUTES:
     value: 'deployment.environment.name=production'
