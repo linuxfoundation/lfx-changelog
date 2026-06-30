@@ -433,17 +433,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@angular/cdk@npm:^20.2.0":
-  version: 20.2.14
-  resolution: "@angular/cdk@npm:20.2.14"
+"@angular/cdk@npm:^22.0.2":
+  version: 22.0.2
+  resolution: "@angular/cdk@npm:22.0.2"
   dependencies:
     parse5: "npm:^8.0.0"
     tslib: "npm:^2.3.0"
   peerDependencies:
-    "@angular/common": ^20.0.0 || ^21.0.0
-    "@angular/core": ^20.0.0 || ^21.0.0
+    "@angular/common": ^22.0.0 || ^23.0.0
+    "@angular/core": ^22.0.0 || ^23.0.0
+    "@angular/platform-browser": ^22.0.0 || ^23.0.0
     rxjs: ^6.5.3 || ^7.4.0
-  checksum: 10c0/8f6463252d942cc2a62b861fcb206abeca097e89018191c7d8f390187a7ff6917ee42918e53b4da40e2f9d407fb42bb94b515d82e1daa17fa0c7be4d4fce6de8
+  checksum: 10c0/7e71da1a8b49fb8dea15b94712e081e09a3c3a1fed8704f2945940d14ec5c0ca89f6ac6e961cefeed0aae0060b2d466722ceda99665ae4edd40e8df3c86a52ae
   languageName: node
   linkType: hard
 
@@ -9097,7 +9098,7 @@ __metadata:
   dependencies:
     "@angular-eslint/builder": "npm:^19.8.1"
     "@angular/build": "npm:^20.3.14"
-    "@angular/cdk": "npm:^20.2.0"
+    "@angular/cdk": "npm:^22.0.2"
     "@angular/cli": "npm:^20.3.14"
     "@angular/common": "npm:^20.3.0"
     "@angular/compiler": "npm:^20.3.0"
