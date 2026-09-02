@@ -1,11 +1,11 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 import { ARGOCD_REPO } from './release-argocd.service';
 import { releaseGitHubService } from './release-github.service';
 import { releaseWorkflowService } from './release-workflow.service';
-import { serverLogger } from '../server-logger';
 
 const LFX_ONE = 'lfx-one';
 const POLL_MS = 3 * 60 * 1000;
@@ -122,9 +122,7 @@ export class ReleaseApprovalService {
           try {
             const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber);
             const position = queued.position != null ? ` (position ${queued.position})` : '';
-            const queueLine = queued.alreadyQueued
-              ? `Already in the merge queue${position}.`
-              : `Added to the merge queue${position}.`;
+            const queueLine = queued.alreadyQueued ? `Already in the merge queue${position}.` : `Added to the merge queue${position}.`;
             await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
             await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
           } catch (enqueueError) {
@@ -138,7 +136,7 @@ export class ReleaseApprovalService {
       serverLogger.error({ err: error, prNumber, jobId: job.id }, 'GitOps approval wait failed');
       await prisma.releaseJob.update({
         where: { id: job.id },
-        data: { status: 'failed', errorMessage: message, completedAt: new Date() },
+        data: { status: 'failed', errorMessage: message, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null },
       });
       await releaseWorkflowService.append(job.id, 'merge', 'error', message);
     }

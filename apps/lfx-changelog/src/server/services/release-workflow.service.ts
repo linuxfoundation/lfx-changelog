@@ -5,16 +5,16 @@ import { randomUUID } from 'node:crypto';
 
 import { Prisma } from '@prisma/client';
 
+import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 import { releasableCatalogService } from './releasable-catalog.service';
 import { ARGOCD_REPO, releaseArgocdService } from './release-argocd.service';
 import { releaseAuthService } from './release-auth.service';
-import { releaseGitHubAuditService, computeNextTag } from './release-github-audit.service';
+import { computeNextTag, releaseGitHubAuditService } from './release-github-audit.service';
 import { releaseGitHubService } from './release-github.service';
 import { releaseJobEmitter } from './release-job-emitter.service';
 import { releaseSlackService } from './release-slack.service';
 import { isArgocdSyncEnabled, releaseSyncService } from './release-sync.service';
-import { serverLogger } from '../server-logger';
 
 import { ReleaseJobStatus } from '@lfx-changelog/shared';
 
@@ -52,12 +52,7 @@ export class ReleaseWorkflowService {
     return { leaseOwner: INSTANCE_ID, leaseExpiresAt: new Date(Date.now() + LEASE_TTL_MS) };
   }
 
-  public async startJob(input: {
-    serviceKey: string;
-    notes: string;
-    newTag?: string;
-    requesterId: string;
-  }): Promise<ReleaseJob> {
+  public async startJob(input: { serviceKey: string; notes: string; newTag?: string; requesterId: string }): Promise<ReleaseJob> {
     const service = releasableCatalogService.require(input.serviceKey);
     const productId = await releaseAuthService.mappedProductId(service.key);
     const audit = await releaseGitHubAuditService.audit(service.githubRepo, { fresh: true });
@@ -268,9 +263,7 @@ export class ReleaseWorkflowService {
       await releaseSlackService.postThread(job.slackThreadTs, slackMerge);
     }
 
-    const syncIntro = syncEnabled
-      ? 'Requesting Argo CD sync per environment'
-      : 'Skipping Argo CD sync. Deploy apply is left to the cluster webhook.';
+    const syncIntro = syncEnabled ? 'Requesting Argo CD sync per environment' : 'Skipping Argo CD sync. Deploy apply is left to the cluster webhook.';
     await this.append(jobId, 'sync', syncEnabled ? 'info' : 'skip', syncIntro);
     await releaseSyncService.requestSyncs(jobId, service);
     const syncs = await prisma.environmentSync.findMany({ where: { jobId } });
@@ -281,7 +274,13 @@ export class ReleaseWorkflowService {
       } else if (sync.requestStatus === 'skipped') {
         type = 'skip';
       }
-      await this.append(jobId, 'sync', type, `${sync.environment}: ${sync.requestStatus}${sync.requestError ? ` (${sync.requestError})` : ''}`, sync.environment);
+      await this.append(
+        jobId,
+        'sync',
+        type,
+        `${sync.environment}: ${sync.requestStatus}${sync.requestError ? ` (${sync.requestError})` : ''}`,
+        sync.environment
+      );
     }
 
     const syncLine = syncs.map((row) => `${row.environment}=${row.requestStatus}`).join(', ');
@@ -432,7 +431,13 @@ export class ReleaseWorkflowService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       serverLogger.error({ err: error, jobId }, 'Release job failed');
-      const failed = await this.updateIfLeaseOwner(jobId, { status: 'failed', errorMessage: message, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null });
+      const failed = await this.updateIfLeaseOwner(jobId, {
+        status: 'failed',
+        errorMessage: message,
+        completedAt: new Date(),
+        leaseOwner: null,
+        leaseExpiresAt: null,
+      });
       if (!failed) {
         return;
       }
