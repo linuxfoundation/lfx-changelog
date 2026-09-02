@@ -23,3 +23,15 @@ Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changel
   - `npx` is allowed for one-off tools not in the workspace or when required by upstream docs/CI (e.g., `npx playwright`, `npx @modelcontextprotocol/inspector`, `npx tsx`)
 - **Always use `docker compose`** instead of `docker-compose`
 - **Use `yarn lint` to lint** — not `yarn eslint`
+
+---
+
+## Local Pre-PR Review
+
+This repo owns its local-review reviewer skills at
+`.claude/skills/local-code-review/SKILL.md` and
+`.claude/skills/local-learnings-review/SKILL.md`, plus the fallback
+orchestrator at `.claude/skills/local-review-fallback/SKILL.md` (aliased at
+`.agents/skills/local-review-fallback`). Invoke `lfx-skills:lfx-local-review`
+from inside this repo's working copy, or pass a resolved `--repo
+<absolute path>` — never a bare repo name for the launcher to look up.
