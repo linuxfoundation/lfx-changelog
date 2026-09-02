@@ -8,6 +8,8 @@ import dotenv from 'dotenv';
 import express from 'express';
 
 import { serverLogger } from './server/server-logger';
+import { releaseApprovalService } from './server/services/release-approval.service';
+import { releaseWorkflowService } from './server/services/release-workflow.service';
 import { SearchService } from './server/services/search.service';
 import { setupAuth } from './server/setup/auth';
 import { setupCors } from './server/setup/cors';
@@ -47,6 +49,8 @@ export function startServer(): void {
     serverLogger.info(`Node Express server listening on http://localhost:${port}`);
   });
   gracefulShutdown(server);
+  releaseApprovalService.startPoller();
+  releaseWorkflowService.resumeRunningJobs().catch((err) => serverLogger.error({ err }, 'Failed to resume in-flight release jobs'));
 }
 
 if (isMainModule(import.meta.url) || process.env['pm_id']) {

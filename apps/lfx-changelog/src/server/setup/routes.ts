@@ -28,7 +28,6 @@ import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
 import { ReleaseJobController } from '../controllers/release-job.controller';
 import { SearchService } from '../services/search.service';
-import { releaseApprovalService } from '../services/release-approval.service';
 import { setupSwagger } from '../swagger';
 import { createApiKeyRateLimiter, createAuthenticatedChatRateLimiter, createPublicChatRateLimiter } from './rate-limit';
 
@@ -94,7 +93,6 @@ export function setupRoutes(app: Express): void {
   // Laptop collision check. Token-gated, not session-gated.
   const releaseJobController = new ReleaseJobController();
   app.get('/internal/release-lock/:serviceKey', (req, res, next) => releaseJobController.activeLock(req, res, next));
-  releaseApprovalService.startPoller();
 
   // ── Public API routes (no auth required) ──────────────────────────────
   if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
