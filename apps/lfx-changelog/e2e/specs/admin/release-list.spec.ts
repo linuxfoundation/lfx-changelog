@@ -3,6 +3,7 @@
 
 import { expect, test } from '@playwright/test';
 import { AdminLayoutPage } from '../../pages/admin-layout.page.js';
+import { ReleaseListPage } from '../../pages/release-list.page.js';
 
 test.describe('Release list RBAC', () => {
   test.describe('editor', () => {
@@ -10,10 +11,11 @@ test.describe('Release list RBAC', () => {
 
     test('hides Create a new release and denies the page', async ({ page }) => {
       const layout = new AdminLayoutPage(page);
+      const releaseList = new ReleaseListPage(page);
       await page.goto('/admin');
-      await expect(page.locator('[data-testid="admin-sidebar-release-jobs"]')).not.toBeVisible();
-      await page.goto('/admin/release-jobs');
-      await expect(page.locator('[data-testid="release-list-heading"]')).not.toBeVisible();
+      await expect(layout.navReleaseJobs).not.toBeVisible();
+      await releaseList.goto();
+      await expect(releaseList.heading).not.toBeVisible();
       await expect(layout.sidebar).toBeVisible();
     });
   });
@@ -22,10 +24,12 @@ test.describe('Release list RBAC', () => {
     test.use({ storageState: './e2e/.auth/product-admin.json' });
 
     test('shows Create a new release and the catalog heading', async ({ page }) => {
+      const layout = new AdminLayoutPage(page);
+      const releaseList = new ReleaseListPage(page);
       await page.goto('/admin');
-      await expect(page.locator('[data-testid="admin-sidebar-release-jobs"]')).toBeVisible();
-      await page.goto('/admin/release-jobs');
-      await expect(page.locator('[data-testid="release-list-heading"]')).toBeVisible();
+      await expect(layout.navReleaseJobs).toBeVisible();
+      await releaseList.goto();
+      await expect(releaseList.heading).toBeVisible();
     });
   });
 
@@ -33,8 +37,9 @@ test.describe('Release list RBAC', () => {
     test.use({ storageState: './e2e/.auth/super-admin.json' });
 
     test('shows the full catalog page', async ({ page }) => {
-      await page.goto('/admin/release-jobs');
-      await expect(page.locator('[data-testid="release-list-heading"]')).toBeVisible();
+      const releaseList = new ReleaseListPage(page);
+      await releaseList.goto();
+      await expect(releaseList.heading).toBeVisible();
     });
   });
 });

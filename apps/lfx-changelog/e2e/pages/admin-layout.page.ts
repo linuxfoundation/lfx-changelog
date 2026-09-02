@@ -11,6 +11,7 @@ export class AdminLayoutPage {
   public readonly navProducts: Locator;
   public readonly navRepositories: Locator;
   public readonly navUsers: Locator;
+  public readonly navReleaseJobs: Locator;
   public readonly userMenuBtn: Locator;
   public readonly userMenuPopup: Locator;
   public readonly userName: Locator;
@@ -27,6 +28,7 @@ export class AdminLayoutPage {
     this.navProducts = page.locator('[data-testid="admin-sidebar-products"]');
     this.navRepositories = page.locator('[data-testid="admin-sidebar-repositories"]');
     this.navUsers = page.locator('[data-testid="admin-sidebar-users"]');
+    this.navReleaseJobs = page.locator('[data-testid="admin-sidebar-release-jobs"]');
     this.userMenuBtn = page.locator('[data-testid="admin-user-menu-btn"]');
     this.userMenuPopup = page.locator('[data-testid="admin-user-menu-popup"]');
     this.userName = page.locator('[data-testid="admin-user-name"]');
@@ -54,6 +56,10 @@ export class AdminLayoutPage {
 
   public async navigateToUsers() {
     await this.navUsers.click();
+  }
+
+  public async navigateToReleaseJobs() {
+    await this.navReleaseJobs.click();
   }
 
   public async toggleSidebar() {
