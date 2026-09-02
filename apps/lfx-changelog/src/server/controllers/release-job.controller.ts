@@ -112,6 +112,15 @@ export class ReleaseJobController {
           res.status(422).json({ success: false, error: error.message });
           return;
         }
+        if (error instanceof Error && error.message === 'STALE_TAG') {
+          const stale = error as Error & { expectedTag: string };
+          res.status(409).json({
+            success: false,
+            error: 'The release plan is out of date; the next tag has changed',
+            data: { expectedTag: stale.expectedTag },
+          });
+          return;
+        }
         throw error;
       }
     } catch (error) {
