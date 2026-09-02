@@ -9,6 +9,7 @@ import express from 'express';
 
 import { serverLogger } from './server/server-logger';
 import { releaseApprovalService } from './server/services/release-approval.service';
+import { releaseRetentionService } from './server/services/release-retention.service';
 import { releaseWorkflowService } from './server/services/release-workflow.service';
 import { SearchService } from './server/services/search.service';
 import { setupAuth } from './server/setup/auth';
@@ -50,6 +51,7 @@ export function startServer(): void {
   });
   gracefulShutdown(server);
   releaseApprovalService.startPoller();
+  releaseRetentionService.startPurger();
   releaseWorkflowService.resumeRunningJobs().catch((err) => serverLogger.error({ err }, 'Failed to resume in-flight release jobs'));
 }
 
