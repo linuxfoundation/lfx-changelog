@@ -62,12 +62,15 @@ export class ReleaseGitHubService {
   }
 
   public async waitForCi(repo: string, tag: string, workflowName: string): Promise<{ status: string; runUrl: string }> {
-    const fallbackUrl = `https://github.com/${repo}/actions`;
     const token = await this.getInstallationToken();
-    let runId: number | null = null;
+    const workflowId = await this.resolveWorkflowId(repo, workflowName, token);
+    if (!workflowId) {
+      throw new Error(`CI workflow "${workflowName}" not found in ${repo}`);
+    }
 
+    let runId: number | null = null;
     for (let attempt = 1; attempt <= CI_POLL_ATTEMPTS; attempt++) {
-      runId = await this.findWorkflowRun(repo, tag, workflowName, token);
+      runId = await this.findWorkflowRun(repo, tag, workflowId, token);
       if (runId) {
         break;
       }
@@ -75,7 +78,7 @@ export class ReleaseGitHubService {
     }
 
     if (!runId) {
-      return { status: 'Warning: CI run not found', runUrl: fallbackUrl };
+      throw new Error(`CI run for "${workflowName}" on ${tag} was not found in ${repo} after ${CI_POLL_ATTEMPTS} attempts`);
     }
 
     const runUrl = `https://github.com/${repo}/actions/runs/${runId}`;
@@ -277,9 +280,8 @@ export class ReleaseGitHubService {
     };
   }
 
-  private async findWorkflowRun(repo: string, tag: string, workflowName: string, token: string): Promise<number | null> {
-    const encoded = encodeURIComponent(workflowName);
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/actions/workflows/${encoded}/runs?per_page=20`, {
+  private async findWorkflowRun(repo: string, tag: string, workflowId: number, token: string): Promise<number | null> {
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/actions/workflows/${workflowId}/runs?per_page=20`, {
       headers: this.headers(token),
     });
     if (!response.ok) {
@@ -287,6 +289,26 @@ export class ReleaseGitHubService {
     }
     const data = (await response.json()) as { workflow_runs?: { id: number; head_branch?: string }[] };
     const match = (data.workflow_runs ?? []).find((run) => run.head_branch === tag || run.head_branch === `refs/tags/${tag}`);
+    return match?.id ?? null;
+  }
+
+  /**
+   * GitHub's workflow_id path parameter accepts a numeric ID or the workflow
+   * file's basename (e.g. "release.yml") -- never the workflow's display
+   * `name:`. The release catalog stores the human-readable display name, so
+   * resolve it to an ID via the list-workflows endpoint before querying runs.
+   */
+  private async resolveWorkflowId(repo: string, workflowName: string, token: string): Promise<number | null> {
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/actions/workflows?per_page=100`, {
+      headers: this.headers(token),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const data = (await response.json()) as { workflows?: { id: number; name?: string; path?: string }[] };
+    const match = (data.workflows ?? []).find(
+      (workflow) => workflow.name === workflowName || workflow.path?.endsWith(`/${workflowName}`)
+    );
     return match?.id ?? null;
   }
 
