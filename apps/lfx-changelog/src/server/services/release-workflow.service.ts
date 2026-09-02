@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { randomUUID } from 'node:crypto';
+
 import { Prisma } from '@prisma/client';
 
 import { getPrismaClient } from './prisma.service';
@@ -20,13 +22,18 @@ import type { ReleaseProgressLine, ReleaseProgressType } from '@lfx-changelog/sh
 import type { ReleaseJob } from '@prisma/client';
 
 const running = new Set<string>();
+const INSTANCE_ID = randomUUID();
+const LEASE_TTL_MS = 10 * 60 * 1000;
+const LEASE_RENEW_MS = 3 * 60 * 1000;
 
 export class ReleaseWorkflowService {
   /**
    * Re-kicks off any job left in `running` status by a process that exited
    * mid-job (crash, redeploy). Each external step in `run()` is checkpointed
    * against the job row before it executes, so resuming re-enters at the
-   * first incomplete step rather than repeating finished ones.
+   * first incomplete step rather than repeating finished ones. The chart runs
+   * multiple replicas, so `kickoff()` only actually proceeds if it wins the
+   * DB-backed lease below — otherwise another replica already owns this job.
    */
   public async resumeRunningJobs(): Promise<void> {
     const prisma = getPrismaClient();
@@ -34,6 +41,15 @@ export class ReleaseWorkflowService {
     for (const job of jobs) {
       this.kickoff(job.id);
     }
+  }
+
+  /**
+   * Lease fields to merge into a `status: 'running'` write made outside this
+   * service (the merge-queue poller), so that transition claims the lease in
+   * the same atomic update that claims the row.
+   */
+  public leaseClaimFields(): { leaseOwner: string; leaseExpiresAt: Date } {
+    return { leaseOwner: INSTANCE_ID, leaseExpiresAt: new Date(Date.now() + LEASE_TTL_MS) };
   }
 
   public async startJob(input: {
@@ -115,7 +131,7 @@ export class ReleaseWorkflowService {
     }
     const claim = await prisma.releaseJob.updateMany({
       where: { id: jobId, status: 'waiting_for_approval', mergeQueuedAt: null },
-      data: { status: 'cancelled', cancelledById, completedAt: new Date() },
+      data: { status: 'cancelled', cancelledById, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null },
     });
     if (claim.count !== 1) {
       const current = await prisma.releaseJob.findUniqueOrThrow({ where: { id: jobId } });
@@ -142,7 +158,7 @@ export class ReleaseWorkflowService {
       return;
     }
     running.add(jobId);
-    void this.run(jobId).finally(() => running.delete(jobId));
+    void this.claimAndRun(jobId).finally(() => running.delete(jobId));
   }
 
   public async append(jobId: string, step: string, type: ReleaseProgressType, summary: string, environment?: string): Promise<void> {
@@ -174,6 +190,63 @@ export class ReleaseWorkflowService {
   }
 
   public async finishAfterMerge(jobId: string): Promise<void> {
+    await this.withLeaseRenewal(jobId, () => this.finishAfterMergeInner(jobId));
+  }
+
+  private async claimLease(jobId: string): Promise<boolean> {
+    const prisma = getPrismaClient();
+    const claim = await prisma.releaseJob.updateMany({
+      where: {
+        id: jobId,
+        status: 'running',
+        OR: [{ leaseExpiresAt: null }, { leaseExpiresAt: { lt: new Date() } }],
+      },
+      data: this.leaseClaimFields(),
+    });
+    return claim.count === 1;
+  }
+
+  private async renewLease(jobId: string): Promise<void> {
+    const prisma = getPrismaClient();
+    await prisma.releaseJob.updateMany({
+      where: { id: jobId, leaseOwner: INSTANCE_ID },
+      data: { leaseExpiresAt: new Date(Date.now() + LEASE_TTL_MS) },
+    });
+  }
+
+  /**
+   * Applies a status/lease-clearing write only if this instance still owns
+   * the lease, so a replica whose lease already expired and was reclaimed by
+   * another replica cannot clobber that replica's in-flight job.
+   */
+  private async updateIfLeaseOwner(jobId: string, data: Prisma.ReleaseJobUpdateManyMutationInput): Promise<ReleaseJob | null> {
+    const prisma = getPrismaClient();
+    const claim = await prisma.releaseJob.updateMany({ where: { id: jobId, leaseOwner: INSTANCE_ID }, data });
+    if (claim.count !== 1) {
+      serverLogger.warn({ jobId }, 'Skipped release-job status update: lease no longer owned by this instance');
+      return null;
+    }
+    return prisma.releaseJob.findUniqueOrThrow({ where: { id: jobId } });
+  }
+
+  private async withLeaseRenewal<T>(jobId: string, fn: () => Promise<T>): Promise<T> {
+    const timer = setInterval(() => void this.renewLease(jobId), LEASE_RENEW_MS);
+    try {
+      return await fn();
+    } finally {
+      clearInterval(timer);
+    }
+  }
+
+  private async claimAndRun(jobId: string): Promise<void> {
+    const claimed = await this.claimLease(jobId);
+    if (!claimed) {
+      return;
+    }
+    await this.withLeaseRenewal(jobId, () => this.run(jobId));
+  }
+
+  private async finishAfterMergeInner(jobId: string): Promise<void> {
     const prisma = getPrismaClient();
     let job = await prisma.releaseJob.findUniqueOrThrow({ where: { id: jobId } });
     const service = releasableCatalogService.require(job.serviceKey);
@@ -244,10 +317,10 @@ export class ReleaseWorkflowService {
       await this.append(jobId, 'slack_summary', 'skip', 'Slack summary skipped: no start thread');
     }
 
-    await prisma.releaseJob.update({
-      where: { id: jobId },
-      data: { status: 'completed', completedAt: new Date() },
-    });
+    const completed = await this.updateIfLeaseOwner(jobId, { status: 'completed', completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null });
+    if (!completed) {
+      return;
+    }
     await this.append(jobId, 'plan', 'success', 'Release job finished. Cluster apply was not waited on.');
     this.emitStatus(jobId, ReleaseJobStatus.COMPLETED);
     releaseJobEmitter.emit(jobId, { type: 'done', data: '' });
@@ -313,16 +386,22 @@ export class ReleaseWorkflowService {
             await this.notifyThread(jobId, job.slackThreadTs, `GitOps pull request opened: ${prUrl}`);
           },
         });
-        job = await prisma.releaseJob.update({
-          where: { id: jobId },
-          data: {
-            bumpOutcome: bump.outcome,
-            bumpRunUrl: bump.runUrl,
-            argocdPrUrl: bump.prUrl,
-            argocdPrNumber: bump.prNumber,
-            status: bump.outcome === 'already_current' || bump.merged ? 'running' : 'waiting_for_approval',
-          },
-        });
+        const staysRunning = bump.outcome === 'already_current' || bump.merged;
+        const bumpData = {
+          bumpOutcome: bump.outcome,
+          bumpRunUrl: bump.runUrl,
+          argocdPrUrl: bump.prUrl,
+          argocdPrNumber: bump.prNumber,
+        };
+        if (staysRunning) {
+          job = await prisma.releaseJob.update({ where: { id: jobId }, data: { ...bumpData, status: 'running' } });
+        } else {
+          const updated = await this.updateIfLeaseOwner(jobId, { ...bumpData, status: 'waiting_for_approval', leaseOwner: null, leaseExpiresAt: null });
+          if (!updated) {
+            return;
+          }
+          job = updated;
+        }
         if (bump.outcome === 'already_current') {
           await this.append(jobId, 'argocd_bump', 'success', 'Pins already current. No pull request.');
           await this.notifyThread(jobId, job.slackThreadTs, 'GitOps pins already current. No pull request.');
@@ -340,8 +419,10 @@ export class ReleaseWorkflowService {
         const pr = await releaseGitHubService.getPull(ARGOCD_REPO, job.argocdPrNumber);
         if (!pr.merged) {
           if (job.status !== 'waiting_for_approval') {
-            await prisma.releaseJob.update({ where: { id: jobId }, data: { status: 'waiting_for_approval' } });
-            this.emitStatus(jobId, ReleaseJobStatus.WAITING_FOR_APPROVAL);
+            const updated = await this.updateIfLeaseOwner(jobId, { status: 'waiting_for_approval', leaseOwner: null, leaseExpiresAt: null });
+            if (updated) {
+              this.emitStatus(jobId, ReleaseJobStatus.WAITING_FOR_APPROVAL);
+            }
           }
           return;
         }
@@ -351,10 +432,10 @@ export class ReleaseWorkflowService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       serverLogger.error({ err: error, jobId }, 'Release job failed');
-      await prisma.releaseJob.update({
-        where: { id: jobId },
-        data: { status: 'failed', errorMessage: message, completedAt: new Date() },
-      });
+      const failed = await this.updateIfLeaseOwner(jobId, { status: 'failed', errorMessage: message, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null });
+      if (!failed) {
+        return;
+      }
       await this.append(jobId, 'plan', 'error', message);
       this.emitStatus(jobId, ReleaseJobStatus.FAILED);
       releaseJobEmitter.emit(jobId, { type: 'error', data: message });

@@ -506,6 +506,8 @@ model ReleaseJob {
   bumpOutcome     String?          @map("bump_outcome")
   bumpRunUrl      String?          @map("bump_run_url")
   mergeQueuedAt   DateTime?        @map("merge_queued_at")
+  leaseOwner      String?          @map("lease_owner")
+  leaseExpiresAt  DateTime?        @map("lease_expires_at")
   slackThreadTs   String?          @map("slack_thread_ts")
   slackChannel    String?          @map("slack_channel")
   progressLog     Json             @default("[]") @map("progress_log")

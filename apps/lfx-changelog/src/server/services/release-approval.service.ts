@@ -89,7 +89,7 @@ export class ReleaseApprovalService {
       if (pr.merged) {
         const mergeClaim = await prisma.releaseJob.updateMany({
           where: { id: job.id, status: 'waiting_for_approval' },
-          data: { status: 'running' },
+          data: { status: 'running', ...releaseWorkflowService.leaseClaimFields() },
         });
         if (mergeClaim.count === 1) {
           await releaseWorkflowService.append(job.id, 'merge', 'success', 'Merge queue finished the GitOps pull request.');
