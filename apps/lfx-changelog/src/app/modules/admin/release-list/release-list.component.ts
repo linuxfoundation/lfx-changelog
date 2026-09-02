@@ -1,8 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { AuthService } from '@services/auth.service';
@@ -16,7 +17,7 @@ import type { Product, ReleaseJob, ReleasableService } from '@lfx-changelog/shar
 
 @Component({
   selector: 'lfx-release-list',
-  imports: [RouterLink, ButtonComponent],
+  imports: [ReactiveFormsModule, RouterLink, ButtonComponent],
   templateUrl: './release-list.component.html',
   styleUrl: './release-list.component.css',
 })
@@ -26,29 +27,17 @@ export class ReleaseListComponent {
   private readonly productService = inject(ProductService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
+  private readonly mappingControlsCache = new Map<string, FormControl<string>>();
 
   protected readonly authService = inject(AuthService);
   protected readonly loading = signal(true);
-  protected readonly mappingKey = signal<string | null>(null);
 
-  protected readonly services = toSignal(
-    this.refresh$.pipe(
-      tap(() => this.loading.set(true)),
-      switchMap(() => this.releasableService.list().pipe(catchError(() => of([] as ReleasableService[])))),
-      tap(() => this.loading.set(false))
-    ),
-    { initialValue: [] as ReleasableService[] }
-  );
-
-  protected readonly jobs = toSignal(
-    this.refresh$.pipe(switchMap(() => this.releaseJobService.list({ page: 1, limit: 20 }).pipe(catchError(() => of({ data: [] as ReleaseJob[] }))))),
-    { initialValue: { data: [] as ReleaseJob[] } }
-  );
-
-  protected readonly products = toSignal(this.productService.getAll().pipe(catchError(() => of([] as Product[]))), {
-    initialValue: [] as Product[],
-  });
+  protected readonly services = this.initServices();
+  protected readonly jobs = this.initJobs();
+  protected readonly products = this.initProducts();
+  protected readonly serviceRows = this.initServiceRows();
 
   protected start(service: ReleasableService): void {
     if (service.activeJobId) {
@@ -62,17 +51,66 @@ export class ReleaseListComponent {
   }
 
   protected saveMapping(key: string, productId: string): void {
-    this.mappingKey.set(key);
+    const control = this.mappingControlsCache.get(key);
+    control?.disable({ emitEvent: false });
     this.releasableService.updateMapping(key, productId || null).subscribe({
       next: () => {
-        this.mappingKey.set(null);
+        control?.enable({ emitEvent: false });
         this.toastService.success('Mapping saved');
         this.refresh$.next();
       },
       error: () => {
-        this.mappingKey.set(null);
+        control?.enable({ emitEvent: false });
         this.toastService.error('Could not save mapping');
       },
     });
+  }
+
+  private initServices() {
+    return toSignal(
+      this.refresh$.pipe(
+        tap(() => this.loading.set(true)),
+        switchMap(() => this.releasableService.list().pipe(catchError(() => of([] as ReleasableService[])))),
+        tap(() => this.loading.set(false))
+      ),
+      { initialValue: [] as ReleasableService[] }
+    );
+  }
+
+  private initJobs() {
+    return toSignal(
+      this.refresh$.pipe(switchMap(() => this.releaseJobService.list({ page: 1, limit: 20 }).pipe(catchError(() => of({ data: [] as ReleaseJob[] }))))),
+      { initialValue: { data: [] as ReleaseJob[] } }
+    );
+  }
+
+  private initProducts() {
+    return toSignal(this.productService.getAll().pipe(catchError(() => of([] as Product[]))), {
+      initialValue: [] as Product[],
+    });
+  }
+
+  private initServiceRows() {
+    return computed(() =>
+      this.services().map((service) => ({
+        service,
+        environmentsLabel: service.environments.join(', '),
+        mappingControl: this.mappingControlFor(service),
+      }))
+    );
+  }
+
+  private mappingControlFor(service: ReleasableService): FormControl<string> {
+    const cached = this.mappingControlsCache.get(service.key);
+    if (cached) {
+      if (!cached.dirty) {
+        cached.setValue(service.productId ?? '', { emitEvent: false });
+      }
+      return cached;
+    }
+    const control = new FormControl(service.productId ?? '', { nonNullable: true });
+    control.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => this.saveMapping(service.key, value));
+    this.mappingControlsCache.set(service.key, control);
+    return control;
   }
 }

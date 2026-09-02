@@ -30,25 +30,21 @@
           </tr>
         </thead>
         <tbody>
-          @for (service of services(); track service.key) {
-            <tr class="border-border border-t" [attr.data-testid]="'release-list-row-' + service.key">
+          @for (row of serviceRows(); track row.service.key) {
+            <tr class="border-border border-t" [attr.data-testid]="'release-list-row-' + row.service.key">
               <td class="px-4 py-3">
-                <div class="text-text-primary font-medium">{{ service.displayName }}</div>
-                <div class="text-text-muted text-xs">{{ service.githubRepo }}</div>
-                @if (service.auditError) {
-                  <div class="text-danger-600 mt-1 text-xs">{{ service.auditError }}</div>
+                <div class="text-text-primary font-medium">{{ row.service.displayName }}</div>
+                <div class="text-text-muted text-xs">{{ row.service.githubRepo }}</div>
+                @if (row.service.auditError) {
+                  <div class="text-danger-600 mt-1 text-xs">{{ row.service.auditError }}</div>
                 }
               </td>
-              <td class="text-text-secondary px-4 py-3">{{ service.latestTag }}</td>
-              <td class="text-text-secondary px-4 py-3">{{ service.pendingCount }}</td>
-              <td class="text-text-secondary px-4 py-3">{{ service.environments.join(', ') }}</td>
+              <td class="text-text-secondary px-4 py-3">{{ row.service.latestTag }}</td>
+              <td class="text-text-secondary px-4 py-3">{{ row.service.pendingCount }}</td>
+              <td class="text-text-secondary px-4 py-3">{{ row.environmentsLabel }}</td>
               @if (authService.isSuperAdmin()) {
                 <td class="px-4 py-3">
-                  <select
-                    class="border-border bg-surface text-text-primary rounded-md border px-2 py-1 text-xs"
-                    [value]="service.productId ?? ''"
-                    [disabled]="mappingKey() === service.key"
-                    (change)="saveMapping(service.key, $any($event.target).value)">
+                  <select class="border-border bg-surface text-text-primary rounded-md border px-2 py-1 text-xs" [formControl]="row.mappingControl">
                     <option value="">Unmapped</option>
                     @for (product of products(); track product.id) {
                       <option [value]="product.id">{{ product.name }}</option>
@@ -57,14 +53,14 @@
                 </td>
               }
               <td class="px-4 py-3 text-right">
-                @if (service.activeJobId) {
-                  <a class="text-brand-700 text-sm font-medium" [routerLink]="['/admin/release-jobs', service.activeJobId]">Open job</a>
+                @if (row.service.activeJobId) {
+                  <a class="text-brand-700 text-sm font-medium" [routerLink]="['/admin/release-jobs', row.service.activeJobId]">Open job</a>
                 } @else {
                   <lfx-button
                     size="sm"
-                    [disabled]="service.pendingCount === 0 || !service.canRelease"
-                    [attr.data-testid]="'release-list-start-' + service.key"
-                    (clicked)="start(service)">
+                    [disabled]="row.service.pendingCount === 0 || !row.service.canRelease"
+                    [attr.data-testid]="'release-list-start-' + row.service.key"
+                    (clicked)="start(row.service)">
                     Start
                   </lfx-button>
                 }
