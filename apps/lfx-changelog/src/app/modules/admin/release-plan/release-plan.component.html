@@ -28,25 +28,25 @@
           <li>{{ step }}</li>
         }
       </ol>
-      <p class="text-text-muted mt-3 text-xs">Environments: {{ current.environments.join(', ') }}</p>
+      <p class="text-text-muted mt-3 text-xs">Environments: {{ environmentsLabel() }}</p>
     </div>
 
     <div class="border-border bg-surface space-y-3 rounded-lg border p-4">
       <div class="flex items-center justify-between gap-3">
         <h2 class="text-text-primary font-semibold">Release notes</h2>
         <lfx-button variant="secondary" size="sm" [loading]="generating()" (clicked)="generateNotes()">
-          {{ notes ? 'Regenerate' : 'Generate' }}
+          {{ notes() ? 'Regenerate' : 'Generate' }}
         </lfx-button>
       </div>
       <textarea
         data-testid="release-plan-notes"
         class="border-border bg-surface text-text-primary min-h-48 w-full rounded-md border p-3 font-mono text-sm"
-        [(ngModel)]="notes"
+        [formControl]="notesControl"
         placeholder="Generate notes, then edit them before confirm."></textarea>
     </div>
 
     <div class="flex gap-3">
-      <lfx-button data-testid="release-plan-confirm" [disabled]="!notes.trim()" [loading]="confirming()" (clicked)="confirm()">Confirm</lfx-button>
+      <lfx-button data-testid="release-plan-confirm" [disabled]="!notesTrimmed()" [loading]="confirming()" (clicked)="confirm()">Confirm</lfx-button>
       <lfx-button data-testid="release-plan-cancel" variant="secondary" (clicked)="cancel()">Cancel</lfx-button>
     </div>
   }

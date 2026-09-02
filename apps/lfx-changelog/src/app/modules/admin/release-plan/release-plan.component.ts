@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { ReleasableServiceService } from '@services/releasable-service.service';
@@ -14,7 +15,7 @@ import type { ReleasePlan } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-release-plan',
-  imports: [FormsModule, RouterLink, ButtonComponent],
+  imports: [ReactiveFormsModule, RouterLink, ButtonComponent],
   templateUrl: './release-plan.component.html',
   styleUrl: './release-plan.component.css',
 })
@@ -25,11 +26,16 @@ export class ReleasePlanComponent {
   private readonly releaseJobService = inject(ReleaseJobService);
   private readonly toastService = inject(ToastService);
 
+  protected readonly notesControl = new FormControl('', { nonNullable: true });
+
   protected readonly loading = signal(true);
   protected readonly generating = signal(false);
   protected readonly confirming = signal(false);
   protected readonly plan = signal<ReleasePlan | null>(null);
-  protected notes = '';
+
+  protected readonly notes = toSignal(this.notesControl.valueChanges, { initialValue: this.notesControl.value });
+  protected readonly notesTrimmed = computed(() => this.notes().trim());
+  protected readonly environmentsLabel = computed(() => this.plan()?.environments.join(', ') ?? '');
 
   public constructor() {
     const key = this.route.snapshot.paramMap.get('key');
@@ -60,7 +66,7 @@ export class ReleasePlanComponent {
     this.generating.set(true);
     this.releasableService.generateNotes(plan.service.key).subscribe({
       next: (notes) => {
-        this.notes = notes;
+        this.notesControl.setValue(notes);
         this.generating.set(false);
       },
       error: () => {
@@ -72,9 +78,10 @@ export class ReleasePlanComponent {
 
   protected confirm(): void {
     const plan = this.plan();
-    if (!plan || !this.notes.trim() || this.confirming()) return;
+    const notes = this.notesTrimmed();
+    if (!plan || !notes || this.confirming()) return;
     this.confirming.set(true);
-    this.releaseJobService.start(plan.service.key, this.notes.trim(), plan.newTag).subscribe({
+    this.releaseJobService.start(plan.service.key, notes, plan.newTag).subscribe({
       next: (job) => {
         void this.router.navigate(['/admin/release-jobs', job.id]);
       },
