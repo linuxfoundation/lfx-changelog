@@ -22,6 +22,20 @@ import type { ReleaseJob } from '@prisma/client';
 const running = new Set<string>();
 
 export class ReleaseWorkflowService {
+  /**
+   * Re-kicks off any job left in `running` status by a process that exited
+   * mid-job (crash, redeploy). Each external step in `run()` is checkpointed
+   * against the job row before it executes, so resuming re-enters at the
+   * first incomplete step rather than repeating finished ones.
+   */
+  public async resumeRunningJobs(): Promise<void> {
+    const prisma = getPrismaClient();
+    const jobs = await prisma.releaseJob.findMany({ where: { status: 'running' }, select: { id: true } });
+    for (const job of jobs) {
+      this.kickoff(job.id);
+    }
+  }
+
   public async startJob(input: {
     serviceKey: string;
     notes: string;
@@ -38,7 +52,12 @@ export class ReleaseWorkflowService {
       throw new Error('Nothing to release');
     }
     const tags = computeNextTag(audit.latestTag);
-    const newTag = input.newTag || tags.newTag;
+    if (input.newTag && input.newTag !== tags.newTag) {
+      const stale = new Error('STALE_TAG');
+      (stale as Error & { expectedTag: string }).expectedTag = tags.newTag;
+      throw stale;
+    }
+    const newTag = tags.newTag;
 
     const prisma = getPrismaClient();
     try {
@@ -139,6 +158,16 @@ export class ReleaseWorkflowService {
     releaseJobEmitter.emit(jobId, { type: 'progress', data: line });
   }
 
+  public async notifyThread(jobId: string, threadTs: string | null | undefined, text: string): Promise<void> {
+    if (!threadTs) {
+      return;
+    }
+    const posted = await releaseSlackService.postThread(threadTs, text);
+    if (!posted.ok) {
+      await this.append(jobId, 'slack_summary', 'skip', `Slack notice skipped: ${posted.error}`);
+    }
+  }
+
   public async finishAfterMerge(jobId: string): Promise<void> {
     const prisma = getPrismaClient();
     let job = await prisma.releaseJob.findUniqueOrThrow({ where: { id: jobId } });
@@ -150,11 +179,14 @@ export class ReleaseWorkflowService {
     await this.append(jobId, 'merge', 'success', mergeLine);
     const syncEnabled = isArgocdSyncEnabled();
     if (job.slackThreadTs) {
-      const slackMerge = syncEnabled
-        ? job.bumpOutcome === 'already_current'
-          ? `${mergeLine} Requesting deploy sync.`
-          : 'Requesting deploy sync.'
-        : `${mergeLine} Changelog is not requesting an Argo CD sync.`;
+      let slackMerge: string;
+      if (!syncEnabled) {
+        slackMerge = `${mergeLine} Changelog is not requesting an Argo CD sync.`;
+      } else if (job.bumpOutcome === 'already_current') {
+        slackMerge = `${mergeLine} Requesting deploy sync.`;
+      } else {
+        slackMerge = 'Requesting deploy sync.';
+      }
       await releaseSlackService.postThread(job.slackThreadTs, slackMerge);
     }
 
@@ -177,6 +209,14 @@ export class ReleaseWorkflowService {
     const syncLine = syncs.map((row) => `${row.environment}=${row.requestStatus}`).join(', ');
     if (job.slackThreadTs) {
       const audit = await releaseGitHubAuditService.audit(service.githubRepo);
+      let argocdLine: string;
+      if (job.argocdPrUrl) {
+        argocdLine = `<${job.argocdPrUrl}|GitOps PR>`;
+      } else if (job.bumpOutcome === 'already_current') {
+        argocdLine = 'already current';
+      } else {
+        argocdLine = 'missing';
+      }
       const summary = releaseSlackService.buildSummary({
         displayName: service.displayName,
         newTag: job.newTag,
@@ -186,7 +226,7 @@ export class ReleaseWorkflowService {
         ciStatus: job.ciStatus || 'unknown',
         ciRunUrl: job.ciRunUrl || `https://github.com/${service.githubRepo}/actions`,
         ciLabel: service.ciSlackLabel,
-        argocdLine: job.argocdPrUrl ? `<${job.argocdPrUrl}|GitOps PR>` : job.bumpOutcome === 'already_current' ? 'already current' : 'missing',
+        argocdLine,
         syncLine,
       });
       const posted = await releaseSlackService.postBroadcastSummary(job.slackThreadTs, summary);
@@ -245,12 +285,7 @@ export class ReleaseWorkflowService {
           where: { id: jobId },
           data: { ciStatus: ci.status, ciRunUrl: ci.runUrl },
         });
-        let ciType: ReleaseProgressType = 'error';
-        if (ci.status === 'Passed') {
-          ciType = 'success';
-        } else if (ci.status.startsWith('Warning')) {
-          ciType = 'skip';
-        }
+        const ciType: ReleaseProgressType = ci.status === 'Passed' ? 'success' : 'error';
         await this.append(jobId, 'ci', ciType, `CI ${ci.status}`);
         if (job.slackThreadTs) {
           await releaseSlackService.postThread(job.slackThreadTs, `${service.ciSlackLabel}: ${ci.status}`);
@@ -319,16 +354,6 @@ export class ReleaseWorkflowService {
       this.emitStatus(jobId, ReleaseJobStatus.FAILED);
       releaseJobEmitter.emit(jobId, { type: 'error', data: message });
       releaseJobEmitter.emit(jobId, { type: 'done', data: '' });
-    }
-  }
-
-  public async notifyThread(jobId: string, threadTs: string | null | undefined, text: string): Promise<void> {
-    if (!threadTs) {
-      return;
-    }
-    const posted = await releaseSlackService.postThread(threadTs, text);
-    if (!posted.ok) {
-      await this.append(jobId, 'slack_summary', 'skip', `Slack notice skipped: ${posted.error}`);
     }
   }
 
