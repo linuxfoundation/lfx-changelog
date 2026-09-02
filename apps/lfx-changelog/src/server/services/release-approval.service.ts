@@ -87,9 +87,15 @@ export class ReleaseApprovalService {
     try {
       const pr = await releaseGitHubService.getPull(ARGOCD_REPO, prNumber);
       if (pr.merged) {
-        await releaseWorkflowService.append(job.id, 'merge', 'success', 'Merge queue finished the GitOps pull request.');
-        await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `Merge queue finished ${pr.url}.`);
-        await releaseWorkflowService.finishAfterMerge(job.id);
+        const mergeClaim = await prisma.releaseJob.updateMany({
+          where: { id: job.id, status: 'waiting_for_approval' },
+          data: { status: 'running' },
+        });
+        if (mergeClaim.count === 1) {
+          await releaseWorkflowService.append(job.id, 'merge', 'success', 'Merge queue finished the GitOps pull request.');
+          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `Merge queue finished ${pr.url}.`);
+          await releaseWorkflowService.finishAfterMerge(job.id);
+        }
         return;
       }
       if (pr.state === 'closed') {
@@ -107,19 +113,24 @@ export class ReleaseApprovalService {
 
       if (!job.mergeQueuedAt) {
         const claim = await prisma.releaseJob.updateMany({
-          where: { id: job.id, mergeQueuedAt: null },
+          where: { id: job.id, status: 'waiting_for_approval', mergeQueuedAt: null },
           data: { mergeQueuedAt: new Date() },
         });
         if (claim.count === 1) {
           await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
           await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
-          const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber);
-          const position = queued.position != null ? ` (position ${queued.position})` : '';
-          const queueLine = queued.alreadyQueued
-            ? `Already in the merge queue${position}.`
-            : `Added to the merge queue${position}.`;
-          await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
-          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
+          try {
+            const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber);
+            const position = queued.position != null ? ` (position ${queued.position})` : '';
+            const queueLine = queued.alreadyQueued
+              ? `Already in the merge queue${position}.`
+              : `Added to the merge queue${position}.`;
+            await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
+            await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
+          } catch (enqueueError) {
+            await prisma.releaseJob.updateMany({ where: { id: job.id, mergeQueuedAt: { not: null } }, data: { mergeQueuedAt: null } });
+            throw enqueueError;
+          }
         }
       }
     } catch (error) {
