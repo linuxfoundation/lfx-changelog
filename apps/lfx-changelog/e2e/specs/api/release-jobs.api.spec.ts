@@ -54,10 +54,8 @@ test.describe('Release jobs API', () => {
     expect(releases.status()).toBe(200);
     const body = await catalog.json();
     const first = body.data?.[0] as { key?: string } | undefined;
-    if (!first?.key) {
-      return;
-    }
-    const plan = await superAdminApi.get(`/api/releasable-services/${first.key}/plan`);
+    test.skip(!first?.key, 'Release catalog is empty in this environment; cannot exercise the plan endpoint');
+    const plan = await superAdminApi.get(`/api/releasable-services/${first?.key}/plan`);
     expect([200, 409, 422]).toContain(plan.status());
     if (plan.status() === 200) {
       const planBody = await plan.json();
