@@ -89,7 +89,9 @@ export class ReleaseJobDetailComponent {
               );
               live.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
                 if (event.type === 'progress') {
-                  this.log.update((lines) => [...lines, event.data]);
+                  this.log.update((lines) =>
+                    lines.some((line) => line.timestamp === event.data.timestamp && line.summary === event.data.summary) ? lines : [...lines, event.data]
+                  );
                 }
               });
               return this.releaseJobService.getById(id).pipe(
