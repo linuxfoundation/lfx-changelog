@@ -44,7 +44,7 @@ export class ReleaseWorkflowService {
   }): Promise<ReleaseJob> {
     const service = releasableCatalogService.require(input.serviceKey);
     const productId = await releaseAuthService.mappedProductId(service.key);
-    const audit = await releaseGitHubAuditService.audit(service.githubRepo);
+    const audit = await releaseGitHubAuditService.audit(service.githubRepo, { fresh: true });
     if (audit.error) {
       throw new Error(audit.error);
     }

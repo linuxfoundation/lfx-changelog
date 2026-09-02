@@ -39,10 +39,11 @@ export function computeNextTag(latestTag: string): { newTag: string; argocdTag: 
 export class ReleaseGitHubAuditService {
   private readonly cache = new Map<string, { expiresAt: number; value: ServiceAudit }>();
   private readonly ttlMs = 30_000;
+  private readonly maxPendingPages = 20;
 
-  public async audit(githubRepo: string): Promise<ServiceAudit> {
+  public async audit(githubRepo: string, options?: { fresh?: boolean }): Promise<ServiceAudit> {
     const cached = this.cache.get(githubRepo);
-    if (cached && cached.expiresAt > Date.now()) {
+    if (!options?.fresh && cached && cached.expiresAt > Date.now()) {
       return cached.value;
     }
 
@@ -85,26 +86,41 @@ export class ReleaseGitHubAuditService {
   }
 
   private async fetchPendingPrs(repo: string, sinceIso: string, token: string): Promise<PendingChange[]> {
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/pulls?state=closed&base=main&per_page=100`, {
-      headers: this.headers(token),
-    });
-    if (!response.ok) {
-      throw new Error(`GitHub pending PRs failed: ${response.status}`);
+    const pending: PendingChange[] = [];
+    for (let page = 1; page <= this.maxPendingPages; page++) {
+      const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/pulls?state=closed&base=main&sort=updated&direction=desc&per_page=100&page=${page}`, {
+        headers: this.headers(token),
+      });
+      if (!response.ok) {
+        throw new Error(`GitHub pending PRs failed: ${response.status}`);
+      }
+      const body = (await response.json()) as {
+        number: number;
+        title: string;
+        merged_at: string | null;
+        updated_at: string;
+        user?: { login?: string };
+      }[];
+      if (body.length === 0) {
+        break;
+      }
+      for (const pr of body) {
+        if (pr.merged_at && pr.merged_at > sinceIso) {
+          pending.push({
+            number: pr.number,
+            title: pr.title,
+            author: pr.user?.login || '',
+            mergedAt: pr.merged_at,
+          });
+        }
+      }
+      // Sorted by last-updated descending: once a page's oldest update predates the release, no later page can hold a newer merge.
+      const oldestUpdatedAt = body[body.length - 1]?.updated_at;
+      if (oldestUpdatedAt && oldestUpdatedAt <= sinceIso) {
+        break;
+      }
     }
-    const body = (await response.json()) as {
-      number: number;
-      title: string;
-      merged_at: string | null;
-      user?: { login?: string };
-    }[];
-    return body
-      .filter((pr) => pr.merged_at && pr.merged_at > sinceIso)
-      .map((pr) => ({
-        number: pr.number,
-        title: pr.title,
-        author: pr.user?.login || '',
-        mergedAt: pr.merged_at as string,
-      }));
+    return pending;
   }
 
   private headers(token: string): Record<string, string> {
