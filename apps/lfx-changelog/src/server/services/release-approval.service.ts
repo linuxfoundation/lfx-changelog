@@ -106,19 +106,21 @@ export class ReleaseApprovalService {
       }
 
       if (!job.mergeQueuedAt) {
-        await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
-        await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
-        const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber);
-        const position = queued.position != null ? ` (position ${queued.position})` : '';
-        const queueLine = queued.alreadyQueued
-          ? `Already in the merge queue${position}.`
-          : `Added to the merge queue${position}.`;
-        await prisma.releaseJob.update({
-          where: { id: job.id },
+        const claim = await prisma.releaseJob.updateMany({
+          where: { id: job.id, mergeQueuedAt: null },
           data: { mergeQueuedAt: new Date() },
         });
-        await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
-        await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
+        if (claim.count === 1) {
+          await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
+          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
+          const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber);
+          const position = queued.position != null ? ` (position ${queued.position})` : '';
+          const queueLine = queued.alreadyQueued
+            ? `Already in the merge queue${position}.`
+            : `Added to the merge queue${position}.`;
+          await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
+          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
