@@ -113,13 +113,18 @@ export class ReleaseWorkflowService {
     if (!job) {
       throw new Error('Job not found');
     }
-    if (job.status !== 'waiting_for_approval') {
-      throw new Error('Job is not waiting for approval');
-    }
-    const updated = await prisma.releaseJob.update({
-      where: { id: jobId },
+    const claim = await prisma.releaseJob.updateMany({
+      where: { id: jobId, status: 'waiting_for_approval', mergeQueuedAt: null },
       data: { status: 'cancelled', cancelledById, completedAt: new Date() },
     });
+    if (claim.count !== 1) {
+      const current = await prisma.releaseJob.findUniqueOrThrow({ where: { id: jobId } });
+      if (current.status === 'waiting_for_approval' && current.mergeQueuedAt) {
+        throw new Error('Release is already in the merge queue and can no longer be cancelled');
+      }
+      throw new Error('Job is not waiting for approval');
+    }
+    const updated = await prisma.releaseJob.findUniqueOrThrow({ where: { id: jobId } });
     await this.append(jobId, 'approval', 'info', 'Wait cancelled. GitHub release and pull request remain.');
     if (updated.slackThreadTs) {
       const slack = await releaseSlackService.postThread(updated.slackThreadTs, 'Release wait cancelled. GitHub release and ArgoCD PR remain.');

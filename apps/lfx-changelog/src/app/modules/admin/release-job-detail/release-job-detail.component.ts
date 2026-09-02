@@ -24,7 +24,7 @@ export class ReleaseJobDetailComponent {
   protected readonly busy = signal(false);
   protected readonly log = signal<ReleaseProgressLine[]>([]);
   protected readonly job = this.initJob();
-  protected readonly canCancel = computed(() => this.job()?.status === 'waiting_for_approval');
+  protected readonly canCancel = computed(() => this.job()?.status === 'waiting_for_approval' && !this.job()?.mergeQueuedAt);
   protected readonly canRetry = computed(() => this.job()?.status === 'failed');
   protected readonly canRefresh = computed(() => this.job()?.status === 'completed');
 

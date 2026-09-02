@@ -202,7 +202,10 @@ export class ReleaseJobController {
         const updated = await releaseWorkflowService.cancel(job.id, req.dbUser!.id);
         res.json({ success: true, data: this.toApi(updated) });
       } catch (error) {
-        if (error instanceof Error && error.message === 'Job is not waiting for approval') {
+        if (
+          error instanceof Error &&
+          (error.message === 'Job is not waiting for approval' || error.message === 'Release is already in the merge queue and can no longer be cancelled')
+        ) {
           throw new ConflictError(error.message, { operation: 'cancel', service: 'release-job' });
         }
         throw error;
