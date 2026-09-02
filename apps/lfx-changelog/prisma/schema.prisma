@@ -72,6 +72,22 @@ enum BlogType {
   product_newsletter
 }
 
+enum ReleaseJobStatus {
+  pending
+  running
+  waiting_for_approval
+  completed
+  failed
+  cancelled
+}
+
+enum EnvironmentSyncRequestStatus {
+  pending
+  accepted
+  failed
+  skipped
+}
+
 model Product {
   id                    String   @id @default(uuid())
   name                  String   @unique
@@ -92,7 +108,9 @@ model Product {
   agentJobs           AgentJob[]
   agentMemory         AgentMemory?
   blogProducts        BlogProduct[]
-  slackNotifyUsers    ProductSlackNotifyUser[]
+  slackNotifyUsers            ProductSlackNotifyUser[]
+  releasableServiceMappings   ReleasableServiceMapping[]
+  releaseJobs                 ReleaseJob[]
 
   @@map("products")
 }
@@ -182,7 +200,9 @@ model User {
   chatConversations   ChatConversation[]
   slackIntegrations   SlackIntegration[]
   blogs               Blog[]
-  slackNotifyUsers    ProductSlackNotifyUser[]
+  slackNotifyUsers         ProductSlackNotifyUser[]
+  releaseJobsRequested     ReleaseJob[]             @relation("ReleaseJobRequester")
+  releaseJobsCancelled     ReleaseJob[]             @relation("ReleaseJobCanceller")
 
   @@map("users")
 }
@@ -452,4 +472,87 @@ model BlogChangelogEntry {
 
   @@unique([blogId, changelogEntryId])
   @@map("blog_changelog_entries")
+}
+
+model ReleasableServiceMapping {
+  id          String   @id @default(uuid())
+  serviceKey  String   @unique @map("service_key")
+  productId   String   @map("product_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("releasable_service_mappings")
+}
+
+model ReleaseJob {
+  id              String           @id @default(uuid())
+  serviceKey      String           @map("service_key")
+  productId       String?          @map("product_id")
+  requesterId     String           @map("requester_id")
+  cancelledById   String?          @map("cancelled_by_id")
+  status          ReleaseJobStatus @default(pending)
+  latestTag       String           @map("latest_tag")
+  newTag          String           @map("new_tag")
+  argocdTag       String           @map("argocd_tag")
+  releaseNotes    String           @map("release_notes") @db.Text
+  releaseUrl      String?          @map("release_url")
+  ciStatus        String?          @map("ci_status")
+  ciRunUrl        String?          @map("ci_run_url")
+  argocdPrUrl     String?          @map("argocd_pr_url")
+  argocdPrNumber  Int?             @map("argocd_pr_number")
+  bumpOutcome     String?          @map("bump_outcome")
+  bumpRunUrl      String?          @map("bump_run_url")
+  mergeQueuedAt   DateTime?        @map("merge_queued_at")
+  slackThreadTs   String?          @map("slack_thread_ts")
+  slackChannel    String?          @map("slack_channel")
+  progressLog     Json             @default("[]") @map("progress_log")
+  errorMessage    String?          @map("error_message")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  startedAt       DateTime?        @map("started_at")
+  completedAt     DateTime?        @map("completed_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  product          Product?          @relation(fields: [productId], references: [id], onDelete: SetNull)
+  requester        User              @relation("ReleaseJobRequester", fields: [requesterId], references: [id])
+  cancelledBy      User?             @relation("ReleaseJobCanceller", fields: [cancelledById], references: [id])
+  environmentSyncs EnvironmentSync[]
+
+  @@index([serviceKey, createdAt])
+  @@index([requesterId, createdAt])
+  @@index([status])
+  @@map("release_jobs")
+}
+
+model EnvironmentSync {
+  id              String                       @id @default(uuid())
+  jobId           String                       @map("job_id")
+  environment     String
+  applicationName String                       @map("application_name")
+  requestStatus   EnvironmentSyncRequestStatus @default(pending) @map("request_status")
+  requestError    String?                      @map("request_error")
+  lastSyncStatus  String?                      @map("last_sync_status")
+  lastHealth      String?                      @map("last_health")
+  lastRefreshedAt DateTime?                    @map("last_refreshed_at")
+  requestedAt     DateTime?                    @map("requested_at")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+
+  job ReleaseJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, environment])
+  @@index([jobId])
+  @@map("environment_syncs")
+}
+
+model ContributorSlackMap {
+  githubUsername String   @id @map("github_username")
+  slackId        String   @map("slack_id")
+  displayName    String   @map("display_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("contributor_slack_maps")
 }

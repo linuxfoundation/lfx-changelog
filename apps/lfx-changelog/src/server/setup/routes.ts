@@ -15,6 +15,8 @@ import githubRouter, { releaseRouter } from '../routes/github.route';
 import mcpRouter from '../routes/mcp.route';
 import opensearchRouter from '../routes/opensearch.route';
 import productRouter from '../routes/product.route';
+import releasableServiceRouter from '../routes/releasable-service.route';
+import releaseJobRouter from '../routes/release-job.route';
 import publicBlogRouter from '../routes/public-blog.route';
 import publicChangelogRouter from '../routes/public-changelog.route';
 import publicChatRouter from '../routes/public-chat.route';
@@ -24,7 +26,9 @@ import publicSearchRouter from '../routes/public-search.route';
 import slackRouter from '../routes/slack.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
+import { ReleaseJobController } from '../controllers/release-job.controller';
 import { SearchService } from '../services/search.service';
+import { releaseApprovalService } from '../services/release-approval.service';
 import { setupSwagger } from '../swagger';
 import { createApiKeyRateLimiter, createAuthenticatedChatRateLimiter, createPublicChatRateLimiter } from './rate-limit';
 
@@ -87,6 +91,11 @@ export function setupRoutes(app: Express): void {
   // ── Webhook routes (unauthenticated — GitHub App callback) ────────────
   app.use('/webhooks', webhookRouter);
 
+  // Laptop collision check. Token-gated, not session-gated.
+  const releaseJobController = new ReleaseJobController();
+  app.get('/internal/release-lock/:serviceKey', (req, res, next) => releaseJobController.activeLock(req, res, next));
+  releaseApprovalService.startPoller();
+
   // ── Public API routes (no auth required) ──────────────────────────────
   if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
     app.use('/public/api/chat', createPublicChatRateLimiter());
@@ -141,6 +150,8 @@ export function setupRoutes(app: Express): void {
   app.use('/api/github', githubRouter);
   app.use('/api/opensearch', opensearchRouter);
   app.use('/api/releases', releaseRouter);
+  app.use('/api/releasable-services', releasableServiceRouter);
+  app.use('/api/release-jobs', releaseJobRouter);
   app.use('/api/slack', slackRouter);
 
   // ── API error handlers ────────────────────────────────────────────────

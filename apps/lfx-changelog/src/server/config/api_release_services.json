@@ -1,0 +1,217 @@
+{
+  "defaults": {
+    "github_org": "linuxfoundation",
+    "argocd_repo": "linuxfoundation/lfx-v2-argocd",
+    "ci_workflow": "Publish Tagged Release",
+    "environments": [
+      "staging",
+      "prod"
+    ]
+  },
+  "services": {
+    "lfx-v2-auth-service": {
+      "display_name": "LFX Auth API",
+      "aliases": [
+        "auth-service",
+        "auth"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-auth-service"
+      }
+    },
+    "lfx-v2-committee-service": {
+      "display_name": "LFX Committee API",
+      "aliases": [
+        "committee-service",
+        "committee"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-committee-service"
+      }
+    },
+    "lfx-v2-email-service": {
+      "display_name": "LFX Email API",
+      "aliases": [
+        "email-service",
+        "email"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-email-service"
+      }
+    },
+    "lfx-v2-forwards-service": {
+      "display_name": "LFX Forwards API",
+      "aliases": [
+        "forwards-service",
+        "forwards"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-forwards-service"
+      }
+    },
+    "lfx-v2-invite-service": {
+      "display_name": "LFX Invite API",
+      "aliases": [
+        "invite-service",
+        "invite"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-invite-service"
+      }
+    },
+    "lfx-v2-mailing-list-service": {
+      "display_name": "LFX Mailing List API",
+      "aliases": [
+        "mailing-list-service",
+        "mailing-list"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-mailing-list-service"
+      }
+    },
+    "lfx-v2-meeting-service": {
+      "display_name": "LFX Meeting API",
+      "aliases": [
+        "meeting-service",
+        "meeting"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-meeting-service"
+      }
+    },
+    "lfx-v2-member-service": {
+      "display_name": "LFX Member API",
+      "aliases": [
+        "member-service",
+        "member"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-member-service"
+      }
+    },
+    "lfx-v2-newsletter-service": {
+      "display_name": "LFX Newsletter API",
+      "aliases": [
+        "newsletter-service",
+        "newsletter"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-newsletter-service"
+      }
+    },
+    "lfx-v2-project-service": {
+      "display_name": "LFX Project API",
+      "aliases": [
+        "project-service",
+        "project"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-project-service"
+      }
+    },
+    "lfx-v2-query-service": {
+      "display_name": "LFX Query API",
+      "aliases": [
+        "query-service",
+        "query"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-query-service"
+      }
+    },
+    "lfx-v2-survey-service": {
+      "display_name": "LFX Survey API",
+      "aliases": [
+        "survey-service",
+        "survey"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-survey-service"
+      }
+    },
+    "lfx-v2-voting-service": {
+      "display_name": "LFX Voting API",
+      "aliases": [
+        "voting-service",
+        "voting"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-voting-service"
+      }
+    },
+    "lfx-v2-persona-service": {
+      "display_name": "LFX Persona API",
+      "aliases": [
+        "persona-service",
+        "persona"
+      ],
+      "environments": [
+        "prod"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-persona-service"
+      }
+    },
+    "lfx-v2-fga-sync": {
+      "display_name": "LFX FGA Sync",
+      "aliases": [
+        "fga-sync",
+        "fga"
+      ],
+      "deployment": {
+        "type": "platform-subchart",
+        "platform_key": "lfx-v2-fga-sync"
+      }
+    },
+    "lfx-v2-indexer-service": {
+      "display_name": "LFX Indexer Service",
+      "aliases": [
+        "indexer-service",
+        "indexer"
+      ],
+      "deployment": {
+        "type": "platform-subchart",
+        "platform_key": "lfx-v2-indexer-service"
+      }
+    },
+    "lfx-v2-campaign-service": {
+      "display_name": "LFX Campaign Service",
+      "aliases": [
+        "campaign-service",
+        "campaign"
+      ],
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-v2-campaign-service"
+      }
+    },
+    "lfx-self-serve": {
+      "display_name": "LFX Self Serve UI",
+      "github_repo": "linuxfoundation/lfx-self-serve",
+      "ci_workflow": "Docker Build - Release",
+      "release_script": "self-serve",
+      "argocd_product_name": "LFX Self Serve",
+      "ci_slack_label": "Docker Build",
+      "ci_plan_note": "docker-build-tag.yml  (up to 5 min appear + 5 min complete)",
+      "show_service_in_plan": false,
+      "deployment": {
+        "type": "standalone",
+        "app_name": "lfx-self-serve"
+      }
+    }
+  }
+}

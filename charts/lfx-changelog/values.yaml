@@ -206,6 +206,40 @@ environment:
   WEBHOOK_STATE_SECRET:
     value:
 
+  # UI releases (dedicated GitHub App, Slack, Argo CD sync)
+  RELEASE_GITHUB_APP_ID:
+    value:
+
+  RELEASE_GITHUB_PRIVATE_KEY:
+    value:
+
+  RELEASE_GITHUB_INSTALLATION_ID:
+    value:
+
+  RELEASE_SLACK_BOT_TOKEN:
+    value:
+
+  RELEASE_SLACK_CHANNEL:
+    value: lfx-one-app-dev
+
+  RELEASE_LOCK_TOKEN:
+    value:
+
+  RELEASE_ARGOCD_SYNC_ENABLED:
+    value: "false"
+
+  ARGOCD_STAGING_URL:
+    value:
+
+  ARGOCD_STAGING_TOKEN:
+    value:
+
+  ARGOCD_PROD_URL:
+    value:
+
+  ARGOCD_PROD_TOKEN:
+    value:
+
 # Blog scheduler CronJob (monthly roundup trigger)
 blogScheduler:
   # 9:00 AM UTC on the 1st of every month

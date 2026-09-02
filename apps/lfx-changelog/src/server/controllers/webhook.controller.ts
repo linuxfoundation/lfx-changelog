@@ -8,6 +8,7 @@ import { serverLogger } from '../server-logger';
 import { ChangelogAgentService } from '../services/changelog-agent.service';
 import { GitHubService } from '../services/github.service';
 import { getPrismaClient } from '../services/prisma.service';
+import { releaseApprovalService } from '../services/release-approval.service';
 import { SlackService } from '../services/slack.service';
 
 import type { AgentJobTrigger, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
@@ -77,6 +78,25 @@ export class WebhookController {
    */
   public async githubWebhook(req: Request, res: Response): Promise<void> {
     const event = req.headers['x-github-event'] as string;
+
+    if (event === 'pull_request_review') {
+      await releaseApprovalService.handleReviewWebhook(req.body as {
+        action?: string;
+        review?: { user?: { login?: string }; state?: string };
+        pull_request?: { number?: number };
+        repository?: { full_name?: string };
+      });
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (event === 'pull_request') {
+      await releaseApprovalService.handlePullRequestWebhook(req.body as {
+        action?: string;
+        pull_request?: { number?: number; merged?: boolean };
+        repository?: { full_name?: string };
+      });
+    }
 
     if (!this.isRelevantEvent(event, req.body as Record<string, unknown>)) {
       res.status(200).json({ ok: true, ignored: true });
@@ -222,6 +242,10 @@ export class WebhookController {
       const repo = body['repository'] as { default_branch?: string } | undefined;
       const defaultBranch = repo?.default_branch || 'main';
       return ref === `refs/heads/${defaultBranch}`;
+    }
+
+    if (event === 'pull_request_review') {
+      return true;
     }
 
     if (event === 'pull_request') {

@@ -1,0 +1,78 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <a routerLink="/admin/release-jobs" class="text-brand-700 text-sm">Back to catalog</a>
+
+  @if (!job()) {
+    <p class="text-text-secondary">Loading job…</p>
+  } @else {
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 data-testid="release-job-heading" class="font-display text-text-primary text-2xl font-bold">{{ job()!.serviceKey }} {{ job()!.newTag }}</h1>
+        <p class="text-text-secondary mt-1">Status: {{ job()!.status }}</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        @if (canCancel()) {
+          <lfx-button data-testid="release-job-cancel" variant="danger" size="sm" [loading]="busy()" (clicked)="cancel()">Cancel wait</lfx-button>
+        }
+        @if (canRetry()) {
+          <lfx-button data-testid="release-job-retry" size="sm" [loading]="busy()" (clicked)="retry()">Retry</lfx-button>
+        }
+        @if (canRefresh()) {
+          <lfx-button data-testid="release-job-refresh" variant="secondary" size="sm" [loading]="busy()" (clicked)="refreshSync()">Refresh status</lfx-button>
+        }
+      </div>
+    </div>
+
+    <div class="border-border bg-surface grid gap-2 rounded-lg border p-4 text-sm">
+      @if (job()!.releaseUrl) {
+        <div>Published version: <a class="text-brand-700" [href]="job()!.releaseUrl" target="_blank">{{ job()!.releaseUrl }}</a></div>
+      }
+      @if (job()!.ciStatus) {
+        <div>
+          CI: {{ job()!.ciStatus }}
+          @if (job()!.ciRunUrl) {
+            — <a class="text-brand-700" [href]="job()!.ciRunUrl" target="_blank">run</a>
+          }
+        </div>
+      }
+      @if (job()!.argocdPrUrl) {
+        <div>Deployment change: <a class="text-brand-700" [href]="job()!.argocdPrUrl" target="_blank">{{ job()!.argocdPrUrl }}</a></div>
+      }
+      @if (job()!.bumpOutcome) {
+        <div>GitOps bump: {{ job()!.bumpOutcome }}</div>
+      }
+      @if (job()!.mergeQueuedAt) {
+        <div>Merge queue: added {{ job()!.mergeQueuedAt }}</div>
+      }
+      @if (job()!.environmentSyncs?.length) {
+        <div>
+          Sync:
+          @for (sync of job()!.environmentSyncs; track sync.environment) {
+            <div class="text-text-secondary">
+              {{ sync.environment }} ({{ sync.applicationName }}): request {{ sync.requestStatus }}
+              @if (sync.lastSyncStatus) {
+                , {{ sync.lastSyncStatus }}/{{ sync.lastHealth }}
+              }
+            </div>
+          }
+        </div>
+      }
+      @if (job()!.errorMessage) {
+        <div class="text-danger-600">{{ job()!.errorMessage }}</div>
+      }
+    </div>
+
+    <div data-testid="release-job-console" class="bg-surface-alt text-text-primary overflow-auto rounded-lg p-4 font-mono text-xs">
+      @for (line of log(); track line.timestamp + line.summary) {
+        <div>
+          <span class="opacity-70">{{ line.timestamp }}</span>
+          [{{ line.step }}] {{ line.type }} — {{ line.summary }}
+        </div>
+      } @empty {
+        <div>Waiting for the first progress line…</div>
+      }
+    </div>
+  }
+</div>

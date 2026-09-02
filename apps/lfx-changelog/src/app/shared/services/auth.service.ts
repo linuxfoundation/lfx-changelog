@@ -14,6 +14,10 @@ export class AuthService {
 
   public readonly isSuperAdmin = computed(() => this.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN) ?? false);
 
+  public readonly canStartRelease = computed(
+    () => this.dbUser()?.roles?.some((r) => r.role === UserRole.SUPER_ADMIN || r.role === UserRole.PRODUCT_ADMIN) ?? false
+  );
+
   /** Whether the user has global access (super admin or a role with productId === null). */
   public readonly hasGlobalAccess = computed(() => {
     if (this.isSuperAdmin()) return true;

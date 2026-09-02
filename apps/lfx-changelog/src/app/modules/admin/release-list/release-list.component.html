@@ -1,0 +1,112 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left">
+    <h1 data-testid="release-list-heading" class="font-display text-text-primary text-2xl font-bold">Create a new release</h1>
+    <p class="text-text-secondary mt-1">Services you may ship, with the latest tag and pending merged changes.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="border-border bg-surface animate-pulse rounded-lg border p-6">Loading catalog…</div>
+  } @else if (services().length === 0) {
+    <div data-testid="release-list-empty" class="border-border bg-surface rounded-lg border px-6 py-12 text-center">
+      <h3 class="text-text-primary text-lg font-medium">No releasable services</h3>
+      <p class="text-text-secondary mt-1">You do not have a mapped service, or the catalog is empty.</p>
+    </div>
+  } @else {
+    <div data-testid="release-list-table" class="border-border bg-surface overflow-x-auto rounded-lg border">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-surface-alt text-text-secondary">
+          <tr>
+            <th class="px-4 py-3 font-medium">Service</th>
+            <th class="px-4 py-3 font-medium">Latest tag</th>
+            <th class="px-4 py-3 font-medium">Pending</th>
+            <th class="px-4 py-3 font-medium">Environments</th>
+            @if (authService.isSuperAdmin()) {
+              <th class="px-4 py-3 font-medium">Product map</th>
+            }
+            <th class="px-4 py-3 font-medium"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (service of services(); track service.key) {
+            <tr class="border-border border-t" [attr.data-testid]="'release-list-row-' + service.key">
+              <td class="px-4 py-3">
+                <div class="text-text-primary font-medium">{{ service.displayName }}</div>
+                <div class="text-text-muted text-xs">{{ service.githubRepo }}</div>
+                @if (service.auditError) {
+                  <div class="text-danger-600 mt-1 text-xs">{{ service.auditError }}</div>
+                }
+              </td>
+              <td class="text-text-secondary px-4 py-3">{{ service.latestTag }}</td>
+              <td class="text-text-secondary px-4 py-3">{{ service.pendingCount }}</td>
+              <td class="text-text-secondary px-4 py-3">{{ service.environments.join(', ') }}</td>
+              @if (authService.isSuperAdmin()) {
+                <td class="px-4 py-3">
+                  <select
+                    class="border-border bg-surface text-text-primary rounded-md border px-2 py-1 text-xs"
+                    [value]="service.productId ?? ''"
+                    [disabled]="mappingKey() === service.key"
+                    (change)="saveMapping(service.key, $any($event.target).value)">
+                    <option value="">Unmapped</option>
+                    @for (product of products(); track product.id) {
+                      <option [value]="product.id">{{ product.name }}</option>
+                    }
+                  </select>
+                </td>
+              }
+              <td class="px-4 py-3 text-right">
+                @if (service.activeJobId) {
+                  <a class="text-brand-700 text-sm font-medium" [routerLink]="['/admin/release-jobs', service.activeJobId]">Open job</a>
+                } @else {
+                  <lfx-button
+                    size="sm"
+                    [disabled]="service.pendingCount === 0 || !service.canRelease"
+                    [attr.data-testid]="'release-list-start-' + service.key"
+                    (clicked)="start(service)">
+                    Start
+                  </lfx-button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <div>
+    <h2 class="text-text-primary mb-3 text-lg font-semibold">Recent jobs</h2>
+    @if (jobs().data.length === 0) {
+      <p class="text-text-secondary text-sm">No release jobs yet.</p>
+    } @else {
+      <div data-testid="release-history-table" class="border-border bg-surface overflow-x-auto rounded-lg border">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-surface-alt text-text-secondary">
+            <tr>
+              <th class="px-4 py-3 font-medium">Service</th>
+              <th class="px-4 py-3 font-medium">Tag</th>
+              <th class="px-4 py-3 font-medium">Status</th>
+              <th class="px-4 py-3 font-medium">Requester</th>
+              <th class="px-4 py-3 font-medium"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (job of jobs().data; track job.id) {
+              <tr class="border-border border-t">
+                <td class="px-4 py-3">{{ job.serviceKey }}</td>
+                <td class="px-4 py-3">{{ job.newTag }}</td>
+                <td class="px-4 py-3">{{ job.status }}</td>
+                <td class="text-text-muted px-4 py-3">{{ job.requesterId }}</td>
+                <td class="px-4 py-3 text-right">
+                  <a class="text-brand-700 text-sm font-medium" [routerLink]="['/admin/release-jobs', job.id]">View</a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

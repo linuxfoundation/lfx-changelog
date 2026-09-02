@@ -102,6 +102,24 @@ export {
   OpenSearchSearchResponseSchema,
 } from './opensearch.schema.js';
 export { AddSlackNotifyUserRequestSchema, ProductSchema, ProductSlackNotifyUserSchema } from './product.schema.js';
+export {
+  ActiveJobConflictSchema,
+  EnvironmentSyncRequestStatusSchema,
+  EnvironmentSyncSchema,
+  GenerateNotesRequestSchema,
+  PendingChangeSchema,
+  ReleaseJobQueryParamsSchema,
+  ReleaseJobSchema,
+  ReleaseJobSSEEventSchema,
+  ReleaseJobStatusSchema,
+  ReleaseNotesPreviewSchema,
+  ReleasePlanSchema,
+  ReleaseProgressLineSchema,
+  ReleaseProgressTypeSchema,
+  ReleasableServiceSchema,
+  StartReleaseRequestSchema,
+  UpdateServiceMappingRequestSchema,
+} from './release-job.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
 export {
   RoadmapBoardResponseSchema,
@@ -235,6 +253,23 @@ export type {
   OpenSearchSearchResponse,
 } from './opensearch.schema.js';
 export type { AddSlackNotifyUserRequest, Product, ProductSlackNotifyUser } from './product.schema.js';
+export type {
+  ActiveJobConflict,
+  EnvironmentSync,
+  GenerateNotesRequest,
+  PendingChange,
+  ReleaseJob,
+  ReleaseJobQueryParams,
+  ReleaseJobSSEEvent,
+  ReleaseJobSSEEventType,
+  ReleaseNotesPreview,
+  ReleasePlan,
+  ReleaseProgressLine,
+  ReleaseProgressType,
+  ReleasableService,
+  StartReleaseRequest,
+  UpdateServiceMappingRequest,
+} from './release-job.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
 export type {
   AdfMark,
