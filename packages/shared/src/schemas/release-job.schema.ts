@@ -27,7 +27,7 @@ export const EnvironmentSyncSchema = z
   .object({
     environment: z.string(),
     applicationName: z.string(),
-    requestStatus: z.string(),
+    requestStatus: EnvironmentSyncRequestStatusSchema,
     lastSyncStatus: z.string().nullable(),
     lastHealth: z.string().nullable(),
     lastRefreshedAt: z.string().nullable(),
