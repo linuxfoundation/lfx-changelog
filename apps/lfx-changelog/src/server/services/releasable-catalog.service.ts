@@ -5,29 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export type DeploymentType = 'standalone' | 'platform-subchart';
-
-export interface DeploymentConfig {
-  type: DeploymentType;
-  appName?: string;
-  platformKey?: string;
-}
-
-export interface ReleasableServiceConfig {
-  key: string;
-  displayName: string;
-  githubRepo: string;
-  ciWorkflow: string;
-  argocdRepo: string;
-  environments: string[];
-  aliases: string[];
-  deployment: DeploymentConfig;
-  releaseScript: string;
-  argocdProductName?: string;
-  ciSlackLabel: string;
-  ciPlanNote?: string;
-  showServiceInPlan: boolean;
-}
+import type { DeploymentType, ReleasableServiceConfig } from '../interfaces/release.interface';
 
 interface RegistryJson {
   defaults?: {

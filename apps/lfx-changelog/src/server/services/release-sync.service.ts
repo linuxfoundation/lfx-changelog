@@ -1,14 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 import { releasableCatalogService } from './releasable-catalog.service';
-import { serverLogger } from '../server-logger';
 
-import type { ReleasableServiceConfig } from './releasable-catalog.service';
+import type { ReleasableServiceConfig } from '../interfaces/release.interface';
 
-const DISABLED_REASON =
-  'Argo CD sync is disabled. Deploy apply is left to the cluster webhook.';
+const DISABLED_REASON = 'Argo CD sync is disabled. Deploy apply is left to the cluster webhook.';
 
 export function isArgocdSyncEnabled(): boolean {
   const raw = (process.env['RELEASE_ARGOCD_SYNC_ENABLED'] || '').trim().toLowerCase();

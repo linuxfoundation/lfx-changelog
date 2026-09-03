@@ -3,11 +3,7 @@
 
 import { getPrismaClient } from './prisma.service';
 
-export interface SlackMapEntry {
-  githubUsername: string;
-  slackId: string;
-  displayName: string;
-}
+import type { SlackMapEntry } from '../interfaces/release.interface';
 
 export class ReleaseSlackMapService {
   public async load(): Promise<Map<string, SlackMapEntry>> {

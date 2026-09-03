@@ -1,19 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { releaseGitHubService } from './release-github.service';
 import { serverLogger } from '../server-logger';
+import { releaseGitHubService } from './release-github.service';
 
 import type { PendingChange } from '@lfx-changelog/shared';
+import type { ServiceAudit } from '../interfaces/release.interface';
 
 const GITHUB_API_BASE = 'https://api.github.com';
-
-export interface ServiceAudit {
-  latestTag: string;
-  publishedAt: string | null;
-  pending: PendingChange[];
-  error: string | null;
-}
 
 export function computeNextTag(latestTag: string): { newTag: string; argocdTag: string } {
   const semver = /^v(\d+)\.(\d+)\.(\d+)$/.exec(latestTag);

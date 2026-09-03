@@ -1,17 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { releaseSlackMapService } from './release-slack-map.service';
 import { serverLogger } from '../server-logger';
+import { releaseSlackMapService } from './release-slack-map.service';
+
+import type { SlackPostResult } from '../interfaces/release.interface';
 
 const POST_MESSAGE_URL = 'https://slack.com/api/chat.postMessage';
-
-export interface SlackPostResult {
-  ok: boolean;
-  ts?: string;
-  channel?: string;
-  error?: string;
-}
 
 export class ReleaseSlackService {
   public isConfigured(): boolean {
