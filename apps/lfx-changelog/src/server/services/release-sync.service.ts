@@ -127,12 +127,12 @@ export class ReleaseSyncService {
 
   private credentials(environment: string): { url: string; token: string } | null {
     const envKey = environment === 'prod' || environment === 'production' ? 'PROD' : 'STAGING';
-    const url = process.env[`ARGOCD_${envKey}_URL`] || '';
-    const token = process.env[`ARGOCD_${envKey}_TOKEN`] || '';
+    const url = (process.env[`ARGOCD_${envKey}_URL`] || '').trim();
+    const token = (process.env[`ARGOCD_${envKey}_TOKEN`] || '').trim();
     if (!url || !token) {
       return null;
     }
-    return { url: url.replace(/\/$/, ''), token };
+    return { url: url.replace(/\/+$/, ''), token };
   }
 }
 
