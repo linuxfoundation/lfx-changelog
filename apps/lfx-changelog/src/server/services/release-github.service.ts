@@ -225,14 +225,23 @@ export class ReleaseGitHubService {
 
   public async listReviews(repo: string, pullNumber: number): Promise<{ user: string; state: string }[]> {
     const token = await this.getInstallationToken();
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/pulls/${pullNumber}/reviews`, {
-      headers: this.headers(token),
-    });
-    if (!response.ok) {
-      throw new Error(`List reviews failed: ${response.status}`);
+    const reviews: { user: string; state: string }[] = [];
+    for (let page = 1; ; page++) {
+      const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/pulls/${pullNumber}/reviews?per_page=100&page=${page}`, {
+        headers: this.headers(token),
+      });
+      if (!response.ok) {
+        throw new Error(`List reviews failed: ${response.status}`);
+      }
+      const data = (await response.json()) as { user?: { login?: string }; state?: string }[];
+      for (const review of data) {
+        reviews.push({ user: review.user?.login || '', state: review.state || '' });
+      }
+      if (data.length < 100) {
+        break;
+      }
     }
-    const data = (await response.json()) as { user?: { login?: string }; state?: string }[];
-    return data.map((review) => ({ user: review.user?.login || '', state: review.state || '' }));
+    return reviews;
   }
 
   public async requiredChecksPassed(repo: string, pullNumber: number): Promise<boolean> {
