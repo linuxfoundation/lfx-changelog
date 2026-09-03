@@ -89,7 +89,7 @@ export class ReleaseWorkflowService {
       (stale as Error & { expectedTag: string }).expectedTag = tags.newTag;
       throw stale;
     }
-    if (input.headSha && input.headSha !== audit.headSha) {
+    if (input.headSha !== audit.headSha) {
       const stale = new Error('STALE_HEAD_SHA');
       (stale as Error & { expectedHeadSha: string | null }).expectedHeadSha = audit.headSha;
       throw stale;
