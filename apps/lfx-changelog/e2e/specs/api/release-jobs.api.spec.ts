@@ -39,6 +39,17 @@ test.describe('Release jobs API', () => {
     expect(res.status()).toBe(403);
   });
 
+  test('POST /api/release-jobs returns 422 for super_admin with missing notes', async () => {
+    const catalog = await superAdminApi.get('/api/releasable-services');
+    const body = await catalog.json();
+    const first = body.data?.[0] as { key?: string } | undefined;
+    test.skip(!first?.key, 'Release catalog is empty in this environment; cannot exercise the create endpoint');
+    const res = await superAdminApi.post('/api/release-jobs', {
+      data: { serviceKey: first?.key, notes: '' },
+    });
+    expect(res.status()).toBe(422);
+  });
+
   test('GET /api/releasable-services returns 200 for super_admin', async () => {
     const res = await superAdminApi.get('/api/releasable-services');
     expect(res.status()).toBe(200);
