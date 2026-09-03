@@ -61,6 +61,24 @@ export class ReleaseGitHubService {
     return data.html_url;
   }
 
+  public async getReleaseByTag(repo: string, tag: string): Promise<{ htmlUrl: string; body: string } | null> {
+    const token = await this.getInstallationToken();
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/releases/tags/${tag}`, {
+      headers: this.headers(token),
+    });
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      throw new Error(`Get GitHub release failed: ${response.status}`);
+    }
+    const data = (await response.json()) as { html_url?: string; body?: string };
+    if (!data.html_url) {
+      throw new Error('Get GitHub release returned no URL');
+    }
+    return { htmlUrl: data.html_url, body: data.body || '' };
+  }
+
   public async waitForCi(repo: string, tag: string, workflowName: string): Promise<{ status: string; runUrl: string }> {
     const token = await this.getInstallationToken();
     const workflowId = await this.resolveWorkflowId(repo, workflowName, token);
@@ -306,9 +324,7 @@ export class ReleaseGitHubService {
       return null;
     }
     const data = (await response.json()) as { workflows?: { id: number; name?: string; path?: string }[] };
-    const match = (data.workflows ?? []).find(
-      (workflow) => workflow.name === workflowName || workflow.path?.endsWith(`/${workflowName}`)
-    );
+    const match = (data.workflows ?? []).find((workflow) => workflow.name === workflowName || workflow.path?.endsWith(`/${workflowName}`));
     return match?.id ?? null;
   }
 
@@ -332,11 +348,7 @@ export class ReleaseGitHubService {
     return jwt.sign({ iat: now - 60, exp: now + 600, iss: appId }, privateKey, { algorithm: 'RS256' });
   }
 
-  private async mergeQueueState(
-    owner: string,
-    name: string,
-    pullNumber: number
-  ): Promise<{ nodeId: string | null; queued: boolean; position: number | null }> {
+  private async mergeQueueState(owner: string, name: string, pullNumber: number): Promise<{ nodeId: string | null; queued: boolean; position: number | null }> {
     const data = await this.graphql<{
       repository?: {
         pullRequest?: {
@@ -375,7 +387,11 @@ export class ReleaseGitHubService {
     });
     const payload = (await response.json()) as { data?: T; errors?: { message?: string }[] };
     if (!response.ok || payload.errors?.length) {
-      const message = payload.errors?.map((entry) => entry.message).filter(Boolean).join('; ') || `GraphQL failed: ${response.status}`;
+      const message =
+        payload.errors
+          ?.map((entry) => entry.message)
+          .filter(Boolean)
+          .join('; ') || `GraphQL failed: ${response.status}`;
       throw new Error(message);
     }
     if (!payload.data) {

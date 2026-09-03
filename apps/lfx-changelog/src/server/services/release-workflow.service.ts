@@ -332,10 +332,22 @@ export class ReleaseWorkflowService {
       const service = releasableCatalogService.require(job.serviceKey);
 
       if (!job.releaseUrl) {
-        await this.append(jobId, 'github_release', 'info', `Creating GitHub release ${job.newTag}`);
-        const releaseUrl = await releaseGitHubService.createRelease(service.githubRepo, job.newTag, job.releaseNotes);
+        const existing = await releaseGitHubService.getReleaseByTag(service.githubRepo, job.newTag);
+        let releaseUrl: string;
+        if (existing) {
+          if (existing.body !== job.releaseNotes) {
+            throw new Error(
+              `GitHub release ${job.newTag} already exists in ${service.githubRepo} with different notes; refusing to adopt it as this job's release`
+            );
+          }
+          releaseUrl = existing.htmlUrl;
+          await this.append(jobId, 'github_release', 'success', `Found existing release ${job.newTag} from a previous attempt`);
+        } else {
+          await this.append(jobId, 'github_release', 'info', `Creating GitHub release ${job.newTag}`);
+          releaseUrl = await releaseGitHubService.createRelease(service.githubRepo, job.newTag, job.releaseNotes);
+          await this.append(jobId, 'github_release', 'success', `Published ${job.newTag}`);
+        }
         job = await prisma.releaseJob.update({ where: { id: jobId }, data: { releaseUrl } });
-        await this.append(jobId, 'github_release', 'success', `Published ${job.newTag}`);
       }
 
       if (!job.slackThreadTs) {
