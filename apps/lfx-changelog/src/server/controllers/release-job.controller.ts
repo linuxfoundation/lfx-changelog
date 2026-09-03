@@ -156,17 +156,13 @@ export class ReleaseJobController {
         flushableRes.flush?.();
       };
 
-      for (const entry of job.progressLog as unknown[]) {
-        sendEvent('progress', entry);
-      }
-      sendEvent('status', { status: job.status });
-      if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
-        sendEvent('done', '');
-        res.end();
-        return;
-      }
-
+      let replaying = true;
+      const buffered: ReleaseJobSSEEvent[] = [];
       const listener = (event: ReleaseJobSSEEvent): void => {
+        if (replaying) {
+          buffered.push(event);
+          return;
+        }
         sendEvent(event.type, event.data);
         if (event.type === 'done') {
           cleanup();
@@ -174,6 +170,36 @@ export class ReleaseJobController {
         }
       };
       releaseJobEmitter.subscribe(job.id, listener);
+
+      const snapshotLog = job.progressLog as { timestamp?: string }[];
+      for (const entry of snapshotLog) {
+        sendEvent('progress', entry);
+      }
+      sendEvent('status', { status: job.status });
+      if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
+        sendEvent('done', '');
+        releaseJobEmitter.unsubscribe(job.id, listener);
+        res.end();
+        return;
+      }
+
+      replaying = false;
+      const lastTimestamp = snapshotLog[snapshotLog.length - 1]?.timestamp;
+      let done = false;
+      for (const event of buffered) {
+        if (event.type === 'progress') {
+          const entryTimestamp = (event.data as { timestamp?: string } | undefined)?.timestamp;
+          if (lastTimestamp && entryTimestamp && entryTimestamp <= lastTimestamp) {
+            continue;
+          }
+        }
+        sendEvent(event.type, event.data);
+        if (event.type === 'done') {
+          done = true;
+          break;
+        }
+      }
+
       const heartbeat = setInterval(() => {
         if (clientDisconnected) {
           cleanup();
@@ -185,6 +211,11 @@ export class ReleaseJobController {
         clearInterval(heartbeat);
         releaseJobEmitter.unsubscribe(job.id, listener);
       };
+      if (done) {
+        cleanup();
+        res.end();
+        return;
+      }
       req.on('close', () => {
         clientDisconnected = true;
         cleanup();
