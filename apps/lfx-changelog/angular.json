@@ -71,7 +71,7 @@
               "@lfx-changelog/mcp-server",
               "@modelcontextprotocol/sdk",
               "@opensearch-project/opensearch",
-              "dd-trace"
+              "@opentelemetry/api"
             ]
           },
           "configurations": {

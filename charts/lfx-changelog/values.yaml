@@ -240,6 +240,22 @@ environment:
   ARGOCD_PROD_TOKEN:
     value:
 
+  # OpenTelemetry configuration
+  OTEL_SERVICE_NAME:
+    value: 'lfx-changelog'
+
+  # OTEL_EXPORTER_OTLP_ENDPOINT is intentionally absent here.
+  # Set it in the per-environment ArgoCD overlay to http://<hostIP>:4318
+  # using the Kubernetes downward API for the node IP. When unset, otel.mjs
+  # defaults to http://localhost:4318 (no-op in production).
+
+  OTEL_RESOURCE_ATTRIBUTES:
+    value: 'deployment.environment.name=production'
+
+  # Disable OTel log export — Pino + Datadog log agent handles logs
+  OTEL_LOGS_EXPORTER:
+    value: 'none'
+
 # Blog scheduler CronJob (monthly roundup trigger)
 blogScheduler:
   # 9:00 AM UTC on the 1st of every month

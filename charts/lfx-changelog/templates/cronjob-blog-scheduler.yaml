@@ -20,6 +20,7 @@ spec:
       labels:
         {{- include "lfx-changelog.labels" . | nindent 8 }}
         app.kubernetes.io/component: blog-scheduler
+        tags.datadoghq.com/service: {{ include "lfx-changelog.name" . }}
     spec:
       ttlSecondsAfterFinished: {{ .Values.blogScheduler.ttlSecondsAfterFinished }}
       backoffLimit: {{ .Values.blogScheduler.backoffLimit }}
@@ -27,6 +28,7 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/component: blog-scheduler
+            tags.datadoghq.com/service: {{ include "lfx-changelog.name" . }}
         spec:
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
