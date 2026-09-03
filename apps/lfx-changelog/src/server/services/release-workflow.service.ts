@@ -285,7 +285,7 @@ export class ReleaseWorkflowService {
 
     const syncLine = syncs.map((row) => `${row.environment}=${row.requestStatus}`).join(', ');
     if (job.slackThreadTs) {
-      const audit = await releaseGitHubAuditService.audit(service.githubRepo);
+      const audit = await releaseGitHubAuditService.auditSince(service.githubRepo, job.latestTag);
       let argocdLine: string;
       if (job.argocdPrUrl) {
         argocdLine = `<${job.argocdPrUrl}|GitOps PR>`;
@@ -339,7 +339,7 @@ export class ReleaseWorkflowService {
       }
 
       if (!job.slackThreadTs) {
-        const audit = await releaseGitHubAuditService.audit(service.githubRepo);
+        const audit = await releaseGitHubAuditService.auditSince(service.githubRepo, job.latestTag);
         const start = await releaseSlackService.postStart(service.displayName, job.newTag, audit.pending.length);
         if (start.ok && start.ts) {
           job = await prisma.releaseJob.update({

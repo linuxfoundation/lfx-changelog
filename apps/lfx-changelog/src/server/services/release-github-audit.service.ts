@@ -65,6 +65,39 @@ export class ReleaseGitHubAuditService {
     }
   }
 
+  public async auditSince(githubRepo: string, sinceTag: string): Promise<ServiceAudit> {
+    try {
+      const token = await releaseGitHubService.getInstallationToken();
+      const release = await this.fetchReleaseByTag(githubRepo, sinceTag, token);
+      if (!release) {
+        throw new Error(`Release ${sinceTag} not found in ${githubRepo}`);
+      }
+      const pending = release.publishedAt ? await this.fetchPendingPrs(githubRepo, release.publishedAt, token) : [];
+      return { latestTag: release.tagName, publishedAt: release.publishedAt, pending, error: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      serverLogger.warn({ err: error, githubRepo, sinceTag }, 'Release audit (since tag) failed');
+      return { latestTag: sinceTag, publishedAt: null, pending: [], error: message };
+    }
+  }
+
+  private async fetchReleaseByTag(repo: string, tag: string, token: string): Promise<{ tagName: string; publishedAt: string | null } | null> {
+    if (tag === 'v0.0.0') {
+      return { tagName: tag, publishedAt: '1970-01-01T00:00:00Z' };
+    }
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/releases/tags/${tag}`, {
+      headers: this.headers(token),
+    });
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      throw new Error(`GitHub release lookup failed: ${response.status}`);
+    }
+    const body = (await response.json()) as { tag_name?: string; published_at?: string };
+    return { tagName: body.tag_name || tag, publishedAt: body.published_at ?? null };
+  }
+
   private async fetchLatestRelease(repo: string, token: string): Promise<{ tagName: string; publishedAt: string | null }> {
     const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/releases/latest`, {
       headers: this.headers(token),
