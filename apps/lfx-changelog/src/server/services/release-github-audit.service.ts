@@ -44,7 +44,7 @@ export class ReleaseGitHubAuditService {
     try {
       const token = await releaseGitHubService.getInstallationToken();
       const latest = await this.fetchLatestRelease(githubRepo, token);
-      const pending = latest.publishedAt ? await this.fetchPendingPrs(githubRepo, latest.publishedAt, token) : [];
+      const pending = await this.fetchPendingPrs(githubRepo, latest.tagName, token);
       const headSha = await this.fetchHeadSha(githubRepo, token);
       const value: ServiceAudit = {
         latestTag: latest.tagName,
@@ -75,7 +75,7 @@ export class ReleaseGitHubAuditService {
       if (!release) {
         throw new Error(`Release ${sinceTag} not found in ${githubRepo}`);
       }
-      const pending = release.publishedAt ? await this.fetchPendingPrs(githubRepo, release.publishedAt, token) : [];
+      const pending = await this.fetchPendingPrs(githubRepo, release.tagName, token);
       const headSha = await this.fetchHeadSha(githubRepo, token);
       return { latestTag: release.tagName, publishedAt: release.publishedAt, headSha, pending, error: null };
     } catch (error) {
@@ -116,7 +116,17 @@ export class ReleaseGitHubAuditService {
     return { tagName: body.tag_name || 'v0.0.0', publishedAt: body.published_at ?? null };
   }
 
-  private async fetchPendingPrs(repo: string, sinceIso: string, token: string): Promise<PendingChange[]> {
+  /**
+   * Windows "pending" PRs by the tag's actual position in commit history rather than the
+   * release's `published_at` timestamp. A release can be tagged (and, for a draft, created)
+   * at an earlier commit than when GitHub marks it published, so `published_at`-based
+   * windowing can wrongly exclude PRs that merged before the tag was published but after it
+   * was created — or, for a still-unpublished draft, exclude every PR by treating `published_at`
+   * as absent. Comparing merge commit SHAs against the tag..main commit range is correct in both
+   * cases.
+   */
+  private async fetchPendingPrs(repo: string, sinceTag: string, token: string): Promise<PendingChange[]> {
+    const commitShas = sinceTag === 'v0.0.0' ? null : await this.fetchCommitShasSinceTag(repo, sinceTag, token);
     const pending: PendingChange[] = [];
     for (let page = 1; page <= this.maxPendingPages; page++) {
       const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/pulls?state=closed&base=main&sort=updated&direction=desc&per_page=100&page=${page}`, {
@@ -129,14 +139,17 @@ export class ReleaseGitHubAuditService {
         number: number;
         title: string;
         merged_at: string | null;
-        updated_at: string;
+        merge_commit_sha: string | null;
         user?: { login?: string };
       }[];
       if (body.length === 0) {
         break;
       }
       for (const pr of body) {
-        if (pr.merged_at && pr.merged_at > sinceIso) {
+        if (!pr.merged_at) {
+          continue;
+        }
+        if (commitShas === null || (pr.merge_commit_sha && commitShas.has(pr.merge_commit_sha))) {
           pending.push({
             number: pr.number,
             title: pr.title,
@@ -145,13 +158,23 @@ export class ReleaseGitHubAuditService {
           });
         }
       }
-      // Sorted by last-updated descending: once a page's oldest update predates the release, no later page can hold a newer merge.
-      const oldestUpdatedAt = body[body.length - 1]?.updated_at;
-      if (oldestUpdatedAt && oldestUpdatedAt <= sinceIso) {
+      // Every commit in the tag..main range has been matched to a PR; no later page can add more.
+      if (commitShas !== null && pending.length >= commitShas.size) {
         break;
       }
     }
     return pending;
+  }
+
+  private async fetchCommitShasSinceTag(repo: string, tag: string, token: string): Promise<Set<string>> {
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/compare/${tag}...main`, {
+      headers: this.headers(token),
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub compare failed: ${response.status}`);
+    }
+    const body = (await response.json()) as { commits?: { sha: string }[] };
+    return new Set((body.commits ?? []).map((commit) => commit.sha));
   }
 
   private async fetchHeadSha(repo: string, token: string): Promise<string | null> {

@@ -92,9 +92,24 @@ export class ReleaseApprovalService {
           data: { status: 'running', ...releaseWorkflowService.leaseClaimFields() },
         });
         if (mergeClaim.count === 1) {
-          await releaseWorkflowService.append(job.id, 'merge', 'success', 'Merge queue finished the GitOps pull request.');
-          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `Merge queue finished ${pr.url}.`);
-          await releaseWorkflowService.finishAfterMerge(job.id);
+          try {
+            await releaseWorkflowService.append(job.id, 'merge', 'success', 'Merge queue finished the GitOps pull request.');
+            await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `Merge queue finished ${pr.url}.`);
+            await releaseWorkflowService.finishAfterMerge(job.id);
+          } catch (postMergeError) {
+            // The claim above already flipped status to 'running', so the outer catch's
+            // 'waiting_for_approval' guard would no-op here and leave the job stuck. Fail it
+            // directly against the status this block actually claimed.
+            const message = postMergeError instanceof Error ? postMergeError.message : String(postMergeError);
+            serverLogger.error({ err: postMergeError, prNumber, jobId: job.id }, 'Post-merge finish failed');
+            const claim = await prisma.releaseJob.updateMany({
+              where: { id: job.id, status: 'running' },
+              data: { status: 'failed', errorMessage: message, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null },
+            });
+            if (claim.count === 1) {
+              await releaseWorkflowService.append(job.id, 'merge', 'error', message);
+            }
+          }
         }
         return;
       }

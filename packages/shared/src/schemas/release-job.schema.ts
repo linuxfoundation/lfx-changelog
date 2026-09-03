@@ -77,8 +77,8 @@ export const StartReleaseRequestSchema = z
   .object({
     serviceKey: z.string().min(1),
     notes: z.string().trim().min(1),
-    newTag: z.string().optional(),
-    headSha: z.string().optional(),
+    newTag: z.string().min(1),
+    headSha: z.string().nullable(),
   })
   .openapi('StartReleaseRequest');
 

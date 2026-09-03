@@ -74,7 +74,7 @@ export class ReleaseJobController {
 
   public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { serviceKey, notes, newTag, headSha } = req.body as { serviceKey: string; notes: string; newTag?: string; headSha?: string };
+      const { serviceKey, notes, newTag, headSha } = req.body as { serviceKey: string; notes: string; newTag: string; headSha: string | null };
       await releaseAuthService.assertCanReleaseService(req.dbUser, serviceKey);
       const existing = await releaseAuthService.findActiveJob(serviceKey);
       if (existing) {

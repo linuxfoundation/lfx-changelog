@@ -21,7 +21,8 @@ import { ReleaseJobStatus } from '@lfx-changelog/shared';
 import type { ReleaseProgressLine, ReleaseProgressType } from '@lfx-changelog/shared';
 import type { ReleaseJob } from '@prisma/client';
 
-const running = new Set<string>();
+// Value: whether a rerun was requested while this job's claimAndRun() was already in flight.
+const running = new Map<string, boolean>();
 const INSTANCE_ID = randomUUID();
 const LEASE_TTL_MS = 10 * 60 * 1000;
 const LEASE_RENEW_MS = 3 * 60 * 1000;
@@ -52,7 +53,7 @@ export class ReleaseWorkflowService {
     return { leaseOwner: INSTANCE_ID, leaseExpiresAt: new Date(Date.now() + LEASE_TTL_MS) };
   }
 
-  public async startJob(input: { serviceKey: string; notes: string; newTag?: string; headSha?: string; requesterId: string }): Promise<ReleaseJob> {
+  public async startJob(input: { serviceKey: string; notes: string; newTag: string; headSha: string | null; requesterId: string }): Promise<ReleaseJob> {
     const service = releasableCatalogService.require(input.serviceKey);
     const productId = await releaseAuthService.mappedProductId(service.key);
     const audit = await releaseGitHubAuditService.audit(service.githubRepo, { fresh: true });
@@ -160,12 +161,19 @@ export class ReleaseWorkflowService {
     return updated;
   }
 
+  /**
+   * If a run for this job is already in flight, records that another kickoff (e.g. a retry)
+   * arrived and returns, instead of dropping it: runLoop() checks this flag after the current
+   * run finishes and starts another pass if it's set, so a request that lands in the window
+   * between a failed run's DB write and its cleanup is not silently lost.
+   */
   public kickoff(jobId: string): void {
     if (running.has(jobId)) {
+      running.set(jobId, true);
       return;
     }
-    running.add(jobId);
-    void this.claimAndRun(jobId).finally(() => running.delete(jobId));
+    running.set(jobId, false);
+    void this.runLoop(jobId);
   }
 
   public async append(jobId: string, step: string, type: ReleaseProgressType, summary: string, environment?: string): Promise<void> {
@@ -200,6 +208,14 @@ export class ReleaseWorkflowService {
     await this.withLeaseRenewal(jobId, () => this.finishAfterMergeInner(jobId));
   }
 
+  private async runLoop(jobId: string): Promise<void> {
+    do {
+      running.set(jobId, false);
+      await this.claimAndRun(jobId);
+    } while (running.get(jobId));
+    running.delete(jobId);
+  }
+
   private async claimLease(jobId: string): Promise<boolean> {
     const prisma = getPrismaClient();
     const claim = await prisma.releaseJob.updateMany({
@@ -215,10 +231,13 @@ export class ReleaseWorkflowService {
 
   private async renewLease(jobId: string): Promise<void> {
     const prisma = getPrismaClient();
-    await prisma.releaseJob.updateMany({
+    const claim = await prisma.releaseJob.updateMany({
       where: { id: jobId, leaseOwner: INSTANCE_ID },
       data: { leaseExpiresAt: new Date(Date.now() + LEASE_TTL_MS) },
     });
+    if (claim.count === 0) {
+      serverLogger.warn({ jobId }, 'Lease renewal found no row owned by this instance; lease may have been reclaimed by another replica');
+    }
   }
 
   /**
@@ -237,7 +256,9 @@ export class ReleaseWorkflowService {
   }
 
   private async withLeaseRenewal<T>(jobId: string, fn: () => Promise<T>): Promise<T> {
-    const timer = setInterval(() => void this.renewLease(jobId), LEASE_RENEW_MS);
+    const timer = setInterval(() => {
+      this.renewLease(jobId).catch((err) => serverLogger.error({ err, jobId }, 'Lease renewal failed'));
+    }, LEASE_RENEW_MS);
     try {
       return await fn();
     } finally {

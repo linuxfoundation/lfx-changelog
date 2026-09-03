@@ -23,7 +23,7 @@ export class ReleaseJobService {
     return this.http.get<ApiResponse<ReleaseJob>>(`/api/release-jobs/${id}`).pipe(map((res) => res.data));
   }
 
-  public start(serviceKey: string, notes: string, newTag?: string, headSha?: string | null): Observable<ReleaseJob> {
+  public start(serviceKey: string, notes: string, newTag: string, headSha: string | null): Observable<ReleaseJob> {
     return this.http.post<ApiResponse<ReleaseJob>>('/api/release-jobs', { serviceKey, notes, newTag, headSha }).pipe(
       map((res) => res.data),
       take(1)
