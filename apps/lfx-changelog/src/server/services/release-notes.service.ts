@@ -14,7 +14,17 @@ export class ReleaseNotesService {
       throw new AiServiceError('LiteLLM is not configured', { operation: 'generateReleaseNotes' });
     }
 
-    const prList = pending.map((pr) => `- #${pr.number} ${pr.title} (@${pr.author})`).join('\n');
+    const placeholders = new Map<string, string>();
+    const authorToPlaceholder = (author: string): string => {
+      let placeholder = placeholders.get(author);
+      if (!placeholder) {
+        placeholder = `contributor-${placeholders.size + 1}`;
+        placeholders.set(author, placeholder);
+      }
+      return placeholder;
+    };
+
+    const prList = pending.map((pr) => `- #${pr.number} ${pr.title} (@${authorToPlaceholder(pr.author)})`).join('\n');
     const prompt =
       `Generate GitHub release notes for ${repo} release ${newTag}.\n\n` +
       `The following PRs have been merged to main since ${latestTag}:\n\n` +
@@ -53,7 +63,12 @@ export class ReleaseNotesService {
     if (!notes) {
       throw new AiServiceError('LiteLLM returned empty release notes', { operation: 'generateReleaseNotes' });
     }
-    return notes;
+
+    let restored = notes;
+    for (const [author, placeholder] of placeholders) {
+      restored = restored.replace(new RegExp(`@${placeholder}(?![0-9])`, 'g'), `@${author}`);
+    }
+    return restored;
   }
 }
 
