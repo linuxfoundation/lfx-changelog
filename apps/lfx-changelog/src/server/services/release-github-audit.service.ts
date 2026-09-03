@@ -45,9 +45,11 @@ export class ReleaseGitHubAuditService {
       const token = await releaseGitHubService.getInstallationToken();
       const latest = await this.fetchLatestRelease(githubRepo, token);
       const pending = latest.publishedAt ? await this.fetchPendingPrs(githubRepo, latest.publishedAt, token) : [];
+      const headSha = await this.fetchHeadSha(githubRepo, token);
       const value: ServiceAudit = {
         latestTag: latest.tagName,
         publishedAt: latest.publishedAt,
+        headSha,
         pending,
         error: null,
       };
@@ -59,6 +61,7 @@ export class ReleaseGitHubAuditService {
       return {
         latestTag: '—',
         publishedAt: null,
+        headSha: null,
         pending: [],
         error: message,
       };
@@ -73,11 +76,12 @@ export class ReleaseGitHubAuditService {
         throw new Error(`Release ${sinceTag} not found in ${githubRepo}`);
       }
       const pending = release.publishedAt ? await this.fetchPendingPrs(githubRepo, release.publishedAt, token) : [];
-      return { latestTag: release.tagName, publishedAt: release.publishedAt, pending, error: null };
+      const headSha = await this.fetchHeadSha(githubRepo, token);
+      return { latestTag: release.tagName, publishedAt: release.publishedAt, headSha, pending, error: null };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       serverLogger.warn({ err: error, githubRepo, sinceTag }, 'Release audit (since tag) failed');
-      return { latestTag: sinceTag, publishedAt: null, pending: [], error: message };
+      return { latestTag: sinceTag, publishedAt: null, headSha: null, pending: [], error: message };
     }
   }
 
@@ -148,6 +152,16 @@ export class ReleaseGitHubAuditService {
       }
     }
     return pending;
+  }
+
+  private async fetchHeadSha(repo: string, token: string): Promise<string | null> {
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/commits/main`, {
+      headers: { ...this.headers(token), Accept: 'application/vnd.github.sha' },
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub head commit lookup failed: ${response.status}`);
+    }
+    return (await response.text()).trim() || null;
   }
 
   private headers(token: string): Record<string, string> {

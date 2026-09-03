@@ -35,7 +35,7 @@ export class ReleaseGitHubService {
     return data.token;
   }
 
-  public async createRelease(repo: string, tag: string, notes: string): Promise<string> {
+  public async createRelease(repo: string, tag: string, notes: string, headSha?: string | null): Promise<string> {
     const token = await this.getInstallationToken();
     const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/releases`, {
       method: 'POST',
@@ -47,7 +47,7 @@ export class ReleaseGitHubService {
         tag_name: tag,
         name: tag,
         body: notes,
-        target_commitish: 'main',
+        target_commitish: headSha || 'main',
       }),
     });
     if (!response.ok) {
@@ -135,7 +135,7 @@ export class ReleaseGitHubService {
     nodeId: string;
   }> {
     const token = await this.getInstallationToken();
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/pulls/${pullNumber}`, {
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/pulls/${encodeURIComponent(pullNumber)}`, {
       headers: this.headers(token),
     });
     if (!response.ok) {
@@ -227,9 +227,12 @@ export class ReleaseGitHubService {
     const token = await this.getInstallationToken();
     const reviews: { user: string; state: string }[] = [];
     for (let page = 1; ; page++) {
-      const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/pulls/${pullNumber}/reviews?per_page=100&page=${page}`, {
-        headers: this.headers(token),
-      });
+      const response = await fetch(
+        `${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/pulls/${encodeURIComponent(pullNumber)}/reviews?per_page=100&page=${page}`,
+        {
+          headers: this.headers(token),
+        }
+      );
       if (!response.ok) {
         throw new Error(`List reviews failed: ${response.status}`);
       }
@@ -407,6 +410,10 @@ export class ReleaseGitHubService {
       throw new Error('GraphQL returned no data');
     }
     return payload.data;
+  }
+
+  private encodeRepo(repo: string): string {
+    return repo.split('/').map(encodeURIComponent).join('/');
   }
 
   private headers(token: string): Record<string, string> {

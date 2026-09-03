@@ -3,9 +3,7 @@
 
 import { z } from 'zod';
 
-export const ReleaseJobStatusSchema = z
-  .enum(['pending', 'running', 'waiting_for_approval', 'completed', 'failed', 'cancelled'])
-  .openapi('ReleaseJobStatus');
+export const ReleaseJobStatusSchema = z.enum(['pending', 'running', 'waiting_for_approval', 'completed', 'failed', 'cancelled']).openapi('ReleaseJobStatus');
 
 export const ReleaseProgressTypeSchema = z.enum(['info', 'success', 'error', 'skip']).openapi('ReleaseProgressType');
 
@@ -19,9 +17,7 @@ export const ReleaseProgressLineSchema = z
   })
   .openapi('ReleaseProgressLine');
 
-export const EnvironmentSyncRequestStatusSchema = z
-  .enum(['pending', 'accepted', 'failed', 'skipped'])
-  .openapi('EnvironmentSyncRequestStatus');
+export const EnvironmentSyncRequestStatusSchema = z.enum(['pending', 'accepted', 'failed', 'skipped']).openapi('EnvironmentSyncRequestStatus');
 
 export const EnvironmentSyncSchema = z
   .object({
@@ -64,6 +60,7 @@ export const ReleasePlanSchema = z
     latestTag: z.string(),
     newTag: z.string(),
     argocdTag: z.string(),
+    headSha: z.string().nullable(),
     pending: z.array(PendingChangeSchema),
     environments: z.array(z.string()),
     steps: z.array(z.string()),
@@ -81,6 +78,7 @@ export const StartReleaseRequestSchema = z
     serviceKey: z.string().min(1),
     notes: z.string().trim().min(1),
     newTag: z.string().optional(),
+    headSha: z.string().optional(),
   })
   .openapi('StartReleaseRequest');
 

@@ -74,7 +74,7 @@ export class ReleaseJobController {
 
   public async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { serviceKey, notes, newTag } = req.body as { serviceKey: string; notes: string; newTag?: string };
+      const { serviceKey, notes, newTag, headSha } = req.body as { serviceKey: string; notes: string; newTag?: string; headSha?: string };
       await releaseAuthService.assertCanReleaseService(req.dbUser, serviceKey);
       const existing = await releaseAuthService.findActiveJob(serviceKey);
       if (existing) {
@@ -95,6 +95,7 @@ export class ReleaseJobController {
           serviceKey,
           notes,
           newTag,
+          headSha,
           requesterId: req.dbUser!.id,
         });
         res.status(202).json({ success: true, data: this.toApi(job) });
@@ -118,6 +119,15 @@ export class ReleaseJobController {
             success: false,
             error: 'The release plan is out of date; the next tag has changed',
             data: { expectedTag: stale.expectedTag },
+          });
+          return;
+        }
+        if (error instanceof Error && error.message === 'STALE_HEAD_SHA') {
+          const stale = error as Error & { expectedHeadSha: string | null };
+          res.status(409).json({
+            success: false,
+            error: 'The release plan is out of date; new commits have landed since it was reviewed',
+            data: { expectedHeadSha: stale.expectedHeadSha },
           });
           return;
         }
@@ -156,12 +166,20 @@ export class ReleaseJobController {
         flushableRes.flush?.();
       };
 
+      let lastTimestamp: string | undefined;
       let replaying = true;
       const buffered: ReleaseJobSSEEvent[] = [];
       const listener = (event: ReleaseJobSSEEvent): void => {
         if (replaying) {
           buffered.push(event);
           return;
+        }
+        if (event.type === 'progress') {
+          const entryTimestamp = (event.data as { timestamp?: string } | undefined)?.timestamp;
+          if (lastTimestamp && entryTimestamp && entryTimestamp <= lastTimestamp) {
+            return;
+          }
+          lastTimestamp = entryTimestamp ?? lastTimestamp;
         }
         sendEvent(event.type, event.data);
         if (event.type === 'done') {
@@ -176,6 +194,7 @@ export class ReleaseJobController {
         sendEvent('progress', entry);
       }
       sendEvent('status', { status: job.status });
+      lastTimestamp = snapshotLog[snapshotLog.length - 1]?.timestamp;
       if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
         sendEvent('done', '');
         releaseJobEmitter.unsubscribe(job.id, listener);
@@ -184,7 +203,6 @@ export class ReleaseJobController {
       }
 
       replaying = false;
-      const lastTimestamp = snapshotLog[snapshotLog.length - 1]?.timestamp;
       let done = false;
       for (const event of buffered) {
         if (event.type === 'progress') {
@@ -192,6 +210,7 @@ export class ReleaseJobController {
           if (lastTimestamp && entryTimestamp && entryTimestamp <= lastTimestamp) {
             continue;
           }
+          lastTimestamp = entryTimestamp ?? lastTimestamp;
         }
         sendEvent(event.type, event.data);
         if (event.type === 'done') {
@@ -200,12 +219,41 @@ export class ReleaseJobController {
         }
       }
 
+      // The job may run on a different replica than this SSE connection: the in-process
+      // emitter above only carries events raised in this process, so poll the DB-backed
+      // job row as a cross-replica fallback for progress/status this replica would otherwise miss.
+      const pollJob = async (): Promise<void> => {
+        if (clientDisconnected) {
+          return;
+        }
+        const prisma = getPrismaClient();
+        const current = await prisma.releaseJob.findUnique({ where: { id: job.id }, select: { progressLog: true, status: true } });
+        if (!current) {
+          return;
+        }
+        const log = current.progressLog as { timestamp?: string }[];
+        for (const entry of log) {
+          if (lastTimestamp && entry.timestamp && entry.timestamp <= lastTimestamp) {
+            continue;
+          }
+          sendEvent('progress', entry);
+          lastTimestamp = entry.timestamp ?? lastTimestamp;
+        }
+        if (current.status === 'completed' || current.status === 'failed' || current.status === 'cancelled') {
+          sendEvent('status', { status: current.status });
+          sendEvent('done', '');
+          cleanup();
+          res.end();
+        }
+      };
+
       const heartbeat = setInterval(() => {
         if (clientDisconnected) {
           cleanup();
           return;
         }
         res.write(': heartbeat\n\n');
+        void pollJob();
       }, 15_000);
       const cleanup = (): void => {
         clearInterval(heartbeat);

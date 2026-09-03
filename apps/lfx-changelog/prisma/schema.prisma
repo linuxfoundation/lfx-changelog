@@ -497,6 +497,7 @@ model ReleaseJob {
   latestTag       String           @map("latest_tag")
   newTag          String           @map("new_tag")
   argocdTag       String           @map("argocd_tag")
+  releaseHeadSha  String?          @map("release_head_sha")
   releaseNotes    String           @map("release_notes") @db.Text
   releaseUrl      String?          @map("release_url")
   ciStatus        String?          @map("ci_status")

@@ -139,11 +139,13 @@ export class ReleaseApprovalService {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       serverLogger.error({ err: error, prNumber, jobId: job.id }, 'GitOps approval wait failed');
-      await prisma.releaseJob.update({
-        where: { id: job.id },
+      const claim = await prisma.releaseJob.updateMany({
+        where: { id: job.id, status: 'waiting_for_approval' },
         data: { status: 'failed', errorMessage: message, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null },
       });
-      await releaseWorkflowService.append(job.id, 'merge', 'error', message);
+      if (claim.count === 1) {
+        await releaseWorkflowService.append(job.id, 'merge', 'error', message);
+      }
     }
   }
 }

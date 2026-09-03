@@ -20,9 +20,7 @@ const PLAN_STEPS = [
   'Wait for the GitOps version-bump job and pull request',
   'Wait for @lfx-one, then add the pull request to the merge queue',
   'Wait until the merge queue finishes the merge',
-  isArgocdSyncEnabled()
-    ? 'Request a deploy sync per environment'
-    : 'Argo CD applies the merged pins. Changelog does not request sync',
+  isArgocdSyncEnabled() ? 'Request a deploy sync per environment' : 'Argo CD applies the merged pins. Changelog does not request sync',
   'Send the summary notice',
 ];
 
@@ -114,6 +112,7 @@ export class ReleasableServiceController {
         latestTag: audit.latestTag,
         newTag: tags.newTag,
         argocdTag: tags.argocdTag,
+        headSha: audit.headSha,
         pending: audit.pending,
         environments: service.environments,
         steps: PLAN_STEPS,

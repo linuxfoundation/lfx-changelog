@@ -56,26 +56,32 @@ export class ReleaseSlackService {
       return { ok: false, error: 'Slack bot token or channel is not configured' };
     }
 
-    const response = await fetch(POST_MESSAGE_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        channel,
-        text,
-        unfurl_links: false,
-        thread_ts: options.threadTs,
-        reply_broadcast: options.replyBroadcast ?? false,
-      }),
-    });
-    const data = (await response.json()) as { ok?: boolean; ts?: string; channel?: string; error?: string };
-    if (!data.ok) {
-      serverLogger.warn({ error: data.error }, 'Release Slack post failed');
-      return { ok: false, error: data.error || 'slack_post_failed' };
+    try {
+      const response = await fetch(POST_MESSAGE_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channel,
+          text,
+          unfurl_links: false,
+          thread_ts: options.threadTs,
+          reply_broadcast: options.replyBroadcast ?? false,
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; ts?: string; channel?: string; error?: string };
+      if (!data.ok) {
+        serverLogger.warn({ error: data.error }, 'Release Slack post failed');
+        return { ok: false, error: data.error || 'slack_post_failed' };
+      }
+      return { ok: true, ts: data.ts, channel: data.channel || channel };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      serverLogger.warn({ err: error }, 'Release Slack post threw');
+      return { ok: false, error: message };
     }
-    return { ok: true, ts: data.ts, channel: data.channel || channel };
   }
 
   private token(): string {

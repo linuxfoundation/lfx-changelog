@@ -35,6 +35,7 @@ export interface ReleasableServiceConfig {
 export interface ServiceAudit {
   latestTag: string;
   publishedAt: string | null;
+  headSha: string | null;
   pending: PendingChange[];
   error: string | null;
 }

@@ -52,7 +52,7 @@ export class ReleaseWorkflowService {
     return { leaseOwner: INSTANCE_ID, leaseExpiresAt: new Date(Date.now() + LEASE_TTL_MS) };
   }
 
-  public async startJob(input: { serviceKey: string; notes: string; newTag?: string; requesterId: string }): Promise<ReleaseJob> {
+  public async startJob(input: { serviceKey: string; notes: string; newTag?: string; headSha?: string; requesterId: string }): Promise<ReleaseJob> {
     const service = releasableCatalogService.require(input.serviceKey);
     const productId = await releaseAuthService.mappedProductId(service.key);
     const audit = await releaseGitHubAuditService.audit(service.githubRepo, { fresh: true });
@@ -68,6 +68,11 @@ export class ReleaseWorkflowService {
       (stale as Error & { expectedTag: string }).expectedTag = tags.newTag;
       throw stale;
     }
+    if (input.headSha && input.headSha !== audit.headSha) {
+      const stale = new Error('STALE_HEAD_SHA');
+      (stale as Error & { expectedHeadSha: string | null }).expectedHeadSha = audit.headSha;
+      throw stale;
+    }
     const newTag = tags.newTag;
 
     const prisma = getPrismaClient();
@@ -81,6 +86,7 @@ export class ReleaseWorkflowService {
           latestTag: audit.latestTag,
           newTag,
           argocdTag: tags.argocdTag,
+          releaseHeadSha: audit.headSha,
           releaseNotes: input.notes,
           startedAt: new Date(),
         },
@@ -110,9 +116,15 @@ export class ReleaseWorkflowService {
     if (job.status !== 'failed') {
       throw new Error('Nothing left to retry');
     }
+    const ciFailed = job.ciStatus === 'Failed' || job.ciStatus === 'Timed out';
     const updated = await prisma.releaseJob.update({
       where: { id: jobId },
-      data: { status: 'running', errorMessage: null, startedAt: job.startedAt ?? new Date() },
+      data: {
+        status: 'running',
+        errorMessage: null,
+        startedAt: job.startedAt ?? new Date(),
+        ...(ciFailed ? { ciStatus: null, ciRunUrl: null } : {}),
+      },
     });
     this.kickoff(jobId);
     return updated;
@@ -344,7 +356,7 @@ export class ReleaseWorkflowService {
           await this.append(jobId, 'github_release', 'success', `Found existing release ${job.newTag} from a previous attempt`);
         } else {
           await this.append(jobId, 'github_release', 'info', `Creating GitHub release ${job.newTag}`);
-          releaseUrl = await releaseGitHubService.createRelease(service.githubRepo, job.newTag, job.releaseNotes);
+          releaseUrl = await releaseGitHubService.createRelease(service.githubRepo, job.newTag, job.releaseNotes, job.releaseHeadSha);
           await this.append(jobId, 'github_release', 'success', `Published ${job.newTag}`);
         }
         job = await prisma.releaseJob.update({ where: { id: jobId }, data: { releaseUrl } });

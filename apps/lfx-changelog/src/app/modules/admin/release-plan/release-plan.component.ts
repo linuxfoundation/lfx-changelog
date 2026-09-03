@@ -81,7 +81,7 @@ export class ReleasePlanComponent {
     const notes = this.notesTrimmed();
     if (!plan || !notes || this.confirming()) return;
     this.confirming.set(true);
-    this.releaseJobService.start(plan.service.key, notes, plan.newTag).subscribe({
+    this.releaseJobService.start(plan.service.key, notes, plan.newTag, plan.headSha).subscribe({
       next: (job) => {
         void this.router.navigate(['/admin/release-jobs', job.id]);
       },
