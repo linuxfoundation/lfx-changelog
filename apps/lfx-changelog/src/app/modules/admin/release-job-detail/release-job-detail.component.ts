@@ -92,6 +92,11 @@ export class ReleaseJobDetailComponent {
                   this.log.update((lines) =>
                     lines.some((line) => line.timestamp === event.data.timestamp && line.summary === event.data.summary) ? lines : [...lines, event.data]
                   );
+                } else if (event.type === 'status' && event.data && 'progressLog' in event.data) {
+                  // SSE-fallback poll: refresh the log from the polled job so it doesn't go
+                  // stale after an SSE error (this branch never fires on a live SSE connection,
+                  // whose 'status' events don't carry a progressLog).
+                  this.log.set((event.data.progressLog ?? []) as ReleaseProgressLine[]);
                 }
               });
               return this.releaseJobService.getById(id).pipe(

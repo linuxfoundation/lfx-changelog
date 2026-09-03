@@ -26,8 +26,28 @@ const running = new Map<string, boolean>();
 const INSTANCE_ID = randomUUID();
 const LEASE_TTL_MS = 10 * 60 * 1000;
 const LEASE_RENEW_MS = 3 * 60 * 1000;
+const RESUME_POLL_MS = 5 * 60 * 1000;
 
 export class ReleaseWorkflowService {
+  private resumePollerStarted = false;
+
+  /**
+   * Periodically re-invokes `resumeRunningJobs()` so a job whose owning replica crashed
+   * gets picked up once its lease expires, rather than only at the next deploy/restart
+   * (when a crash happens to land before the lease had expired, the one-shot startup
+   * call misses it and nothing else would ever retry).
+   */
+  public startResumePoller(): void {
+    if (this.resumePollerStarted) {
+      return;
+    }
+    this.resumePollerStarted = true;
+    setInterval(() => {
+      this.resumeRunningJobs().catch((err) => serverLogger.error({ err }, 'Periodic resume of in-flight release jobs failed'));
+    }, RESUME_POLL_MS);
+    this.resumeRunningJobs().catch((err) => serverLogger.error({ err }, 'Failed to resume in-flight release jobs'));
+  }
+
   /**
    * Re-kicks off any job left in `running` status by a process that exited
    * mid-job (crash, redeploy). Each external step in `run()` is checkpointed
@@ -318,7 +338,7 @@ export class ReleaseWorkflowService {
 
     const syncLine = syncs.map((row) => `${row.environment}=${row.requestStatus}`).join(', ');
     if (job.slackThreadTs) {
-      const audit = await releaseGitHubAuditService.auditSince(service.githubRepo, job.latestTag);
+      const audit = await releaseGitHubAuditService.auditSince(service.githubRepo, job.latestTag, job.releaseHeadSha ?? undefined);
       let argocdLine: string;
       if (job.argocdPrUrl) {
         argocdLine = `<${job.argocdPrUrl}|GitOps PR>`;
@@ -384,7 +404,7 @@ export class ReleaseWorkflowService {
       }
 
       if (!job.slackThreadTs) {
-        const audit = await releaseGitHubAuditService.auditSince(service.githubRepo, job.latestTag);
+        const audit = await releaseGitHubAuditService.auditSince(service.githubRepo, job.latestTag, job.releaseHeadSha ?? undefined);
         const start = await releaseSlackService.postStart(service.displayName, job.newTag, audit.pending.length);
         if (start.ok && start.ts) {
           job = await prisma.releaseJob.update({
@@ -430,13 +450,34 @@ export class ReleaseWorkflowService {
             await this.notifyThread(jobId, job.slackThreadTs, `GitOps pull request opened: ${prUrl}`);
           },
         });
-        const staysRunning = bump.outcome === 'already_current' || bump.merged;
         const bumpData = {
           bumpOutcome: bump.outcome,
           bumpRunUrl: bump.runUrl,
           argocdPrUrl: bump.prUrl,
           argocdPrNumber: bump.prNumber,
         };
+        if (bump.merged && !job.mergeQueuedAt) {
+          // The version-bump PR was already merged by the time we observed it, but this
+          // job never recorded @lfx-one's approval or a merge-queue entry (e.g. a
+          // manual/out-of-band merge). Proceeding would bypass the approval gate.
+          const message = 'GitOps pull request merged without recorded @lfx-one approval or merge-queue entry';
+          const updated = await this.updateIfLeaseOwner(jobId, {
+            ...bumpData,
+            status: 'failed',
+            errorMessage: message,
+            completedAt: new Date(),
+            leaseOwner: null,
+            leaseExpiresAt: null,
+          });
+          if (updated) {
+            await this.append(jobId, 'approval', 'error', message);
+            this.emitStatus(jobId, ReleaseJobStatus.FAILED);
+            releaseJobEmitter.emit(jobId, { type: 'error', data: message });
+            releaseJobEmitter.emit(jobId, { type: 'done', data: '' });
+          }
+          return;
+        }
+        const staysRunning = bump.outcome === 'already_current';
         if (staysRunning) {
           job = await prisma.releaseJob.update({ where: { id: jobId }, data: { ...bumpData, status: 'running' } });
         } else {

@@ -68,15 +68,21 @@ export class ReleaseGitHubAuditService {
     }
   }
 
-  public async auditSince(githubRepo: string, sinceTag: string): Promise<ServiceAudit> {
+  /**
+   * `upToRef` bounds the pending-PR window to a specific commit (e.g. the SHA a release
+   * job was pinned to) rather than the live `main` tip, so PRs merged into `main` after
+   * the job's snapshot was taken aren't misreported as part of that release.
+   */
+  public async auditSince(githubRepo: string, sinceTag: string, upToRef?: string): Promise<ServiceAudit> {
     try {
       const token = await releaseGitHubService.getInstallationToken();
       const release = await this.fetchReleaseByTag(githubRepo, sinceTag, token);
       if (!release) {
         throw new Error(`Release ${sinceTag} not found in ${githubRepo}`);
       }
-      const pending = await this.fetchPendingPrs(githubRepo, release.tagName, token);
-      const headSha = await this.fetchHeadSha(githubRepo, token);
+      const ref = upToRef || 'main';
+      const pending = await this.fetchPendingPrs(githubRepo, release.tagName, token, ref);
+      const headSha = await this.fetchHeadSha(githubRepo, token, ref);
       return { latestTag: release.tagName, publishedAt: release.publishedAt, headSha, pending, error: null };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -125,8 +131,8 @@ export class ReleaseGitHubAuditService {
    * as absent. Comparing merge commit SHAs against the tag..main commit range is correct in both
    * cases.
    */
-  private async fetchPendingPrs(repo: string, sinceTag: string, token: string): Promise<PendingChange[]> {
-    const commitShas = sinceTag === 'v0.0.0' ? null : await this.fetchCommitShasSinceTag(repo, sinceTag, token);
+  private async fetchPendingPrs(repo: string, sinceTag: string, token: string, upToRef = 'main'): Promise<PendingChange[]> {
+    const commitShas = sinceTag === 'v0.0.0' ? null : await this.fetchCommitShasSinceTag(repo, sinceTag, token, upToRef);
     const pending: PendingChange[] = [];
     for (let page = 1; page <= this.maxPendingPages; page++) {
       const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/pulls?state=closed&base=main&sort=updated&direction=desc&per_page=100&page=${page}`, {
@@ -166,8 +172,8 @@ export class ReleaseGitHubAuditService {
     return pending;
   }
 
-  private async fetchCommitShasSinceTag(repo: string, tag: string, token: string): Promise<Set<string>> {
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/compare/${tag}...main`, {
+  private async fetchCommitShasSinceTag(repo: string, tag: string, token: string, upToRef = 'main'): Promise<Set<string>> {
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/compare/${tag}...${upToRef}`, {
       headers: this.headers(token),
     });
     if (!response.ok) {
@@ -177,8 +183,8 @@ export class ReleaseGitHubAuditService {
     return new Set((body.commits ?? []).map((commit) => commit.sha));
   }
 
-  private async fetchHeadSha(repo: string, token: string): Promise<string | null> {
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/commits/main`, {
+  private async fetchHeadSha(repo: string, token: string, ref = 'main'): Promise<string | null> {
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/commits/${ref}`, {
       headers: { ...this.headers(token), Accept: 'application/vnd.github.sha' },
     });
     if (!response.ok) {

@@ -87,6 +87,20 @@ export class ReleaseApprovalService {
     try {
       const pr = await releaseGitHubService.getPull(ARGOCD_REPO, prNumber);
       if (pr.merged) {
+        if (!job.mergeQueuedAt) {
+          // Merged without this job ever recording @lfx-one's approval or enqueuing it
+          // (e.g. a manual/out-of-band merge). Accepting it here would bypass the
+          // approval gate and misreport the merge queue as having finished it.
+          const message = 'GitOps pull request merged without recorded @lfx-one approval or merge-queue entry';
+          const bypassClaim = await prisma.releaseJob.updateMany({
+            where: { id: job.id, status: 'waiting_for_approval' },
+            data: { status: 'failed', errorMessage: message, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null },
+          });
+          if (bypassClaim.count === 1) {
+            await releaseWorkflowService.append(job.id, 'merge', 'error', message);
+          }
+          return;
+        }
         const mergeClaim = await prisma.releaseJob.updateMany({
           where: { id: job.id, status: 'waiting_for_approval' },
           data: { status: 'running', ...releaseWorkflowService.leaseClaimFields() },

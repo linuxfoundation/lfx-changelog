@@ -12,17 +12,19 @@ import { isArgocdSyncEnabled } from '../services/release-sync.service';
 import type { ReleasableService, ReleasePlan } from '@lfx-changelog/shared';
 import type { NextFunction, Request, Response } from 'express';
 
-const PLAN_STEPS = [
-  'Generate or accept release notes',
-  'Publish the GitHub version',
-  'Notify the team that work started',
-  'Wait for the image build',
-  'Wait for the GitOps version-bump job and pull request',
-  'Wait for @lfx-one, then add the pull request to the merge queue',
-  'Wait until the merge queue finishes the merge',
-  isArgocdSyncEnabled() ? 'Request a deploy sync per environment' : 'Argo CD applies the merged pins. Changelog does not request sync',
-  'Send the summary notice',
-];
+function buildPlanSteps(): string[] {
+  return [
+    'Generate or accept release notes',
+    'Publish the GitHub version',
+    'Notify the team that work started',
+    'Wait for the image build',
+    'Wait for the GitOps version-bump job and pull request',
+    'Wait for @lfx-one, then add the pull request to the merge queue',
+    'Wait until the merge queue finishes the merge',
+    isArgocdSyncEnabled() ? 'Request a deploy sync per environment' : 'Argo CD applies the merged pins. Changelog does not request sync',
+    'Send the summary notice',
+  ];
+}
 
 export class ReleasableServiceController {
   public async list(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -115,7 +117,7 @@ export class ReleasableServiceController {
         headSha: audit.headSha,
         pending: audit.pending,
         environments: service.environments,
-        steps: PLAN_STEPS,
+        steps: buildPlanSteps(),
       };
       res.json({ success: true, data: payload });
     } catch (error) {

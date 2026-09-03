@@ -5,6 +5,7 @@ import { MAX_PAGE_SIZE, ReleaseJobStatusSchema } from '@lfx-changelog/shared';
 
 import { ConflictError, NotFoundError } from '../errors';
 import { FlushableResponse } from '../interfaces/chat.interface';
+import { serverLogger } from '../server-logger';
 import { getPrismaClient } from '../services/prisma.service';
 import { releaseAuthService } from '../services/release-auth.service';
 import { releaseJobEmitter } from '../services/release-job-emitter.service';
@@ -253,7 +254,7 @@ export class ReleaseJobController {
           return;
         }
         res.write(': heartbeat\n\n');
-        void pollJob();
+        pollJob().catch((err) => serverLogger.error({ err, jobId: job.id }, 'SSE cross-replica poll failed'));
       }, 15_000);
       const cleanup = (): void => {
         clearInterval(heartbeat);

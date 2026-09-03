@@ -9,9 +9,18 @@ const GITHUB_API_BASE = 'https://api.github.com';
 const CI_POLL_ATTEMPTS = 60;
 const CI_POLL_INTERVAL_MS = 5_000;
 const CI_WATCH_TIMEOUT_MS = 420_000;
+// Refresh this far ahead of GitHub's stated expiry so a token handed out for a request
+// doesn't expire mid-flight.
+const TOKEN_EXPIRY_SAFETY_MS = 60_000;
 
 export class ReleaseGitHubService {
+  private cachedToken: { token: string; expiresAt: number } | null = null;
+
   public async getInstallationToken(): Promise<string> {
+    if (this.cachedToken && this.cachedToken.expiresAt > Date.now()) {
+      return this.cachedToken.token;
+    }
+
     const installationId = Number(process.env['RELEASE_GITHUB_INSTALLATION_ID'] || '');
     if (!Number.isFinite(installationId) || installationId <= 0) {
       throw new Error('RELEASE_GITHUB_INSTALLATION_ID is not set');
@@ -31,7 +40,9 @@ export class ReleaseGitHubService {
       serverLogger.error({ status: response.status, body }, 'Release GitHub installation token failed');
       throw new Error(`GitHub installation token failed: ${response.status}`);
     }
-    const data = (await response.json()) as { token: string };
+    const data = (await response.json()) as { token: string; expires_at?: string };
+    const expiresAt = data.expires_at ? new Date(data.expires_at).getTime() - TOKEN_EXPIRY_SAFETY_MS : Date.now();
+    this.cachedToken = { token: data.token, expiresAt };
     return data.token;
   }
 

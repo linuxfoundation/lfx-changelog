@@ -50,7 +50,7 @@ export function startServer(): void {
   gracefulShutdown(server);
   releaseApprovalService.startPoller();
   releaseRetentionService.startPurger();
-  releaseWorkflowService.resumeRunningJobs().catch((err) => serverLogger.error({ err }, 'Failed to resume in-flight release jobs'));
+  releaseWorkflowService.startResumePoller();
 }
 
 if (isMainModule(import.meta.url) || process.env['pm_id']) {
