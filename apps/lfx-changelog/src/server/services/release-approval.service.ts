@@ -103,8 +103,13 @@ export class ReleaseApprovalService {
       }
 
       const reviews = await releaseGitHubService.listReviews(ARGOCD_REPO, prNumber);
-      const approved = reviews.some((review) => review.user === LFX_ONE && review.state.toLowerCase() === 'approved');
-      if (!approved) {
+      let latestLfxOneState: string | null = null;
+      for (const review of reviews) {
+        if (review.user === LFX_ONE) {
+          latestLfxOneState = review.state.toLowerCase();
+        }
+      }
+      if (latestLfxOneState !== 'approved') {
         return;
       }
       if (pr.mergeableState === 'dirty') {
@@ -117,10 +122,10 @@ export class ReleaseApprovalService {
           data: { mergeQueuedAt: new Date() },
         });
         if (claim.count === 1) {
-          await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
-          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
           try {
             const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber);
+            await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
+            await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
             const position = queued.position != null ? ` (position ${queued.position})` : '';
             const queueLine = queued.alreadyQueued ? `Already in the merge queue${position}.` : `Added to the merge queue${position}.`;
             await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
