@@ -34,6 +34,7 @@ export class ReleaseGitHubAuditService {
   private readonly cache = new Map<string, { expiresAt: number; value: ServiceAudit }>();
   private readonly ttlMs = 30_000;
   private readonly maxPendingPages = 20;
+  private readonly maxCompareCommitPages = 20;
 
   public async audit(githubRepo: string, options?: { fresh?: boolean }): Promise<ServiceAudit> {
     const cached = this.cache.get(githubRepo);
@@ -172,15 +173,35 @@ export class ReleaseGitHubAuditService {
     return pending;
   }
 
+  /**
+   * GitHub's compare endpoint returns at most `per_page` commits per page (max 100) and
+   * requires `page` to iterate. An unpaginated call caps at ~250 commits, so a release
+   * range larger than that would silently drop the older SHAs and their PRs would be
+   * omitted from `fetchPendingPrs` even though the tag ships them. Union every page.
+   */
   private async fetchCommitShasSinceTag(repo: string, tag: string, token: string, upToRef = 'main'): Promise<Set<string>> {
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/compare/${tag}...${upToRef}`, {
-      headers: this.headers(token),
-    });
-    if (!response.ok) {
-      throw new Error(`GitHub compare failed: ${response.status}`);
+    const shas = new Set<string>();
+    const perPage = 100;
+    for (let page = 1; page <= this.maxCompareCommitPages; page++) {
+      const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/compare/${tag}...${upToRef}?per_page=${perPage}&page=${page}`, {
+        headers: this.headers(token),
+      });
+      if (!response.ok) {
+        throw new Error(`GitHub compare failed: ${response.status}`);
+      }
+      const body = (await response.json()) as { commits?: { sha: string }[]; total_commits?: number };
+      const commits = body.commits ?? [];
+      for (const commit of commits) {
+        shas.add(commit.sha);
+      }
+      if (commits.length < perPage) {
+        break;
+      }
+      if (typeof body.total_commits === 'number' && shas.size >= body.total_commits) {
+        break;
+      }
     }
-    const body = (await response.json()) as { commits?: { sha: string }[] };
-    return new Set((body.commits ?? []).map((commit) => commit.sha));
+    return shas;
   }
 
   private async fetchHeadSha(repo: string, token: string, ref = 'main'): Promise<string | null> {

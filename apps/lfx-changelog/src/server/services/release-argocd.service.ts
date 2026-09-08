@@ -58,19 +58,25 @@ export class ReleaseArgocdService {
         throw new Error(`GitOps version-bump job failed${run.url ? `: ${run.url}` : ''}`);
       }
 
-      if (pr) {
+      // findPullByHead prefers open PRs but falls back to state=closed. A closed-unmerged
+      // fallback match is a stale attempt (someone closed it without merging), and
+      // returning it would route the job to waiting_for_approval where observePull will
+      // immediately fail it because a closed PR cannot be approved or queued. Skip it
+      // and keep polling so the version-bump workflow's next PR is picked up.
+      const usablePr = pr && !(pr.state === 'closed' && !pr.merged) ? pr : null;
+      if (usablePr) {
         if (!prNotified) {
           prNotified = true;
-          await hooks.onPrFound?.(pr.url);
+          await hooks.onPrFound?.(usablePr.url);
         }
-        const createdAt = pr.createdAt ? new Date(pr.createdAt) : null;
+        const createdAt = usablePr.createdAt ? new Date(usablePr.createdAt) : null;
         const reused = Boolean(jobStartedAt && createdAt && createdAt < jobStartedAt);
         return {
           outcome: reused ? 'reused' : 'created',
-          prUrl: pr.url,
-          prNumber: pr.number,
+          prUrl: usablePr.url,
+          prNumber: usablePr.number,
           runUrl: lastRunUrl,
-          merged: pr.merged,
+          merged: usablePr.merged,
         };
       }
 

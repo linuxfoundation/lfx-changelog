@@ -144,6 +144,7 @@ export class ReleaseGitHubService {
     merged: boolean;
     mergeableState: string | null;
     nodeId: string;
+    headSha: string | null;
   }> {
     const token = await this.getInstallationToken();
     const response = await fetch(`${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/pulls/${encodeURIComponent(pullNumber)}`, {
@@ -159,6 +160,7 @@ export class ReleaseGitHubService {
       merged?: boolean;
       mergeable_state?: string;
       node_id?: string;
+      head?: { sha?: string };
     };
     if (!data.node_id) {
       throw new Error('Get pull request returned no node_id');
@@ -170,10 +172,20 @@ export class ReleaseGitHubService {
       merged: Boolean(data.merged),
       mergeableState: data.mergeable_state ?? null,
       nodeId: data.node_id,
+      headSha: data.head?.sha ?? null,
     };
   }
 
-  public async enqueueMergeQueue(repo: string, pullNumber: number): Promise<{ alreadyQueued: boolean; position: number | null }> {
+  /**
+   * `expectedHeadOid` closes the check-to-enqueue race: GitHub's mutation refuses to enqueue
+   * if the PR's current head differs from the SHA we approved against, so a commit pushed
+   * after our approval check cannot slip into the merge queue on a stale approval.
+   */
+  public async enqueueMergeQueue(
+    repo: string,
+    pullNumber: number,
+    expectedHeadOid?: string | null
+  ): Promise<{ alreadyQueued: boolean; position: number | null }> {
     const [owner, name] = repo.split('/');
     if (!owner || !name) {
       throw new Error(`Invalid repo: ${repo}`);
@@ -189,12 +201,12 @@ export class ReleaseGitHubService {
       const data = await this.graphql<{
         enqueuePullRequest?: { mergeQueueEntry?: { position?: number | null } | null };
       }>(
-        `mutation Enqueue($prId: ID!) {
-          enqueuePullRequest(input: { pullRequestId: $prId }) {
+        `mutation Enqueue($prId: ID!, $expectedHeadOid: GitObjectID) {
+          enqueuePullRequest(input: { pullRequestId: $prId, expectedHeadOid: $expectedHeadOid }) {
             mergeQueueEntry { position }
           }
         }`,
-        { prId: state.nodeId }
+        { prId: state.nodeId, expectedHeadOid: expectedHeadOid ?? null }
       );
       return { alreadyQueued: false, position: data.enqueuePullRequest?.mergeQueueEntry?.position ?? null };
     } catch (error) {
@@ -234,9 +246,9 @@ export class ReleaseGitHubService {
     };
   }
 
-  public async listReviews(repo: string, pullNumber: number): Promise<{ user: string; state: string }[]> {
+  public async listReviews(repo: string, pullNumber: number): Promise<{ user: string; state: string; commitId: string | null }[]> {
     const token = await this.getInstallationToken();
-    const reviews: { user: string; state: string }[] = [];
+    const reviews: { user: string; state: string; commitId: string | null }[] = [];
     for (let page = 1; ; page++) {
       const response = await fetch(
         `${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/pulls/${encodeURIComponent(pullNumber)}/reviews?per_page=100&page=${page}`,
@@ -247,9 +259,9 @@ export class ReleaseGitHubService {
       if (!response.ok) {
         throw new Error(`List reviews failed: ${response.status}`);
       }
-      const data = (await response.json()) as { user?: { login?: string }; state?: string }[];
+      const data = (await response.json()) as { user?: { login?: string }; state?: string; commit_id?: string | null }[];
       for (const review of data) {
-        reviews.push({ user: review.user?.login || '', state: review.state || '' });
+        reviews.push({ user: review.user?.login || '', state: review.state || '', commitId: review.commit_id ?? null });
       }
       if (data.length < 100) {
         break;

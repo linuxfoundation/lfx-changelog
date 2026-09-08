@@ -161,10 +161,18 @@ export class ReleaseJobController {
       res.socket?.setNoDelay(true);
 
       let clientDisconnected = false;
+      let lastStatus: string | null = null;
       const sendEvent = (type: ReleaseJobSSEEventType, data: unknown): void => {
         if (clientDisconnected) return;
         res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
         flushableRes.flush?.();
+        // Track last-emitted status so the cross-replica poller below only re-emits
+        // when the polled DB status differs from what the client has already seen,
+        // whether the previous emit came from this replica's in-process listener or
+        // from an earlier poll.
+        if (type === 'status') {
+          lastStatus = (data as { status?: string } | undefined)?.status ?? lastStatus;
+        }
       };
 
       let lastTimestamp: string | undefined;
@@ -240,8 +248,13 @@ export class ReleaseJobController {
           sendEvent('progress', entry);
           lastTimestamp = entry.timestamp ?? lastTimestamp;
         }
-        if (current.status === 'completed' || current.status === 'failed' || current.status === 'cancelled') {
+        // Emit any status transition, not only terminal ones, so a client connected to
+        // a different replica than the one running the job still sees intermediate
+        // transitions such as running -> waiting_for_approval.
+        if (current.status !== lastStatus) {
           sendEvent('status', { status: current.status });
+        }
+        if (current.status === 'completed' || current.status === 'failed' || current.status === 'cancelled') {
           sendEvent('done', '');
           cleanup();
           res.end();

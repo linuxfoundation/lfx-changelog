@@ -133,10 +133,18 @@ export class ReleaseApprovalService {
 
       const reviews = await releaseGitHubService.listReviews(ARGOCD_REPO, prNumber);
       let latestLfxOneState: string | null = null;
+      // Consider only reviews pinned to the PR's current head. Without this filter, an
+      // approval on an older commit remains sufficient whenever the repo has not enabled
+      // stale-review dismissal, and a commit pushed after that review could be enqueued
+      // without @lfx-one approving it.
       for (const review of reviews) {
-        if (review.user === LFX_ONE) {
-          latestLfxOneState = review.state.toLowerCase();
+        if (review.user !== LFX_ONE) {
+          continue;
         }
+        if (pr.headSha && review.commitId !== pr.headSha) {
+          continue;
+        }
+        latestLfxOneState = review.state.toLowerCase();
       }
       if (latestLfxOneState !== 'approved') {
         return;
@@ -146,23 +154,25 @@ export class ReleaseApprovalService {
       }
 
       if (!job.mergeQueuedAt) {
+        // Enqueue first, then persist mergeQueuedAt in an atomic claim. Previously the
+        // timestamp was written before the API call, so a crash between the two would
+        // leave the job stuck: later polls skip this block on the non-null timestamp,
+        // and cancel is also blocked while mergeQueuedAt is set. enqueueMergeQueue is
+        // idempotent (repeated calls return alreadyQueued=true), so a retry after a
+        // crash is safe. expectedHeadOid asks GitHub to reject the enqueue if the head
+        // has advanced since our review check, closing the check-to-enqueue race.
+        const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber, pr.headSha ?? undefined);
         const claim = await prisma.releaseJob.updateMany({
           where: { id: job.id, status: 'waiting_for_approval', mergeQueuedAt: null },
           data: { mergeQueuedAt: new Date() },
         });
         if (claim.count === 1) {
-          try {
-            const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber);
-            await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
-            await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
-            const position = queued.position != null ? ` (position ${queued.position})` : '';
-            const queueLine = queued.alreadyQueued ? `Already in the merge queue${position}.` : `Added to the merge queue${position}.`;
-            await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
-            await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
-          } catch (enqueueError) {
-            await prisma.releaseJob.updateMany({ where: { id: job.id, mergeQueuedAt: { not: null } }, data: { mergeQueuedAt: null } });
-            throw enqueueError;
-          }
+          await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
+          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
+          const position = queued.position != null ? ` (position ${queued.position})` : '';
+          const queueLine = queued.alreadyQueued ? `Already in the merge queue${position}.` : `Added to the merge queue${position}.`;
+          await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
+          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
         }
       }
     } catch (error) {

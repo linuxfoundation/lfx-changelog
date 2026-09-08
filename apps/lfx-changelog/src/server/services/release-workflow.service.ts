@@ -502,6 +502,27 @@ export class ReleaseWorkflowService {
 
       if (job.argocdPrNumber) {
         const pr = await releaseGitHubService.getPull(ARGOCD_REPO, job.argocdPrNumber);
+        if (pr.merged && !job.mergeQueuedAt) {
+          // Same out-of-band merge check as the pre-bump guard above. A retry re-enters
+          // with bumpOutcome already set (so the earlier guard is skipped) and would
+          // otherwise accept a PR merged without @lfx-one approval by falling through
+          // to finishAfterMerge below.
+          const message = 'GitOps pull request merged without recorded @lfx-one approval or merge-queue entry';
+          const updated = await this.updateIfLeaseOwner(jobId, {
+            status: 'failed',
+            errorMessage: message,
+            completedAt: new Date(),
+            leaseOwner: null,
+            leaseExpiresAt: null,
+          });
+          if (updated) {
+            await this.append(jobId, 'approval', 'error', message);
+            this.emitStatus(jobId, ReleaseJobStatus.FAILED);
+            releaseJobEmitter.emit(jobId, { type: 'error', data: message });
+            releaseJobEmitter.emit(jobId, { type: 'done', data: '' });
+          }
+          return;
+        }
         if (!pr.merged) {
           if (job.status !== 'waiting_for_approval') {
             const updated = await this.updateIfLeaseOwner(jobId, { status: 'waiting_for_approval', leaseOwner: null, leaseExpiresAt: null });
