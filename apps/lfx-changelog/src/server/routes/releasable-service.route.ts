@@ -13,9 +13,7 @@ const controller = new ReleasableServiceController();
 
 router.get('/', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) => controller.list(req, res, next));
 router.get('/:key/plan', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) => controller.plan(req, res, next));
-router.post('/:key/notes', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
-  controller.notes(req, res, next)
-);
+router.post('/:key/notes', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) => controller.notes(req, res, next));
 router.put(
   '/:key/mapping',
   authorize({ oauthOnly: true, role: UserRole.SUPER_ADMIN }),

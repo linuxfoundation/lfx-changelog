@@ -42,7 +42,7 @@ specific rule it violates:
 - **`.claude/CLAUDE.md`** — project overview, styling (Tailwind CSS v4,
   CSS-first `@theme`, no SCSS, semantic color tokens, light-mode default),
   and tooling preferences (`yarn` over `npx` for workspace deps, `docker
-  compose` not `docker-compose`, `yarn lint` not `yarn eslint`).
+compose` not `docker-compose`, `yarn lint` not `yarn eslint`).
 - **`.claude/rules/angular.md`** — no inline templates/styles, component
   folder structure, 2016 file-naming convention, `lfx` prefix, Angular 20
   standalone/signal patterns (`input()`, `output()`, `model()`,
@@ -78,7 +78,7 @@ generators, commit, reset, or push. Report what you find; the developer's
 session fixes it. Ordinary non-fixing builds, tests and linters
 (`yarn lint`, `yarn test`, `yarn build`) are fine even when they leave
 caches or binaries behind. Reading GitHub is fine — a linked issue, an
-upstream API, a referenced PR. Never *write* GitHub state: no comment,
+upstream API, a referenced PR. Never _write_ GitHub state: no comment,
 review, check, status, label or approval, and never gate or merge.
 
 ## The shared bar

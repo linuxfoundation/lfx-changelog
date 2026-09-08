@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { ReleaseJobController } from '../controllers/release-job.controller';
 import { hybridAuthMiddleware } from '../middleware/api-key-auth.middleware';
 import { noCacheMiddleware } from '../middleware/cache.middleware';
 import { apiErrorHandler } from '../middleware/error-handler.middleware';
@@ -15,18 +16,17 @@ import githubRouter, { releaseRouter } from '../routes/github.route';
 import mcpRouter from '../routes/mcp.route';
 import opensearchRouter from '../routes/opensearch.route';
 import productRouter from '../routes/product.route';
-import releasableServiceRouter from '../routes/releasable-service.route';
-import releaseJobRouter from '../routes/release-job.route';
 import publicBlogRouter from '../routes/public-blog.route';
 import publicChangelogRouter from '../routes/public-changelog.route';
 import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
 import publicRoadmapRouter from '../routes/public-roadmap.route';
 import publicSearchRouter from '../routes/public-search.route';
+import releasableServiceRouter from '../routes/releasable-service.route';
+import releaseJobRouter from '../routes/release-job.route';
 import slackRouter from '../routes/slack.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
-import { ReleaseJobController } from '../controllers/release-job.controller';
 import { SearchService } from '../services/search.service';
 import { setupSwagger } from '../swagger';
 import { createApiKeyRateLimiter, createAuthenticatedChatRateLimiter, createPublicChatRateLimiter } from './rate-limit';

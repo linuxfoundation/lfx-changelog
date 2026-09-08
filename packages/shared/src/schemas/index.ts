@@ -102,25 +102,25 @@ export {
   OpenSearchSearchResponseSchema,
 } from './opensearch.schema.js';
 export { AddSlackNotifyUserRequestSchema, ProductSchema, ProductSlackNotifyUserSchema } from './product.schema.js';
+export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
 export {
   ActiveJobConflictSchema,
   EnvironmentSyncRequestStatusSchema,
   EnvironmentSyncSchema,
   GenerateNotesRequestSchema,
   PendingChangeSchema,
+  ReleasableServiceSchema,
   ReleaseJobQueryParamsSchema,
-  ReleaseJobSchema,
   ReleaseJobSSEEventSchema,
+  ReleaseJobSchema,
   ReleaseJobStatusSchema,
   ReleaseNotesPreviewSchema,
   ReleasePlanSchema,
   ReleaseProgressLineSchema,
   ReleaseProgressTypeSchema,
-  ReleasableServiceSchema,
   StartReleaseRequestSchema,
   UpdateServiceMappingRequestSchema,
 } from './release-job.schema.js';
-export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
 export {
   RoadmapBoardResponseSchema,
   RoadmapColumnSchema,
@@ -253,11 +253,13 @@ export type {
   OpenSearchSearchResponse,
 } from './opensearch.schema.js';
 export type { AddSlackNotifyUserRequest, Product, ProductSlackNotifyUser } from './product.schema.js';
+export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
 export type {
   ActiveJobConflict,
   EnvironmentSync,
   GenerateNotesRequest,
   PendingChange,
+  ReleasableService,
   ReleaseJob,
   ReleaseJobQueryParams,
   ReleaseJobSSEEvent,
@@ -266,11 +268,9 @@ export type {
   ReleasePlan,
   ReleaseProgressLine,
   ReleaseProgressType,
-  ReleasableService,
   StartReleaseRequest,
   UpdateServiceMappingRequest,
 } from './release-job.schema.js';
-export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
 export type {
   AdfMark,
   AdfNode,

@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { getPrismaClient } from './prisma.service';
 import { serverLogger } from '../server-logger';
+import { getPrismaClient } from './prisma.service';
 
 const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;

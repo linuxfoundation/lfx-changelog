@@ -36,7 +36,7 @@ plain `<button>` for the single-select case that has no children.
 - Source: PR #93, same component (follow-up round) — the multi-select
   trigger nested per-chip `<button>` elements inside the outer trigger
   `<button>`; fixed by splitting multi-select into a `<div role="combobox"
-  tabindex="0">` while single-select kept `<button>`.
+tabindex="0">` while single-select kept `<button>`.
 
 ## Don't remove a visible focus indicator without a fallback for browsers lacking the replacement
 
@@ -47,7 +47,7 @@ environments without `:focus-visible`/`color-mix()` support. Keep a plain
 `:focus:not(:focus-visible)`.
 
 - Source: PR #103, `apps/lfx-changelog/src/styles.css` — `.btn:focus {
-  outline: none }` with only a `:focus-visible` replacement; fixed to keep
+outline: none }` with only a `:focus-visible` replacement; fixed to keep
   a fallback outline on `:focus`, suppressed only via `:focus:not(:focus-visible)`.
 
 ## Match `transition` properties to everything that actually changes on the interaction

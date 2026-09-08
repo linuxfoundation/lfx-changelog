@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, take } from 'rxjs';
 
-import type { ApiResponse, ReleaseNotesPreview, ReleasePlan, ReleasableService } from '@lfx-changelog/shared';
+import type { ApiResponse, ReleasableService, ReleaseNotesPreview, ReleasePlan } from '@lfx-changelog/shared';
 import type { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })

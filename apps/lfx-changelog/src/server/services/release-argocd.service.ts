@@ -37,12 +37,7 @@ export type VersionBumpHooks = {
 };
 
 export class ReleaseArgocdService {
-  public async waitForVersionBump(
-    serviceKey: string,
-    tag: string,
-    jobStartedAt?: Date,
-    hooks: VersionBumpHooks = {}
-  ): Promise<VersionBumpResult> {
+  public async waitForVersionBump(serviceKey: string, tag: string, jobStartedAt?: Date, hooks: VersionBumpHooks = {}): Promise<VersionBumpResult> {
     const branch = bumpBranch(serviceKey, tag);
     const runName = bumpRunName(serviceKey, tag);
     let lastRunUrl: string | null = null;
@@ -92,9 +87,7 @@ export class ReleaseArgocdService {
       await this.sleep(BUMP_POLL_INTERVAL_MS);
     }
 
-    throw new Error(
-      `GitOps version-bump pull request did not appear on ${branch}. The service may not be allowlisted, or the notify job did not dispatch.`
-    );
+    throw new Error(`GitOps version-bump pull request did not appear on ${branch}. The service may not be allowlisted, or the notify job did not dispatch.`);
   }
 
   private sleep(ms: number): Promise<void> {

@@ -6,5 +6,5 @@ export { BlogStatus } from './blog-status.enum.js';
 export { BlogType } from './blog-type.enum.js';
 export { ChangelogSource } from './changelog-source.enum.js';
 export { ChangelogStatus } from './changelog-status.enum.js';
-export { ReleaseJobStatus, RELEASE_JOB_ACTIVE_STATUSES } from './release-job-status.enum.js';
+export { RELEASE_JOB_ACTIVE_STATUSES, ReleaseJobStatus } from './release-job-status.enum.js';
 export { UserRole } from './user-role.enum.js';

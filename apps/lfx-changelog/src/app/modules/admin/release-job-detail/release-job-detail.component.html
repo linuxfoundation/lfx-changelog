@@ -27,7 +27,9 @@
 
     <div class="border-border bg-surface grid gap-2 rounded-lg border p-4 text-sm">
       @if (job()!.releaseUrl) {
-        <div>Published version: <a class="text-brand-700" [href]="job()!.releaseUrl" target="_blank">{{ job()!.releaseUrl }}</a></div>
+        <div>
+          Published version: <a class="text-brand-700" [href]="job()!.releaseUrl" target="_blank">{{ job()!.releaseUrl }}</a>
+        </div>
       }
       @if (job()!.ciStatus) {
         <div>
@@ -38,7 +40,9 @@
         </div>
       }
       @if (job()!.argocdPrUrl) {
-        <div>Deployment change: <a class="text-brand-700" [href]="job()!.argocdPrUrl" target="_blank">{{ job()!.argocdPrUrl }}</a></div>
+        <div>
+          Deployment change: <a class="text-brand-700" [href]="job()!.argocdPrUrl" target="_blank">{{ job()!.argocdPrUrl }}</a>
+        </div>
       }
       @if (job()!.bumpOutcome) {
         <div>GitOps bump: {{ job()!.bumpOutcome }}</div>

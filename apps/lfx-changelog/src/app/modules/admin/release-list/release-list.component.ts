@@ -13,7 +13,7 @@ import { ReleaseJobService } from '@services/release-job.service';
 import { ToastService } from '@services/toast.service';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 
-import type { Product, ReleaseJob, ReleasableService } from '@lfx-changelog/shared';
+import type { Product, ReleasableService, ReleaseJob } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-release-list',

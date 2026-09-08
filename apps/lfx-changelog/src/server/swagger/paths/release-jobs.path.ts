@@ -5,11 +5,11 @@ import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
 import {
+  ReleasableServiceSchema,
   ReleaseJobQueryParamsSchema,
   ReleaseJobSchema,
   ReleaseNotesPreviewSchema,
   ReleasePlanSchema,
-  ReleasableServiceSchema,
   StartReleaseRequestSchema,
   UpdateServiceMappingRequestSchema,
   createApiResponseSchema,

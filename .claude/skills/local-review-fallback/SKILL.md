@@ -18,11 +18,11 @@ review. This is a launch table. It contains no criteria, no severities, no
 floor rules, no knowledge-base awareness — all of that lives in the three
 named skills below.
 
-| Role | Model | Skill to load |
-| --- | --- | --- |
-| `general` | `opus` | `lfx-skills:lfx-general-code-review` |
-| `repo_code` | `opus` | `local-code-review` |
-| `repo_learnings` | `opus` | `local-learnings-review` |
+| Role             | Model  | Skill to load                        |
+| ---------------- | ------ | ------------------------------------ |
+| `general`        | `opus` | `lfx-skills:lfx-general-code-review` |
+| `repo_code`      | `opus` | `local-code-review`                  |
+| `repo_learnings` | `opus` | `local-learnings-review`             |
 
 One model requirement for the whole batch, not per role.
 

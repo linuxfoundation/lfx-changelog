@@ -80,22 +80,26 @@ export class WebhookController {
     const event = req.headers['x-github-event'] as string;
 
     if (event === 'pull_request_review') {
-      await releaseApprovalService.handleReviewWebhook(req.body as {
-        action?: string;
-        review?: { user?: { login?: string }; state?: string };
-        pull_request?: { number?: number };
-        repository?: { full_name?: string };
-      });
+      await releaseApprovalService.handleReviewWebhook(
+        req.body as {
+          action?: string;
+          review?: { user?: { login?: string }; state?: string };
+          pull_request?: { number?: number };
+          repository?: { full_name?: string };
+        }
+      );
       res.status(200).json({ ok: true });
       return;
     }
 
     if (event === 'pull_request') {
-      await releaseApprovalService.handlePullRequestWebhook(req.body as {
-        action?: string;
-        pull_request?: { number?: number; merged?: boolean };
-        repository?: { full_name?: string };
-      });
+      await releaseApprovalService.handlePullRequestWebhook(
+        req.body as {
+          action?: string;
+          pull_request?: { number?: number; merged?: boolean };
+          repository?: { full_name?: string };
+        }
+      );
     }
 
     if (!this.isRelevantEvent(event, req.body as Record<string, unknown>)) {

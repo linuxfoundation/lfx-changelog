@@ -19,8 +19,6 @@ router.get('/:id/stream', authorize({ oauthOnly: true, role: UserRole.PRODUCT_AD
 router.get('/:id', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) => controller.getById(req, res, next));
 router.post('/:id/cancel', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) => controller.cancel(req, res, next));
 router.post('/:id/retry', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) => controller.retry(req, res, next));
-router.post('/:id/refresh-sync', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
-  controller.refreshSync(req, res, next)
-);
+router.post('/:id/refresh-sync', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) => controller.refreshSync(req, res, next));
 
 export default router;
