@@ -301,18 +301,11 @@ export class ReleaseWorkflowService {
 
     job = await prisma.releaseJob.update({ where: { id: jobId }, data: { status: 'running' } });
     this.emitStatus(jobId, ReleaseJobStatus.RUNNING);
-    const mergeLine = job.bumpOutcome === 'already_current' ? 'Pins already current. No GitOps pull request.' : 'GitOps pull request merged';
+    const mergeLine = 'GitOps pull request merged';
     await this.append(jobId, 'merge', 'success', mergeLine);
     const syncEnabled = isArgocdSyncEnabled();
     if (job.slackThreadTs) {
-      let slackMerge: string;
-      if (!syncEnabled) {
-        slackMerge = `${mergeLine} Changelog is not requesting an Argo CD sync.`;
-      } else if (job.bumpOutcome === 'already_current') {
-        slackMerge = `${mergeLine} Requesting deploy sync.`;
-      } else {
-        slackMerge = 'Requesting deploy sync.';
-      }
+      const slackMerge = syncEnabled ? 'Requesting deploy sync.' : `${mergeLine}. Changelog is not requesting an Argo CD sync.`;
       await releaseSlackService.postThread(job.slackThreadTs, slackMerge);
     }
 
@@ -339,14 +332,7 @@ export class ReleaseWorkflowService {
     const syncLine = syncs.map((row) => `${row.environment}=${row.requestStatus}`).join(', ');
     if (job.slackThreadTs) {
       const audit = await releaseGitHubAuditService.auditSince(service.githubRepo, job.latestTag, job.releaseHeadSha ?? undefined);
-      let argocdLine: string;
-      if (job.argocdPrUrl) {
-        argocdLine = `<${job.argocdPrUrl}|GitOps PR>`;
-      } else if (job.bumpOutcome === 'already_current') {
-        argocdLine = 'already current';
-      } else {
-        argocdLine = 'missing';
-      }
+      const argocdLine = job.argocdPrUrl ? `<${job.argocdPrUrl}|GitOps PR>` : 'missing';
       const summary = releaseSlackService.buildSummary({
         displayName: service.displayName,
         newTag: job.newTag,
@@ -438,13 +424,9 @@ export class ReleaseWorkflowService {
       }
 
       if (!job.bumpOutcome) {
-        await this.append(jobId, 'argocd_bump', 'info', 'Watching for the GitOps version-bump job');
-        await this.notifyThread(jobId, job.slackThreadTs, `Watching for the GitOps version-bump job after ${service.ciSlackLabel}.`);
+        await this.append(jobId, 'argocd_bump', 'info', 'Waiting for the ArgoCD version-bump pull request');
+        await this.notifyThread(jobId, job.slackThreadTs, `Waiting for the ArgoCD version-bump pull request after ${service.ciSlackLabel}.`);
         const bump = await releaseArgocdService.waitForVersionBump(service.key, job.argocdTag, job.startedAt ?? undefined, {
-          onRunDetected: async (runUrl) => {
-            await this.append(jobId, 'argocd_bump', 'info', `GitOps version-bump job is running: ${runUrl}`);
-            await this.notifyThread(jobId, job.slackThreadTs, `GitOps version-bump job is running: ${runUrl}`);
-          },
           onPrFound: async (prUrl) => {
             await this.append(jobId, 'argocd_bump', 'success', `GitOps pull request opened: ${prUrl}`);
             await this.notifyThread(jobId, job.slackThreadTs, `GitOps pull request opened: ${prUrl}`);
@@ -452,7 +434,6 @@ export class ReleaseWorkflowService {
         });
         const bumpData = {
           bumpOutcome: bump.outcome,
-          bumpRunUrl: bump.runUrl,
           argocdPrUrl: bump.prUrl,
           argocdPrNumber: bump.prNumber,
         };
@@ -477,23 +458,15 @@ export class ReleaseWorkflowService {
           }
           return;
         }
-        const staysRunning = bump.outcome === 'already_current';
-        if (staysRunning) {
-          job = await prisma.releaseJob.update({ where: { id: jobId }, data: { ...bumpData, status: 'running' } });
-        } else {
-          const updated = await this.updateIfLeaseOwner(jobId, { ...bumpData, status: 'waiting_for_approval', leaseOwner: null, leaseExpiresAt: null });
-          if (!updated) {
-            return;
-          }
-          job = updated;
+        const updated = await this.updateIfLeaseOwner(jobId, { ...bumpData, status: 'waiting_for_approval', leaseOwner: null, leaseExpiresAt: null });
+        if (!updated) {
+          return;
         }
-        if (bump.outcome === 'already_current') {
-          await this.append(jobId, 'argocd_bump', 'success', 'Pins already current. No pull request.');
-          await this.notifyThread(jobId, job.slackThreadTs, 'GitOps pins already current. No pull request.');
-        } else if (bump.outcome === 'reused') {
+        job = updated;
+        if (bump.outcome === 'reused') {
           await this.append(jobId, 'argocd_bump', 'success', `Reused ${bump.prUrl}`);
         }
-        if (bump.outcome !== 'already_current' && !bump.merged) {
+        if (!bump.merged) {
           await this.append(jobId, 'approval', 'info', 'Waiting for @lfx-one. Changelog will enqueue the merge queue after approval.');
           this.emitStatus(jobId, ReleaseJobStatus.WAITING_FOR_APPROVAL);
           return;

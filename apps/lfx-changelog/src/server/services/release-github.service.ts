@@ -145,6 +145,7 @@ export class ReleaseGitHubService {
     mergeableState: string | null;
     nodeId: string;
     headSha: string | null;
+    createdAt: string | null;
   }> {
     const token = await this.getInstallationToken();
     const response = await fetch(`${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/pulls/${encodeURIComponent(pullNumber)}`, {
@@ -161,6 +162,7 @@ export class ReleaseGitHubService {
       mergeable_state?: string;
       node_id?: string;
       head?: { sha?: string };
+      created_at?: string;
     };
     if (!data.node_id) {
       throw new Error('Get pull request returned no node_id');
@@ -173,7 +175,32 @@ export class ReleaseGitHubService {
       mergeableState: data.mergeable_state ?? null,
       nodeId: data.node_id,
       headSha: data.head?.sha ?? null,
+      createdAt: data.created_at ?? null,
     };
+  }
+
+  /**
+   * Returns whether any commit status on `sha` is in a terminal-failure state
+   * (`failure` or `error`). Used by the approval poller to fail a job whose
+   * ArgoCD pull request's CI has failed. Returns `null` if the status cannot
+   * be fetched (permission errors, transient 5xx), so the caller can treat it
+   * as "unknown" rather than "passing".
+   */
+  public async getFailingCheckStatus(repo: string, sha: string): Promise<{ failed: boolean; url: string | null } | null> {
+    const token = await this.getInstallationToken();
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/commits/${encodeURIComponent(sha)}/status`, {
+      headers: this.headers(token),
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const data = (await response.json()) as { state?: string; statuses?: { state?: string; target_url?: string | null }[] };
+    const failed = data.state === 'failure' || data.state === 'error';
+    if (!failed) {
+      return { failed: false, url: null };
+    }
+    const firstFailingUrl = (data.statuses ?? []).find((entry) => entry.state === 'failure' || entry.state === 'error')?.target_url ?? null;
+    return { failed: true, url: firstFailingUrl };
   }
 
   /**
@@ -216,34 +243,6 @@ export class ReleaseGitHubService {
       }
       throw error;
     }
-  }
-
-  public async findWorkflowRunByName(
-    repo: string,
-    workflowFile: string,
-    runName: string
-  ): Promise<{ id: number; url: string; status: string; conclusion: string | null } | null> {
-    const token = await this.getInstallationToken();
-    const encoded = encodeURIComponent(workflowFile);
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/actions/workflows/${encoded}/runs?per_page=30`, {
-      headers: this.headers(token),
-    });
-    if (!response.ok) {
-      return null;
-    }
-    const data = (await response.json()) as {
-      workflow_runs?: { id: number; name?: string; display_title?: string; html_url?: string; status?: string; conclusion?: string | null }[];
-    };
-    const match = (data.workflow_runs ?? []).find((run) => run.name === runName || run.display_title === runName);
-    if (!match) {
-      return null;
-    }
-    return {
-      id: match.id,
-      url: match.html_url || `https://github.com/${repo}/actions/runs/${match.id}`,
-      status: match.status || '',
-      conclusion: match.conclusion ?? null,
-    };
   }
 
   public async listReviews(repo: string, pullNumber: number): Promise<{ user: string; state: string; commitId: string | null }[]> {

@@ -393,7 +393,6 @@ export class ReleaseJobController {
       ciRunUrl: job.ciRunUrl,
       argocdPrUrl: job.argocdPrUrl,
       bumpOutcome: job.bumpOutcome,
-      bumpRunUrl: job.bumpRunUrl,
       mergeQueuedAt: job.mergeQueuedAt?.toISOString() ?? null,
       progressLog: job.progressLog,
       environmentSyncs: (job.environmentSyncs ?? []).map((row) => ({

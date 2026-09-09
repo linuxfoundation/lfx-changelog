@@ -107,7 +107,6 @@ export const ReleaseJobSchema = z
     ciRunUrl: z.string().nullable(),
     argocdPrUrl: z.string().nullable(),
     bumpOutcome: z.string().nullable().optional(),
-    bumpRunUrl: z.string().nullable().optional(),
     mergeQueuedAt: z.string().nullable().optional(),
     progressLog: z.array(ReleaseProgressLineSchema),
     environmentSyncs: z.array(EnvironmentSyncSchema).optional(),

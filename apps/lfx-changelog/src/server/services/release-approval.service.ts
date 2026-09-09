@@ -9,6 +9,7 @@ import { releaseWorkflowService } from './release-workflow.service';
 
 const LFX_ONE = 'lfx-one';
 const POLL_MS = 3 * 60 * 1000;
+const APPROVAL_TIMEOUT_MS = 3 * 60 * 1000;
 
 export class ReleaseApprovalService {
   private pollerStarted = false;
@@ -131,6 +132,17 @@ export class ReleaseApprovalService {
         throw new Error('GitOps pull request closed without merge');
       }
 
+      // If any CI check on the ArgoCD PR has failed, the PR cannot be merged even
+      // once @lfx-one approves. Fail the job now and post to Slack instead of waiting
+      // out the polling window for an approval that would land on a broken build.
+      if (pr.headSha) {
+        const checks = await releaseGitHubService.getFailingCheckStatus(ARGOCD_REPO, pr.headSha);
+        if (checks?.failed) {
+          const suffix = checks.url ? ` (${checks.url})` : '';
+          throw new Error(`ArgoCD pull request CI failed${suffix}`);
+        }
+      }
+
       const reviews = await releaseGitHubService.listReviews(ARGOCD_REPO, prNumber);
       let latestLfxOneState: string | null = null;
       // Consider only reviews pinned to the PR's current head. Without this filter, an
@@ -147,6 +159,7 @@ export class ReleaseApprovalService {
         latestLfxOneState = review.state.toLowerCase();
       }
       if (latestLfxOneState !== 'approved') {
+        await this.notifyApprovalTimeoutIfDue(job, pr.createdAt, pr.url);
         return;
       }
       if (pr.mergeableState === 'dirty') {
@@ -186,6 +199,47 @@ export class ReleaseApprovalService {
         await releaseWorkflowService.append(job.id, 'merge', 'error', message);
       }
     }
+  }
+
+  /**
+   * The lfx-one review agent is expected to auto-approve the ArgoCD version-bump
+   * pull request within about 3 minutes of it opening. If that window elapses without
+   * an approval, post a heads-up to the Slack thread so a human knows to check in.
+   * The job stays in `waiting_for_approval` so a later approval still completes it.
+   * `approvalTimeoutNotifiedAt` guards against re-posting on every poll cycle and
+   * survives server restarts.
+   */
+  private async notifyApprovalTimeoutIfDue(
+    job: { id: string; slackThreadTs: string | null; approvalTimeoutNotifiedAt: Date | null },
+    prCreatedAt: string | null,
+    prUrl: string
+  ): Promise<void> {
+    if (job.approvalTimeoutNotifiedAt) {
+      return;
+    }
+    if (!prCreatedAt) {
+      return;
+    }
+    const openedAt = new Date(prCreatedAt).getTime();
+    if (!Number.isFinite(openedAt)) {
+      return;
+    }
+    if (Date.now() - openedAt < APPROVAL_TIMEOUT_MS) {
+      return;
+    }
+    const prisma = getPrismaClient();
+    // Claim on the null timestamp so at most one replica posts the Slack notice,
+    // even if two pollers reach this point in the same cycle.
+    const claim = await prisma.releaseJob.updateMany({
+      where: { id: job.id, approvalTimeoutNotifiedAt: null },
+      data: { approvalTimeoutNotifiedAt: new Date() },
+    });
+    if (claim.count !== 1) {
+      return;
+    }
+    const message = `@lfx-one has not approved ${prUrl} after 3 minutes. The review agent may need attention.`;
+    await releaseWorkflowService.append(job.id, 'approval', 'info', message);
+    await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, message);
   }
 }
 

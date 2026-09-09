@@ -89,47 +89,47 @@ enum EnvironmentSyncRequestStatus {
 }
 
 model Product {
-  id                    String   @id @default(uuid())
-  name                  String   @unique
-  slug                  String   @unique
-  description           String?
-  iconUrl               String?  @map("icon_url")
-  faIcon                String?  @map("fa_icon")
-  isActive              Boolean  @default(true) @map("is_active")
-  githubInstallationId  Int?     @map("github_installation_id")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(uuid())
+  name                 String   @unique
+  slug                 String   @unique
+  description          String?
+  iconUrl              String?  @map("icon_url")
+  faIcon               String?  @map("fa_icon")
+  isActive             Boolean  @default(true) @map("is_active")
+  githubInstallationId Int?     @map("github_installation_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  changelogEntries    ChangelogEntry[]
-  userRoleAssignments UserRoleAssignment[]
-  repositories        ProductRepository[]
-  autoChangelogLock   AutoChangelogLock?
-  changelogViews      ChangelogView[]
-  agentJobs           AgentJob[]
-  agentMemory         AgentMemory?
-  blogProducts        BlogProduct[]
-  slackNotifyUsers            ProductSlackNotifyUser[]
-  releasableServiceMappings   ReleasableServiceMapping[]
-  releaseJobs                 ReleaseJob[]
+  changelogEntries          ChangelogEntry[]
+  userRoleAssignments       UserRoleAssignment[]
+  repositories              ProductRepository[]
+  autoChangelogLock         AutoChangelogLock?
+  changelogViews            ChangelogView[]
+  agentJobs                 AgentJob[]
+  agentMemory               AgentMemory?
+  blogProducts              BlogProduct[]
+  slackNotifyUsers          ProductSlackNotifyUser[]
+  releasableServiceMappings ReleasableServiceMapping[]
+  releaseJobs               ReleaseJob[]
 
   @@map("products")
 }
 
 model ProductRepository {
-  id                    String   @id @default(uuid())
-  productId             String   @map("product_id")
-  githubInstallationId  Int      @map("github_installation_id")
-  owner                 String
-  name                  String
-  fullName              String   @map("full_name")
-  htmlUrl               String   @map("html_url")
-  description           String?
-  isPrivate             Boolean   @default(false) @map("is_private")
-  lastSyncedAt          DateTime? @map("last_synced_at")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  id                   String    @id @default(uuid())
+  productId            String    @map("product_id")
+  githubInstallationId Int       @map("github_installation_id")
+  owner                String
+  name                 String
+  fullName             String    @map("full_name")
+  htmlUrl              String    @map("html_url")
+  description          String?
+  isPrivate            Boolean   @default(false) @map("is_private")
+  lastSyncedAt         DateTime? @map("last_synced_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
-  product  Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product  Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   releases GitHubRelease[]
 
   @@unique([productId, owner, name])
@@ -161,25 +161,25 @@ model GitHubRelease {
 }
 
 model ChangelogEntry {
-  id          String            @id @default(uuid())
-  productId   String            @map("product_id")
-  slug        String?           @unique
-  title       String
-  description String
-  version     String?
-  source      ChangelogSource   @default(manual) @map("source")
-  status      ChangelogStatus   @default(draft)
-  qualityScore Json?            @map("quality_score")
-  publishedAt DateTime?         @map("published_at")
-  createdBy   String            @map("created_by")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+  id           String          @id @default(uuid())
+  productId    String          @map("product_id")
+  slug         String?         @unique
+  title        String
+  description  String
+  version      String?
+  source       ChangelogSource @default(manual) @map("source")
+  status       ChangelogStatus @default(draft)
+  qualityScore Json?           @map("quality_score")
+  publishedAt  DateTime?       @map("published_at")
+  createdBy    String          @map("created_by")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
 
-  product               Product                  @relation(fields: [productId], references: [id])
-  author                User                     @relation(fields: [createdBy], references: [id])
-  slackNotifications    SlackNotification[]
-  agentJobs             AgentJob[]
-  blogChangelogs    BlogChangelogEntry[]
+  product            Product              @relation(fields: [productId], references: [id])
+  author             User                 @relation(fields: [createdBy], references: [id])
+  slackNotifications SlackNotification[]
+  agentJobs          AgentJob[]
+  blogChangelogs     BlogChangelogEntry[]
 
   @@index([productId, status, publishedAt])
   @@map("changelog_entries")
@@ -194,15 +194,15 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  changelogEntries    ChangelogEntry[]
-  userRoleAssignments UserRoleAssignment[]
-  apiKeys             ApiKey[]
-  chatConversations   ChatConversation[]
-  slackIntegrations   SlackIntegration[]
-  blogs               Blog[]
-  slackNotifyUsers         ProductSlackNotifyUser[]
-  releaseJobsRequested     ReleaseJob[]             @relation("ReleaseJobRequester")
-  releaseJobsCancelled     ReleaseJob[]             @relation("ReleaseJobCanceller")
+  changelogEntries     ChangelogEntry[]
+  userRoleAssignments  UserRoleAssignment[]
+  apiKeys              ApiKey[]
+  chatConversations    ChatConversation[]
+  slackIntegrations    SlackIntegration[]
+  blogs                Blog[]
+  slackNotifyUsers     ProductSlackNotifyUser[]
+  releaseJobsRequested ReleaseJob[]             @relation("ReleaseJobRequester")
+  releaseJobsCancelled ReleaseJob[]             @relation("ReleaseJobCanceller")
 
   @@map("users")
 }
@@ -303,7 +303,7 @@ model SlackChannel {
   isDefault          Boolean  @default(false) @map("is_default")
   createdAt          DateTime @default(now()) @map("created_at")
 
-  slackIntegration SlackIntegration  @relation(fields: [slackIntegrationId], references: [id], onDelete: Cascade)
+  slackIntegration SlackIntegration    @relation(fields: [slackIntegrationId], references: [id], onDelete: Cascade)
   notifications    SlackNotification[]
 
   @@unique([slackIntegrationId, channelId])
@@ -358,10 +358,10 @@ model ProductSlackNotifyUser {
 }
 
 model AutoChangelogLock {
-  productId String                   @id @map("product_id")
-  status    AutoChangelogLockStatus  @default(in_progress)
-  lockedAt  DateTime                 @map("locked_at")
-  updatedAt DateTime                 @updatedAt @map("updated_at")
+  productId String                  @id @map("product_id")
+  status    AutoChangelogLockStatus @default(in_progress)
+  lockedAt  DateTime                @map("locked_at")
+  updatedAt DateTime                @updatedAt @map("updated_at")
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -400,7 +400,7 @@ model AgentJob {
   completedAt  DateTime?       @map("completed_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
-  blogId         String?         @map("blog_id")
+  blogId String? @map("blog_id")
 
   product        Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
   changelogEntry ChangelogEntry? @relation(fields: [changelogId], references: [id], onDelete: SetNull)
@@ -475,11 +475,11 @@ model BlogChangelogEntry {
 }
 
 model ReleasableServiceMapping {
-  id          String   @id @default(uuid())
-  serviceKey  String   @unique @map("service_key")
-  productId   String   @map("product_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  serviceKey String   @unique @map("service_key")
+  productId  String   @map("product_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -488,35 +488,35 @@ model ReleasableServiceMapping {
 }
 
 model ReleaseJob {
-  id              String           @id @default(uuid())
-  serviceKey      String           @map("service_key")
-  productId       String?          @map("product_id")
-  requesterId     String           @map("requester_id")
-  cancelledById   String?          @map("cancelled_by_id")
-  status          ReleaseJobStatus @default(pending)
-  latestTag       String           @map("latest_tag")
-  newTag          String           @map("new_tag")
-  argocdTag       String           @map("argocd_tag")
-  releaseHeadSha  String?          @map("release_head_sha")
-  releaseNotes    String           @map("release_notes") @db.Text
-  releaseUrl      String?          @map("release_url")
-  ciStatus        String?          @map("ci_status")
-  ciRunUrl        String?          @map("ci_run_url")
-  argocdPrUrl     String?          @map("argocd_pr_url")
-  argocdPrNumber  Int?             @map("argocd_pr_number")
-  bumpOutcome     String?          @map("bump_outcome")
-  bumpRunUrl      String?          @map("bump_run_url")
-  mergeQueuedAt   DateTime?        @map("merge_queued_at")
-  leaseOwner      String?          @map("lease_owner")
-  leaseExpiresAt  DateTime?        @map("lease_expires_at")
-  slackThreadTs   String?          @map("slack_thread_ts")
-  slackChannel    String?          @map("slack_channel")
-  progressLog     Json             @default("[]") @map("progress_log")
-  errorMessage    String?          @map("error_message")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  startedAt       DateTime?        @map("started_at")
-  completedAt     DateTime?        @map("completed_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
+  id                        String           @id @default(uuid())
+  serviceKey                String           @map("service_key")
+  productId                 String?          @map("product_id")
+  requesterId               String           @map("requester_id")
+  cancelledById             String?          @map("cancelled_by_id")
+  status                    ReleaseJobStatus @default(pending)
+  latestTag                 String           @map("latest_tag")
+  newTag                    String           @map("new_tag")
+  argocdTag                 String           @map("argocd_tag")
+  releaseHeadSha            String?          @map("release_head_sha")
+  releaseNotes              String           @map("release_notes") @db.Text
+  releaseUrl                String?          @map("release_url")
+  ciStatus                  String?          @map("ci_status")
+  ciRunUrl                  String?          @map("ci_run_url")
+  argocdPrUrl               String?          @map("argocd_pr_url")
+  argocdPrNumber            Int?             @map("argocd_pr_number")
+  bumpOutcome               String?          @map("bump_outcome")
+  mergeQueuedAt             DateTime?        @map("merge_queued_at")
+  approvalTimeoutNotifiedAt DateTime?        @map("approval_timeout_notified_at")
+  leaseOwner                String?          @map("lease_owner")
+  leaseExpiresAt            DateTime?        @map("lease_expires_at")
+  slackThreadTs             String?          @map("slack_thread_ts")
+  slackChannel              String?          @map("slack_channel")
+  progressLog               Json             @default("[]") @map("progress_log")
+  errorMessage              String?          @map("error_message")
+  createdAt                 DateTime         @default(now()) @map("created_at")
+  startedAt                 DateTime?        @map("started_at")
+  completedAt               DateTime?        @map("completed_at")
+  updatedAt                 DateTime         @updatedAt @map("updated_at")
 
   product          Product?          @relation(fields: [productId], references: [id], onDelete: SetNull)
   requester        User              @relation("ReleaseJobRequester", fields: [requesterId], references: [id])
