@@ -11,6 +11,14 @@ const LFX_ONE = 'lfx-one';
 const POLL_MS = 3 * 60 * 1000;
 const APPROVAL_TIMEOUT_MS = 3 * 60 * 1000;
 
+// REST `mergeable_state` values (lowercase) that mean required checks and required
+// reviews are satisfied and GitHub will accept an immediate enqueue. `clean` is the
+// normal ready state; `has_hooks` is clean plus a pre-receive hook; `unstable` means
+// the PR is mergeable but a non-required check is failing/pending (still enqueueable).
+const MERGE_READY_STATES = new Set(['clean', 'has_hooks', 'unstable']);
+// States that will not become mergeable on their own; stop waiting and fail the job.
+const MERGE_TERMINAL_BAD_STATES = new Set(['dirty', 'draft']);
+
 export class ReleaseApprovalService {
   private pollerStarted = false;
 
@@ -162,8 +170,23 @@ export class ReleaseApprovalService {
         await this.notifyApprovalTimeoutIfDue(job, pr.createdAt, pr.url);
         return;
       }
-      if (pr.mergeableState === 'dirty') {
-        throw new Error('GitOps pull request has conflicts after @lfx-one approval');
+
+      // Approval alone is not enough to enqueue: GitHub's `enqueuePullRequest` mutation
+      // rejects a PR whose required checks have not yet passed. Waiting for the merge
+      // queue to reject us and then failing the whole job on a transient state was the
+      // repeated failure mode in the Python reference implementation, so gate on
+      // `mergeableState` before calling the mutation and let a not-yet-ready PR retry
+      // on the next poll instead.
+      const mergeState = (pr.mergeableState ?? '').toLowerCase();
+      if (MERGE_TERMINAL_BAD_STATES.has(mergeState)) {
+        throw new Error(`GitOps pull request cannot be merged (mergeableState=${mergeState})`);
+      }
+      if (!MERGE_READY_STATES.has(mergeState)) {
+        serverLogger.info(
+          { jobId: job.id, prNumber, mergeableState: mergeState || null },
+          '@lfx-one approved GitOps pull request; waiting for required checks before enqueueing'
+        );
+        return;
       }
 
       if (!job.mergeQueuedAt) {
