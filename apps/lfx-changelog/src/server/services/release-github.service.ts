@@ -48,7 +48,19 @@ export class ReleaseGitHubService {
 
   public async createRelease(repo: string, tag: string, notes: string, headSha?: string | null): Promise<string> {
     const token = await this.getInstallationToken();
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/releases`, {
+    // GitHub silently ignores `target_commitish` when `tag_name` already exists,
+    // so a pre-existing orphaned tag would end up pinning the release to whatever
+    // commit that tag references — potentially something other than the reviewed
+    // `headSha`. Resolve the tag ref up-front and refuse to proceed on a mismatch.
+    if (headSha) {
+      const existingTagSha = await this.resolveTagCommitSha(repo, tag, token);
+      if (existingTagSha && existingTagSha !== headSha) {
+        throw new Error(
+          `Refusing to create release ${tag}: tag already points at ${existingTagSha} but the release SHA is ${headSha}`
+        );
+      }
+    }
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/releases`, {
       method: 'POST',
       headers: {
         ...this.headers(token),
@@ -180,26 +192,93 @@ export class ReleaseGitHubService {
   }
 
   /**
-   * Returns whether any commit status on `sha` is in a terminal-failure state
-   * (`failure` or `error`). Used by the approval poller to fail a job whose
-   * ArgoCD pull request's CI has failed. Returns `null` if the status cannot
-   * be fetched (permission errors, transient 5xx), so the caller can treat it
-   * as "unknown" rather than "passing".
+   * Returns whether any check on `sha` is in a terminal-failure state. Used by the
+   * approval poller to fail a job whose ArgoCD pull request's CI has failed. Returns
+   * `null` if the rollup cannot be fetched (transient 5xx, permission error, etc.)
+   * so the caller can treat it as "unknown" rather than "passing".
+   *
+   * Uses GraphQL `statusCheckRollup` because the REST `/commits/{sha}/status` endpoint
+   * only returns legacy commit statuses — GitHub Actions runs are reported as check
+   * runs and were invisible to the earlier implementation, meaning an Actions failure
+   * on the ArgoCD PR could silently pass this gate and the poller would enqueue an
+   * unmergeable PR. `statusCheckRollup` unifies check runs and status contexts.
    */
   public async getFailingCheckStatus(repo: string, sha: string): Promise<{ failed: boolean; url: string | null } | null> {
-    const token = await this.getInstallationToken();
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/commits/${encodeURIComponent(sha)}/status`, {
-      headers: this.headers(token),
-    });
-    if (!response.ok) {
+    const [owner, name] = repo.split('/');
+    if (!owner || !name) {
       return null;
     }
-    const data = (await response.json()) as { state?: string; statuses?: { state?: string; target_url?: string | null }[] };
-    const failed = data.state === 'failure' || data.state === 'error';
-    if (!failed) {
+    const query = `
+      query($owner: String!, $name: String!, $oid: GitObjectID!) {
+        repository(owner: $owner, name: $name) {
+          object(oid: $oid) {
+            ... on Commit {
+              statusCheckRollup {
+                state
+                contexts(first: 100) {
+                  nodes {
+                    __typename
+                    ... on CheckRun { conclusion detailsUrl }
+                    ... on StatusContext { state targetUrl }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+    let data: {
+      repository?: {
+        object?: {
+          statusCheckRollup?: {
+            state?: string;
+            contexts?: {
+              nodes?: (
+                | { __typename?: 'CheckRun'; conclusion?: string | null; detailsUrl?: string | null }
+                | { __typename?: 'StatusContext'; state?: string | null; targetUrl?: string | null }
+              )[];
+            };
+          };
+        };
+      };
+    };
+    try {
+      data = await this.graphql(query, { owner, name, oid: sha });
+    } catch {
+      return null;
+    }
+    const rollup = data.repository?.object?.statusCheckRollup;
+    if (!rollup) {
       return { failed: false, url: null };
     }
-    const firstFailingUrl = (data.statuses ?? []).find((entry) => entry.state === 'failure' || entry.state === 'error')?.target_url ?? null;
+    const state = (rollup.state ?? '').toUpperCase();
+    // FAILURE/ERROR are the terminal-failure rollup states; PENDING/EXPECTED/SUCCESS
+    // are not failures. `EXPECTED` means required checks haven't reported yet.
+    if (state !== 'FAILURE' && state !== 'ERROR') {
+      return { failed: false, url: null };
+    }
+    const failingConclusions = new Set(['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED', 'STARTUP_FAILURE']);
+    const nodes = rollup.contexts?.nodes ?? [];
+    let firstFailingUrl: string | null = null;
+    for (const node of nodes) {
+      if (!node) {
+        continue;
+      }
+      if (node.__typename === 'CheckRun') {
+        const conclusion = (node.conclusion ?? '').toUpperCase();
+        if (failingConclusions.has(conclusion)) {
+          firstFailingUrl = node.detailsUrl ?? null;
+          break;
+        }
+      } else if (node.__typename === 'StatusContext') {
+        const nodeState = (node.state ?? '').toUpperCase();
+        if (nodeState === 'FAILURE' || nodeState === 'ERROR') {
+          firstFailingUrl = node.targetUrl ?? null;
+          break;
+        }
+      }
+    }
     return { failed: true, url: firstFailingUrl };
   }
 
@@ -407,6 +486,47 @@ export class ReleaseGitHubService {
       queued: Boolean(pr?.mergeQueueEntry),
       position: pr?.mergeQueueEntry?.position ?? null,
     };
+  }
+
+  /**
+   * Returns the commit SHA that `refs/tags/{tag}` resolves to, or `null` if the tag
+   * does not exist. Annotated tags are dereferenced once so callers always get a
+   * commit SHA rather than a tag-object SHA. Errors bubble up so `createRelease`
+   * fails loudly instead of silently pinning the release to the wrong commit when
+   * the ref lookup breaks.
+   */
+  private async resolveTagCommitSha(repo: string, tag: string, token: string): Promise<string | null> {
+    const refResponse = await fetch(
+      `${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/git/ref/tags/${encodeURIComponent(tag)}`,
+      { headers: this.headers(token) }
+    );
+    if (refResponse.status === 404) {
+      return null;
+    }
+    if (!refResponse.ok) {
+      throw new Error(`Get tag ref failed: ${refResponse.status}`);
+    }
+    const refData = (await refResponse.json()) as { object?: { sha?: string; type?: string } };
+    const objectSha = refData.object?.sha;
+    const objectType = refData.object?.type;
+    if (!objectSha) {
+      throw new Error('Get tag ref returned no object');
+    }
+    if (objectType !== 'tag') {
+      return objectSha;
+    }
+    const tagResponse = await fetch(
+      `${GITHUB_API_BASE}/repos/${this.encodeRepo(repo)}/git/tags/${encodeURIComponent(objectSha)}`,
+      { headers: this.headers(token) }
+    );
+    if (!tagResponse.ok) {
+      throw new Error(`Get annotated tag failed: ${tagResponse.status}`);
+    }
+    const tagData = (await tagResponse.json()) as { object?: { sha?: string } };
+    if (!tagData.object?.sha) {
+      throw new Error('Get annotated tag returned no object');
+    }
+    return tagData.object.sha;
   }
 
   private async graphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {

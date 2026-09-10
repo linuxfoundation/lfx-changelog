@@ -137,6 +137,36 @@ export class ReleaseWorkflowService {
     if (job.status !== 'failed') {
       throw new Error('Nothing left to retry');
     }
+    // Refuse to reactivate a stale failure. A `failed` row no longer holds the
+    // `active job per service` DB constraint, so a newer release can start and
+    // complete for the same service while this row waits. Retrying without a
+    // freshness check would resume the old job — potentially re-opening its
+    // still-open GitOps PR and enqueueing an older image pin — which would
+    // effectively downgrade the deploy. Block the retry when either a newer
+    // completed release exists or another active job is already running for
+    // the same service, and tell the caller to start a fresh release.
+    const stalenessCutoff = job.completedAt ?? job.startedAt ?? job.createdAt;
+    const [newerCompleted, activeElsewhere] = await Promise.all([
+      prisma.releaseJob.findFirst({
+        where: {
+          serviceKey: job.serviceKey,
+          id: { not: jobId },
+          status: 'completed',
+          completedAt: { gt: stalenessCutoff },
+        },
+        orderBy: { completedAt: 'desc' },
+        select: { newTag: true, completedAt: true },
+      }),
+      releaseAuthService.findActiveJob(job.serviceKey),
+    ]);
+    if (newerCompleted) {
+      throw new Error(
+        `A newer release for ${job.serviceKey} has already completed (${newerCompleted.newTag}). Retrying this job could downgrade the deploy; start a fresh release instead.`
+      );
+    }
+    if (activeElsewhere && activeElsewhere.id !== jobId) {
+      throw new Error(`An active release job already exists for ${job.serviceKey} (${activeElsewhere.id}).`);
+    }
     const ciFailed = job.ciStatus === 'Failed' || job.ciStatus === 'Timed out';
     const updated = await prisma.releaseJob.update({
       where: { id: jobId },
