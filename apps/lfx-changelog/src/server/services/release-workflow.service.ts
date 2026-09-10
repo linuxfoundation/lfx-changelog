@@ -193,7 +193,18 @@ export class ReleaseWorkflowService {
       return;
     }
     running.set(jobId, false);
-    void this.runLoop(jobId);
+    // `runLoop` awaits `claimAndRun`, which itself awaits `run`; `run`'s own
+    // catch handles any release-step failure. But `claimLease` and the surrounding
+    // Prisma writes can still reject before `run` gets a chance to catch (transient
+    // DB hiccup, connection reset). Without this handler that rejection would (a) leak
+    // the jobId in the `running` map so later `kickoff` calls only flip the rerun
+    // flag on a runner that no longer exists, and (b) surface as an unhandled
+    // promise rejection at the process level. Clean the map and log; the periodic
+    // resume scan will pick the job back up.
+    this.runLoop(jobId).catch((error) => {
+      running.delete(jobId);
+      serverLogger.error({ err: error, jobId }, 'Release runLoop rejected outside run(); job returned to resume-scan pool');
+    });
   }
 
   public async append(jobId: string, step: string, type: ReleaseProgressType, summary: string, environment?: string): Promise<void> {

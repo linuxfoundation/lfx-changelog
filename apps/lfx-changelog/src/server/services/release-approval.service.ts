@@ -19,6 +19,21 @@ const MERGE_READY_STATES = new Set(['clean', 'has_hooks', 'unstable']);
 // States that will not become mergeable on their own; stop waiting and fail the job.
 const MERGE_TERMINAL_BAD_STATES = new Set(['dirty', 'draft']);
 
+/**
+ * Errors thrown from within `observePull` that represent a permanent, GitHub-visible
+ * failure state (closed PR, failed required checks, unresolvable merge conflict).
+ * The catch block flips the job to `failed` only for these. Anything else is treated
+ * as a transient integration hiccup (5xx, timeout, expired token) and left in
+ * `waiting_for_approval` so the next poll can retry, per @copilot-pull-request-reviewer's
+ * feedback that a temporary read failure should not permanently kill a release.
+ */
+class TerminalReleaseError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'TerminalReleaseError';
+  }
+}
+
 export class ReleaseApprovalService {
   private pollerStarted = false;
 
@@ -137,7 +152,7 @@ export class ReleaseApprovalService {
         return;
       }
       if (pr.state === 'closed') {
-        throw new Error('GitOps pull request closed without merge');
+        throw new TerminalReleaseError('GitOps pull request closed without merge');
       }
 
       // If any CI check on the ArgoCD PR has failed, the PR cannot be merged even
@@ -147,7 +162,7 @@ export class ReleaseApprovalService {
         const checks = await releaseGitHubService.getFailingCheckStatus(ARGOCD_REPO, pr.headSha);
         if (checks?.failed) {
           const suffix = checks.url ? ` (${checks.url})` : '';
-          throw new Error(`ArgoCD pull request CI failed${suffix}`);
+          throw new TerminalReleaseError(`ArgoCD pull request CI failed${suffix}`);
         }
       }
 
@@ -179,7 +194,7 @@ export class ReleaseApprovalService {
       // on the next poll instead.
       const mergeState = (pr.mergeableState ?? '').toLowerCase();
       if (MERGE_TERMINAL_BAD_STATES.has(mergeState)) {
-        throw new Error(`GitOps pull request cannot be merged (mergeableState=${mergeState})`);
+        throw new TerminalReleaseError(`GitOps pull request cannot be merged (mergeableState=${mergeState})`);
       }
       if (!MERGE_READY_STATES.has(mergeState)) {
         serverLogger.info(
@@ -190,37 +205,64 @@ export class ReleaseApprovalService {
       }
 
       if (!job.mergeQueuedAt) {
-        // Enqueue first, then persist mergeQueuedAt in an atomic claim. Previously the
-        // timestamp was written before the API call, so a crash between the two would
-        // leave the job stuck: later polls skip this block on the non-null timestamp,
-        // and cancel is also blocked while mergeQueuedAt is set. enqueueMergeQueue is
-        // idempotent (repeated calls return alreadyQueued=true), so a retry after a
-        // crash is safe. expectedHeadOid asks GitHub to reject the enqueue if the head
-        // has advanced since our review check, closing the check-to-enqueue race.
-        const queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber, pr.headSha ?? undefined);
-        const claim = await prisma.releaseJob.updateMany({
+        // Pre-claim `mergeQueuedAt` BEFORE calling GitHub. `cancel()` refuses to run
+        // when `mergeQueuedAt` is set, so this pre-claim closes the previous
+        // enqueue-before-claim race: a concurrent cancel that reads the job while
+        // `mergeQueuedAt` is still null used to succeed even after the enqueue call
+        // had already queued the PR, leaving the user believing cancel worked while
+        // the deployment still shipped. We capture the exact timestamp we wrote and
+        // use it to guard the rollback so, on enqueue failure, we only clear our
+        // own claim (never overwrite a cancel/re-poll write that snuck in). If the
+        // pre-claim wins zero rows a cancel already fired; skip the enqueue entirely.
+        // `enqueueMergeQueue` is idempotent (repeated calls return alreadyQueued=true),
+        // so a crash after the pre-claim but before the info logs is recoverable —
+        // the next poll finds `mergeQueuedAt` set and returns without re-enqueuing.
+        const claimedAt = new Date();
+        const preClaim = await prisma.releaseJob.updateMany({
           where: { id: job.id, status: 'waiting_for_approval', mergeQueuedAt: null },
-          data: { mergeQueuedAt: new Date() },
+          data: { mergeQueuedAt: claimedAt },
         });
-        if (claim.count === 1) {
-          await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
-          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
-          const position = queued.position != null ? ` (position ${queued.position})` : '';
-          const queueLine = queued.alreadyQueued ? `Already in the merge queue${position}.` : `Added to the merge queue${position}.`;
-          await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
-          await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
+        if (preClaim.count !== 1) {
+          return;
         }
+        let queued: { alreadyQueued: boolean; position: number | null };
+        try {
+          queued = await releaseGitHubService.enqueueMergeQueue(ARGOCD_REPO, prNumber, pr.headSha ?? undefined);
+        } catch (enqueueError) {
+          // Only clear our own pre-claim: guard on the exact timestamp we wrote so
+          // we don't stomp on a subsequent successful write from another poller.
+          await prisma.releaseJob.updateMany({
+            where: { id: job.id, mergeQueuedAt: claimedAt },
+            data: { mergeQueuedAt: null },
+          });
+          throw enqueueError;
+        }
+        await releaseWorkflowService.append(job.id, 'approval', 'success', '@lfx-one approved the GitOps pull request.');
+        await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, `@lfx-one approved ${pr.url}. Adding it to the merge queue.`);
+        const position = queued.position != null ? ` (position ${queued.position})` : '';
+        const queueLine = queued.alreadyQueued ? `Already in the merge queue${position}.` : `Added to the merge queue${position}.`;
+        await releaseWorkflowService.append(job.id, 'merge', 'info', queueLine);
+        await releaseWorkflowService.notifyThread(job.id, job.slackThreadTs, queueLine);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      serverLogger.error({ err: error, prNumber, jobId: job.id }, 'GitOps approval wait failed');
-      const claim = await prisma.releaseJob.updateMany({
-        where: { id: job.id, status: 'waiting_for_approval' },
-        data: { status: 'failed', errorMessage: message, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null },
-      });
-      if (claim.count === 1) {
-        await releaseWorkflowService.append(job.id, 'merge', 'error', message);
+      // Only permanent failures (closed PR, failed required checks, dirty/draft state,
+      // or an explicit merge-queue rejection) should transition the job to `failed`.
+      // A transient GitHub outage (5xx, timeout, installation-token refresh failure)
+      // during any of the reads above must not permanently kill an otherwise healthy
+      // approval wait — leave the job in `waiting_for_approval` so the next poll retries.
+      if (error instanceof TerminalReleaseError) {
+        const message = error.message;
+        serverLogger.error({ err: error, prNumber, jobId: job.id }, 'GitOps approval wait failed with terminal condition');
+        const claim = await prisma.releaseJob.updateMany({
+          where: { id: job.id, status: 'waiting_for_approval' },
+          data: { status: 'failed', errorMessage: message, completedAt: new Date(), leaseOwner: null, leaseExpiresAt: null },
+        });
+        if (claim.count === 1) {
+          await releaseWorkflowService.append(job.id, 'merge', 'error', message);
+        }
+        return;
       }
+      serverLogger.error({ err: error, prNumber, jobId: job.id }, 'GitOps approval poll encountered transient error; will retry on next poll');
     }
   }
 
@@ -251,10 +293,17 @@ export class ReleaseApprovalService {
       return;
     }
     const prisma = getPrismaClient();
-    // Claim on the null timestamp so at most one replica posts the Slack notice,
-    // even if two pollers reach this point in the same cycle.
+    // Include `status: 'waiting_for_approval'` and `mergeQueuedAt: null` in the atomic
+    // claim so a poller holding a stale snapshot can't post an "approval overdue" notice
+    // for a job that has since been cancelled or already enqueued in the merge queue.
+    // Also keeps the null-timestamp guard so at most one replica posts the notice per cycle.
     const claim = await prisma.releaseJob.updateMany({
-      where: { id: job.id, approvalTimeoutNotifiedAt: null },
+      where: {
+        id: job.id,
+        status: 'waiting_for_approval',
+        mergeQueuedAt: null,
+        approvalTimeoutNotifiedAt: null,
+      },
       data: { approvalTimeoutNotifiedAt: new Date() },
     });
     if (claim.count !== 1) {
