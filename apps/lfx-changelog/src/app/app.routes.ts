@@ -4,6 +4,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from '@shared/guards/auth.guard';
+import { releaseAdminGuard } from '@shared/guards/release-admin.guard';
 import { superAdminGuard } from '@shared/guards/super-admin.guard';
 
 export const routes: Routes = [
@@ -91,6 +92,21 @@ export const routes: Routes = [
         path: 'users',
         canActivate: [superAdminGuard],
         loadComponent: () => import('@modules/admin/user-management/user-management.component').then((m) => m.UserManagementComponent),
+      },
+      {
+        path: 'release-jobs',
+        canActivate: [releaseAdminGuard],
+        loadComponent: () => import('@modules/admin/release-list/release-list.component').then((m) => m.ReleaseListComponent),
+      },
+      {
+        path: 'release-jobs/plan/:key',
+        canActivate: [releaseAdminGuard],
+        loadComponent: () => import('@modules/admin/release-plan/release-plan.component').then((m) => m.ReleasePlanComponent),
+      },
+      {
+        path: 'release-jobs/:id',
+        canActivate: [releaseAdminGuard],
+        loadComponent: () => import('@modules/admin/release-job-detail/release-job-detail.component').then((m) => m.ReleaseJobDetailComponent),
       },
       {
         path: 'agent-jobs',

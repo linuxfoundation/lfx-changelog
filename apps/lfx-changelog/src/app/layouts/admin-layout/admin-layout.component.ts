@@ -23,6 +23,7 @@ export class AdminLayoutComponent {
 
   protected readonly authUser = this.authService.user;
   protected readonly isSuperAdmin = this.authService.isSuperAdmin;
+  protected readonly canStartRelease = this.authService.canStartRelease;
   protected readonly userInitial = computed(() => this.authUser()?.name?.charAt(0)?.toUpperCase() || '?');
   protected readonly sidebarCollapsed = signal(false);
   protected readonly userMenuOpen = signal(false);

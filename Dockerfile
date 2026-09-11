@@ -83,6 +83,10 @@ COPY --from=builder /app/packages/mcp-server/dist ./packages/mcp-server/dist
 # Copy built application
 COPY --from=builder /app/apps/lfx-changelog/dist/lfx-changelog ./dist/lfx-changelog
 
+# Copy release-service catalog config (read at runtime via process.cwd()-relative
+# path by ReleasableCatalogService; not part of the Angular/esbuild server bundle)
+COPY --from=builder /app/apps/lfx-changelog/src/server/config ./src/server/config
+
 # Copy OTel initializer (loaded via --import before the app bundle)
 COPY --from=builder /app/apps/lfx-changelog/otel.mjs ./otel.mjs
 

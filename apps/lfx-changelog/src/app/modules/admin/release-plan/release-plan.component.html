@@ -1,0 +1,53 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <a routerLink="/admin/release-jobs" class="text-brand-700 text-sm">Back to catalog</a>
+
+  @if (loading()) {
+    <p class="text-text-secondary">Loading plan…</p>
+  } @else if (plan(); as current) {
+    <div>
+      <h1 data-testid="release-plan-heading" class="font-display text-text-primary text-2xl font-bold">{{ current.service.displayName }}</h1>
+      <p class="text-text-secondary mt-1">{{ current.latestTag }} → {{ current.newTag }} (image {{ current.argocdTag }})</p>
+    </div>
+
+    <div class="border-border bg-surface rounded-lg border p-4">
+      <h2 class="text-text-primary mb-2 font-semibold">Pending changes</h2>
+      <ul class="text-text-secondary space-y-1 text-sm">
+        @for (change of current.pending; track change.number) {
+          <li>#{{ change.number }} {{ change.title }} (@{{ change.author }})</li>
+        }
+      </ul>
+    </div>
+
+    <div class="border-border bg-surface rounded-lg border p-4">
+      <h2 class="text-text-primary mb-2 font-semibold">Steps</h2>
+      <ol class="text-text-secondary list-decimal space-y-1 pl-5 text-sm">
+        @for (step of current.steps; track step) {
+          <li>{{ step }}</li>
+        }
+      </ol>
+      <p class="text-text-muted mt-3 text-xs">Environments: {{ environmentsLabel() }}</p>
+    </div>
+
+    <div class="border-border bg-surface space-y-3 rounded-lg border p-4">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-text-primary font-semibold">Release notes</h2>
+        <lfx-button variant="secondary" size="sm" [loading]="generating()" (clicked)="generateNotes()">
+          {{ notes() ? 'Regenerate' : 'Generate' }}
+        </lfx-button>
+      </div>
+      <textarea
+        data-testid="release-plan-notes"
+        class="border-border bg-surface text-text-primary min-h-48 w-full rounded-md border p-3 font-mono text-sm"
+        [formControl]="notesControl"
+        placeholder="Generate notes, then edit them before confirm."></textarea>
+    </div>
+
+    <div class="flex gap-3">
+      <lfx-button data-testid="release-plan-confirm" [disabled]="!notesTrimmed()" [loading]="confirming()" (clicked)="confirm()">Confirm</lfx-button>
+      <lfx-button data-testid="release-plan-cancel" variant="secondary" (clicked)="cancel()">Cancel</lfx-button>
+    </div>
+  }
+</div>

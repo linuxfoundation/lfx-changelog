@@ -15,6 +15,7 @@ import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
 import { publicProductRegistry } from './paths/public-products.path';
 import { publicRoadmapRegistry } from './paths/public-roadmap.path';
+import { releaseJobRegistry } from './paths/release-jobs.path';
 import { releaseRegistry } from './paths/releases.path';
 import { searchRegistry } from './paths/search.path';
 import { userRegistry } from './paths/users.path';
@@ -44,6 +45,7 @@ const allRegistries = [
   productRegistry,
   changelogRegistry,
   releaseRegistry,
+  releaseJobRegistry,
   userRegistry,
   agentJobRegistry,
   publicRoadmapRegistry,
@@ -77,6 +79,8 @@ const document = generator.generateDocument({
     { name: 'Changelogs', description: 'Authentication required' },
     { name: 'Changelog Views', description: 'Track unseen changelog entries per user — authentication required' },
     { name: 'Releases', description: 'Authentication required' },
+    { name: 'Releasable Services', description: 'Session-only shipping catalog' },
+    { name: 'Release Jobs', description: 'Session-only shipping jobs' },
     { name: 'OpenSearch', description: 'OpenSearch administration — super_admin only' },
     { name: 'Users', description: 'Authentication required' },
     { name: 'Blog Posts', description: 'Blog post management — authentication required' },

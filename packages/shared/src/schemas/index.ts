@@ -104,6 +104,24 @@ export {
 export { AddSlackNotifyUserRequestSchema, ProductSchema, ProductSlackNotifyUserSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
 export {
+  ActiveJobConflictSchema,
+  EnvironmentSyncRequestStatusSchema,
+  EnvironmentSyncSchema,
+  GenerateNotesRequestSchema,
+  PendingChangeSchema,
+  ReleasableServiceSchema,
+  ReleaseJobQueryParamsSchema,
+  ReleaseJobSSEEventSchema,
+  ReleaseJobSchema,
+  ReleaseJobStatusSchema,
+  ReleaseNotesPreviewSchema,
+  ReleasePlanSchema,
+  ReleaseProgressLineSchema,
+  ReleaseProgressTypeSchema,
+  StartReleaseRequestSchema,
+  UpdateServiceMappingRequestSchema,
+} from './release-job.schema.js';
+export {
   RoadmapBoardResponseSchema,
   RoadmapColumnSchema,
   RoadmapCommentSchema,
@@ -236,6 +254,23 @@ export type {
 } from './opensearch.schema.js';
 export type { AddSlackNotifyUserRequest, Product, ProductSlackNotifyUser } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';
+export type {
+  ActiveJobConflict,
+  EnvironmentSync,
+  GenerateNotesRequest,
+  PendingChange,
+  ReleasableService,
+  ReleaseJob,
+  ReleaseJobQueryParams,
+  ReleaseJobSSEEvent,
+  ReleaseJobSSEEventType,
+  ReleaseNotesPreview,
+  ReleasePlan,
+  ReleaseProgressLine,
+  ReleaseProgressType,
+  StartReleaseRequest,
+  UpdateServiceMappingRequest,
+} from './release-job.schema.js';
 export type {
   AdfMark,
   AdfNode,

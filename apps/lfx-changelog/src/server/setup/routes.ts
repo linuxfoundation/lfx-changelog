@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { ReleaseJobController } from '../controllers/release-job.controller';
 import { hybridAuthMiddleware } from '../middleware/api-key-auth.middleware';
 import { noCacheMiddleware } from '../middleware/cache.middleware';
 import { apiErrorHandler } from '../middleware/error-handler.middleware';
@@ -21,6 +22,8 @@ import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
 import publicRoadmapRouter from '../routes/public-roadmap.route';
 import publicSearchRouter from '../routes/public-search.route';
+import releasableServiceRouter from '../routes/releasable-service.route';
+import releaseJobRouter from '../routes/release-job.route';
 import slackRouter from '../routes/slack.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
@@ -87,6 +90,10 @@ export function setupRoutes(app: Express): void {
   // ── Webhook routes (unauthenticated — GitHub App callback) ────────────
   app.use('/webhooks', webhookRouter);
 
+  // Laptop collision check. Token-gated, not session-gated.
+  const releaseJobController = new ReleaseJobController();
+  app.get('/internal/release-lock/:serviceKey', (req, res, next) => releaseJobController.activeLock(req, res, next));
+
   // ── Public API routes (no auth required) ──────────────────────────────
   if (process.env['SKIP_RATE_LIMIT'] !== 'true') {
     app.use('/public/api/chat', createPublicChatRateLimiter());
@@ -141,6 +148,8 @@ export function setupRoutes(app: Express): void {
   app.use('/api/github', githubRouter);
   app.use('/api/opensearch', opensearchRouter);
   app.use('/api/releases', releaseRouter);
+  app.use('/api/releasable-services', releasableServiceRouter);
+  app.use('/api/release-jobs', releaseJobRouter);
   app.use('/api/slack', slackRouter);
 
   // ── API error handlers ────────────────────────────────────────────────
