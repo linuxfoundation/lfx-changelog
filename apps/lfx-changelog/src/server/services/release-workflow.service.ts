@@ -13,7 +13,8 @@ import { releaseAuthService } from './release-auth.service';
 import { computeNextTag, releaseGitHubAuditService } from './release-github-audit.service';
 import { releaseGitHubService } from './release-github.service';
 import { releaseJobEmitter } from './release-job-emitter.service';
-import { releaseSlackService } from './release-slack.service';
+import { releaseSlackMapService } from './release-slack-map.service';
+import { escapeSlackMrkdwn, releaseSlackService, slackAuthorMention } from './release-slack.service';
 import { isArgocdSyncEnabled, releaseSyncService } from './release-sync.service';
 
 import { ReleaseJobStatus } from '@lfx-changelog/shared';
@@ -374,11 +375,22 @@ export class ReleaseWorkflowService {
     if (job.slackThreadTs) {
       const audit = await releaseGitHubAuditService.auditSince(service.githubRepo, job.latestTag, job.releaseHeadSha ?? undefined);
       const argocdLine = job.argocdPrUrl ? `<${job.argocdPrUrl}|GitOps PR>` : 'missing';
+      // PR titles and author usernames are contributor-controlled. Escape mrkdwn control
+      // characters on the title so a title like `<!channel>` cannot inject a mention when
+      // this posts, and resolve authors to `<@SlackID>` here (scoped to only the author
+      // field) instead of a global regex over the assembled message. Without this scoping
+      // a PR title containing `@some-mapped-user` would be silently converted into a real
+      // Slack mention downstream.
+      const slackMap = await releaseSlackMapService.load();
+      const pendingLines =
+        audit.pending
+          .map((pr) => `- #${pr.number} ${escapeSlackMrkdwn(pr.title)} ${slackAuthorMention(pr.author, slackMap)}`)
+          .join('\n') || 'See GitHub release notes.';
       const summary = releaseSlackService.buildSummary({
         displayName: service.displayName,
         newTag: job.newTag,
         prCount: audit.pending.length,
-        pendingLines: audit.pending.map((pr) => `- #${pr.number} ${pr.title} @${pr.author}`).join('\n') || 'See GitHub release notes.',
+        pendingLines,
         releaseUrl: job.releaseUrl || '',
         ciStatus: job.ciStatus || 'unknown',
         ciRunUrl: job.ciRunUrl || `https://github.com/${service.githubRepo}/actions`,

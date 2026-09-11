@@ -2,11 +2,37 @@
 // SPDX-License-Identifier: MIT
 
 import { serverLogger } from '../server-logger';
-import { releaseSlackMapService } from './release-slack-map.service';
 
-import type { SlackPostResult } from '../interfaces/release.interface';
+import type { SlackMapEntry, SlackPostResult } from '../interfaces/release.interface';
 
 const POST_MESSAGE_URL = 'https://slack.com/api/chat.postMessage';
+
+/**
+ * Escape the three characters Slack mrkdwn treats as control syntax so
+ * contributor-controlled strings (PR titles, GitHub usernames) cannot inject
+ * `<!channel>`, `<@Uxxx>` mentions, or `<url|label>` links when the automated
+ * summary posts. Order matters: `&` must be escaped first to avoid double-escaping
+ * the substitutions that follow. See https://api.slack.com/reference/surfaces/formatting#escaping.
+ */
+export function escapeSlackMrkdwn(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Return a safe rendering of a GitHub username for a Slack message: a real
+ * `<@SlackID>` mention when the user is in the contributor→Slack map, or the
+ * escaped plain-text `@name` otherwise. Only the author field on each pending
+ * PR line should flow through this helper; applying it to arbitrary message
+ * text would let a PR title containing `@some-mapped-user` be silently converted
+ * into a real Slack mention.
+ */
+export function slackAuthorMention(username: string, mapping: Map<string, SlackMapEntry>): string {
+  const entry = mapping.get(username);
+  if (entry) {
+    return `<@${entry.slackId}>`;
+  }
+  return `@${escapeSlackMrkdwn(username)}`;
+}
 
 export class ReleaseSlackService {
   public isConfigured(): boolean {
@@ -21,10 +47,16 @@ export class ReleaseSlackService {
     return this.post(text, { threadTs });
   }
 
+  /**
+   * Post `text` as-is to a broadcast summary. Previously this method loaded the
+   * contributor→Slack map and substituted `@username` occurrences across the
+   * whole assembled message, which let a contributor-controlled PR title
+   * containing `@some-mapped-user` be transformed into a real Slack mention.
+   * Substitution now happens at the assembly site (via `slackAuthorMention`)
+   * so only the intended author field is converted.
+   */
   public async postBroadcastSummary(threadTs: string, text: string): Promise<SlackPostResult> {
-    const mapping = await releaseSlackMapService.load();
-    const substituted = releaseSlackMapService.substitute(text, mapping);
-    return this.post(substituted, { threadTs, replyBroadcast: true });
+    return this.post(text, { threadTs, replyBroadcast: true });
   }
 
   public buildSummary(input: {
