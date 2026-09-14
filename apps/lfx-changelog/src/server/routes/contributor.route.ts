@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ContributorQueryParamsSchema, LinkContributorSlackRequestSchema, SyncContributorsRequestSchema, UserRole } from '@lfx-changelog/shared';
+import {
+  ContributorQueryParamsSchema,
+  LinkContributorSlackRequestSchema,
+  SlackUserSearchParamsSchema,
+  SyncContributorsRequestSchema,
+  UserRole,
+} from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { ContributorController } from '../controllers/contributor.controller';
@@ -15,7 +21,7 @@ const contributorController = new ContributorController();
 router.use(authorize({ oauthOnly: true, role: UserRole.SUPER_ADMIN }));
 
 // Static paths must be declared before /:id so they aren't swallowed by the param route.
-router.get('/slack-users', (req, res, next) => contributorController.listSlackWorkspaceUsers(req, res, next));
+router.get('/slack-users', validate({ query: SlackUserSearchParamsSchema }), (req, res, next) => contributorController.listSlackWorkspaceUsers(req, res, next));
 router.post('/sync', validate({ body: SyncContributorsRequestSchema }), (req, res, next) => contributorController.sync(req, res, next));
 
 router.get('/', validate({ query: ContributorQueryParamsSchema }), (req, res, next) => contributorController.list(req, res, next));

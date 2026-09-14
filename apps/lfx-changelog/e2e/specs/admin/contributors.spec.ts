@@ -92,7 +92,9 @@ test.describe('Contributors', () => {
 
     test('should surface an error when the Slack workspace is not connected', async () => {
       await contributorsPage.openLinkDialogFor('e2e-octo-dev');
-      // No Slack bot installation exists in the E2E environment, so the directory fetch fails.
+      // The directory is only queried once a search term is entered, so the failure
+      // surfaces on search rather than on open.
+      await contributorsPage.searchSlackUsers('oct');
       await expect(contributorsPage.linkError).toBeVisible();
       await expect(contributorsPage.linkError).toContainText('Slack');
     });

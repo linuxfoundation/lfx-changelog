@@ -15,6 +15,7 @@ export class ContributorsPage {
   // Link to Slack dialog
   public readonly linkDialog: Locator;
   public readonly linkLoading: Locator;
+  public readonly linkSearchInput: Locator;
   public readonly linkUserSelect: Locator;
   public readonly linkSaveBtn: Locator;
   public readonly linkError: Locator;
@@ -33,6 +34,7 @@ export class ContributorsPage {
 
     this.linkDialog = page.locator('[data-testid="link-slack-dialog"]');
     this.linkLoading = page.locator('[data-testid="link-slack-loading"]');
+    this.linkSearchInput = page.locator('[data-testid="link-slack-search-input"]');
     this.linkUserSelect = page.locator('[data-testid="link-slack-user-select"]');
     this.linkSaveBtn = page.locator('[data-testid="link-slack-save-btn"]');
     this.linkError = page.locator('[data-testid="link-slack-error"]');
@@ -64,6 +66,10 @@ export class ContributorsPage {
 
   public async openUnlinkDialogFor(githubLogin: string) {
     await this.getRowByLogin(githubLogin).getByRole('button', { name: 'Unlink' }).click();
+  }
+
+  public async searchSlackUsers(term: string) {
+    await this.linkSearchInput.locator('input').fill(term);
   }
 
   public async confirmUnlink() {
