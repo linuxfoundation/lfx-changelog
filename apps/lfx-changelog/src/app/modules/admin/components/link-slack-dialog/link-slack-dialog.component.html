@@ -25,7 +25,9 @@
   </div>
 
   @if (loading()) {
-    <div class="text-text-muted py-4 text-center text-sm">Loading Slack workspace directory…</div>
+    <div data-testid="link-slack-loading" class="flex items-center justify-center py-8">
+      <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-2xl" aria-label="Loading Slack workspace directory"></i>
+    </div>
   } @else {
     <lfx-select
       data-testid="link-slack-user-select"

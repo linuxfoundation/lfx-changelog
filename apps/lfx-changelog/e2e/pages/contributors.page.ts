@@ -13,6 +13,7 @@ export class ContributorsPage {
 
   // Link to Slack dialog
   public readonly linkDialog: Locator;
+  public readonly linkLoading: Locator;
   public readonly linkUserSelect: Locator;
   public readonly linkSaveBtn: Locator;
   public readonly linkError: Locator;
@@ -26,6 +27,7 @@ export class ContributorsPage {
     this.slackFilter = page.locator('[data-testid="contributors-slack-filter"]');
 
     this.linkDialog = page.locator('[data-testid="link-slack-dialog"]');
+    this.linkLoading = page.locator('[data-testid="link-slack-loading"]');
     this.linkUserSelect = page.locator('[data-testid="link-slack-user-select"]');
     this.linkSaveBtn = page.locator('[data-testid="link-slack-save-btn"]');
     this.linkError = page.locator('[data-testid="link-slack-error"]');
