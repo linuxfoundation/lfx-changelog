@@ -61,7 +61,10 @@ export type ContributorWithRelations = z.infer<typeof ContributorWithRelationsSc
 
 export const ContributorQueryParamsSchema = z
   .object({
-    query: z.string().optional().openapi({ description: 'Free-text search across GitHub login, display name, and known emails' }),
+    query: z
+      .string()
+      .optional()
+      .openapi({ description: 'Substring match on GitHub login, display name, primary email and Slack name; exact match on any other known email' }),
     productId: z.string().uuid().optional().openapi({ description: 'Only contributors who contributed to this product' }),
     repositoryId: z.string().uuid().optional().openapi({ description: 'Only contributors who contributed to this repository' }),
     slackLink: z.enum(['linked', 'unlinked']).optional().openapi({ description: 'Filter by whether a Slack account is associated' }),

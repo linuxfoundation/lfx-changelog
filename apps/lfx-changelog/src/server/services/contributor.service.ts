@@ -10,7 +10,14 @@ import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
 import { SlackService } from './slack.service';
 
-import type { ContributorQueryParams, ContributorSyncResult, ContributorWithRelations, PaginatedResponse, SlackWorkspaceUser } from '@lfx-changelog/shared';
+import type {
+  ContributorQueryParams,
+  ContributorSyncResult,
+  ContributorWithRelations,
+  GitHubContributor,
+  PaginatedResponse,
+  SlackWorkspaceUser,
+} from '@lfx-changelog/shared';
 import type { Contributor as PrismaContributor, ProductRepository as PrismaProductRepository } from '@prisma/client';
 import type { CommitProfile, ContributorRepositoryRow, RepositorySyncCounts } from '../interfaces/contributor.interface';
 
@@ -92,14 +99,25 @@ export class ContributorService {
       });
     }
 
-    const updated = await prisma.contributor.update({
-      where: { id },
-      data: this.slackLinkData(slackUser, ContributorSlackLinkSource.MANUAL, linkedById),
-      include: CONTRIBUTOR_REPOSITORY_INCLUDE,
-    });
+    try {
+      const updated = await prisma.contributor.update({
+        where: { id },
+        data: this.slackLinkData(slackUser, ContributorSlackLinkSource.MANUAL, linkedById),
+        include: CONTRIBUTOR_REPOSITORY_INCLUDE,
+      });
 
-    serverLogger.info({ contributorId: id, slackUserId, linkedById }, 'Contributor linked to Slack user');
-    return this.mapContributor(updated);
+      serverLogger.info({ contributorId: id, slackUserId, linkedById }, 'Contributor linked to Slack user');
+      return this.mapContributor(updated);
+    } catch (error) {
+      // The check above is not atomic — concurrent links race to the unique index.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictError(`Slack user ${slackUserId} is already linked to another contributor`, {
+          operation: 'linkSlack',
+          service: 'contributor',
+        });
+      }
+      throw error;
+    }
   }
 
   public async unlinkSlack(id: string): Promise<ContributorWithRelations> {
@@ -262,13 +280,36 @@ export class ContributorService {
       });
     }
 
-    await this.refreshContributionTotals(contributors.map((contributor) => contributor.id));
+    const staleIds = await this.removeStaleRepositoryLinks(repository.id, contributors);
+    await this.refreshContributionTotals(
+      contributors.map((contributor) => contributor.id),
+      staleIds
+    );
 
     serverLogger.info(
-      { repo: repository.fullName, created: counts.created.length, updated: counts.updated.length, slackLinked: counts.slackLinked },
+      { repo: repository.fullName, created: counts.created.length, updated: counts.updated.length, slackLinked: counts.slackLinked, unlinked: staleIds.length },
       'Synced contributors for repository'
     );
     return counts;
+  }
+
+  /**
+   * Drops links for contributors GitHub no longer reports for this repository, so the product
+   * filter and commit totals don't retain rows that have gone (including an emptied repository,
+   * which returns 204 and therefore no contributors at all). Returns the affected contributor IDs.
+   */
+  private async removeStaleRepositoryLinks(repositoryId: string, contributors: GitHubContributor[]): Promise<string[]> {
+    const prisma = getPrismaClient();
+    const keep = contributors.map((contributor) => contributor.id);
+
+    const stale = await prisma.contributorRepository.findMany({
+      where: { repositoryId, contributor: { githubUserId: { notIn: keep } } },
+      select: { id: true, contributorId: true },
+    });
+    if (stale.length === 0) return [];
+
+    await prisma.contributorRepository.deleteMany({ where: { id: { in: stale.map((link) => link.id) } } });
+    return stale.map((link) => link.contributorId);
   }
 
   /**
@@ -358,12 +399,12 @@ export class ContributorService {
   }
 
   /** Rolls the per-repository contribution counts up onto the contributor row. */
-  private async refreshContributionTotals(githubUserIds: number[]): Promise<void> {
-    if (githubUserIds.length === 0) return;
+  private async refreshContributionTotals(githubUserIds: number[], contributorIds: string[] = []): Promise<void> {
+    if (githubUserIds.length === 0 && contributorIds.length === 0) return;
     const prisma = getPrismaClient();
 
     const contributors = await prisma.contributor.findMany({
-      where: { githubUserId: { in: githubUserIds } },
+      where: { OR: [{ githubUserId: { in: githubUserIds } }, { id: { in: contributorIds } }] },
       select: { id: true, repositories: { select: { contributions: true } } },
     });
 
@@ -405,6 +446,8 @@ export class ContributorService {
         { name: { contains: params.query, mode: 'insensitive' } },
         { primaryEmail: { contains: params.query, mode: 'insensitive' } },
         { slackRealName: { contains: params.query, mode: 'insensitive' } },
+        // Postgres array membership is exact — substring matching only applies to the scalar fields.
+        { emails: { has: params.query.toLowerCase() } },
       ];
     }
 

@@ -17,3 +17,10 @@ CREATE UNIQUE INDEX "contributors_slack_user_id_key" ON "contributors"("slack_us
 -- CreateIndex
 CREATE INDEX "contributors_github_login_idx" ON "contributors"("github_login");
 
+
+-- emails is a non-nullable String[] in the Prisma model but the create left the column
+-- nullable, so a direct insert could produce a row the client types as an array.
+-- Same drift corrected for api_keys.scopes in 20260301041627.
+UPDATE "contributors" SET "emails" = '{}' WHERE "emails" IS NULL;
+ALTER TABLE "contributors" ALTER COLUMN "emails" SET NOT NULL;
+ALTER TABLE "contributors" ALTER COLUMN "emails" SET DEFAULT '{}';

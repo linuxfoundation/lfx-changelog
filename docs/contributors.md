@@ -32,7 +32,7 @@ Manual linking is not a fallback for a broken auto-match — it is the expected 
 
 Two tables, plus one enum.
 
-**Contributor** — one row per GitHub account. Keyed on `github_user_id`, GitHub's immutable numeric ID, _not_ the login: logins change when people rename their accounts, and keying on one would silently create duplicates. The login is stored (and uniquely indexed) but treated as mutable and refreshed on every sync.
+**Contributor** — one row per GitHub account. Keyed on `github_user_id`, GitHub's immutable numeric ID, _not_ the login: logins change when people rename their accounts, and keying on one would silently create duplicates. The login is stored under a plain (non-unique) index and treated as mutable, refreshed on every sync — a unique index there would break the moment a login is renamed or reclaimed.
 
 Each row holds the GitHub identity (login, avatar, profile URL), all discovered emails as a Postgres array plus a chosen `primary_email`, the Slack association (member ID, team, display and real name, avatar), and provenance for that association: `slack_link_source` (`auto_email` or `manual`), `slack_linked_at`, and `slack_linked_by_id`. Recording _how_ a link was made means a bad auto-match is auditable rather than indistinguishable from a human decision.
 
