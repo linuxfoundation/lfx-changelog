@@ -39,7 +39,9 @@ export class ContributorsPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin/contributors');
+    // networkidle so hydration has wired the filter FormControls before a spec types into them —
+    // a fill() that lands pre-hydration updates the DOM but never reaches valueChanges.
+    await this.page.goto('/admin/contributors', { waitUntil: 'networkidle' });
   }
 
   public getRows(): Locator {
