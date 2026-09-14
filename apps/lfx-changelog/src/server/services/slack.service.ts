@@ -769,18 +769,33 @@ export class SlackService {
    * Concurrent callers share one in-flight refresh rather than each starting their own.
    */
   private async getWorkspaceDirectory(): Promise<SlackWorkspaceUser[]> {
-    // One selection yields both the token and the team it belongs to, so the cache key and the
-    // request that populates it can never describe different workspaces.
-    const { token, teamId } = await this.getFreshBotAuth();
+    const prisma = getPrismaClient();
 
-    // Reconnecting a different workspace must not serve the previous one's members, which
-    // would otherwise auto-link contributors against the wrong directory.
-    if (this.directoryCache && this.directoryCache.teamId === teamId && this.directoryCache.expiresAt > Date.now()) {
-      return this.directoryCache.users;
+    // Which workspace is active is all the cache check needs. Resolving the full token here
+    // would decrypt, and sometimes refresh against Slack, on every cache hit — and this is the
+    // debounced picker's hot path.
+    const active = await prisma.slackBotInstallation.findFirst({
+      where: { status: 'active' },
+      orderBy: { installedAt: 'desc' },
+      select: { teamId: true },
+    });
+
+    if (active) {
+      // Reconnecting a different workspace must not serve the previous one's members, which
+      // would otherwise auto-link contributors against the wrong directory.
+      if (this.directoryCache?.teamId === active.teamId && this.directoryCache.expiresAt > Date.now()) {
+        return this.directoryCache.users;
+      }
+      if (this.directoryRefresh?.teamId === active.teamId) return this.directoryRefresh.promise;
     }
 
-    // Coalesce only within the same team — a refresh started for the previous workspace must
-    // not satisfy a caller that has since switched.
+    // Only on a miss: one selection yields the token and the team it belongs to, so the entry
+    // written below and the request that fills it can never describe different workspaces.
+    const { token, teamId } = await this.getFreshBotAuth();
+
+    if (this.directoryCache?.teamId === teamId && this.directoryCache.expiresAt > Date.now()) {
+      return this.directoryCache.users;
+    }
     if (this.directoryRefresh?.teamId === teamId) return this.directoryRefresh.promise;
 
     const promise = this.listWorkspaceUsers(token)
