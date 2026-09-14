@@ -248,8 +248,15 @@ export class GitHubService {
         throw new Error(`GitHub API error: ${response.status}`);
       }
 
-      const data = (await response.json()) as GitHubContributor[];
-      contributors.push(...data);
+      const data = (await response.json()) as unknown;
+      if (!Array.isArray(data)) {
+        // An empty result is taken as "this repository has no contributors" and prunes the
+        // stored links, so a 2xx that isn't a list must fail loudly rather than look empty.
+        serverLogger.error({ status: response.status, owner, repo }, 'GitHub contributors response was not a list');
+        throw new Error(`GitHub API returned a non-list contributors response: ${response.status}`);
+      }
+
+      contributors.push(...(data as GitHubContributor[]));
 
       if (data.length < 100) break;
       page++;

@@ -46,7 +46,7 @@ export class SlackService {
   private readonly directoryTtlMs = 5 * 60 * 1000; // Workspace roster cache lifetime
 
   /** Cached roster and the in-flight refresh, so a typeahead doesn't re-paginate users.list per keystroke. */
-  private directoryCache: { users: SlackWorkspaceUser[]; expiresAt: number } | null = null;
+  private directoryCache: { teamId: string; users: SlackWorkspaceUser[]; expiresAt: number } | null = null;
   private directoryRefresh: Promise<SlackWorkspaceUser[]> | null = null;
 
   /**
@@ -769,14 +769,25 @@ export class SlackService {
    * Concurrent callers share one in-flight refresh rather than each starting their own.
    */
   private async getWorkspaceDirectory(): Promise<SlackWorkspaceUser[]> {
-    if (this.directoryCache && this.directoryCache.expiresAt > Date.now()) {
+    const prisma = getPrismaClient();
+    const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' }, orderBy: { installedAt: 'desc' } });
+    if (!installation) {
+      throw new ServiceUnavailableError('No active Slack bot installation found — install the bot via Admin → Settings', {
+        operation: 'getWorkspaceDirectory',
+        service: 'slack',
+      });
+    }
+
+    // Keyed by team: reconnecting a different workspace must not serve the previous one's
+    // members, which would otherwise auto-link contributors against the wrong directory.
+    if (this.directoryCache && this.directoryCache.teamId === installation.teamId && this.directoryCache.expiresAt > Date.now()) {
       return this.directoryCache.users;
     }
     if (this.directoryRefresh) return this.directoryRefresh;
 
     this.directoryRefresh = this.listWorkspaceUsers()
       .then((users) => {
-        this.directoryCache = { users, expiresAt: Date.now() + this.directoryTtlMs };
+        this.directoryCache = { teamId: installation.teamId, users, expiresAt: Date.now() + this.directoryTtlMs };
         return users;
       })
       .finally(() => {
