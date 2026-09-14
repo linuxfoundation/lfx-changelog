@@ -87,14 +87,27 @@ export const GitHubCommitSchema = z
     html_url: z.string(),
     commit: z.object({
       message: z.string(),
-      author: z.object({ name: z.string(), date: z.string() }),
+      author: z.object({ name: z.string(), email: z.string().optional(), date: z.string() }),
     }),
-    author: z.object({ login: z.string(), avatar_url: z.string() }).nullable(),
+    author: z.object({ id: z.number().optional(), login: z.string(), avatar_url: z.string(), html_url: z.string().optional() }).nullable(),
     repoFullName: z.string(),
   })
   .openapi('GitHubCommit');
 
 export type GitHubCommit = z.infer<typeof GitHubCommitSchema>;
+
+export const GitHubContributorSchema = z
+  .object({
+    id: z.number(),
+    login: z.string(),
+    avatar_url: z.string(),
+    html_url: z.string(),
+    type: z.string(),
+    contributions: z.number(),
+  })
+  .openapi('GitHubContributor');
+
+export type GitHubContributor = z.infer<typeof GitHubContributorSchema>;
 
 export const GitHubReleaseSchema = z
   .object({

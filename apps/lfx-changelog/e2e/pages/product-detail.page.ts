@@ -17,7 +17,7 @@ export class ProductDetailPage {
   }
 
   public async goto(id: string) {
-    await this.page.goto(`/admin/products/${id}`);
+    await this.page.goto(`/admin/products/${id}`, { waitUntil: 'networkidle' });
   }
 
   public async switchTab(tabValue: string) {

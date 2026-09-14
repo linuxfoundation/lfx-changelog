@@ -6,4 +6,5 @@ export { BlogStatus } from './blog-status.enum.js';
 export { BlogType } from './blog-type.enum.js';
 export { ChangelogSource } from './changelog-source.enum.js';
 export { ChangelogStatus } from './changelog-status.enum.js';
+export { ContributorSlackLinkSource } from './contributor-slack-link-source.enum.js';
 export { UserRole } from './user-role.enum.js';

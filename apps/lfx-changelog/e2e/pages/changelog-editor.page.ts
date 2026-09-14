@@ -39,11 +39,11 @@ export class ChangelogEditorPage {
   }
 
   public async gotoNew() {
-    await this.page.goto('/admin/changelogs/new');
+    await this.page.goto('/admin/changelogs/new', { waitUntil: 'networkidle' });
   }
 
   public async gotoEdit(id: string) {
-    await this.page.goto(`/admin/changelogs/${id}/edit`);
+    await this.page.goto(`/admin/changelogs/${id}/edit`, { waitUntil: 'networkidle' });
   }
 
   public async fillForm(data: { title?: string; version?: string; description?: string }) {

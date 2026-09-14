@@ -320,6 +320,7 @@ Adding the `deploy-preview` label to a PR builds and pushes a branch-specific im
 | [API Authentication](docs/api-authentication.md)         | API keys, OAuth sessions, scopes, and usage examples              |
 | [Changelog Agent](docs/changelog-agent.md)               | Claude Agent SDK pipeline, MCP tools, job tracking, webhooks      |
 | [Changelog Views](docs/changelog-views.md)               | Unseen-count tracking API for external LFX product apps           |
+| [Contributors](docs/contributors.md)                     | GitHub contributor sync and Slack account associations            |
 | [Database Migrations](docs/database-migrations.md)       | Automated (CI/CD) and manual migration workflows                  |
 | [GitHub Integration](docs/github-integration.md)         | GitHub App, repo tracking, release sync, auto-changelog, webhooks |
 | [MCP Server](docs/mcp-server.md)                         | MCP tools, resources, and client setup                            |

@@ -27,7 +27,7 @@ export class ProductManagementPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin/products');
+    await this.page.goto('/admin/products', { waitUntil: 'networkidle' });
   }
 
   public getRows(): Locator {

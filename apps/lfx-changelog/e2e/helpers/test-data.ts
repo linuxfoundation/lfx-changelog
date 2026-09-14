@@ -5,7 +5,9 @@ import {
   BlogStatus,
   BlogType,
   ChangelogStatus,
+  ContributorSchema,
   CreateChangelogEntryRequestSchema,
+  LinkRepositoryRequestSchema,
   UserRole,
   UserRoleAssignmentSchema,
   UserSchema,
@@ -43,9 +45,24 @@ const TestBlogPostSchema = z.object({
   periodEnd: z.date().optional(),
 });
 
+const TestRepositorySchema = LinkRepositoryRequestSchema.pick({ githubInstallationId: true, owner: true, name: true, fullName: true, htmlUrl: true }).extend({
+  productSlug: z.string(),
+});
+
+const TestContributorSchema = ContributorSchema.pick({ githubUserId: true, githubLogin: true, emails: true, contributions: true }).extend({
+  name: z.string().optional(),
+  primaryEmail: z.string().optional(),
+  isBot: z.boolean().optional(),
+  slackUserId: z.string().optional(),
+  slackRealName: z.string().optional(),
+  slackDisplayName: z.string().optional(),
+});
+
 type TestUser = z.infer<typeof TestUserSchema>;
 type TestRoleAssignment = z.infer<typeof TestRoleAssignmentSchema>;
 type TestChangelog = z.infer<typeof TestChangelogSchema>;
+type TestRepository = z.infer<typeof TestRepositorySchema>;
+type TestContributor = z.infer<typeof TestContributorSchema>;
 export type TestBlogPost = z.infer<typeof TestBlogPostSchema>;
 
 function e2eEmail(role: string, fallback: string): string {
@@ -99,6 +116,79 @@ export const TEST_PRODUCTS: CreateProductRequest[] = [
 export const TEST_ROLE_ASSIGNMENTS: TestRoleAssignment[] = [
   { userIndex: 1, productSlug: 'e2e-easycla', role: UserRole.PRODUCT_ADMIN },
   { userIndex: 2, productSlug: 'e2e-easycla', role: UserRole.EDITOR },
+];
+
+export const TEST_REPOSITORY: TestRepository = {
+  productSlug: 'e2e-easycla',
+  githubInstallationId: 999001,
+  owner: 'linuxfoundation',
+  name: 'e2e-easycla-repo',
+  fullName: 'linuxfoundation/e2e-easycla-repo',
+  htmlUrl: 'https://github.com/linuxfoundation/e2e-easycla-repo',
+};
+
+/**
+ * `linked-dev` and `unlink-me-dev` are both Slack-linked so the filter assertions and the
+ * destructive unlink spec don't contend for the same row.
+ */
+export const TEST_CONTRIBUTORS: TestContributor[] = [
+  {
+    githubUserId: 900001,
+    githubLogin: 'e2e-octo-dev',
+    name: 'E2E Octo Dev',
+    primaryEmail: 'octo-dev@e2e.test',
+    emails: ['octo-dev@e2e.test'],
+    contributions: 42,
+  },
+  {
+    githubUserId: 900002,
+    githubLogin: 'e2e-linked-dev',
+    name: 'E2E Linked Dev',
+    primaryEmail: 'linked-dev@e2e.test',
+    emails: ['linked-dev@e2e.test'],
+    contributions: 17,
+    slackUserId: 'U0E2ELINKED',
+    slackRealName: 'E2E Linked Dev',
+    slackDisplayName: 'linked-dev',
+  },
+  {
+    githubUserId: 900003,
+    githubLogin: 'e2e-unlink-me-dev',
+    name: 'E2E Unlink Me',
+    primaryEmail: 'unlink-me@e2e.test',
+    emails: ['unlink-me@e2e.test'],
+    contributions: 9,
+    slackUserId: 'U0E2EUNLINK',
+    slackRealName: 'E2E Unlink Me',
+    slackDisplayName: 'unlink-me',
+  },
+  {
+    githubUserId: 900004,
+    githubLogin: 'e2e-api-unlink-dev',
+    name: 'E2E Api Unlink',
+    primaryEmail: 'api-unlink@e2e.test',
+    emails: ['api-unlink@e2e.test'],
+    contributions: 5,
+    slackUserId: 'U0E2EAPI',
+    slackRealName: 'E2E Api Unlink',
+    slackDisplayName: 'api-unlink',
+  },
+  {
+    githubUserId: 900005,
+    githubLogin: 'e2e-delete-me-dev',
+    name: 'E2E Delete Me',
+    primaryEmail: 'delete-me@e2e.test',
+    emails: ['delete-me@e2e.test'],
+    contributions: 3,
+  },
+  {
+    githubUserId: 900006,
+    githubLogin: 'e2e-testbot[bot]',
+    name: 'E2E Test Bot',
+    emails: [],
+    contributions: 500,
+    isBot: true,
+  },
 ];
 
 export const TEST_BLOG_POSTS: TestBlogPost[] = [

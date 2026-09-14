@@ -8,8 +8,9 @@ import { markdownToSlackMrkdwn, truncateSlackMrkdwn } from '../helpers/markdown-
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 
-import type { PostChangelogEntry, PostToSlackResponse, SlackApiResponse, SlackBlock, SlackBotInstallation } from '@lfx-changelog/shared';
+import type { PostChangelogEntry, PostToSlackResponse, SlackApiResponse, SlackBlock, SlackBotInstallation, SlackWorkspaceUser } from '@lfx-changelog/shared';
 import type { SlackChannel as PrismaSlackChannel, SlackIntegration as PrismaSlackIntegration } from '@prisma/client';
+import type { SlackBotAuth, SlackMember } from '../interfaces/slack.interface';
 
 export class SlackService {
   private get slackClientId(): string {
@@ -42,6 +43,11 @@ export class SlackService {
   private readonly slackBotScopes = 'chat:write,im:write,users:read,users:read.email';
   private readonly tokenRefreshBufferMs = 5 * 60 * 1000; // Refresh 5 minutes before expiry
   private readonly stateTtlMs = 10 * 60 * 1000; // OAuth state expires after 10 minutes
+  private readonly directoryTtlMs = 5 * 60 * 1000; // Workspace roster cache lifetime
+
+  /** Cached roster and the in-flight refresh, so a typeahead doesn't re-paginate users.list per keystroke. */
+  private directoryCache: { teamId: string; users: SlackWorkspaceUser[]; expiresAt: number } | null = null;
+  private directoryRefresh: { teamId: string; promise: Promise<SlackWorkspaceUser[]> } | null = null;
 
   /**
    * Generate the Slack OAuth URL for the user to authorize.
@@ -288,6 +294,70 @@ export class SlackService {
     serverLogger.info({ total: channels.length, pages: page, hasMore: !!cursor }, 'Slack channels fetched');
 
     return channels;
+  }
+
+  /**
+   * Full directory, for server-side email matching during sync only.
+   * Never return this to a client — use searchWorkspaceUsers for anything user-facing.
+   */
+  public async listWorkspaceUsersForMatching(): Promise<SlackWorkspaceUser[]> {
+    return this.getWorkspaceDirectory();
+  }
+
+  /**
+   * Search workspace members server-side and return only the matches.
+   *
+   * Slack has no user-search endpoint, so the roster still has to be fetched, but it is
+   * filtered here and capped — the full directory (and everyone's email) never leaves the
+   * server, which it did when the picker received the whole list.
+   */
+  public async searchWorkspaceUsers(term: string, limit = 25): Promise<SlackWorkspaceUser[]> {
+    const needle = term.trim().toLowerCase();
+    if (needle.length < 2) return [];
+
+    const users = await this.getWorkspaceDirectory();
+    const matches: SlackWorkspaceUser[] = [];
+
+    for (const user of users) {
+      const haystack = [user.name, user.realName, user.displayName, user.email].filter(Boolean).join(' ').toLowerCase();
+      if (haystack.includes(needle)) matches.push(user);
+      if (matches.length >= limit) break;
+    }
+
+    return matches;
+  }
+
+  /**
+   * Look up a single workspace member by ID via `users.info`.
+   * Avoids pulling the whole directory just to validate one member on link.
+   */
+  public async findWorkspaceUser(slackUserId: string): Promise<SlackWorkspaceUser | null> {
+    const token = await this.getFreshBotToken();
+    const res = (await this.slackApiGet(`https://slack.com/api/users.info?user=${encodeURIComponent(slackUserId)}`, token)) as SlackApiResponse & {
+      user?: SlackMember;
+    };
+
+    if (!res.ok || !res.user) {
+      if (res.error === 'user_not_found') return null;
+      serverLogger.error({ error: res.error, slackUserId }, 'Slack users.info failed');
+      throw new ServiceUnavailableError(`Slack users.info failed: ${res.error ?? 'unknown error'}`, {
+        operation: 'findWorkspaceUser',
+        service: 'slack',
+      });
+    }
+
+    const member = res.user;
+    if (member.deleted || member.is_bot || member.id === 'USLACKBOT') return null;
+
+    return {
+      id: member.id,
+      teamId: member.team_id ?? '',
+      name: member.name,
+      realName: member.real_name ?? member.profile?.real_name ?? null,
+      displayName: member.profile?.display_name || null,
+      email: member.profile?.email ?? null,
+      avatarUrl: member.profile?.image_192 ?? member.profile?.image_72 ?? null,
+    };
   }
 
   /**
@@ -694,20 +764,120 @@ export class SlackService {
   // ── Bot-token DM notifications ─────────────────────
 
   /**
+   * Cached workspace roster. `users.list` is Tier 2 and a full workspace is many sequential
+   * pages, so without this every debounced picker keystroke would re-paginate the directory.
+   * Concurrent callers share one in-flight refresh rather than each starting their own.
+   */
+  private async getWorkspaceDirectory(): Promise<SlackWorkspaceUser[]> {
+    const prisma = getPrismaClient();
+
+    // Which workspace is active is all the cache check needs. Resolving the full token here
+    // would decrypt, and sometimes refresh against Slack, on every cache hit — and this is the
+    // debounced picker's hot path.
+    const active = await prisma.slackBotInstallation.findFirst({
+      where: { status: 'active' },
+      orderBy: { installedAt: 'desc' },
+      select: { teamId: true },
+    });
+
+    if (active) {
+      // Reconnecting a different workspace must not serve the previous one's members, which
+      // would otherwise auto-link contributors against the wrong directory.
+      if (this.directoryCache?.teamId === active.teamId && this.directoryCache.expiresAt > Date.now()) {
+        return this.directoryCache.users;
+      }
+      if (this.directoryRefresh?.teamId === active.teamId) return this.directoryRefresh.promise;
+    }
+
+    // Only on a miss: one selection yields the token and the team it belongs to, so the entry
+    // written below and the request that fills it can never describe different workspaces.
+    const { token, teamId } = await this.getFreshBotAuth();
+
+    if (this.directoryCache?.teamId === teamId && this.directoryCache.expiresAt > Date.now()) {
+      return this.directoryCache.users;
+    }
+    if (this.directoryRefresh?.teamId === teamId) return this.directoryRefresh.promise;
+
+    const promise = this.listWorkspaceUsers(token)
+      .then((users) => {
+        this.directoryCache = { teamId, users, expiresAt: Date.now() + this.directoryTtlMs };
+        return users;
+      })
+      .finally(() => {
+        if (this.directoryRefresh?.promise === promise) this.directoryRefresh = null;
+      });
+
+    this.directoryRefresh = { teamId, promise };
+    return promise;
+  }
+
+  /**
+   * Workspace members via the bot token, cursor-paginated. Deactivated accounts, bots and
+   * Slackbot are filtered out. Tier 2 method — cache the result rather than calling per contributor.
+   */
+  private async listWorkspaceUsers(token: string, maxPages = 20): Promise<SlackWorkspaceUser[]> {
+    const users: SlackWorkspaceUser[] = [];
+    let cursor: string | undefined;
+    let page = 0;
+
+    do {
+      const url = new URL('https://slack.com/api/users.list');
+      url.searchParams.set('limit', '200');
+      if (cursor) url.searchParams.set('cursor', cursor);
+
+      const res = await this.slackApiGet(url.toString(), token);
+
+      if (!res.ok) {
+        serverLogger.error({ error: res.error }, 'Slack users.list failed');
+        throw new ServiceUnavailableError(`Slack users.list failed: ${res.error ?? 'unknown error'}`, {
+          operation: 'listWorkspaceUsers',
+          service: 'slack',
+        });
+      }
+
+      const members = (res['members'] as SlackMember[]) || [];
+      for (const member of members) {
+        if (member.deleted || member.is_bot || member.id === 'USLACKBOT') continue;
+        users.push({
+          id: member.id,
+          teamId: member.team_id ?? '',
+          name: member.name,
+          realName: member.real_name ?? member.profile?.real_name ?? null,
+          displayName: member.profile?.display_name || null,
+          email: member.profile?.email ?? null,
+          avatarUrl: member.profile?.image_192 ?? member.profile?.image_72 ?? null,
+        });
+      }
+
+      cursor = (res['response_metadata'] as { next_cursor?: string })?.next_cursor || undefined;
+      page++;
+    } while (cursor && page < maxPages);
+
+    serverLogger.info({ total: users.length, pages: page, hasMore: !!cursor }, 'Slack workspace users fetched');
+
+    return users;
+  }
+
+  /**
    * Returns a fresh bot access token, refreshing if within the buffer window.
    * Throws if no active bot installation exists.
    */
-  private async getFreshBotToken(): Promise<string> {
+  /** Token plus the installation it was selected from, so callers can key work to that workspace. */
+  private async getFreshBotAuth(): Promise<SlackBotAuth> {
     const prisma = getPrismaClient();
     const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' }, orderBy: { installedAt: 'desc' } });
 
     if (!installation) {
-      throw new Error('No active Slack bot installation found — install the bot via Admin → Settings');
+      // Configuration state, not a server fault — 503 rather than 500.
+      throw new ServiceUnavailableError('No active Slack bot installation found — install the bot via Admin → Settings', {
+        operation: 'getFreshBotAuth',
+        service: 'slack',
+      });
     }
 
     const now = Date.now();
     if (installation.tokenExpiresAt.getTime() - now > this.tokenRefreshBufferMs) {
-      return this.decrypt(installation.accessToken);
+      return { token: this.decrypt(installation.accessToken), teamId: installation.teamId };
     }
 
     serverLogger.info({ teamId: installation.teamId }, 'Refreshing Slack bot token');
@@ -725,7 +895,10 @@ export class SlackService {
       if (res.error === 'invalid_refresh_token' || res.error === 'token_revoked' || res.error === 'invalid_auth') {
         await prisma.slackBotInstallation.update({ where: { id: installation.id }, data: { status: 'revoked' } });
       }
-      throw new Error(`Slack bot token refresh failed: ${res.error}`);
+      throw new ServiceUnavailableError(`Slack bot token refresh failed: ${res.error} — reinstall the bot via Admin → Settings`, {
+        operation: 'getFreshBotAuth',
+        service: 'slack',
+      });
     }
 
     const newAccessToken = res['access_token'] as string;
@@ -741,7 +914,12 @@ export class SlackService {
       },
     });
 
-    return newAccessToken;
+    return { token: newAccessToken, teamId: installation.teamId };
+  }
+
+  /** Token only, for callers that do not need to know which workspace produced it. */
+  private async getFreshBotToken(): Promise<string> {
+    return (await this.getFreshBotAuth()).token;
   }
 
   /**

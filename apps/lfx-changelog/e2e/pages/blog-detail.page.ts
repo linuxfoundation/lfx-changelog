@@ -27,7 +27,7 @@ export class BlogDetailPage {
   }
 
   public async goto(slug: string) {
-    await this.page.goto(`/blog/${slug}`);
+    await this.page.goto(`/blog/${slug}`, { waitUntil: 'networkidle' });
   }
 
   public async getTitle(): Promise<string> {

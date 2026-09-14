@@ -11,6 +11,7 @@ import '@lfx-changelog/shared';
 import { agentJobRegistry } from './paths/agent-jobs.path';
 import { blogPostRegistry } from './paths/blogs.path';
 import { changelogRegistry } from './paths/changelogs.path';
+import { contributorRegistry } from './paths/contributors.path';
 import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
 import { publicProductRegistry } from './paths/public-products.path';
@@ -46,6 +47,7 @@ const allRegistries = [
   releaseRegistry,
   userRegistry,
   agentJobRegistry,
+  contributorRegistry,
   publicRoadmapRegistry,
 ];
 
@@ -81,6 +83,7 @@ const document = generator.generateDocument({
     { name: 'Users', description: 'Authentication required' },
     { name: 'Blog Posts', description: 'Blog post management — authentication required' },
     { name: 'Agent Jobs', description: 'Changelog agent job management — super_admin only' },
+    { name: 'Contributors', description: 'GitHub contributors and their Slack associations — super_admin only' },
   ],
 });
 

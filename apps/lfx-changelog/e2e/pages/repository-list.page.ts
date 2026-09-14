@@ -15,7 +15,7 @@ export class RepositoryListPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin/repositories');
+    await this.page.goto('/admin/repositories', { waitUntil: 'networkidle' });
   }
 
   public getGroups(): Locator {

@@ -29,7 +29,7 @@ export class ChangelogDetailPage {
   }
 
   public async goto(id: string) {
-    await this.page.goto(`/entry/${id}`);
+    await this.page.goto(`/entry/${id}`, { waitUntil: 'networkidle' });
   }
 
   public async getTitle(): Promise<string> {

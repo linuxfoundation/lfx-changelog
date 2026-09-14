@@ -4,6 +4,7 @@
 import { Product as PrismaProduct } from '@prisma/client';
 
 import { NotFoundError } from '../errors';
+import { findContributorsForRepositories, recalculateContributorTotals } from '../helpers/contributor-totals.helper';
 import { serverLogger } from '../server-logger';
 
 import { getPrismaClient } from './prisma.service';
@@ -62,7 +63,21 @@ export class ProductService {
   public async delete(id: string): Promise<void> {
     const prisma = getPrismaClient();
     await this.findById(id);
-    await prisma.product.delete({ where: { id } });
+
+    // Deleting a product cascades through its repositories to the contributor links, so the
+    // same recalculation unlinkRepository performs is required here.
+    const repositories = await prisma.productRepository.findMany({ where: { productId: id }, select: { id: true } });
+    const contributorIds = await findContributorsForRepositories(
+      prisma,
+      repositories.map((repository) => repository.id)
+    );
+
+    await prisma.$transaction(async (tx) => {
+      await tx.product.delete({ where: { id } });
+      await recalculateContributorTotals(tx, contributorIds);
+    });
+
+    serverLogger.info({ productId: id, contributorsRecalculated: contributorIds.length }, 'Deleted product and refreshed contributor totals');
   }
 
   // ── Repository operations ───────────────────────────
@@ -160,7 +175,17 @@ export class ProductService {
       throw new NotFoundError(`Repository not found: ${repoId}`, { operation: 'unlinkRepository', service: 'product' });
     }
 
-    await prisma.productRepository.delete({ where: { id: repoId } });
+    // The delete cascades ContributorRepository rows away, which would leave
+    // Contributor.contributions overstated with no way back — once the repository is untracked,
+    // no later sync can repair those totals.
+    const contributorIds = await findContributorsForRepositories(prisma, [repoId]);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.productRepository.delete({ where: { id: repoId } });
+      await recalculateContributorTotals(tx, contributorIds);
+    });
+
+    serverLogger.info({ repoId, productId, contributorsRecalculated: contributorIds.length }, 'Unlinked repository and refreshed contributor totals');
   }
 
   // ── Slack notify users ──────────────────────────────

@@ -72,6 +72,11 @@ enum BlogType {
   product_newsletter
 }
 
+enum ContributorSlackLinkSource {
+  auto_email
+  manual
+}
+
 model Product {
   id                    String   @id @default(uuid())
   name                  String   @unique
@@ -111,8 +116,9 @@ model ProductRepository {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  product  Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  releases GitHubRelease[]
+  product      Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  releases     GitHubRelease[]
+  contributors ContributorRepository[]
 
   @@unique([productId, owner, name])
   @@index([productId])
@@ -183,6 +189,7 @@ model User {
   slackIntegrations   SlackIntegration[]
   blogs               Blog[]
   slackNotifyUsers    ProductSlackNotifyUser[]
+  contributorsLinked  Contributor[]           @relation("ContributorSlackLinker")
 
   @@map("users")
 }
@@ -452,4 +459,57 @@ model BlogChangelogEntry {
 
   @@unique([blogId, changelogEntryId])
   @@map("blog_changelog_entries")
+}
+
+model Contributor {
+  id              String   @id @default(uuid())
+  githubUserId    Int      @unique @map("github_user_id")
+  githubLogin     String   @map("github_login")
+  githubAvatarUrl String?  @map("github_avatar_url")
+  githubHtmlUrl   String?  @map("github_html_url")
+  name            String?
+  primaryEmail    String?  @map("primary_email")
+  emails          String[] @default([])
+  isBot           Boolean  @default(false) @map("is_bot")
+
+  slackUserId      String?                     @unique @map("slack_user_id")
+  slackTeamId      String?                     @map("slack_team_id")
+  slackDisplayName String?                     @map("slack_display_name")
+  slackRealName    String?                     @map("slack_real_name")
+  slackAvatarUrl   String?                     @map("slack_avatar_url")
+  slackLinkSource  ContributorSlackLinkSource? @map("slack_link_source")
+  slackLinkedAt    DateTime?                   @map("slack_linked_at")
+  slackLinkedById  String?                     @map("slack_linked_by_id")
+
+  contributions Int       @default(0)
+  firstSeenAt   DateTime  @default(now()) @map("first_seen_at")
+  lastActiveAt  DateTime? @map("last_active_at")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  slackLinkedBy User?                  @relation("ContributorSlackLinker", fields: [slackLinkedById], references: [id], onDelete: SetNull)
+  repositories  ContributorRepository[]
+
+  @@index([githubLogin])
+  @@index([lastActiveAt(sort: Desc)])
+  @@index([contributions(sort: Desc)])
+  @@map("contributors")
+}
+
+model ContributorRepository {
+  id            String    @id @default(uuid())
+  contributorId String    @map("contributor_id")
+  repositoryId  String    @map("repository_id")
+  contributions Int       @default(0)
+  lastActiveAt  DateTime? @map("last_active_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  contributor Contributor       @relation(fields: [contributorId], references: [id], onDelete: Cascade)
+  repository  ProductRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([contributorId, repositoryId])
+  @@index([repositoryId])
+  @@map("contributor_repositories")
 }

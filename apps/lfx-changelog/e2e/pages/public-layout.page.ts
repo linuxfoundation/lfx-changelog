@@ -23,7 +23,7 @@ export class PublicLayoutPage {
   }
 
   public async goto() {
-    await this.page.goto('/');
+    await this.page.goto('/', { waitUntil: 'networkidle' });
   }
 
   public async toggleTheme() {

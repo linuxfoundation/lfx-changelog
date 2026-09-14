@@ -261,11 +261,16 @@ body {
     transition-duration: 60ms;
   }
 
+  /* Dim rather than flatten — the hover lift and press translate are already
+     suppressed by the :not(:disabled) guards on each variant. */
   .btn:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
-    box-shadow: none;
-    transform: none;
+    opacity: 0.45;
+  }
+
+  .btn[data-loading] {
+    cursor: progress;
+    opacity: 0.75;
   }
 
   /* ── Primary ──────────────────────────────────── */

@@ -152,3 +152,27 @@ export const LinkBlogPostProductsRequestSchema = z
   .openapi('LinkBlogPostProductsRequest');
 
 export type LinkBlogPostProductsRequest = z.infer<typeof LinkBlogPostProductsRequestSchema>;
+
+// ── Contributor DTOs ─────────────────────────
+
+export const LinkContributorSlackRequestSchema = z
+  .object({
+    slackUserId: z.string().min(1),
+  })
+  .openapi('LinkContributorSlackRequest');
+
+export type LinkContributorSlackRequest = z.infer<typeof LinkContributorSlackRequestSchema>;
+
+export const SyncContributorsRequestSchema = z
+  .object({
+    productId: z.string().uuid().optional(),
+    repositoryId: z.string().uuid().optional(),
+  })
+  // Exactly one: an unscoped sync crawls every tracked repository inline in the request.
+  .refine((data) => Boolean(data.productId) !== Boolean(data.repositoryId), {
+    message: 'Provide exactly one of productId or repositoryId',
+    path: ['productId'],
+  })
+  .openapi('SyncContributorsRequest');
+
+export type SyncContributorsRequest = z.infer<typeof SyncContributorsRequestSchema>;

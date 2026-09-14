@@ -25,7 +25,7 @@ export class AdminDashboardPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin');
+    await this.page.goto('/admin', { waitUntil: 'networkidle' });
   }
 
   public async getStatValue(stat: 'total' | 'published' | 'drafts' | 'products'): Promise<string> {

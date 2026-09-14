@@ -9,6 +9,7 @@ import { ProductService } from './product.service';
 
 import type {
   GitHubCommit,
+  GitHubContributor,
   GitHubInstallation,
   GitHubPullRequest,
   GitHubRelease,
@@ -216,6 +217,52 @@ export class GitHubService {
 
     const releases = (await response.json()) as GitHubRelease[];
     return releases.map((release) => ({ ...release, repoFullName }));
+  }
+
+  /**
+   * Fetches every contributor for a repository, paginated. Anonymous (unmatched-email)
+   * contributors are excluded — without a GitHub account there is nothing to key a
+   * Contributor row on, and nothing to link to Slack.
+   */
+  public async getRepositoryContributors(installationId: number, owner: string, repo: string): Promise<GitHubContributor[]> {
+    this.validateInstallationId(installationId);
+    const token = await this.getInstallationToken(installationId);
+    const contributors: GitHubContributor[] = [];
+    let page = 1;
+
+    while (true) {
+      const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/contributors?per_page=100&page=${page}`, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+
+      // An empty repository returns 204 with no body.
+      if (response.status === 204) break;
+
+      if (!response.ok) {
+        const body = await response.text();
+        serverLogger.error({ status: response.status, body, owner, repo }, 'Failed to get repository contributors');
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const data = (await response.json()) as unknown;
+      if (!Array.isArray(data)) {
+        // An empty result is taken as "this repository has no contributors" and prunes the
+        // stored links, so a 2xx that isn't a list must fail loudly rather than look empty.
+        serverLogger.error({ status: response.status, owner, repo }, 'GitHub contributors response was not a list');
+        throw new Error(`GitHub API returned a non-list contributors response: ${response.status}`);
+      }
+
+      contributors.push(...(data as GitHubContributor[]));
+
+      if (data.length < 100) break;
+      page++;
+    }
+
+    return contributors;
   }
 
   /**

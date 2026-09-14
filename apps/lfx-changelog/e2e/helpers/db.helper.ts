@@ -1,12 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { BLOGS_INDEX, CHANGELOGS_INDEX } from '@lfx-changelog/shared';
+import { BLOGS_INDEX, CHANGELOGS_INDEX, ContributorSlackLinkSource } from '@lfx-changelog/shared';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 import { buildConnectionString } from '../../src/server/helpers/build-connection-string';
-import { TEST_BLOG_POSTS, TEST_CHANGELOGS, TEST_PRODUCTS, TEST_ROLE_ASSIGNMENTS, TEST_USERS } from './test-data.js';
+import { TEST_BLOG_POSTS, TEST_CHANGELOGS, TEST_CONTRIBUTORS, TEST_PRODUCTS, TEST_REPOSITORY, TEST_ROLE_ASSIGNMENTS, TEST_USERS } from './test-data.js';
 
 let prisma: PrismaClient | null = null;
 
@@ -37,6 +37,8 @@ export async function cleanTestDatabase(): Promise<void> {
   await client.apiKey.deleteMany();
   await client.userRoleAssignment.deleteMany();
   await client.changelogEntry.deleteMany();
+  await client.contributorRepository.deleteMany();
+  await client.contributor.deleteMany();
   await client.productRepository.deleteMany();
   await client.product.deleteMany();
   await client.user.deleteMany();
@@ -113,7 +115,52 @@ export async function seedTestDatabase(): Promise<void> {
     });
   }
 
-  // 5. Create blog posts
+  // 5. Create a tracked repository and its contributors
+  const repositoryProduct = productBySlug.get(TEST_REPOSITORY.productSlug);
+  if (!repositoryProduct) throw new Error(`Product not found for slug: ${TEST_REPOSITORY.productSlug}`);
+
+  const repository = await client.productRepository.create({
+    data: {
+      productId: repositoryProduct.id,
+      githubInstallationId: TEST_REPOSITORY.githubInstallationId,
+      owner: TEST_REPOSITORY.owner,
+      name: TEST_REPOSITORY.name,
+      fullName: TEST_REPOSITORY.fullName,
+      htmlUrl: TEST_REPOSITORY.htmlUrl,
+    },
+  });
+
+  for (const contributor of TEST_CONTRIBUTORS) {
+    const created = await client.contributor.create({
+      data: {
+        githubUserId: contributor.githubUserId,
+        githubLogin: contributor.githubLogin,
+        githubAvatarUrl: `https://avatars.githubusercontent.com/u/${contributor.githubUserId}`,
+        githubHtmlUrl: `https://github.com/${contributor.githubLogin}`,
+        name: contributor.name ?? null,
+        primaryEmail: contributor.primaryEmail ?? null,
+        emails: contributor.emails,
+        isBot: contributor.isBot ?? false,
+        contributions: contributor.contributions,
+        ...(contributor.slackUserId
+          ? {
+              slackUserId: contributor.slackUserId,
+              slackTeamId: 'T0E2ETEAM',
+              slackRealName: contributor.slackRealName ?? null,
+              slackDisplayName: contributor.slackDisplayName ?? null,
+              slackLinkSource: ContributorSlackLinkSource.MANUAL,
+              slackLinkedAt: new Date(),
+            }
+          : {}),
+      },
+    });
+
+    await client.contributorRepository.create({
+      data: { contributorId: created.id, repositoryId: repository.id, contributions: contributor.contributions },
+    });
+  }
+
+  // 6. Create blog posts
   for (const post of TEST_BLOG_POSTS) {
     await client.blog.create({
       data: {

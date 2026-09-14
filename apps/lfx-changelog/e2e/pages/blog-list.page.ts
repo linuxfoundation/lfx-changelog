@@ -21,7 +21,7 @@ export class BlogListPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin/blog');
+    await this.page.goto('/admin/blog', { waitUntil: 'networkidle' });
   }
 
   public getRows(): Locator {
