@@ -160,11 +160,13 @@ export class ContributorService {
    */
   public async delete(id: string, deletedById: string): Promise<void> {
     const prisma = getPrismaClient();
-    const contributor = await this.requireContributor(id);
+    await this.requireContributor(id);
 
     await prisma.contributor.delete({ where: { id } });
-    // This endpoint services erasure requests, so the actor belongs in the audit line.
-    serverLogger.info({ contributorId: id, githubLogin: contributor.githubLogin, deletedById }, 'Contributor deleted');
+    // The actor belongs in the audit line, but the subject's GitHub login does not: this
+    // endpoint services erasure requests, and logs outlive the row, so naming them here would
+    // leave a fresh copy of the identifier behind. Opaque IDs only.
+    serverLogger.info({ contributorId: id, deletedById }, 'Contributor deleted');
   }
 
   // ── Sync ────────────────────────────────────

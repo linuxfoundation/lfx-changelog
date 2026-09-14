@@ -54,8 +54,7 @@ Triggered from the admin UI ("Sync from GitHub") or `POST /api/contributors/sync
    ├─ Upsert each contributor on github_user_id
    │   ├─ Merge newly discovered emails with those already stored
    │   ├─ Pick primary_email (first non-noreply address)
-   │   ├─ Auto-link Slack if an email matches AND no link exists yet
-   │   └─ Link the LFX User with the same email, if unclaimed
+   │   └─ Auto-link Slack when the emails agree on one member and no link exists yet
    └─ Upsert the contributor↔repository row with its commit count
 
 4. Roll per-repository counts up into Contributor.contributions
@@ -70,11 +69,12 @@ All endpoints require an **OAuth session** and the **`super_admin`** role. API k
 | Method | Path                            | Description                                |
 | ------ | ------------------------------- | ------------------------------------------ |
 | GET    | `/api/contributors`             | Paginated list with filters                |
-| GET    | `/api/contributors/slack-users` | Slack workspace members, for the picker    |
+| GET    | `/api/contributors/slack-users` | Slack members matching a search term       |
 | POST   | `/api/contributors/sync`        | Sync from GitHub                           |
 | GET    | `/api/contributors/:id`         | Single contributor with their repositories |
 | PUT    | `/api/contributors/:id/slack`   | Link to a Slack user                       |
 | DELETE | `/api/contributors/:id/slack`   | Remove the Slack association               |
+| DELETE | `/api/contributors/:id`         | Delete a contributor and its links         |
 
 ### List query parameters
 
