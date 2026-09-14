@@ -64,7 +64,7 @@ export class ContributorController {
 
   public async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await this.contributorService.delete(req.params['id'] as string);
+      await this.contributorService.delete(req.params['id'] as string, req.dbUser!.id);
       res.status(204).end();
     } catch (error) {
       next(error);

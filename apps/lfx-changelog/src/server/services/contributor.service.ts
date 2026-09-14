@@ -158,12 +158,13 @@ export class ContributorService {
    * a later sync of a tracked repository will recreate the row. It exists so an erasure request
    * can be honoured, and so a record can be dropped once its repositories are no longer tracked.
    */
-  public async delete(id: string): Promise<void> {
+  public async delete(id: string, deletedById: string): Promise<void> {
     const prisma = getPrismaClient();
-    await this.requireContributor(id);
+    const contributor = await this.requireContributor(id);
 
     await prisma.contributor.delete({ where: { id } });
-    serverLogger.info({ contributorId: id }, 'Contributor deleted');
+    // This endpoint services erasure requests, so the actor belongs in the audit line.
+    serverLogger.info({ contributorId: id, githubLogin: contributor.githubLogin, deletedById }, 'Contributor deleted');
   }
 
   // ── Sync ────────────────────────────────────
@@ -269,7 +270,7 @@ export class ContributorService {
       const repoLastActiveAt = profile?.lastActiveAt ?? null;
       const lastActiveAt = this.latestDate(repoLastActiveAt, existing?.lastActiveAt ?? null);
 
-      const slackMatch = this.matchSlackUser(mergedEmails, slackUsersByEmail);
+      const slackMatch = this.matchSlackUser(mergedEmails, slackUsersByEmail, contributor.login);
       const shouldAutoLink = Boolean(slackMatch) && !existing?.slackUserId && !claimedSlackIds.has(slackMatch!.id);
 
       const shared = {
@@ -431,11 +432,26 @@ export class ContributorService {
     return byEmail;
   }
 
-  private matchSlackUser(emails: string[], slackUsersByEmail: Map<string, SlackWorkspaceUser>): SlackWorkspaceUser | null {
+  /**
+   * Resolves harvested emails to a Slack member, but only when they agree.
+   *
+   * A contributor can commit under several addresses, and those can belong to different people
+   * — a shared or mistyped address, or a machine account. Picking the first match would silently
+   * link an arbitrary person, so a disagreement is treated as ambiguous and left for manual linking.
+   */
+  private matchSlackUser(emails: string[], slackUsersByEmail: Map<string, SlackWorkspaceUser>, githubLogin: string): SlackWorkspaceUser | null {
+    const matches = new Map<string, SlackWorkspaceUser>();
+
     for (const email of emails) {
       if (email.endsWith(NOREPLY_EMAIL_SUFFIX)) continue;
       const match = slackUsersByEmail.get(email.toLowerCase());
-      if (match) return match;
+      if (match) matches.set(match.id, match);
+    }
+
+    if (matches.size === 1) return [...matches.values()][0] ?? null;
+
+    if (matches.size > 1) {
+      serverLogger.warn({ githubLogin, slackUserIds: [...matches.keys()] }, 'Contributor emails match multiple Slack members — leaving for manual linking');
     }
     return null;
   }

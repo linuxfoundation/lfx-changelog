@@ -44,7 +44,12 @@ export async function recalculateContributorTotals(prisma: PrismaLike, contribut
       null
     );
 
-    await prisma.contributor.update({ where: { id: contributor.id }, data: { contributions: total, lastActiveAt } });
+    // Only write a date we actually derived — links with no dates must not erase a known one,
+    // matching the per-repository guard in ContributorService.
+    await prisma.contributor.update({
+      where: { id: contributor.id },
+      data: { contributions: total, ...(lastActiveAt ? { lastActiveAt } : {}) },
+    });
   }
 }
 
