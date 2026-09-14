@@ -5,6 +5,7 @@ import { ContributorSlackLinkSource, DEFAULT_LOOKBACK_DAYS, MAX_PAGE_SIZE } from
 import { Prisma } from '@prisma/client';
 
 import { ConflictError, NotFoundError } from '../errors';
+import { recalculateContributorTotals } from '../helpers/contributor-totals.helper';
 import { serverLogger } from '../server-logger';
 import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
@@ -439,18 +440,14 @@ export class ContributorService {
     if (githubUserIds.length === 0 && contributorIds.length === 0) return;
     const prisma = getPrismaClient();
 
-    const contributors = await prisma.contributor.findMany({
+    const rows = await prisma.contributor.findMany({
       where: { OR: [{ githubUserId: { in: githubUserIds } }, { id: { in: contributorIds } }] },
-      select: { id: true, repositories: { select: { contributions: true } } },
+      select: { id: true },
     });
 
-    await Promise.all(
-      contributors.map((contributor) =>
-        prisma.contributor.update({
-          where: { id: contributor.id },
-          data: { contributions: contributor.repositories.reduce((sum, link) => sum + link.contributions, 0) },
-        })
-      )
+    await recalculateContributorTotals(
+      prisma,
+      rows.map((row) => row.id)
     );
   }
 

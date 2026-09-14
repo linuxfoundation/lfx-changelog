@@ -4,6 +4,7 @@
 import { Product as PrismaProduct } from '@prisma/client';
 
 import { NotFoundError } from '../errors';
+import { findContributorsForRepositories, recalculateContributorTotals } from '../helpers/contributor-totals.helper';
 import { serverLogger } from '../server-logger';
 
 import { getPrismaClient } from './prisma.service';
@@ -62,7 +63,21 @@ export class ProductService {
   public async delete(id: string): Promise<void> {
     const prisma = getPrismaClient();
     await this.findById(id);
-    await prisma.product.delete({ where: { id } });
+
+    // Deleting a product cascades through its repositories to the contributor links, so the
+    // same recalculation unlinkRepository performs is required here.
+    const repositories = await prisma.productRepository.findMany({ where: { productId: id }, select: { id: true } });
+    const contributorIds = await findContributorsForRepositories(
+      prisma,
+      repositories.map((repository) => repository.id)
+    );
+
+    await prisma.$transaction(async (tx) => {
+      await tx.product.delete({ where: { id } });
+      await recalculateContributorTotals(tx, contributorIds);
+    });
+
+    serverLogger.info({ productId: id, contributorsRecalculated: contributorIds.length }, 'Deleted product and refreshed contributor totals');
   }
 
   // ── Repository operations ───────────────────────────
@@ -160,21 +175,14 @@ export class ProductService {
       throw new NotFoundError(`Repository not found: ${repoId}`, { operation: 'unlinkRepository', service: 'product' });
     }
 
-    // Deleting the repository cascades its ContributorRepository rows away, which would leave
+    // The delete cascades ContributorRepository rows away, which would leave
     // Contributor.contributions overstated with no way back — once the repository is untracked,
-    // no later sync can repair those totals. Recompute in the same transaction.
-    // Inlined rather than calling ContributorService: that would close a
-    // product -> contributor -> github -> product import cycle.
-    const affected = await prisma.contributorRepository.findMany({ where: { repositoryId: repoId }, select: { contributorId: true } });
-    const contributorIds = [...new Set(affected.map((link) => link.contributorId))];
+    // no later sync can repair those totals.
+    const contributorIds = await findContributorsForRepositories(prisma, [repoId]);
 
     await prisma.$transaction(async (tx) => {
       await tx.productRepository.delete({ where: { id: repoId } });
-
-      for (const contributorId of contributorIds) {
-        const remaining = await tx.contributorRepository.aggregate({ where: { contributorId }, _sum: { contributions: true } });
-        await tx.contributor.update({ where: { id: contributorId }, data: { contributions: remaining._sum.contributions ?? 0 } });
-      }
+      await recalculateContributorTotals(tx, contributorIds);
     });
 
     serverLogger.info({ repoId, productId, contributorsRecalculated: contributorIds.length }, 'Unlinked repository and refreshed contributor totals');
