@@ -10,7 +10,7 @@ import { getPrismaClient } from './prisma.service';
 
 import type { PostChangelogEntry, PostToSlackResponse, SlackApiResponse, SlackBlock, SlackBotInstallation, SlackWorkspaceUser } from '@lfx-changelog/shared';
 import type { SlackChannel as PrismaSlackChannel, SlackIntegration as PrismaSlackIntegration } from '@prisma/client';
-import type { SlackMember } from '../interfaces/slack.interface';
+import type { SlackBotAuth, SlackMember } from '../interfaces/slack.interface';
 
 export class SlackService {
   private get slackClientId(): string {
@@ -769,34 +769,30 @@ export class SlackService {
    * Concurrent callers share one in-flight refresh rather than each starting their own.
    */
   private async getWorkspaceDirectory(): Promise<SlackWorkspaceUser[]> {
-    const prisma = getPrismaClient();
-    const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' }, orderBy: { installedAt: 'desc' } });
-    if (!installation) {
-      throw new ServiceUnavailableError('No active Slack bot installation found — install the bot via Admin → Settings', {
-        operation: 'getWorkspaceDirectory',
-        service: 'slack',
-      });
-    }
+    // One selection yields both the token and the team it belongs to, so the cache key and the
+    // request that populates it can never describe different workspaces.
+    const { token, teamId } = await this.getFreshBotAuth();
 
-    // Keyed by team: reconnecting a different workspace must not serve the previous one's
-    // members, which would otherwise auto-link contributors against the wrong directory.
-    if (this.directoryCache && this.directoryCache.teamId === installation.teamId && this.directoryCache.expiresAt > Date.now()) {
+    // Reconnecting a different workspace must not serve the previous one's members, which
+    // would otherwise auto-link contributors against the wrong directory.
+    if (this.directoryCache && this.directoryCache.teamId === teamId && this.directoryCache.expiresAt > Date.now()) {
       return this.directoryCache.users;
     }
-    // Coalesce only within the same team — a refresh started for the previous workspace must
-    // not satisfy a caller that has since switched, or sync auto-links against the wrong team.
-    if (this.directoryRefresh?.teamId === installation.teamId) return this.directoryRefresh.promise;
 
-    const promise = this.listWorkspaceUsers()
+    // Coalesce only within the same team — a refresh started for the previous workspace must
+    // not satisfy a caller that has since switched.
+    if (this.directoryRefresh?.teamId === teamId) return this.directoryRefresh.promise;
+
+    const promise = this.listWorkspaceUsers(token)
       .then((users) => {
-        this.directoryCache = { teamId: installation.teamId, users, expiresAt: Date.now() + this.directoryTtlMs };
+        this.directoryCache = { teamId, users, expiresAt: Date.now() + this.directoryTtlMs };
         return users;
       })
       .finally(() => {
         if (this.directoryRefresh?.promise === promise) this.directoryRefresh = null;
       });
 
-    this.directoryRefresh = { teamId: installation.teamId, promise };
+    this.directoryRefresh = { teamId, promise };
     return promise;
   }
 
@@ -804,8 +800,7 @@ export class SlackService {
    * Workspace members via the bot token, cursor-paginated. Deactivated accounts, bots and
    * Slackbot are filtered out. Tier 2 method — cache the result rather than calling per contributor.
    */
-  private async listWorkspaceUsers(maxPages = 20): Promise<SlackWorkspaceUser[]> {
-    const token = await this.getFreshBotToken();
+  private async listWorkspaceUsers(token: string, maxPages = 20): Promise<SlackWorkspaceUser[]> {
     const users: SlackWorkspaceUser[] = [];
     let cursor: string | undefined;
     let page = 0;
@@ -852,21 +847,22 @@ export class SlackService {
    * Returns a fresh bot access token, refreshing if within the buffer window.
    * Throws if no active bot installation exists.
    */
-  private async getFreshBotToken(): Promise<string> {
+  /** Token plus the installation it was selected from, so callers can key work to that workspace. */
+  private async getFreshBotAuth(): Promise<SlackBotAuth> {
     const prisma = getPrismaClient();
     const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' }, orderBy: { installedAt: 'desc' } });
 
     if (!installation) {
       // Configuration state, not a server fault — 503 rather than 500.
       throw new ServiceUnavailableError('No active Slack bot installation found — install the bot via Admin → Settings', {
-        operation: 'getFreshBotToken',
+        operation: 'getFreshBotAuth',
         service: 'slack',
       });
     }
 
     const now = Date.now();
     if (installation.tokenExpiresAt.getTime() - now > this.tokenRefreshBufferMs) {
-      return this.decrypt(installation.accessToken);
+      return { token: this.decrypt(installation.accessToken), teamId: installation.teamId };
     }
 
     serverLogger.info({ teamId: installation.teamId }, 'Refreshing Slack bot token');
@@ -885,7 +881,7 @@ export class SlackService {
         await prisma.slackBotInstallation.update({ where: { id: installation.id }, data: { status: 'revoked' } });
       }
       throw new ServiceUnavailableError(`Slack bot token refresh failed: ${res.error} — reinstall the bot via Admin → Settings`, {
-        operation: 'getFreshBotToken',
+        operation: 'getFreshBotAuth',
         service: 'slack',
       });
     }
@@ -903,7 +899,12 @@ export class SlackService {
       },
     });
 
-    return newAccessToken;
+    return { token: newAccessToken, teamId: installation.teamId };
+  }
+
+  /** Token only, for callers that do not need to know which workspace produced it. */
+  private async getFreshBotToken(): Promise<string> {
+    return (await this.getFreshBotAuth()).token;
   }
 
   /**

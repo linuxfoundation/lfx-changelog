@@ -17,3 +17,9 @@ export interface SlackMember {
     image_192?: string;
   };
 }
+
+/** A bot token together with the workspace installation it was selected from. */
+export interface SlackBotAuth {
+  token: string;
+  teamId: string;
+}
