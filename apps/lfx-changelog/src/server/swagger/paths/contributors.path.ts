@@ -139,3 +139,20 @@ contributorRegistry.registerPath({
     404: { description: 'Contributor not found' },
   },
 });
+
+contributorRegistry.registerPath({
+  method: 'delete',
+  path: '/api/contributors/{id}',
+  tags: ['Contributors'],
+  summary: 'Delete a contributor',
+  description:
+    'Permanently removes a contributor and its repository links.\n\nContributor data is derived entirely from GitHub, so a later sync of a tracked repository recreates the record. Provided so an erasure request can be honoured.\n\n**Required privilege:** SUPER_ADMIN role.',
+  security: COOKIE_AUTH,
+  request: { params: contributorIdParam },
+  responses: {
+    204: { description: 'Contributor deleted' },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires SUPER_ADMIN role' },
+    404: { description: 'Contributor not found' },
+  },
+});

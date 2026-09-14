@@ -23,7 +23,7 @@ export class ProductChangelogPage {
   }
 
   public async goto(slug: string) {
-    await this.page.goto(`/products/${slug}`);
+    await this.page.goto(`/products/${slug}`, { waitUntil: 'networkidle' });
   }
 
   public async getProductName(): Promise<string> {

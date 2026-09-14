@@ -92,15 +92,25 @@
       </ng-template>
 
       <ng-template lfxColumn="" lfxColumnCellClass="text-right" let-contributor>
-        @if (contributor.slackUserId) {
-          <lfx-button [attr.data-testid]="'contributors-unlink-' + contributor.id" variant="ghost" size="sm" (clicked)="confirmUnlink(contributor)">
-            Unlink
-          </lfx-button>
-        } @else {
-          <lfx-button [attr.data-testid]="'contributors-link-' + contributor.id" variant="ghost" size="sm" (clicked)="openLinkDialog(contributor)">
-            Link Slack
-          </lfx-button>
-        }
+        <div class="flex items-center justify-end gap-1">
+          @if (contributor.slackUserId) {
+            <lfx-button [attr.data-testid]="'contributors-unlink-' + contributor.id" variant="ghost" size="sm" (clicked)="confirmUnlink(contributor)">
+              Unlink
+            </lfx-button>
+          } @else {
+            <lfx-button [attr.data-testid]="'contributors-link-' + contributor.id" variant="ghost" size="sm" (clicked)="openLinkDialog(contributor)">
+              Link Slack
+            </lfx-button>
+          }
+          <lfx-dropdown-menu [items]="(contributorMenuItems() | mapGet: contributor.id) ?? []">
+            <button
+              [attr.data-testid]="'contributors-actions-' + contributor.id"
+              class="text-text-muted hover:bg-surface-alt hover:text-text-primary rounded-md p-1.5 transition-colors"
+              aria-label="Contributor actions">
+              <i class="fa-solid fa-ellipsis-vertical text-sm"></i>
+            </button>
+          </lfx-dropdown-menu>
+        </div>
       </ng-template>
     </lfx-table>
   </div>

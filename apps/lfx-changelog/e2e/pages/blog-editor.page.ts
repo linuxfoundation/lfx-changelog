@@ -41,11 +41,11 @@ export class BlogEditorPage {
   }
 
   public async gotoNew() {
-    await this.page.goto('/admin/blog/new');
+    await this.page.goto('/admin/blog/new', { waitUntil: 'networkidle' });
   }
 
   public async gotoEdit(id: string) {
-    await this.page.goto(`/admin/blog/${id}/edit`);
+    await this.page.goto(`/admin/blog/${id}/edit`, { waitUntil: 'networkidle' });
   }
 
   public async fillForm(data: { title?: string; slug?: string; excerpt?: string; description?: string }) {

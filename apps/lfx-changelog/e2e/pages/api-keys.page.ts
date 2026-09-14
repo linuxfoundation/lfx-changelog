@@ -55,7 +55,7 @@ export class ApiKeysPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin/settings');
+    await this.page.goto('/admin/settings', { waitUntil: 'networkidle' });
   }
 
   public async openCreateDialog() {

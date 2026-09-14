@@ -175,6 +175,14 @@ export const TEST_CONTRIBUTORS: TestContributor[] = [
   },
   {
     githubUserId: 900005,
+    githubLogin: 'e2e-delete-me-dev',
+    name: 'E2E Delete Me',
+    primaryEmail: 'delete-me@e2e.test',
+    emails: ['delete-me@e2e.test'],
+    contributions: 3,
+  },
+  {
+    githubUserId: 900006,
     githubLogin: 'e2e-testbot[bot]',
     name: 'E2E Test Bot',
     emails: [],

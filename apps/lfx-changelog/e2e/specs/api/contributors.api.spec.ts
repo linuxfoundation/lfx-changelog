@@ -69,6 +69,11 @@ test.describe('Contributors API (/api/contributors)', () => {
       expect(res.status()).toBe(403);
     });
 
+    test('DELETE /api/contributors/:id is forbidden for editor', async () => {
+      const res = await editorApi.delete(`/api/contributors/${MISSING_ID}`);
+      expect(res.status()).toBe(403);
+    });
+
     test('DELETE /api/contributors/:id/slack is forbidden for editor', async () => {
       const res = await editorApi.delete(`/api/contributors/${MISSING_ID}/slack`);
       expect(res.status()).toBe(403);
@@ -203,6 +208,25 @@ test.describe('Contributors API (/api/contributors)', () => {
       expect(body.data.slackUserId).toBeNull();
       expect(body.data.slackLinkSource).toBeNull();
       expect(body.data.slackLinkedAt).toBeNull();
+    });
+  });
+
+  test.describe('Delete', () => {
+    test('removes the contributor and its repository links', async () => {
+      const list = await (await superAdminApi.get('/api/contributors?query=e2e-delete-me-dev')).json();
+      const contributor = list.data[0];
+      expect(contributor.repositories.length).toBeGreaterThan(0);
+
+      const res = await superAdminApi.delete(`/api/contributors/${contributor.id}`);
+      expect(res.status()).toBe(204);
+
+      const after = await superAdminApi.get(`/api/contributors/${contributor.id}`);
+      expect(after.status()).toBe(404);
+    });
+
+    test('returns 404 for an unknown contributor', async () => {
+      const res = await superAdminApi.delete(`/api/contributors/${MISSING_ID}`);
+      expect(res.status()).toBe(404);
     });
   });
 

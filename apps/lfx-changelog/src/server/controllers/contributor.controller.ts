@@ -62,6 +62,15 @@ export class ContributorController {
     }
   }
 
+  public async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await this.contributorService.delete(req.params['id'] as string);
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public async listSlackWorkspaceUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { query } = SlackUserSearchParamsSchema.parse(req.query);

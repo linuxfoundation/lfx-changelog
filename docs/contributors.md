@@ -100,7 +100,9 @@ Contributor records hold third-party PII — names and email addresses harvested
 - **Search terms are kept out of logs.** Contributor search matches against email addresses, so `query` (along with `email` and `q`) is redacted from the request URL in both the log message and the structured `req.url` field — see `helpers/redact-url.helper.ts`.
 - **No automatic link to LFX user accounts.** An earlier revision associated a contributor with the LFX `User` sharing an email. That was removed: commit-author email is attacker-controllable, and the link had no provenance or way to reverse it. Slack links, by contrast, record `slackLinkSource`, `slackLinkedAt` and `slackLinkedById`, and are reversible via `DELETE /api/contributors/:id/slack`.
 
-There is currently **no retention or purge path** for contributor records — consistent with the rest of the application, which has no user-deletion or anonymisation flow, but worth noting as an open item given this data concerns third parties.
+`DELETE /api/contributors/:id` removes a contributor and its repository links, so an erasure request can be honoured. Because every field is derived from GitHub, deletion loses nothing authoritative — a later sync of a tracked repository recreates the record, which also means deletion is not a way to permanently suppress someone while their repository stays tracked.
+
+There is no automatic retention or purge schedule. The application has no user-deletion or anonymisation flow anywhere, so a retention policy is worth addressing across the whole system rather than for contributors alone.
 
 ## Required Configuration
 

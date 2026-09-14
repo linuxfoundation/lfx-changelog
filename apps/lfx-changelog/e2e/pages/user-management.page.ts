@@ -40,7 +40,7 @@ export class UserManagementPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin/users');
+    await this.page.goto('/admin/users', { waitUntil: 'networkidle' });
   }
 
   public getRows(): Locator {

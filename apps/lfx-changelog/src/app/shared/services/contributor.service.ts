@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, take } from 'rxjs';
 
@@ -51,6 +51,10 @@ export class ContributorService {
       map((res) => res.data),
       take(1)
     );
+  }
+
+  public delete(id: string): Observable<HttpResponse<unknown>> {
+    return this.http.delete(`/api/contributors/${id}`, { observe: 'response' }).pipe(take(1));
   }
 
   public linkSlack(id: string, slackUserId: string): Observable<ContributorWithRelations> {

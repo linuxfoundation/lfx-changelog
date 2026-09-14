@@ -151,6 +151,21 @@ export class ContributorService {
     return this.mapContributor(updated);
   }
 
+  /**
+   * Permanently removes a contributor and its repository links.
+   *
+   * Contributor data is entirely derived from GitHub, so deletion loses nothing authoritative —
+   * a later sync of a tracked repository will recreate the row. It exists so an erasure request
+   * can be honoured, and so a record can be dropped once its repositories are no longer tracked.
+   */
+  public async delete(id: string): Promise<void> {
+    const prisma = getPrismaClient();
+    await this.requireContributor(id);
+
+    await prisma.contributor.delete({ where: { id } });
+    serverLogger.info({ contributorId: id }, 'Contributor deleted');
+  }
+
   // ── Sync ────────────────────────────────────
 
   /**

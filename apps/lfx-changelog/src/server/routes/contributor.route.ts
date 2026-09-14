@@ -28,5 +28,6 @@ router.get('/', validate({ query: ContributorQueryParamsSchema }), (req, res, ne
 router.get('/:id', (req, res, next) => contributorController.getById(req, res, next));
 router.put('/:id/slack', validate({ body: LinkContributorSlackRequestSchema }), (req, res, next) => contributorController.linkSlack(req, res, next));
 router.delete('/:id/slack', (req, res, next) => contributorController.unlinkSlack(req, res, next));
+router.delete('/:id', (req, res, next) => contributorController.delete(req, res, next));
 
 export default router;

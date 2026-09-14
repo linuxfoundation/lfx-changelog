@@ -8,6 +8,7 @@ import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ConfirmDialogComponent } from '@components/confirm-dialog/confirm-dialog.component';
+import { DropdownMenuComponent } from '@components/dropdown-menu/dropdown-menu.component';
 import { InputComponent } from '@components/input/input.component';
 import { PaginationComponent } from '@components/pagination/pagination.component';
 import { SelectComponent } from '@components/select/select.component';
@@ -23,7 +24,7 @@ import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntil
 
 import type { ContributorWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
 import type { ContributorPageState } from '@shared/interfaces/contributor.interface';
-import type { SelectOption } from '@shared/interfaces/form.interface';
+import type { DropdownMenuItem, SelectOption } from '@shared/interfaces/form.interface';
 
 const EMPTY_PAGE_STATE: ContributorPageState = { contributors: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
 
@@ -34,6 +35,7 @@ const EMPTY_PAGE_STATE: ContributorPageState = { contributors: [], total: 0, pag
     BadgeComponent,
     ButtonComponent,
     CardComponent,
+    DropdownMenuComponent,
     InputComponent,
     PaginationComponent,
     SelectComponent,
@@ -88,6 +90,7 @@ export class ContributorsComponent {
   protected readonly pageSize = computed(() => this.pageState().pageSize);
   /** Distinct product names per contributor — a contributor may appear in several repos of the same product. */
   protected readonly productNamesByContributor: Signal<Map<string, string[]>> = this.initProductNamesByContributor();
+  protected readonly contributorMenuItems: Signal<Map<string, DropdownMenuItem[]>> = this.initContributorMenuItems();
 
   public constructor() {
     // Any filter change resets to page 1. merge, not combineLatest, so one control is enough;
@@ -163,6 +166,39 @@ export class ContributorsComponent {
           error: () => this.toastService.error(`Failed to unlink ${contributor.githubLogin}`),
         });
       },
+    });
+  }
+
+  private confirmDelete(contributor: ContributorWithRelations): void {
+    this.dialogService.open({
+      title: 'Delete Contributor',
+      size: 'sm',
+      component: ConfirmDialogComponent,
+      inputs: {
+        message: `Permanently delete ${contributor.githubLogin}, including any Slack association? Contributor data comes from GitHub, so a later sync of a tracked repository will recreate the record.`,
+        confirmLabel: 'Delete',
+        danger: true,
+      },
+      onClose: (result) => {
+        if (result !== 'confirmed') return;
+        this.contributorService.delete(contributor.id).subscribe({
+          next: () => {
+            this.toastService.success(`Deleted ${contributor.githubLogin}`);
+            this.refresh$.next();
+          },
+          error: () => this.toastService.error(`Failed to delete ${contributor.githubLogin}`),
+        });
+      },
+    });
+  }
+
+  private initContributorMenuItems(): Signal<Map<string, DropdownMenuItem[]>> {
+    return computed(() => {
+      const menu = new Map<string, DropdownMenuItem[]>();
+      for (const contributor of this.contributors()) {
+        menu.set(contributor.id, [{ label: 'Delete contributor', action: () => this.confirmDelete(contributor), danger: true }]);
+      }
+      return menu;
     });
   }
 
