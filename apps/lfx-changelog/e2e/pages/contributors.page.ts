@@ -18,6 +18,9 @@ export class ContributorsPage {
   public readonly linkSaveBtn: Locator;
   public readonly linkError: Locator;
 
+  // Shared confirm dialog (no testId passed, so it falls back to dialog-box)
+  public readonly confirmDialog: Locator;
+
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="contributors-heading"]');
     this.table = page.locator('[data-testid="contributors-table"]');
@@ -31,6 +34,8 @@ export class ContributorsPage {
     this.linkUserSelect = page.locator('[data-testid="link-slack-user-select"]');
     this.linkSaveBtn = page.locator('[data-testid="link-slack-save-btn"]');
     this.linkError = page.locator('[data-testid="link-slack-error"]');
+
+    this.confirmDialog = page.locator('[data-testid="dialog-box"]');
   }
 
   public async goto() {
@@ -41,12 +46,24 @@ export class ContributorsPage {
     return this.table.locator('tbody tr');
   }
 
-  public async openLinkDialog(contributorId: string) {
-    await this.page.locator(`[data-testid="contributors-link-${contributorId}"]`).click();
+  public getRowByLogin(githubLogin: string): Locator {
+    return this.getRows().filter({ hasText: githubLogin });
   }
 
-  public async openUnlinkDialog(contributorId: string) {
-    await this.page.locator(`[data-testid="contributors-unlink-${contributorId}"]`).click();
+  public async search(term: string) {
+    await this.searchInput.locator('input').fill(term);
+  }
+
+  public async openLinkDialogFor(githubLogin: string) {
+    await this.getRowByLogin(githubLogin).getByRole('button', { name: 'Link Slack' }).click();
+  }
+
+  public async openUnlinkDialogFor(githubLogin: string) {
+    await this.getRowByLogin(githubLogin).getByRole('button', { name: 'Unlink' }).click();
+  }
+
+  public async confirmUnlink() {
+    await this.confirmDialog.getByRole('button', { name: 'Unlink' }).click();
   }
 
   public async selectOption(selectLocator: Locator, optionLabel: string) {

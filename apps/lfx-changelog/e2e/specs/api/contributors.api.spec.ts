@@ -113,6 +113,67 @@ test.describe('Contributors API (/api/contributors)', () => {
     });
   });
 
+  test.describe('Seeded data', () => {
+    test('excludes bots by default and includes them on request', async () => {
+      const withoutBots = await (await superAdminApi.get('/api/contributors?limit=100')).json();
+      const withBots = await (await superAdminApi.get('/api/contributors?limit=100&includeBots=true')).json();
+
+      const logins = (list: { githubLogin: string }[]) => list.map((c) => c.githubLogin);
+      expect(logins(withoutBots.data)).toContain('e2e-octo-dev');
+      expect(logins(withoutBots.data)).not.toContain('e2e-testbot[bot]');
+      expect(logins(withBots.data)).toContain('e2e-testbot[bot]');
+    });
+
+    test('includeBots=false is honoured rather than coerced to true', async () => {
+      const res = await superAdminApi.get('/api/contributors?limit=100&includeBots=false');
+      const body = await res.json();
+      expect(body.data.map((c: { githubLogin: string }) => c.githubLogin)).not.toContain('e2e-testbot[bot]');
+    });
+
+    test('filters by Slack link state', async () => {
+      const linked = await (await superAdminApi.get('/api/contributors?slackLink=linked&limit=100')).json();
+      const unlinked = await (await superAdminApi.get('/api/contributors?slackLink=unlinked&limit=100')).json();
+
+      expect(linked.data.every((c: { slackUserId: string | null }) => c.slackUserId !== null)).toBe(true);
+      expect(unlinked.data.every((c: { slackUserId: string | null }) => c.slackUserId === null)).toBe(true);
+      expect(unlinked.data.map((c: { githubLogin: string }) => c.githubLogin)).toContain('e2e-octo-dev');
+    });
+
+    test('returns the repositories a contributor belongs to', async () => {
+      const list = await (await superAdminApi.get('/api/contributors?query=e2e-octo-dev')).json();
+      const contributor = list.data[0];
+      expect(contributor.repositories.length).toBeGreaterThan(0);
+      expect(contributor.repositories[0].repositoryFullName).toBe('linuxfoundation/e2e-easycla-repo');
+    });
+  });
+
+  test.describe('Slack linking', () => {
+    test('PUT rejects a Slack user when no workspace is connected', async () => {
+      const list = await (await superAdminApi.get('/api/contributors?query=e2e-octo-dev')).json();
+      const res = await superAdminApi.put(`/api/contributors/${list.data[0].id}/slack`, { data: { slackUserId: 'U0NOTREAL' } });
+
+      // No bot installation exists in E2E, so the directory lookup is unavailable — 503, not 500.
+      expect(res.status()).toBe(503);
+      const body = await res.json();
+      expect(body.code).toBe('SERVICE_UNAVAILABLE');
+    });
+
+    // Uses a contributor reserved for this spec so the admin filter assertions stay stable.
+    test('DELETE clears the Slack association', async () => {
+      const list = await (await superAdminApi.get('/api/contributors?query=e2e-api-unlink-dev')).json();
+      const contributor = list.data[0];
+      expect(contributor.slackUserId).not.toBeNull();
+
+      const res = await superAdminApi.delete(`/api/contributors/${contributor.id}/slack`);
+      expect(res.status()).toBe(200);
+
+      const body = await res.json();
+      expect(body.data.slackUserId).toBeNull();
+      expect(body.data.slackLinkSource).toBeNull();
+      expect(body.data.slackLinkedAt).toBeNull();
+    });
+  });
+
   test.describe('Not found (404)', () => {
     test('GET /api/contributors/:id returns 404 for an unknown contributor', async () => {
       const res = await superAdminApi.get(`/api/contributors/${MISSING_ID}`);

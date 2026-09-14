@@ -40,13 +40,65 @@ test.describe('Contributors', () => {
     await expect(contributorsPage.slackFilter).toBeVisible();
   });
 
-  test('should filter to unlinked contributors without error', async () => {
-    await contributorsPage.selectOption(contributorsPage.slackFilter, 'Not linked');
-    await expect(contributorsPage.table).toBeVisible();
+  test('should list seeded contributors and hide bots by default', async () => {
+    await expect(contributorsPage.getRows().first()).toBeVisible();
+    await expect(contributorsPage.table).toContainText('e2e-octo-dev');
+    await expect(contributorsPage.table).not.toContainText('e2e-testbot');
   });
 
-  test('should accept a search term without error', async () => {
-    await contributorsPage.searchInput.locator('input').fill('octocat');
-    await expect(contributorsPage.table).toBeVisible();
+  test('should show the Slack name for a linked contributor', async () => {
+    const row = contributorsPage.getRowByLogin('e2e-linked-dev');
+    await expect(row).toContainText('E2E Linked Dev');
+    await expect(row.locator('img[alt="Slack"]')).toBeVisible();
+  });
+
+  test('should filter to unlinked contributors', async () => {
+    await contributorsPage.selectOption(contributorsPage.slackFilter, 'Not linked');
+    await expect(contributorsPage.table).toContainText('e2e-octo-dev');
+    await expect(contributorsPage.table).not.toContainText('e2e-linked-dev');
+  });
+
+  test('should filter to linked contributors', async () => {
+    await contributorsPage.selectOption(contributorsPage.slackFilter, 'Linked to Slack');
+    await expect(contributorsPage.table).toContainText('e2e-linked-dev');
+    await expect(contributorsPage.table).not.toContainText('e2e-octo-dev');
+  });
+
+  test('should narrow the list with a search term', async () => {
+    await contributorsPage.search('octo');
+    await expect(contributorsPage.table).toContainText('e2e-octo-dev');
+    await expect(contributorsPage.table).not.toContainText('e2e-linked-dev');
+  });
+
+  test.describe('Link to Slack dialog', () => {
+    test('should open for an unlinked contributor', async () => {
+      await contributorsPage.openLinkDialogFor('e2e-octo-dev');
+      await expect(contributorsPage.linkDialog).toBeVisible();
+      await expect(contributorsPage.linkDialog).toContainText('e2e-octo-dev');
+    });
+
+    test('should keep the save action disabled until a Slack user is selected', async () => {
+      await contributorsPage.openLinkDialogFor('e2e-octo-dev');
+      await expect(contributorsPage.linkDialog).toBeVisible();
+      await expect(contributorsPage.linkSaveBtn.locator('button')).toBeDisabled();
+    });
+
+    test('should surface an error when the Slack workspace is not connected', async () => {
+      await contributorsPage.openLinkDialogFor('e2e-octo-dev');
+      // No Slack bot installation exists in the E2E environment, so the directory fetch fails.
+      await expect(contributorsPage.linkError).toBeVisible();
+      await expect(contributorsPage.linkError).toContainText('Slack');
+    });
+  });
+
+  // Mutating — uses a contributor reserved for this spec so the filter assertions stay stable.
+  test('should unlink a contributor from Slack', async () => {
+    await expect(contributorsPage.getRowByLogin('e2e-unlink-me-dev')).toContainText('E2E Unlink Me');
+
+    await contributorsPage.openUnlinkDialogFor('e2e-unlink-me-dev');
+    await expect(contributorsPage.confirmDialog).toBeVisible();
+    await contributorsPage.confirmUnlink();
+
+    await expect(contributorsPage.getRowByLogin('e2e-unlink-me-dev')).toContainText('Not linked');
   });
 });
