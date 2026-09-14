@@ -43,6 +43,9 @@ export class LinkSlackDialogComponent {
     this.searchControl.valueChanges.pipe(
       debounceTime(LinkSlackDialogComponent.searchDebounceMs),
       distinctUntilChanged(),
+      // Drop any prior pick — the select retains values that vanish from options, so without
+      // this you could choose Alice, search Bob, and still submit Alice's hidden ID.
+      tap(() => this.slackUserControl.setValue('')),
       switchMap((term) => {
         const query = term.trim();
         if (query.length < LinkSlackDialogComponent.minSearchLength) {

@@ -43,6 +43,11 @@ export class SlackService {
   private readonly slackBotScopes = 'chat:write,im:write,users:read,users:read.email';
   private readonly tokenRefreshBufferMs = 5 * 60 * 1000; // Refresh 5 minutes before expiry
   private readonly stateTtlMs = 10 * 60 * 1000; // OAuth state expires after 10 minutes
+  private readonly directoryTtlMs = 5 * 60 * 1000; // Workspace roster cache lifetime
+
+  /** Cached roster and the in-flight refresh, so a typeahead doesn't re-paginate users.list per keystroke. */
+  private directoryCache: { users: SlackWorkspaceUser[]; expiresAt: number } | null = null;
+  private directoryRefresh: Promise<SlackWorkspaceUser[]> | null = null;
 
   /**
    * Generate the Slack OAuth URL for the user to authorize.
@@ -296,7 +301,7 @@ export class SlackService {
    * Never return this to a client — use searchWorkspaceUsers for anything user-facing.
    */
   public async listWorkspaceUsersForMatching(): Promise<SlackWorkspaceUser[]> {
-    return this.listWorkspaceUsers();
+    return this.getWorkspaceDirectory();
   }
 
   /**
@@ -310,7 +315,7 @@ export class SlackService {
     const needle = term.trim().toLowerCase();
     if (needle.length < 2) return [];
 
-    const users = await this.listWorkspaceUsers();
+    const users = await this.getWorkspaceDirectory();
     const matches: SlackWorkspaceUser[] = [];
 
     for (const user of users) {
@@ -757,6 +762,29 @@ export class SlackService {
   }
 
   // ── Bot-token DM notifications ─────────────────────
+
+  /**
+   * Cached workspace roster. `users.list` is Tier 2 and a full workspace is many sequential
+   * pages, so without this every debounced picker keystroke would re-paginate the directory.
+   * Concurrent callers share one in-flight refresh rather than each starting their own.
+   */
+  private async getWorkspaceDirectory(): Promise<SlackWorkspaceUser[]> {
+    if (this.directoryCache && this.directoryCache.expiresAt > Date.now()) {
+      return this.directoryCache.users;
+    }
+    if (this.directoryRefresh) return this.directoryRefresh;
+
+    this.directoryRefresh = this.listWorkspaceUsers()
+      .then((users) => {
+        this.directoryCache = { users, expiresAt: Date.now() + this.directoryTtlMs };
+        return users;
+      })
+      .finally(() => {
+        this.directoryRefresh = null;
+      });
+
+    return this.directoryRefresh;
+  }
 
   /**
    * Workspace members via the bot token, cursor-paginated. Deactivated accounts, bots and

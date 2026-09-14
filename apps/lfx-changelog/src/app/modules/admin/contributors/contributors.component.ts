@@ -184,6 +184,8 @@ export class ContributorsComponent {
         this.contributorService.delete(contributor.id).subscribe({
           next: () => {
             this.toastService.success(`Deleted ${contributor.githubLogin}`);
+            // Removing the last row on the final page would otherwise refresh an out-of-range page.
+            this.page$.next(1);
             this.refresh$.next();
           },
           error: () => this.toastService.error(`Failed to delete ${contributor.githubLogin}`),

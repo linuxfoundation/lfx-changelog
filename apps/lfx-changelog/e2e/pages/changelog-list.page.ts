@@ -27,7 +27,7 @@ export class ChangelogListPage {
   }
 
   public async goto() {
-    await this.page.goto('/admin/changelogs');
+    await this.page.goto('/admin/changelogs', { waitUntil: 'networkidle' });
   }
 
   public getRows(): Locator {

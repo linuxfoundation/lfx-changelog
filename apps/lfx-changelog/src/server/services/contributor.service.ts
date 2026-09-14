@@ -294,11 +294,19 @@ export class ContributorService {
       // taken before this loop, so a manual link made mid-sync would otherwise be overwritten.
       let linked = false;
       if (shouldAutoLink && slackMatch) {
-        const claimed = await prisma.contributor.updateMany({
-          where: { id: record.id, slackUserId: null },
-          data: this.slackLinkData(slackMatch, ContributorSlackLinkSource.AUTO_EMAIL, null),
-        });
-        linked = claimed.count > 0;
+        try {
+          const claimed = await prisma.contributor.updateMany({
+            where: { id: record.id, slackUserId: null },
+            data: this.slackLinkData(slackMatch, ContributorSlackLinkSource.AUTO_EMAIL, null),
+          });
+          linked = claimed.count > 0;
+        } catch (error) {
+          // Another row claimed this Slack member since claimedSlackIds was read. That is a
+          // failed auto-link, not a failed sync — record it and keep going.
+          if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) throw error;
+          claimedSlackIds.add(slackMatch.id);
+          serverLogger.warn({ contributorId: record.id, slackUserId: slackMatch.id }, 'Slack member claimed concurrently — skipping auto-link');
+        }
       }
 
       if (existing) {

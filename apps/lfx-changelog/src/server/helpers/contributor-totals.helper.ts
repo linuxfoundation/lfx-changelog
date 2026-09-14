@@ -11,6 +11,8 @@ type PrismaLike = PrismaClient | Prisma.TransactionClient;
  * Lives outside the services because both ContributorService and ProductService need it, and
  * importing one into the other would close a product -> contributor -> github -> product cycle.
  *
+ * Also recomputes lastActiveAt, which is likewise a cross-repository aggregate.
+ *
  * Totals are deduplicated by repository full name: `ProductRepository` is unique only on
  * (productId, owner, name), so one GitHub repository linked to two products produces two rows
  * carrying the same GitHub contribution count. Summing the links directly would double-count it.
@@ -22,7 +24,7 @@ export async function recalculateContributorTotals(prisma: PrismaLike, contribut
     where: { id: { in: contributorIds } },
     select: {
       id: true,
-      repositories: { select: { contributions: true, repository: { select: { fullName: true } } } },
+      repositories: { select: { contributions: true, lastActiveAt: true, repository: { select: { fullName: true } } } },
     },
   });
 
@@ -34,7 +36,15 @@ export async function recalculateContributorTotals(prisma: PrismaLike, contribut
     }
 
     const total = [...byRepository.values()].reduce((sum, contributions) => sum + contributions, 0);
-    await prisma.contributor.update({ where: { id: contributor.id }, data: { contributions: total } });
+
+    // lastActiveAt is a cross-repository maximum too. Sync only ever grows it, so if the
+    // removed link held the newest date it would otherwise persist forever.
+    const lastActiveAt = contributor.repositories.reduce<Date | null>(
+      (latest, link) => (link.lastActiveAt && (!latest || link.lastActiveAt > latest) ? link.lastActiveAt : latest),
+      null
+    );
+
+    await prisma.contributor.update({ where: { id: contributor.id }, data: { contributions: total, lastActiveAt } });
   }
 }
 

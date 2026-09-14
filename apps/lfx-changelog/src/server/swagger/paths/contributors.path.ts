@@ -9,6 +9,7 @@ import {
   ContributorSyncResultSchema,
   ContributorWithRelationsSchema,
   LinkContributorSlackRequestSchema,
+  SlackUserSearchParamsSchema,
   SlackWorkspaceUserSchema,
   SyncContributorsRequestSchema,
   createApiResponseSchema,
@@ -46,13 +47,15 @@ contributorRegistry.registerPath({
   tags: ['Contributors'],
   summary: 'List Slack workspace users',
   description:
-    'Returns the members of the connected Slack workspace, for use as the picker when linking a contributor manually. Deactivated accounts and bots are omitted.\n\n**Required privilege:** SUPER_ADMIN role.',
+    'Returns connected Slack workspace members matching `query`, for the manual link picker. Filtering happens server-side and results are capped, so the full directory is never returned. Deactivated accounts and bots are omitted.\n\n**Required privilege:** SUPER_ADMIN role.',
   security: COOKIE_AUTH,
+  request: { query: SlackUserSearchParamsSchema },
   responses: {
     200: {
-      description: 'Slack workspace members',
+      description: 'Slack workspace members matching the search term',
       content: { 'application/json': { schema: createApiResponseSchema(z.array(SlackWorkspaceUserSchema)) } },
     },
+    400: { description: 'Missing or too-short search term' },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires SUPER_ADMIN role' },
     503: { description: 'No active Slack bot installation' },
