@@ -237,7 +237,10 @@ export class ContributorService {
       const mergedEmails = Array.from(new Set([...(existing?.emails ?? []), ...(profile?.emails ?? [])])).sort();
       const primaryEmail = mergedEmails.find((email) => !email.endsWith(NOREPLY_EMAIL_SUFFIX)) ?? existing?.primaryEmail ?? null;
       const name = profile?.name ?? existing?.name ?? null;
-      const lastActiveAt = this.latestDate(profile?.lastActiveAt ?? null, existing?.lastActiveAt ?? null);
+      // Contributor.lastActiveAt is the cross-repository maximum; the link row below must carry
+      // only this repository's date, or activity in one repo leaks into another's relation.
+      const repoLastActiveAt = profile?.lastActiveAt ?? null;
+      const lastActiveAt = this.latestDate(repoLastActiveAt, existing?.lastActiveAt ?? null);
 
       const slackMatch = this.matchSlackUser(mergedEmails, slackUsersByEmail);
       const shouldAutoLink = Boolean(slackMatch) && !existing?.slackUserId && !claimedSlackIds.has(slackMatch!.id);
@@ -283,8 +286,10 @@ export class ContributorService {
 
       await prisma.contributorRepository.upsert({
         where: { contributorId_repositoryId: { contributorId: record.id, repositoryId: repository.id } },
-        create: { contributorId: record.id, repositoryId: repository.id, contributions: contributor.contributions, lastActiveAt },
-        update: { contributions: contributor.contributions, lastActiveAt },
+        create: { contributorId: record.id, repositoryId: repository.id, contributions: contributor.contributions, lastActiveAt: repoLastActiveAt },
+        // Only overwrite when this run actually harvested a date — otherwise a lookback window
+        // that no longer reaches their last commit would wipe a known date.
+        update: { contributions: contributor.contributions, ...(repoLastActiveAt ? { lastActiveAt: repoLastActiveAt } : {}) },
       });
     }
 

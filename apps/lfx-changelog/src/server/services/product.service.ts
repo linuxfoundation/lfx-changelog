@@ -160,7 +160,24 @@ export class ProductService {
       throw new NotFoundError(`Repository not found: ${repoId}`, { operation: 'unlinkRepository', service: 'product' });
     }
 
-    await prisma.productRepository.delete({ where: { id: repoId } });
+    // Deleting the repository cascades its ContributorRepository rows away, which would leave
+    // Contributor.contributions overstated with no way back — once the repository is untracked,
+    // no later sync can repair those totals. Recompute in the same transaction.
+    // Inlined rather than calling ContributorService: that would close a
+    // product -> contributor -> github -> product import cycle.
+    const affected = await prisma.contributorRepository.findMany({ where: { repositoryId: repoId }, select: { contributorId: true } });
+    const contributorIds = [...new Set(affected.map((link) => link.contributorId))];
+
+    await prisma.$transaction(async (tx) => {
+      await tx.productRepository.delete({ where: { id: repoId } });
+
+      for (const contributorId of contributorIds) {
+        const remaining = await tx.contributorRepository.aggregate({ where: { contributorId }, _sum: { contributions: true } });
+        await tx.contributor.update({ where: { id: contributorId }, data: { contributions: remaining._sum.contributions ?? 0 } });
+      }
+    });
+
+    serverLogger.info({ repoId, productId, contributorsRecalculated: contributorIds.length }, 'Unlinked repository and refreshed contributor totals');
   }
 
   // ── Slack notify users ──────────────────────────────
