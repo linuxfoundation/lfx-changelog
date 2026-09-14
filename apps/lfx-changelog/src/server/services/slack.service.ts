@@ -47,7 +47,7 @@ export class SlackService {
 
   /** Cached roster and the in-flight refresh, so a typeahead doesn't re-paginate users.list per keystroke. */
   private directoryCache: { teamId: string; users: SlackWorkspaceUser[]; expiresAt: number } | null = null;
-  private directoryRefresh: Promise<SlackWorkspaceUser[]> | null = null;
+  private directoryRefresh: { teamId: string; promise: Promise<SlackWorkspaceUser[]> } | null = null;
 
   /**
    * Generate the Slack OAuth URL for the user to authorize.
@@ -783,18 +783,21 @@ export class SlackService {
     if (this.directoryCache && this.directoryCache.teamId === installation.teamId && this.directoryCache.expiresAt > Date.now()) {
       return this.directoryCache.users;
     }
-    if (this.directoryRefresh) return this.directoryRefresh;
+    // Coalesce only within the same team — a refresh started for the previous workspace must
+    // not satisfy a caller that has since switched, or sync auto-links against the wrong team.
+    if (this.directoryRefresh?.teamId === installation.teamId) return this.directoryRefresh.promise;
 
-    this.directoryRefresh = this.listWorkspaceUsers()
+    const promise = this.listWorkspaceUsers()
       .then((users) => {
         this.directoryCache = { teamId: installation.teamId, users, expiresAt: Date.now() + this.directoryTtlMs };
         return users;
       })
       .finally(() => {
-        this.directoryRefresh = null;
+        if (this.directoryRefresh?.promise === promise) this.directoryRefresh = null;
       });
 
-    return this.directoryRefresh;
+    this.directoryRefresh = { teamId: installation.teamId, promise };
+    return promise;
   }
 
   /**
