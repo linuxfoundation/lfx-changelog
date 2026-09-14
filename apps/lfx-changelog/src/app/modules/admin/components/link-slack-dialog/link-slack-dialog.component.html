@@ -39,6 +39,9 @@
   <div class="flex justify-end gap-2 pt-2">
     <lfx-button variant="secondary" size="sm" (clicked)="dialogService.close()">Cancel</lfx-button>
     <lfx-button data-testid="link-slack-save-btn" variant="primary" size="sm" [loading]="saving()" [disabled]="!canSave()" (clicked)="save()">
+      @if (!saving()) {
+        <img src="/slack.svg" alt="" width="12" height="12" class="inline-block shrink-0" />
+      }
       Link Slack User
     </lfx-button>
   </div>
