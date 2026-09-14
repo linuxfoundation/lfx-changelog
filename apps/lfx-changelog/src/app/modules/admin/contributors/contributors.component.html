@@ -160,6 +160,17 @@
           </div>
         </lfx-card>
       }
+
+      @if (totalPages() > 1) {
+        <lfx-card padding="none">
+          <lfx-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalItems]="totalItems()"
+            [pageSize]="pageSize()"
+            (pageChange)="onPageChange($event)" />
+        </lfx-card>
+      }
     }
   </div>
 </div>

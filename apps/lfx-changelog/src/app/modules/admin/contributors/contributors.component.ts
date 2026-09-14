@@ -9,6 +9,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ConfirmDialogComponent } from '@components/confirm-dialog/confirm-dialog.component';
 import { InputComponent } from '@components/input/input.component';
+import { PaginationComponent } from '@components/pagination/pagination.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
@@ -18,18 +19,11 @@ import { DialogService } from '@services/dialog.service';
 import { ProductService } from '@services/product.service';
 import { ToastService } from '@services/toast.service';
 import { MapGetPipe } from '@shared/pipes/map-get.pipe';
-import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, map, merge, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { ContributorWithRelations, PaginatedResponse, Product } from '@lfx-changelog/shared';
+import type { ContributorPageState } from '@shared/interfaces/contributor.interface';
 import type { SelectOption } from '@shared/interfaces/form.interface';
-
-interface ContributorPageState {
-  contributors: ContributorWithRelations[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
 
 const EMPTY_PAGE_STATE: ContributorPageState = { contributors: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
 
@@ -41,6 +35,7 @@ const EMPTY_PAGE_STATE: ContributorPageState = { contributors: [], total: 0, pag
     ButtonComponent,
     CardComponent,
     InputComponent,
+    PaginationComponent,
     SelectComponent,
     TableComponent,
     TableColumnDirective,
@@ -59,6 +54,7 @@ export class ContributorsComponent {
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
   private readonly page$ = new BehaviorSubject<number>(1);
   private static readonly defaultPageSize = 20;
+  private static readonly searchDebounceMs = 250;
 
   protected readonly searchControl = new FormControl('', { nonNullable: true });
   protected readonly productFilterControl = new FormControl('', { nonNullable: true });
@@ -90,12 +86,13 @@ export class ContributorsComponent {
   protected readonly productNamesByContributor: Signal<Map<string, string[]>> = this.initProductNamesByContributor();
 
   public constructor() {
-    // Any filter change resets to the first page — otherwise a narrower filter can land on an empty page.
-    combineLatest([
-      this.searchControl.valueChanges.pipe(startWith(this.searchControl.value)),
-      this.productFilterControl.valueChanges.pipe(startWith(this.productFilterControl.value)),
-      this.slackFilterControl.valueChanges.pipe(startWith(this.slackFilterControl.value)),
-    ])
+    // Any filter change resets to page 1. merge, not combineLatest, so one control is enough;
+    // the search leg repeats initPageState's debounce so a keystroke can't refetch on a stale query.
+    merge(
+      this.searchControl.valueChanges.pipe(debounceTime(ContributorsComponent.searchDebounceMs), distinctUntilChanged()),
+      this.productFilterControl.valueChanges,
+      this.slackFilterControl.valueChanges
+    )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.page$.next(1));
   }
@@ -174,10 +171,10 @@ export class ContributorsComponent {
   private initPageState(): Signal<ContributorPageState> {
     return toSignal(
       combineLatest([
-        this.searchControl.valueChanges.pipe(startWith(this.searchControl.value), debounceTime(250), distinctUntilChanged()),
+        this.searchControl.valueChanges.pipe(startWith(this.searchControl.value), debounceTime(ContributorsComponent.searchDebounceMs), distinctUntilChanged()),
         this.productFilterControl.valueChanges.pipe(startWith(this.productFilterControl.value)),
         this.slackFilterControl.valueChanges.pipe(startWith(this.slackFilterControl.value)),
-        this.page$,
+        this.page$.pipe(distinctUntilChanged()),
         this.refresh$,
       ]).pipe(
         tap(() => this.loading.set(true)),

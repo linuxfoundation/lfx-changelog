@@ -465,7 +465,7 @@ model BlogChangelogEntry {
 model Contributor {
   id              String   @id @default(uuid())
   githubUserId    Int      @unique @map("github_user_id")
-  githubLogin     String   @unique @map("github_login")
+  githubLogin     String   @map("github_login")
   githubAvatarUrl String?  @map("github_avatar_url")
   githubHtmlUrl   String?  @map("github_html_url")
   name            String?
@@ -473,7 +473,7 @@ model Contributor {
   emails          String[] @default([])
   isBot           Boolean  @default(false) @map("is_bot")
 
-  slackUserId      String?                     @map("slack_user_id")
+  slackUserId      String?                     @unique @map("slack_user_id")
   slackTeamId      String?                     @map("slack_team_id")
   slackDisplayName String?                     @map("slack_display_name")
   slackRealName    String?                     @map("slack_real_name")
@@ -494,7 +494,7 @@ model Contributor {
   slackLinkedBy User?                   @relation("ContributorSlackLinker", fields: [slackLinkedById], references: [id], onDelete: SetNull)
   repositories  ContributorRepository[]
 
-  @@index([slackUserId])
+  @@index([githubLogin])
   @@index([lastActiveAt(sort: Desc)])
   @@index([contributions(sort: Desc)])
   @@map("contributors")

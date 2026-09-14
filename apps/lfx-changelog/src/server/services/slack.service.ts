@@ -292,12 +292,8 @@ export class SlackService {
   }
 
   /**
-   * List the workspace's human members via the bot token, following cursor pagination.
-   *
-   * Deactivated accounts, bots and the Slackbot pseudo-user are filtered out — none of
-   * them is a plausible target for a contributor mapping. `users.list` is a Tier 2 method
-   * (20+ req/min) and a full workspace is a handful of pages, so callers should cache the
-   * result rather than calling this per contributor.
+   * Workspace members via the bot token, cursor-paginated. Deactivated accounts, bots and
+   * Slackbot are filtered out. Tier 2 method — cache the result rather than calling per contributor.
    */
   public async listWorkspaceUsers(maxPages = 20): Promise<SlackWorkspaceUser[]> {
     const token = await this.getFreshBotToken();
@@ -755,7 +751,11 @@ export class SlackService {
     const installation = await prisma.slackBotInstallation.findFirst({ where: { status: 'active' }, orderBy: { installedAt: 'desc' } });
 
     if (!installation) {
-      throw new Error('No active Slack bot installation found — install the bot via Admin → Settings');
+      // Configuration state, not a server fault — 503 rather than 500.
+      throw new ServiceUnavailableError('No active Slack bot installation found — install the bot via Admin → Settings', {
+        operation: 'getFreshBotToken',
+        service: 'slack',
+      });
     }
 
     const now = Date.now();
@@ -778,7 +778,10 @@ export class SlackService {
       if (res.error === 'invalid_refresh_token' || res.error === 'token_revoked' || res.error === 'invalid_auth') {
         await prisma.slackBotInstallation.update({ where: { id: installation.id }, data: { status: 'revoked' } });
       }
-      throw new Error(`Slack bot token refresh failed: ${res.error}`);
+      throw new ServiceUnavailableError(`Slack bot token refresh failed: ${res.error} — reinstall the bot via Admin → Settings`, {
+        operation: 'getFreshBotToken',
+        service: 'slack',
+      });
     }
 
     const newAccessToken = res['access_token'] as string;
