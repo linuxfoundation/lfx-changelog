@@ -4,11 +4,22 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-import { RepositoryWithCountsSchema, StoredReleaseSchema, createApiResponseSchema } from '@lfx-changelog/shared';
+import {
+  CreateReleaseRequestSchema,
+  GenerateReleaseNotesRequestSchema,
+  GeneratedReleaseNotesSchema,
+  GitHubReleaseSchema,
+  ReleaseTargetSchema,
+  RepositoryWithCountsSchema,
+  StoredReleaseSchema,
+  createApiResponseSchema,
+} from '@lfx-changelog/shared';
 
-import { API_KEY_AUTH } from '../constants';
+import { API_KEY_AUTH, COOKIE_AUTH } from '../constants';
 
 export const releaseRegistry = new OpenAPIRegistry();
+
+const repoIdParam = z.object({ repoId: z.string().uuid().openapi({ description: 'Tracked repository ID' }) });
 
 releaseRegistry.registerPath({
   method: 'get',
@@ -108,5 +119,60 @@ releaseRegistry.registerPath({
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires SUPER_ADMIN role' },
     404: { description: 'Repository not found' },
+  },
+});
+
+releaseRegistry.registerPath({
+  method: 'get',
+  path: '/api/releases/repositories/{repoId}/target',
+  tags: ['Releases'],
+  summary: 'Get release target details for a repository',
+  description:
+    "Returns the repository's default branch, its branches, the newest stored tag and a suggested next tag, for prefilling the create-release form.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. Session authentication only.",
+  security: COOKIE_AUTH,
+  request: { params: repoIdParam },
+  responses: {
+    200: { description: 'Release target', content: { 'application/json': { schema: createApiResponseSchema(ReleaseTargetSchema) } } },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN' },
+    404: { description: 'Repository not found, or not one the caller administers' },
+  },
+});
+
+releaseRegistry.registerPath({
+  method: 'post',
+  path: '/api/releases/repositories/{repoId}/notes',
+  tags: ['Releases'],
+  summary: 'Preview generated release notes',
+  description:
+    'Asks GitHub to generate release notes from pull requests merged since the previous tag, so the form can prefill them for editing. Nothing is created.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository.',
+  security: COOKIE_AUTH,
+  request: { params: repoIdParam, body: { content: { 'application/json': { schema: GenerateReleaseNotesRequestSchema } } } },
+  responses: {
+    200: { description: 'Generated notes', content: { 'application/json': { schema: createApiResponseSchema(GeneratedReleaseNotesSchema) } } },
+    400: { description: 'Validation failed' },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks access' },
+    404: { description: 'Repository not found, or not one the caller administers' },
+  },
+});
+
+releaseRegistry.registerPath({
+  method: 'post',
+  path: '/api/releases/repositories/{repoId}',
+  tags: ['Releases'],
+  summary: 'Publish a GitHub release',
+  description:
+    'Creates a published release on GitHub, which also creates the tag at `targetCommitish`. The release is stored by the existing `release.published` webhook rather than written here, so a release created this way is indistinguishable from one created on GitHub directly.\n\nRequires the GitHub App to hold **Contents: write**.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. Session authentication only.',
+  security: COOKIE_AUTH,
+  request: { params: repoIdParam, body: { content: { 'application/json': { schema: CreateReleaseRequestSchema } } } },
+  responses: {
+    201: { description: 'Release created', content: { 'application/json': { schema: createApiResponseSchema(GitHubReleaseSchema) } } },
+    400: { description: 'Validation failed' },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks Contents: write' },
+    404: { description: 'Repository not found, or not one the caller administers' },
+    409: { description: 'GitHub rejected the release, most commonly because the tag already exists' },
+    502: { description: 'GitHub was unavailable' },
   },
 });

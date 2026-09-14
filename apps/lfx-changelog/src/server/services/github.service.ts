@@ -3,11 +3,14 @@
 
 import jwt from 'jsonwebtoken';
 
+import { GitHubApiError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 import { ProductService } from './product.service';
 
 import type {
+  GeneratedReleaseNotes,
+  GitHubBranch,
   GitHubCommit,
   GitHubContributor,
   GitHubInstallation,
@@ -18,7 +21,7 @@ import type {
   StoredRelease,
 } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
-import type { FindAllPublicOptions } from '../interfaces/release.interface';
+import type { CreateReleaseInput, FindAllPublicOptions, GenerateReleaseNotesInput } from '../interfaces/release.interface';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -217,6 +220,52 @@ export class GitHubService {
 
     const releases = (await response.json()) as GitHubRelease[];
     return releases.map((release) => ({ ...release, repoFullName }));
+  }
+
+  /**
+   * Repository metadata needed to target a release, currently the default branch.
+   * ProductRepository does not store it, and it is the sensible default for a new tag.
+   */
+  public async getRepositoryDefaultBranch(installationId: number, owner: string, repo: string): Promise<string> {
+    const data = (await this.repoRequest(installationId, owner, repo, '', 'Failed to get repository')) as { default_branch?: string };
+    return data.default_branch || 'main';
+  }
+
+  /** Branches available as a release target, newest activity first is not guaranteed by GitHub so they arrive alphabetically. */
+  public async listBranches(installationId: number, owner: string, repo: string, perPage = 100): Promise<GitHubBranch[]> {
+    return (await this.repoRequest(installationId, owner, repo, `/branches?per_page=${perPage}`, 'Failed to list branches')) as GitHubBranch[];
+  }
+
+  /**
+   * GitHub's own release-note generation from merged pull requests since the previous tag.
+   * Used to prefill the form so the author edits rather than writes from scratch.
+   */
+  public async generateReleaseNotes(installationId: number, owner: string, repo: string, input: GenerateReleaseNotesInput): Promise<GeneratedReleaseNotes> {
+    return (await this.repoRequest(installationId, owner, repo, '/releases/generate-notes', 'Failed to generate release notes', {
+      tag_name: input.tagName,
+      target_commitish: input.targetCommitish,
+      ...(input.previousTagName ? { previous_tag_name: input.previousTagName } : {}),
+    })) as GeneratedReleaseNotes;
+  }
+
+  /**
+   * Creates a published release. GitHub creates the tag at `target_commitish` as a side effect,
+   * so this is the only place the app writes a git ref — it needs Contents: write on the App.
+   *
+   * The release webhook then stores the row, so nothing is persisted here.
+   */
+  public async createRelease(installationId: number, owner: string, repo: string, input: CreateReleaseInput): Promise<GitHubRelease> {
+    const release = (await this.repoRequest(installationId, owner, repo, '/releases', 'Failed to create release', {
+      tag_name: input.tagName,
+      target_commitish: input.targetCommitish,
+      name: input.name,
+      body: input.body,
+      draft: false,
+      prerelease: input.prerelease ?? false,
+    })) as GitHubRelease;
+
+    serverLogger.info({ owner, repo, tagName: input.tagName, targetCommitish: input.targetCommitish }, 'Created GitHub release');
+    return { ...release, repoFullName: `${owner}/${repo}` };
   }
 
   /**
@@ -528,5 +577,35 @@ export class GitHubService {
     if (!Number.isInteger(installationId) || installationId <= 0) {
       throw new Error('Invalid installation ID');
     }
+  }
+
+  /**
+   * Shared request path for repository-scoped calls. A body makes it a POST.
+   *
+   * GitHub returns 422 for the cases a user can actually cause — a tag that already exists, an
+   * unknown target — so the response body is surfaced rather than flattened into a status code.
+   */
+  private async repoRequest(installationId: number, owner: string, repo: string, path: string, errorMessage: string, body?: unknown): Promise<unknown> {
+    this.validateInstallationId(installationId);
+    const token = await this.getInstallationToken(installationId);
+
+    const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}${path}`, {
+      method: body ? 'POST' : 'GET',
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      serverLogger.error({ status: response.status, body: text, owner, repo, path }, errorMessage);
+      throw new GitHubApiError(errorMessage, response.status, text);
+    }
+
+    return response.json();
   }
 }

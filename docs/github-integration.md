@@ -59,6 +59,42 @@ Each tracked repository is stored as a **ProductRepository** record linking a pr
 | GET    | `/api/github/installations`                  | OAuth only | List GitHub App installations       |
 | GET    | `/api/github/installations/:id/repositories` | OAuth only | List repos for an installation      |
 
+## Creating Releases
+
+Releases can be published from the admin UI, which creates them on GitHub. The tag is created as a
+side effect at the chosen branch or commit, so this is the only place the application writes a git
+ref — **the GitHub App requires `Contents: write`**, and it is the only write permission the app uses.
+Everything else in this integration is read-only.
+
+Nothing is persisted by the create call. The `release.published` webhook stores the row exactly as it
+would for a release created on github.com, so a release published here and one published there are
+indistinguishable in the database.
+
+| Method | Path                                        | Auth                       | Description                             |
+| ------ | ------------------------------------------- | -------------------------- | --------------------------------------- |
+| GET    | `/api/releases/repositories/:repoId/target` | OAuth only (product_admin) | Branches, default branch, suggested tag |
+| POST   | `/api/releases/repositories/:repoId/notes`  | OAuth only (product_admin) | Preview GitHub-generated notes          |
+| POST   | `/api/releases/repositories/:repoId`        | OAuth only (product_admin) | Publish the release                     |
+
+Authorization is per repository: the caller must hold `product_admin` (or higher) on the product that
+owns it. A repository outside the caller's products returns `404` rather than `403`, so the endpoint
+cannot be used to enumerate repositories. API keys are rejected — session authentication only.
+
+Releases are always published, never drafted. A draft would fire GitHub's `created` event, which this
+application does not handle, so a drafted release would be invisible here until published.
+
+Suggested tags come from the newest stored release for the repository, patch-bumped, preserving a
+leading `v` when the previous tag used one.
+
+### Failure modes
+
+| GitHub response | API response             | Usual cause                                     |
+| --------------- | ------------------------ | ----------------------------------------------- |
+| 422             | 409 `CONFLICT`           | The tag already exists                          |
+| 403 / 401       | 403 `GITHUB_FORBIDDEN`   | The App lacks `Contents: write`, or repo access |
+| 404             | 404 `NOT_FOUND`          | The App cannot see the repository               |
+| 5xx             | 502 `GITHUB_UNAVAILABLE` | GitHub is unavailable                           |
+
 ## Release Syncing
 
 GitHub releases are stored in the database and displayed on the admin repositories page. Releases sync via two mechanisms:

@@ -80,7 +80,9 @@ export {
   CreateBlogPostRequestSchema,
   CreateChangelogEntryRequestSchema,
   CreateProductRequestSchema,
+  CreateReleaseRequestSchema,
   CreateUserRequestSchema,
+  GenerateReleaseNotesRequestSchema,
   LinkBlogPostChangelogsRequestSchema,
   LinkBlogPostProductsRequestSchema,
   LinkContributorSlackRequestSchema,
@@ -90,6 +92,8 @@ export {
   UpdateProductRequestSchema,
 } from './dto.schema.js';
 export {
+  GeneratedReleaseNotesSchema,
+  GitHubBranchSchema,
   GitHubCommitSchema,
   GitHubContributorSchema,
   GitHubInstallationSchema,
@@ -100,6 +104,7 @@ export {
   LinkRepositoryRequestSchema,
   ProductActivitySchema,
   ProductRepositorySchema,
+  ReleaseTargetSchema,
   RepositoryWithCountsSchema,
   StoredReleaseSchema,
 } from './github.schema.js';
@@ -225,7 +230,9 @@ export type {
   CreateBlogPostRequest,
   CreateChangelogEntryRequest,
   CreateProductRequest,
+  CreateReleaseRequest,
   CreateUserRequest,
+  GenerateReleaseNotesRequest,
   LinkBlogPostChangelogsRequest,
   LinkBlogPostProductsRequest,
   LinkContributorSlackRequest,
@@ -235,6 +242,8 @@ export type {
   UpdateProductRequest,
 } from './dto.schema.js';
 export type {
+  GeneratedReleaseNotes,
+  GitHubBranch,
   GitHubCommit,
   GitHubContributor,
   GitHubInstallation,
@@ -245,6 +254,7 @@ export type {
   LinkRepositoryRequest,
   ProductActivity,
   ProductRepository,
+  ReleaseTarget,
   RepositoryWithCounts,
   StoredRelease,
 } from './github.schema.js';
