@@ -76,6 +76,10 @@ export class ContributorsComponent {
     ...this.products().map((product) => ({ label: product.name, value: product.id })),
   ]);
 
+  private readonly selectedProductId = toSignal(this.productFilterControl.valueChanges, { initialValue: this.productFilterControl.value });
+  /** Sync is scoped to one product, mirroring release sync — an unscoped crawl would run every tracked repo inline. */
+  protected readonly canSync: Signal<boolean> = computed(() => this.selectedProductId().length > 0);
+
   protected readonly pageState: Signal<ContributorPageState> = this.initPageState();
   protected readonly contributors = computed(() => this.pageState().contributors);
   protected readonly currentPage = computed(() => this.pageState().page);
@@ -102,8 +106,11 @@ export class ContributorsComponent {
   }
 
   protected syncContributors(): void {
+    const productId = this.selectedProductId();
+    if (!productId) return;
+
     this.syncing.set(true);
-    this.contributorService.sync().subscribe({
+    this.contributorService.sync({ productId }).subscribe({
       next: (result) => {
         this.syncing.set(false);
         const summary = `${result.contributorsCreated} added, ${result.contributorsUpdated} updated, ${result.slackAutoLinked} auto-linked to Slack`;

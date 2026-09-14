@@ -7,10 +7,15 @@
       <h1 data-testid="contributors-heading" class="font-display text-text-primary text-2xl font-bold">Contributors</h1>
       <p class="text-text-secondary mt-1">GitHub contributors across tracked repositories, and their Slack associations.</p>
     </div>
-    <lfx-button data-testid="contributors-sync-btn" variant="primary" [loading]="syncing()" (clicked)="syncContributors()">
-      <i class="fa-solid fa-arrows-rotate text-xs"></i>
-      Sync from GitHub
-    </lfx-button>
+    <div class="flex flex-col items-start gap-1 sm:items-end">
+      <lfx-button data-testid="contributors-sync-btn" variant="primary" [loading]="syncing()" [disabled]="!canSync()" (clicked)="syncContributors()">
+        <i class="fa-solid fa-arrows-rotate text-xs"></i>
+        Sync from GitHub
+      </lfx-button>
+      @if (!canSync()) {
+        <span data-testid="contributors-sync-hint" class="text-text-muted text-xs">Select a product to sync</span>
+      }
+    </div>
   </div>
 
   <!-- Filters -->

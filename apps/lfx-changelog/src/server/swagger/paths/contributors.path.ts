@@ -65,7 +65,7 @@ contributorRegistry.registerPath({
   tags: ['Contributors'],
   summary: 'Sync contributors from GitHub',
   description:
-    'Pulls contributors from every tracked repository (optionally narrowed to a single product or repository), enriches them with commit author emails, and auto-links any whose email matches a Slack workspace member.\n\n**Required privilege:** SUPER_ADMIN role.',
+    'Pulls contributors for one product or one repository, enriches them with commit author emails, and auto-links any whose email matches a Slack workspace member.\n\nExactly one of `productId` or `repositoryId` is required — an unscoped sync would crawl every tracked repository inline in the request.\n\n**Required privilege:** SUPER_ADMIN role.',
   security: COOKIE_AUTH,
   request: { body: { content: { 'application/json': { schema: SyncContributorsRequestSchema } } } },
   responses: {

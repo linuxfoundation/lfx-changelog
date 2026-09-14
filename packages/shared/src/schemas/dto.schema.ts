@@ -168,7 +168,11 @@ export const SyncContributorsRequestSchema = z
     productId: z.string().uuid().optional(),
     repositoryId: z.string().uuid().optional(),
   })
-  .refine((data) => !(data.productId && data.repositoryId), { message: 'productId and repositoryId cannot be used together', path: ['repositoryId'] })
+  // Exactly one: an unscoped sync crawls every tracked repository inline in the request.
+  .refine((data) => Boolean(data.productId) !== Boolean(data.repositoryId), {
+    message: 'Provide exactly one of productId or repositoryId',
+    path: ['productId'],
+  })
   .openapi('SyncContributorsRequest');
 
 export type SyncContributorsRequest = z.infer<typeof SyncContributorsRequestSchema>;

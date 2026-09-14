@@ -29,9 +29,16 @@ test.describe('Contributors', () => {
     await expect(headers.nth(3)).toContainText('Slack');
   });
 
-  test('should display the sync button', async () => {
+  test('should display the sync button, disabled until a product is chosen', async () => {
     await expect(contributorsPage.syncBtn).toBeVisible();
     await expect(contributorsPage.syncBtn).toContainText('Sync from GitHub');
+    await expect(contributorsPage.syncBtn.locator('button')).toBeDisabled();
+    await expect(contributorsPage.syncHint).toBeVisible();
+  });
+
+  test('should enable sync once a product is selected', async () => {
+    await contributorsPage.selectOption(contributorsPage.productFilter, 'E2E EasyCLA');
+    await expect(contributorsPage.syncBtn.locator('button')).toBeEnabled();
   });
 
   test('should display the filter controls', async () => {

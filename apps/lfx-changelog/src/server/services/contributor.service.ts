@@ -157,7 +157,13 @@ export class ContributorService {
    * Pulls contributors from tracked repositories, enriches them from commit history, and
    * attempts an email-based Slack match. A failing repository is recorded, not fatal.
    */
-  public async sync(options: { productId?: string; repositoryId?: string } = {}): Promise<ContributorSyncResult> {
+  public async sync(options: { productId?: string; repositoryId?: string }): Promise<ContributorSyncResult> {
+    // Route validation enforces this; the guard covers internal callers, since an unscoped
+    // sync would crawl every tracked repository inline in the request.
+    if (!options.productId && !options.repositoryId) {
+      throw new Error('Contributor sync must be scoped to a product or repository');
+    }
+
     const prisma = getPrismaClient();
     const repositories = await prisma.productRepository.findMany({
       where: {

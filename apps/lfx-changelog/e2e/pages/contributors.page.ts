@@ -7,6 +7,7 @@ export class ContributorsPage {
   public readonly heading: Locator;
   public readonly table: Locator;
   public readonly syncBtn: Locator;
+  public readonly syncHint: Locator;
   public readonly searchInput: Locator;
   public readonly productFilter: Locator;
   public readonly slackFilter: Locator;
@@ -25,6 +26,7 @@ export class ContributorsPage {
     this.heading = page.locator('[data-testid="contributors-heading"]');
     this.table = page.locator('[data-testid="contributors-table"]');
     this.syncBtn = page.locator('[data-testid="contributors-sync-btn"]');
+    this.syncHint = page.locator('[data-testid="contributors-sync-hint"]');
     this.searchInput = page.locator('[data-testid="contributors-search-input"]');
     this.productFilter = page.locator('[data-testid="contributors-product-filter"]');
     this.slackFilter = page.locator('[data-testid="contributors-slack-filter"]');

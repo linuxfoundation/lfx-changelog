@@ -111,6 +111,13 @@ test.describe('Contributors API (/api/contributors)', () => {
       const body = await res.json();
       expect(body.code).toBe('VALIDATION_ERROR');
     });
+
+    test('POST /api/contributors/sync rejects an unscoped sync', async () => {
+      const res = await superAdminApi.post('/api/contributors/sync', { data: {} });
+      expect(res.status()).toBe(400);
+      const body = await res.json();
+      expect(body.code).toBe('VALIDATION_ERROR');
+    });
   });
 
   test.describe('Seeded data', () => {
