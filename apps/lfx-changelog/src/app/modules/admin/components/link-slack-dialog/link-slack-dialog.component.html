@@ -38,6 +38,8 @@
 
   <div class="flex justify-end gap-2 pt-2">
     <lfx-button variant="secondary" size="sm" (clicked)="dialogService.close()">Cancel</lfx-button>
-    <lfx-button data-testid="link-slack-save-btn" variant="primary" size="sm" [loading]="saving()" (clicked)="save()">Link Slack User</lfx-button>
+    <lfx-button data-testid="link-slack-save-btn" variant="primary" size="sm" [loading]="saving()" [disabled]="!canSave()" (clicked)="save()">
+      Link Slack User
+    </lfx-button>
   </div>
 </div>

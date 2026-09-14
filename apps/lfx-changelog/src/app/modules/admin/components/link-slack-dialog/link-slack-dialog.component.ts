@@ -46,6 +46,9 @@ export class LinkSlackDialogComponent {
 
   protected readonly slackUserOptions: Signal<SelectOption[]> = this.initSlackUserOptions();
 
+  private readonly selectedSlackUserId = toSignal(this.slackUserControl.valueChanges, { initialValue: this.slackUserControl.value });
+  protected readonly canSave: Signal<boolean> = computed(() => this.selectedSlackUserId().length > 0);
+
   protected save(): void {
     const slackUserId = this.slackUserControl.value;
     if (!slackUserId) {

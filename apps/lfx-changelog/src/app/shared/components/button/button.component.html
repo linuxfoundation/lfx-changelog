@@ -4,6 +4,8 @@
 <button
   [type]="type()"
   [disabled]="disabled() || loading()"
+  [attr.data-loading]="loading() ? '' : null"
+  [attr.aria-busy]="loading() ? 'true' : null"
   (click)="clicked.emit($event)"
   class="btn inline-flex items-center justify-center gap-2 rounded-lg font-medium"
   [class.w-full]="fluid()"
