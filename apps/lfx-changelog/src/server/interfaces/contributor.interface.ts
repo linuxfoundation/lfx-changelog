@@ -8,6 +8,12 @@ export interface CommitProfile {
   lastActiveAt: Date | null;
 }
 
+/** Commit harvest for one repository, plus any reasons the harvest was partial. */
+export interface CommitProfileHarvest {
+  profilesByLogin: Map<string, CommitProfile>;
+  warnings: string[];
+}
+
 /**
  * Per-repository sync tallies. Created and updated carry GitHub user IDs rather than
  * counts so the caller can de-duplicate a contributor seen across several repositories.
@@ -16,6 +22,7 @@ export interface RepositorySyncCounts {
   created: number[];
   updated: number[];
   slackLinked: number;
+  warnings: string[];
 }
 
 /** Shape of a ContributorRepository row loaded with its repository and product. */

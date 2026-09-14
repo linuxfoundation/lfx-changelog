@@ -19,10 +19,17 @@ import type {
   SlackWorkspaceUser,
 } from '@lfx-changelog/shared';
 import type { Contributor as PrismaContributor, ProductRepository as PrismaProductRepository } from '@prisma/client';
-import type { CommitProfile, ContributorRepositoryRow, RepositorySyncCounts } from '../interfaces/contributor.interface';
+import type { CommitProfile, CommitProfileHarvest, ContributorRepositoryRow, RepositorySyncCounts } from '../interfaces/contributor.interface';
 
 /** GitHub's privacy-preserving commit addresses can never match a real Slack account. */
 const NOREPLY_EMAIL_SUFFIX = '@users.noreply.github.com';
+
+/**
+ * Commits read per repository when harvesting emails. Above GitHubService's 500 default so a
+ * busy repository doesn't lose older commits inside the lookback window; bounded rather than
+ * unlimited, and the sync reports when the cap is reached.
+ */
+const COMMIT_HARVEST_LIMIT = 5000;
 
 const CONTRIBUTOR_REPOSITORY_INCLUDE = {
   repositories: {
@@ -184,6 +191,7 @@ export class ContributorService {
         counts.created.forEach((id) => createdIds.add(id));
         counts.updated.forEach((id) => updatedIds.add(id));
         result.slackAutoLinked += counts.slackLinked;
+        result.errors.push(...counts.warnings);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         serverLogger.error({ err: error, repo: repository.fullName }, 'Failed to sync contributors for repository');
@@ -206,7 +214,7 @@ export class ContributorService {
   private async syncRepository(repository: PrismaProductRepository, slackUsersByEmail: Map<string, SlackWorkspaceUser>): Promise<RepositorySyncCounts> {
     const prisma = getPrismaClient();
     const contributors = await this.githubService.getRepositoryContributors(repository.githubInstallationId, repository.owner, repository.name);
-    const profilesByLogin = await this.collectCommitProfiles(repository);
+    const { profilesByLogin, warnings } = await this.collectCommitProfiles(repository);
 
     const existingRows = await prisma.contributor.findMany({
       where: { githubUserId: { in: contributors.map((contributor) => contributor.id) } },
@@ -219,7 +227,7 @@ export class ContributorService {
       (await prisma.contributor.findMany({ where: { slackUserId: { not: null } }, select: { slackUserId: true } })).map((row) => row.slackUserId as string)
     );
 
-    const counts: RepositorySyncCounts = { created: [], updated: [], slackLinked: 0 };
+    const counts: RepositorySyncCounts = { created: [], updated: [], slackLinked: 0, warnings };
 
     for (const contributor of contributors) {
       const isBot = contributor.type === 'Bot' || contributor.login.endsWith('[bot]');
@@ -233,7 +241,7 @@ export class ContributorService {
 
       const slackMatch = this.matchSlackUser(mergedEmails, slackUsersByEmail);
       const shouldAutoLink = Boolean(slackMatch) && !existing?.slackUserId && !claimedSlackIds.has(slackMatch!.id);
-      const linkedUserId = primaryEmail && !existing?.userId ? await this.findUserIdByEmail(primaryEmail) : null;
+      const linkedUserId = existing?.userId ? null : await this.findUserIdByEmails(mergedEmails);
 
       const shared = {
         githubLogin: contributor.login,
@@ -316,12 +324,26 @@ export class ContributorService {
    * Harvests author name, emails and last commit date, keyed by GitHub login.
    * The contributors endpoint carries no email, and email is the only reliable join key to Slack.
    */
-  private async collectCommitProfiles(repository: PrismaProductRepository): Promise<Map<string, CommitProfile>> {
+  private async collectCommitProfiles(repository: PrismaProductRepository): Promise<CommitProfileHarvest> {
     const profilesByLogin = new Map<string, CommitProfile>();
+    const warnings: string[] = [];
     const since = new Date(Date.now() - DEFAULT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
     try {
-      const commits = await this.githubService.getCommitsSince(repository.githubInstallationId, repository.owner, repository.name, since, repository.fullName);
+      const commits = await this.githubService.getCommitsSince(
+        repository.githubInstallationId,
+        repository.owner,
+        repository.name,
+        since,
+        repository.fullName,
+        COMMIT_HARVEST_LIMIT
+      );
+
+      // Hitting the cap means older commits in the window were never read, so some
+      // contributors will lack an email and silently miss auto-linking. Say so.
+      if (commits.length >= COMMIT_HARVEST_LIMIT) {
+        warnings.push(`${repository.fullName}: commit harvest hit the ${COMMIT_HARVEST_LIMIT}-commit cap; some contributors may be missing emails`);
+      }
 
       for (const commit of commits) {
         const login = commit.author?.login?.toLowerCase();
@@ -338,11 +360,14 @@ export class ContributorService {
         profilesByLogin.set(login, profile);
       }
     } catch (error) {
-      // Best-effort: a contributor without commit metadata is still worth recording.
+      // Best-effort: a contributor without commit metadata is still worth recording, but the
+      // sync must not report success as though enrichment and auto-linking had run.
+      const message = error instanceof Error ? error.message : String(error);
       serverLogger.warn({ err: error, repo: repository.fullName }, 'Failed to harvest commit author profiles');
+      warnings.push(`${repository.fullName}: commit harvest failed (${message}); emails and Slack auto-matching were skipped`);
     }
 
-    return profilesByLogin;
+    return { profilesByLogin, warnings };
   }
 
   private latestDate(a: Date | null, b: Date | null): Date | null {
@@ -379,7 +404,9 @@ export class ContributorService {
     return {
       slackUserId: slackUser.id,
       slackTeamId: slackUser.teamId,
-      slackDisplayName: slackUser.displayName,
+      // real_name and display_name are both optional in Slack; name always exists, and the
+      // contributor table renders only these two fields — without the fallback it shows blank.
+      slackDisplayName: slackUser.displayName ?? slackUser.name,
       slackRealName: slackUser.realName,
       slackAvatarUrl: slackUser.avatarUrl,
       slackLinkSource: source,
@@ -388,9 +415,13 @@ export class ContributorService {
     };
   }
 
-  private async findUserIdByEmail(email: string): Promise<string | null> {
+  /** Matches any known address, not just primaryEmail — that is merely the first non-noreply one alphabetically. */
+  private async findUserIdByEmails(emails: string[]): Promise<string | null> {
+    const candidates = emails.filter((email) => !email.endsWith(NOREPLY_EMAIL_SUFFIX));
+    if (candidates.length === 0) return null;
+
     const prisma = getPrismaClient();
-    const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const user = await prisma.user.findFirst({ where: { email: { in: candidates, mode: 'insensitive' } }, select: { id: true } });
     if (!user) return null;
 
     // userId is unique on Contributor — skip the link if this user is already claimed.
