@@ -24,18 +24,25 @@
     </div>
   </div>
 
+  <lfx-input
+    data-testid="link-slack-search-input"
+    label="Find a Slack user"
+    [formControl]="searchControl"
+    placeholder="Search by name or email (min 2 characters)..." />
+
   @if (loading()) {
     <div data-testid="link-slack-loading" class="flex items-center justify-center py-8">
-      <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-2xl" aria-label="Loading Slack workspace directory"></i>
+      <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-2xl" aria-label="Searching Slack workspace"></i>
     </div>
-  } @else {
+  } @else if (slackUserOptions().length > 0) {
     <lfx-select
       data-testid="link-slack-user-select"
       label="Slack user"
       [options]="slackUserOptions()"
       [formControl]="slackUserControl"
-      [searchable]="true"
-      placeholder="Search by name or email..." />
+      placeholder="Select a match..." />
+  } @else if (hasSearched()) {
+    <p data-testid="link-slack-no-results" class="text-text-muted py-2 text-sm">No Slack users match that search.</p>
   }
 
   <div class="flex justify-end gap-2 pt-2">

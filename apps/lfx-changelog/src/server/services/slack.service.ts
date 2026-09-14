@@ -292,51 +292,67 @@ export class SlackService {
   }
 
   /**
-   * Workspace members via the bot token, cursor-paginated. Deactivated accounts, bots and
-   * Slackbot are filtered out. Tier 2 method — cache the result rather than calling per contributor.
+   * Full directory, for server-side email matching during sync only.
+   * Never return this to a client — use searchWorkspaceUsers for anything user-facing.
    */
-  public async listWorkspaceUsers(maxPages = 20): Promise<SlackWorkspaceUser[]> {
+  public async listWorkspaceUsersForMatching(): Promise<SlackWorkspaceUser[]> {
+    return this.listWorkspaceUsers();
+  }
+
+  /**
+   * Search workspace members server-side and return only the matches.
+   *
+   * Slack has no user-search endpoint, so the roster still has to be fetched, but it is
+   * filtered here and capped — the full directory (and everyone's email) never leaves the
+   * server, which it did when the picker received the whole list.
+   */
+  public async searchWorkspaceUsers(term: string, limit = 25): Promise<SlackWorkspaceUser[]> {
+    const needle = term.trim().toLowerCase();
+    if (needle.length < 2) return [];
+
+    const users = await this.listWorkspaceUsers();
+    const matches: SlackWorkspaceUser[] = [];
+
+    for (const user of users) {
+      const haystack = [user.name, user.realName, user.displayName, user.email].filter(Boolean).join(' ').toLowerCase();
+      if (haystack.includes(needle)) matches.push(user);
+      if (matches.length >= limit) break;
+    }
+
+    return matches;
+  }
+
+  /**
+   * Look up a single workspace member by ID via `users.info`.
+   * Avoids pulling the whole directory just to validate one member on link.
+   */
+  public async findWorkspaceUser(slackUserId: string): Promise<SlackWorkspaceUser | null> {
     const token = await this.getFreshBotToken();
-    const users: SlackWorkspaceUser[] = [];
-    let cursor: string | undefined;
-    let page = 0;
+    const res = (await this.slackApiGet(`https://slack.com/api/users.info?user=${encodeURIComponent(slackUserId)}`, token)) as SlackApiResponse & {
+      user?: SlackMember;
+    };
 
-    do {
-      const url = new URL('https://slack.com/api/users.list');
-      url.searchParams.set('limit', '200');
-      if (cursor) url.searchParams.set('cursor', cursor);
+    if (!res.ok || !res.user) {
+      if (res.error === 'user_not_found') return null;
+      serverLogger.error({ error: res.error, slackUserId }, 'Slack users.info failed');
+      throw new ServiceUnavailableError(`Slack users.info failed: ${res.error ?? 'unknown error'}`, {
+        operation: 'findWorkspaceUser',
+        service: 'slack',
+      });
+    }
 
-      const res = await this.slackApiGet(url.toString(), token);
+    const member = res.user;
+    if (member.deleted || member.is_bot || member.id === 'USLACKBOT') return null;
 
-      if (!res.ok) {
-        serverLogger.error({ error: res.error }, 'Slack users.list failed');
-        throw new ServiceUnavailableError(`Slack users.list failed: ${res.error ?? 'unknown error'}`, {
-          operation: 'listWorkspaceUsers',
-          service: 'slack',
-        });
-      }
-
-      const members = (res['members'] as SlackMember[]) || [];
-      for (const member of members) {
-        if (member.deleted || member.is_bot || member.id === 'USLACKBOT') continue;
-        users.push({
-          id: member.id,
-          teamId: member.team_id ?? '',
-          name: member.name,
-          realName: member.real_name ?? member.profile?.real_name ?? null,
-          displayName: member.profile?.display_name || null,
-          email: member.profile?.email ?? null,
-          avatarUrl: member.profile?.image_192 ?? member.profile?.image_72 ?? null,
-        });
-      }
-
-      cursor = (res['response_metadata'] as { next_cursor?: string })?.next_cursor || undefined;
-      page++;
-    } while (cursor && page < maxPages);
-
-    serverLogger.info({ total: users.length, pages: page, hasMore: !!cursor }, 'Slack workspace users fetched');
-
-    return users;
+    return {
+      id: member.id,
+      teamId: member.team_id ?? '',
+      name: member.name,
+      realName: member.real_name ?? member.profile?.real_name ?? null,
+      displayName: member.profile?.display_name || null,
+      email: member.profile?.email ?? null,
+      avatarUrl: member.profile?.image_192 ?? member.profile?.image_72 ?? null,
+    };
   }
 
   /**
@@ -741,6 +757,54 @@ export class SlackService {
   }
 
   // ── Bot-token DM notifications ─────────────────────
+
+  /**
+   * Workspace members via the bot token, cursor-paginated. Deactivated accounts, bots and
+   * Slackbot are filtered out. Tier 2 method — cache the result rather than calling per contributor.
+   */
+  private async listWorkspaceUsers(maxPages = 20): Promise<SlackWorkspaceUser[]> {
+    const token = await this.getFreshBotToken();
+    const users: SlackWorkspaceUser[] = [];
+    let cursor: string | undefined;
+    let page = 0;
+
+    do {
+      const url = new URL('https://slack.com/api/users.list');
+      url.searchParams.set('limit', '200');
+      if (cursor) url.searchParams.set('cursor', cursor);
+
+      const res = await this.slackApiGet(url.toString(), token);
+
+      if (!res.ok) {
+        serverLogger.error({ error: res.error }, 'Slack users.list failed');
+        throw new ServiceUnavailableError(`Slack users.list failed: ${res.error ?? 'unknown error'}`, {
+          operation: 'listWorkspaceUsers',
+          service: 'slack',
+        });
+      }
+
+      const members = (res['members'] as SlackMember[]) || [];
+      for (const member of members) {
+        if (member.deleted || member.is_bot || member.id === 'USLACKBOT') continue;
+        users.push({
+          id: member.id,
+          teamId: member.team_id ?? '',
+          name: member.name,
+          realName: member.real_name ?? member.profile?.real_name ?? null,
+          displayName: member.profile?.display_name || null,
+          email: member.profile?.email ?? null,
+          avatarUrl: member.profile?.image_192 ?? member.profile?.image_72 ?? null,
+        });
+      }
+
+      cursor = (res['response_metadata'] as { next_cursor?: string })?.next_cursor || undefined;
+      page++;
+    } while (cursor && page < maxPages);
+
+    serverLogger.info({ total: users.length, pages: page, hasMore: !!cursor }, 'Slack workspace users fetched');
+
+    return users;
+  }
 
   /**
    * Returns a fresh bot access token, refreshing if within the buffer window.

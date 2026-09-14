@@ -40,11 +40,13 @@ export class ContributorService {
     );
   }
 
-  public getSlackWorkspaceUsers(): Observable<SlackWorkspaceUser[]> {
-    return this.http.get<ApiResponse<SlackWorkspaceUser[]>>('/api/contributors/slack-users').pipe(map((res) => res.data));
+  public searchSlackWorkspaceUsers(query: string): Observable<SlackWorkspaceUser[]> {
+    return this.http
+      .get<ApiResponse<SlackWorkspaceUser[]>>('/api/contributors/slack-users', { params: new HttpParams().set('query', query) })
+      .pipe(map((res) => res.data));
   }
 
-  public sync(data: SyncContributorsRequest = {}): Observable<ContributorSyncResult> {
+  public sync(data: SyncContributorsRequest): Observable<ContributorSyncResult> {
     return this.http.post<ApiResponse<ContributorSyncResult>>('/api/contributors/sync', data).pipe(
       map((res) => res.data),
       take(1)

@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ContributorQueryParamsSchema } from '@lfx-changelog/shared';
+import { ContributorQueryParamsSchema, SlackUserSearchParamsSchema } from '@lfx-changelog/shared';
 import { NextFunction, Request, Response } from 'express';
 
 import { ContributorService } from '../services/contributor.service';
@@ -62,9 +62,10 @@ export class ContributorController {
     }
   }
 
-  public async listSlackWorkspaceUsers(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async listSlackWorkspaceUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const users = await this.slackService.listWorkspaceUsers();
+      const { query } = SlackUserSearchParamsSchema.parse(req.query);
+      const users = await this.slackService.searchWorkspaceUsers(query);
       res.json({ success: true, data: users });
     } catch (error) {
       next(error);

@@ -7,6 +7,7 @@ import pinoPretty from 'pino-pretty';
 import { customErrorSerializer } from './helpers/error-serializer';
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { redactUrl } from './helpers/redact-url.helper';
 
 const prettyStream =
   process.env['NODE_ENV'] !== 'production'
@@ -25,7 +26,7 @@ export function reqSerializer(req: IncomingMessage & { originalUrl?: string; ip?
   return {
     id: req.id,
     method: req.method,
-    url: req.originalUrl || req.url,
+    url: redactUrl(req.originalUrl || req.url || '/'),
     remoteAddress: req.ip || req.socket?.remoteAddress,
     userAgent: req.headers['user-agent'],
   };

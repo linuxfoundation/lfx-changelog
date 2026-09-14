@@ -23,7 +23,6 @@ CREATE TABLE "contributors" (
     "slack_link_source" "ContributorSlackLinkSource",
     "slack_linked_at" TIMESTAMP(3),
     "slack_linked_by_id" TEXT,
-    "user_id" TEXT,
     "contributions" INTEGER NOT NULL DEFAULT 0,
     "first_seen_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "last_active_at" TIMESTAMP(3),
@@ -51,13 +50,10 @@ CREATE TABLE "contributor_repositories" (
 CREATE UNIQUE INDEX "contributors_github_user_id_key" ON "contributors"("github_user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "contributors_github_login_key" ON "contributors"("github_login");
+CREATE UNIQUE INDEX "contributors_slack_user_id_key" ON "contributors"("slack_user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "contributors_user_id_key" ON "contributors"("user_id");
-
--- CreateIndex
-CREATE INDEX "contributors_slack_user_id_idx" ON "contributors"("slack_user_id");
+CREATE INDEX "contributors_github_login_idx" ON "contributors"("github_login");
 
 -- CreateIndex
 CREATE INDEX "contributors_last_active_at_idx" ON "contributors"("last_active_at" DESC);
@@ -72,9 +68,6 @@ CREATE INDEX "contributor_repositories_repository_id_idx" ON "contributor_reposi
 CREATE UNIQUE INDEX "contributor_repositories_contributor_id_repository_id_key" ON "contributor_repositories"("contributor_id", "repository_id");
 
 -- AddForeignKey
-ALTER TABLE "contributors" ADD CONSTRAINT "contributors_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "contributors" ADD CONSTRAINT "contributors_slack_linked_by_id_fkey" FOREIGN KEY ("slack_linked_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -83,3 +76,9 @@ ALTER TABLE "contributor_repositories" ADD CONSTRAINT "contributor_repositories_
 -- AddForeignKey
 ALTER TABLE "contributor_repositories" ADD CONSTRAINT "contributor_repositories_repository_id_fkey" FOREIGN KEY ("repository_id") REFERENCES "product_repositories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+
+-- emails is a non-nullable String[] in the Prisma model, but the generated DDL leaves the
+-- column nullable, so a direct insert could produce a row the client types as an array.
+-- Same correction applied to api_keys.scopes in 20260301041627.
+ALTER TABLE "contributors" ALTER COLUMN "emails" SET NOT NULL;
+ALTER TABLE "contributors" ALTER COLUMN "emails" SET DEFAULT '{}';

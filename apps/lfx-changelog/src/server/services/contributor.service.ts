@@ -90,8 +90,8 @@ export class ContributorService {
     const prisma = getPrismaClient();
     await this.requireContributor(id);
 
-    const workspaceUsers = await this.slackService.listWorkspaceUsers();
-    const slackUser = workspaceUsers.find((user) => user.id === slackUserId);
+    // Single-member lookup rather than pulling the whole directory to validate one ID.
+    const slackUser = await this.slackService.findWorkspaceUser(slackUserId);
     if (!slackUser) {
       throw new NotFoundError(`Slack user not found in the connected workspace: ${slackUserId}`, {
         operation: 'linkSlack',
@@ -160,8 +160,8 @@ export class ContributorService {
   public async sync(options: { productId?: string; repositoryId?: string }): Promise<ContributorSyncResult> {
     // Route validation enforces this; the guard covers internal callers, since an unscoped
     // sync would crawl every tracked repository inline in the request.
-    if (!options.productId && !options.repositoryId) {
-      throw new Error('Contributor sync must be scoped to a product or repository');
+    if (Boolean(options.productId) === Boolean(options.repositoryId)) {
+      throw new Error('Contributor sync requires exactly one of productId or repositoryId');
     }
 
     const prisma = getPrismaClient();
@@ -187,13 +187,19 @@ export class ContributorService {
 
     const slackUsersByEmail = await this.loadSlackUsersByEmail(result);
 
+    // Loaded once and mutated as links are made — the set does not change from anything
+    // other than this sync, so re-reading it per repository was redundant.
+    const claimedSlackIds = new Set(
+      (await prisma.contributor.findMany({ where: { slackUserId: { not: null } }, select: { slackUserId: true } })).map((row) => row.slackUserId as string)
+    );
+
     // Keyed by GitHub user ID, not summed per repository — one person in five repos is one contributor.
     const createdIds = new Set<number>();
     const updatedIds = new Set<number>();
 
     for (const repository of repositories) {
       try {
-        const counts = await this.syncRepository(repository, slackUsersByEmail);
+        const counts = await this.syncRepository(repository, slackUsersByEmail, claimedSlackIds);
         result.repositoriesScanned++;
         counts.created.forEach((id) => createdIds.add(id));
         counts.updated.forEach((id) => updatedIds.add(id));
@@ -218,21 +224,20 @@ export class ContributorService {
 
   // ── Private helpers ─────────────────────────
 
-  private async syncRepository(repository: PrismaProductRepository, slackUsersByEmail: Map<string, SlackWorkspaceUser>): Promise<RepositorySyncCounts> {
+  private async syncRepository(
+    repository: PrismaProductRepository,
+    slackUsersByEmail: Map<string, SlackWorkspaceUser>,
+    claimedSlackIds: Set<string>
+  ): Promise<RepositorySyncCounts> {
     const prisma = getPrismaClient();
     const contributors = await this.githubService.getRepositoryContributors(repository.githubInstallationId, repository.owner, repository.name);
     const { profilesByLogin, warnings } = await this.collectCommitProfiles(repository);
 
     const existingRows = await prisma.contributor.findMany({
       where: { githubUserId: { in: contributors.map((contributor) => contributor.id) } },
-      select: { id: true, githubUserId: true, emails: true, primaryEmail: true, name: true, slackUserId: true, userId: true, lastActiveAt: true },
+      select: { id: true, githubUserId: true, emails: true, primaryEmail: true, name: true, slackUserId: true, lastActiveAt: true },
     });
     const existingByGithubId = new Map(existingRows.map((row) => [row.githubUserId, row]));
-
-    // Two GitHub accounts can share a commit email; a Slack member must not be auto-linked twice.
-    const claimedSlackIds = new Set(
-      (await prisma.contributor.findMany({ where: { slackUserId: { not: null } }, select: { slackUserId: true } })).map((row) => row.slackUserId as string)
-    );
 
     const counts: RepositorySyncCounts = { created: [], updated: [], slackLinked: 0, warnings };
 
@@ -251,7 +256,6 @@ export class ContributorService {
 
       const slackMatch = this.matchSlackUser(mergedEmails, slackUsersByEmail);
       const shouldAutoLink = Boolean(slackMatch) && !existing?.slackUserId && !claimedSlackIds.has(slackMatch!.id);
-      const linkedUserId = existing?.userId ? null : await this.findUserIdByEmails(mergedEmails);
 
       const shared = {
         githubLogin: contributor.login,
@@ -267,26 +271,27 @@ export class ContributorService {
 
       const record = await prisma.contributor.upsert({
         where: { githubUserId: contributor.id },
-        create: {
-          githubUserId: contributor.id,
-          contributions: contributor.contributions,
-          ...shared,
-          ...(linkedUserId ? { userId: linkedUserId } : {}),
-          ...(shouldAutoLink && slackMatch ? this.slackLinkData(slackMatch, ContributorSlackLinkSource.AUTO_EMAIL, null) : {}),
-        },
-        update: {
-          ...shared,
-          ...(linkedUserId ? { userId: linkedUserId } : {}),
-          ...(shouldAutoLink && slackMatch ? this.slackLinkData(slackMatch, ContributorSlackLinkSource.AUTO_EMAIL, null) : {}),
-        },
+        create: { githubUserId: contributor.id, contributions: contributor.contributions, ...shared },
+        update: shared,
       });
+
+      // Applied separately and conditionally on slackUserId IS NULL. `existing` is a snapshot
+      // taken before this loop, so a manual link made mid-sync would otherwise be overwritten.
+      let linked = false;
+      if (shouldAutoLink && slackMatch) {
+        const claimed = await prisma.contributor.updateMany({
+          where: { id: record.id, slackUserId: null },
+          data: this.slackLinkData(slackMatch, ContributorSlackLinkSource.AUTO_EMAIL, null),
+        });
+        linked = claimed.count > 0;
+      }
 
       if (existing) {
         counts.updated.push(contributor.id);
       } else {
         counts.created.push(contributor.id);
       }
-      if (shouldAutoLink && slackMatch) {
+      if (linked && slackMatch) {
         claimedSlackIds.add(slackMatch.id);
         counts.slackLinked++;
       }
@@ -391,7 +396,7 @@ export class ContributorService {
   private async loadSlackUsersByEmail(result: ContributorSyncResult): Promise<Map<string, SlackWorkspaceUser>> {
     const byEmail = new Map<string, SlackWorkspaceUser>();
     try {
-      const users = await this.slackService.listWorkspaceUsers();
+      const users = await this.slackService.listWorkspaceUsersForMatching();
       for (const user of users) {
         if (user.email) byEmail.set(user.email.toLowerCase(), user);
       }
@@ -427,20 +432,6 @@ export class ContributorService {
     };
   }
 
-  /** Matches any known address, not just primaryEmail — that is merely the first non-noreply one alphabetically. */
-  private async findUserIdByEmails(emails: string[]): Promise<string | null> {
-    const candidates = emails.filter((email) => !email.endsWith(NOREPLY_EMAIL_SUFFIX));
-    if (candidates.length === 0) return null;
-
-    const prisma = getPrismaClient();
-    const user = await prisma.user.findFirst({ where: { email: { in: candidates, mode: 'insensitive' } }, select: { id: true } });
-    if (!user) return null;
-
-    // userId is unique on Contributor — skip the link if this user is already claimed.
-    const claimed = await prisma.contributor.findUnique({ where: { userId: user.id }, select: { id: true } });
-    return claimed ? null : user.id;
-  }
-
   /** Rolls the per-repository contribution counts up onto the contributor row. */
   private async refreshContributionTotals(githubUserIds: number[], contributorIds: string[] = []): Promise<void> {
     if (githubUserIds.length === 0 && contributorIds.length === 0) return;
@@ -473,10 +464,15 @@ export class ContributorService {
     if (params.slackLink === 'linked') where.slackUserId = { not: null };
     if (params.slackLink === 'unlinked') where.slackUserId = null;
 
-    if (params.repositoryId) {
-      where.repositories = { some: { repositoryId: params.repositoryId } };
-    } else if (params.productId) {
-      where.repositories = { some: { repository: { productId: params.productId } } };
+    // Both constraints applied to the same relation, so a mismatched pair yields the empty
+    // intersection the request expresses rather than silently ignoring productId.
+    if (params.repositoryId || params.productId) {
+      where.repositories = {
+        some: {
+          ...(params.repositoryId ? { repositoryId: params.repositoryId } : {}),
+          ...(params.productId ? { repository: { productId: params.productId } } : {}),
+        },
+      };
     }
 
     if (params.query) {

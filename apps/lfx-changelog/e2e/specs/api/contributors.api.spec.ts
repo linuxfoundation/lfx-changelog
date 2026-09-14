@@ -38,7 +38,7 @@ test.describe('Contributors API (/api/contributors)', () => {
     });
 
     test('GET /api/contributors/slack-users returns 401 without auth', async () => {
-      const res = await unauthApi.get('/api/contributors/slack-users');
+      const res = await unauthApi.get('/api/contributors/slack-users?query=ab');
       expect(res.status()).toBe(401);
     });
   });
@@ -56,6 +56,21 @@ test.describe('Contributors API (/api/contributors)', () => {
 
     test('PUT /api/contributors/:id/slack is forbidden for editor', async () => {
       const res = await editorApi.put(`/api/contributors/${MISSING_ID}/slack`, { data: { slackUserId: 'U123' } });
+      expect(res.status()).toBe(403);
+    });
+
+    test('GET /api/contributors/:id is forbidden for editor', async () => {
+      const res = await editorApi.get(`/api/contributors/${MISSING_ID}`);
+      expect(res.status()).toBe(403);
+    });
+
+    test('GET /api/contributors/slack-users is forbidden for editor', async () => {
+      const res = await editorApi.get('/api/contributors/slack-users?query=ab');
+      expect(res.status()).toBe(403);
+    });
+
+    test('DELETE /api/contributors/:id/slack is forbidden for editor', async () => {
+      const res = await editorApi.delete(`/api/contributors/${MISSING_ID}/slack`);
       expect(res.status()).toBe(403);
     });
   });
@@ -110,6 +125,16 @@ test.describe('Contributors API (/api/contributors)', () => {
       expect(res.status()).toBe(400);
       const body = await res.json();
       expect(body.code).toBe('VALIDATION_ERROR');
+    });
+
+    test('GET /api/contributors/slack-users requires a search term', async () => {
+      const res = await superAdminApi.get('/api/contributors/slack-users');
+      expect(res.status()).toBe(400);
+    });
+
+    test('GET /api/contributors/slack-users rejects a too-short search term', async () => {
+      const res = await superAdminApi.get('/api/contributors/slack-users?query=a');
+      expect(res.status()).toBe(400);
     });
 
     test('POST /api/contributors/sync rejects an unscoped sync', async () => {

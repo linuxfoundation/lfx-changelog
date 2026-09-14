@@ -72,6 +72,7 @@ export {
   ContributorSchema,
   ContributorSyncResultSchema,
   ContributorWithRelationsSchema,
+  SlackUserSearchParamsSchema,
 } from './contributor.schema.js';
 export {
   AssignRoleRequestSchema,
@@ -210,7 +211,14 @@ export type {
   StreamDeltaToolCall,
   UpdateBlogToolArgs,
 } from './chat.schema.js';
-export type { Contributor, ContributorQueryParams, ContributorRepositoryLink, ContributorSyncResult, ContributorWithRelations } from './contributor.schema.js';
+export type {
+  Contributor,
+  ContributorQueryParams,
+  ContributorRepositoryLink,
+  ContributorSyncResult,
+  ContributorWithRelations,
+  SlackUserSearchParams,
+} from './contributor.schema.js';
 export type {
   AssignRoleRequest,
   BatchAssignRoleRequest,

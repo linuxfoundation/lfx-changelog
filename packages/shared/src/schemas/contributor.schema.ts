@@ -41,7 +41,6 @@ export const ContributorSchema = z
     slackLinkSource: z.nativeEnum(ContributorSlackLinkSource).nullable(),
     slackLinkedAt: z.string().nullable(),
     slackLinkedById: z.string().nullable(),
-    userId: z.string().nullable(),
     contributions: z.number(),
     firstSeenAt: z.string(),
     lastActiveAt: z.string().nullable(),
@@ -79,6 +78,18 @@ export const ContributorQueryParamsSchema = z
   .openapi('ContributorQueryParams');
 
 export type ContributorQueryParams = z.infer<typeof ContributorQueryParamsSchema>;
+
+export const SlackUserSearchParamsSchema = z
+  .object({
+    query: z
+      .string()
+      .trim()
+      .min(2)
+      .openapi({ description: 'Search term matched server-side against Slack name, real name, display name and email (minimum 2 characters)' }),
+  })
+  .openapi('SlackUserSearchParams');
+
+export type SlackUserSearchParams = z.infer<typeof SlackUserSearchParamsSchema>;
 
 export const ContributorSyncResultSchema = z
   .object({

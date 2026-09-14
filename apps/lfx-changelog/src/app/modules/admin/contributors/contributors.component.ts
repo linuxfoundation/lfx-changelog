@@ -119,6 +119,8 @@ export class ContributorsComponent {
         } else {
           this.toastService.success(`Sync complete — ${summary}`);
         }
+        // Sync can remove stale repository links, shrinking the result set below the current page.
+        this.page$.next(1);
         this.refresh$.next();
       },
       error: () => {

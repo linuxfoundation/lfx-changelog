@@ -5,18 +5,19 @@ import { Component, computed, inject, input, Signal, signal } from '@angular/cor
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
+import { InputComponent } from '@components/input/input.component';
 import { SelectComponent } from '@components/select/select.component';
 import { ContributorService } from '@services/contributor.service';
 import { DialogService } from '@services/dialog.service';
 import { ToastService } from '@services/toast.service';
-import { catchError, of, tap } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
 
 import type { ContributorWithRelations, SlackWorkspaceUser } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
   selector: 'lfx-link-slack-dialog',
-  imports: [ReactiveFormsModule, ButtonComponent, SelectComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, InputComponent, SelectComponent],
   templateUrl: './link-slack-dialog.component.html',
   styleUrl: './link-slack-dialog.component.css',
 })
@@ -27,24 +28,45 @@ export class LinkSlackDialogComponent {
 
   public readonly contributor = input.required<ContributorWithRelations>();
 
+  protected readonly searchControl = new FormControl('', { nonNullable: true });
   protected readonly slackUserControl = new FormControl('', { nonNullable: true });
 
-  protected readonly loading = signal(true);
+  private static readonly minSearchLength = 2;
+  private static readonly searchDebounceMs = 300;
+
+  protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal('');
 
+  /** Searched server-side so the workspace directory is never sent to the browser in full. */
   protected readonly slackUsers = toSignal(
-    this.contributorService.getSlackWorkspaceUsers().pipe(
-      catchError(() => {
-        this.error.set('Could not load the Slack workspace directory. Check that the Slack bot is installed in Admin → Settings.');
-        return of([] as SlackWorkspaceUser[]);
-      }),
-      tap(() => this.loading.set(false))
+    this.searchControl.valueChanges.pipe(
+      debounceTime(LinkSlackDialogComponent.searchDebounceMs),
+      distinctUntilChanged(),
+      switchMap((term) => {
+        const query = term.trim();
+        if (query.length < LinkSlackDialogComponent.minSearchLength) {
+          this.loading.set(false);
+          return of([] as SlackWorkspaceUser[]);
+        }
+
+        this.error.set('');
+        this.loading.set(true);
+        return this.contributorService.searchSlackWorkspaceUsers(query).pipe(
+          catchError(() => {
+            this.error.set('Could not search the Slack workspace. Check that the Slack bot is installed in Admin → Settings.');
+            return of([] as SlackWorkspaceUser[]);
+          }),
+          tap(() => this.loading.set(false))
+        );
+      })
     ),
     { initialValue: [] as SlackWorkspaceUser[] }
   );
 
   protected readonly slackUserOptions: Signal<SelectOption[]> = this.initSlackUserOptions();
+  private readonly searchTerm = toSignal(this.searchControl.valueChanges, { initialValue: '' });
+  protected readonly hasSearched: Signal<boolean> = computed(() => this.searchTerm().trim().length >= LinkSlackDialogComponent.minSearchLength);
 
   private readonly selectedSlackUserId = toSignal(this.slackUserControl.valueChanges, { initialValue: this.slackUserControl.value });
   protected readonly canSave: Signal<boolean> = computed(() => this.selectedSlackUserId().length > 0);

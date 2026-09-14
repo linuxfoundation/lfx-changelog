@@ -36,8 +36,6 @@ Two tables, plus one enum.
 
 Each row holds the GitHub identity (login, avatar, profile URL), all discovered emails as a Postgres array plus a chosen `primary_email`, the Slack association (member ID, team, display and real name, avatar), and provenance for that association: `slack_link_source` (`auto_email` or `manual`), `slack_linked_at`, and `slack_linked_by_id`. Recording _how_ a link was made means a bad auto-match is auditable rather than indistinguishable from a human decision.
 
-`user_id` optionally points at the LFX `User` with the same email, so automated changelogs can be attributed to the right person. It is unique — one LFX user maps to at most one GitHub contributor.
-
 **ContributorRepository** — the join between a contributor and a `ProductRepository`, carrying the per-repository commit count. This is what powers the product filter on the admin page. The contributor's top-level `contributions` is the sum across repositories, refreshed at the end of each sync.
 
 ## Sync
@@ -93,6 +91,16 @@ All endpoints require an **OAuth session** and the **`super_admin`** role. API k
 Bot accounts — `type: "Bot"` or a `[bot]` login suffix — are flagged on sync and hidden from the default view rather than discarded.
 
 A Slack member can be linked to only one contributor; a second attempt returns `409 Conflict`.
+
+## Privacy
+
+Contributor records hold third-party PII — names and email addresses harvested from public commit metadata for people who never interacted with this system. Three deliberate constraints:
+
+- **The Slack directory is never sent to the browser in full.** `GET /api/contributors/slack-users` requires a search term of at least two characters and filters server-side, returning at most 25 matches. Linking validates a single member through `users.info` rather than downloading the roster.
+- **Search terms are kept out of logs.** Contributor search matches against email addresses, so `query` (along with `email` and `q`) is redacted from the request URL in both the log message and the structured `req.url` field — see `helpers/redact-url.helper.ts`.
+- **No automatic link to LFX user accounts.** An earlier revision associated a contributor with the LFX `User` sharing an email. That was removed: commit-author email is attacker-controllable, and the link had no provenance or way to reverse it. Slack links, by contrast, record `slackLinkSource`, `slackLinkedAt` and `slackLinkedById`, and are reversible via `DELETE /api/contributors/:id/slack`.
+
+There is currently **no retention or purge path** for contributor records — consistent with the rest of the application, which has no user-deletion or anonymisation flow, but worth noting as an open item given this data concerns third parties.
 
 ## Required Configuration
 

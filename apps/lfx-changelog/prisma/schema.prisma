@@ -78,16 +78,16 @@ enum ContributorSlackLinkSource {
 }
 
 model Product {
-  id                   String   @id @default(uuid())
-  name                 String   @unique
-  slug                 String   @unique
-  description          String?
-  iconUrl              String?  @map("icon_url")
-  faIcon               String?  @map("fa_icon")
-  isActive             Boolean  @default(true) @map("is_active")
-  githubInstallationId Int?     @map("github_installation_id")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid())
+  name                  String   @unique
+  slug                  String   @unique
+  description           String?
+  iconUrl               String?  @map("icon_url")
+  faIcon                String?  @map("fa_icon")
+  isActive              Boolean  @default(true) @map("is_active")
+  githubInstallationId  Int?     @map("github_installation_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   changelogEntries    ChangelogEntry[]
   userRoleAssignments UserRoleAssignment[]
@@ -103,20 +103,20 @@ model Product {
 }
 
 model ProductRepository {
-  id                   String    @id @default(uuid())
-  productId            String    @map("product_id")
-  githubInstallationId Int       @map("github_installation_id")
-  owner                String
-  name                 String
-  fullName             String    @map("full_name")
-  htmlUrl              String    @map("html_url")
-  description          String?
-  isPrivate            Boolean   @default(false) @map("is_private")
-  lastSyncedAt         DateTime? @map("last_synced_at")
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid())
+  productId             String   @map("product_id")
+  githubInstallationId  Int      @map("github_installation_id")
+  owner                 String
+  name                  String
+  fullName              String   @map("full_name")
+  htmlUrl               String   @map("html_url")
+  description           String?
+  isPrivate             Boolean   @default(false) @map("is_private")
+  lastSyncedAt          DateTime? @map("last_synced_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  product      Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product      Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
   releases     GitHubRelease[]
   contributors ContributorRepository[]
 
@@ -149,25 +149,25 @@ model GitHubRelease {
 }
 
 model ChangelogEntry {
-  id           String          @id @default(uuid())
-  productId    String          @map("product_id")
-  slug         String?         @unique
-  title        String
-  description  String
-  version      String?
-  source       ChangelogSource @default(manual) @map("source")
-  status       ChangelogStatus @default(draft)
-  qualityScore Json?           @map("quality_score")
-  publishedAt  DateTime?       @map("published_at")
-  createdBy    String          @map("created_by")
-  createdAt    DateTime        @default(now()) @map("created_at")
-  updatedAt    DateTime        @updatedAt @map("updated_at")
+  id          String            @id @default(uuid())
+  productId   String            @map("product_id")
+  slug        String?           @unique
+  title       String
+  description String
+  version     String?
+  source      ChangelogSource   @default(manual) @map("source")
+  status      ChangelogStatus   @default(draft)
+  qualityScore Json?            @map("quality_score")
+  publishedAt DateTime?         @map("published_at")
+  createdBy   String            @map("created_by")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
 
-  product            Product              @relation(fields: [productId], references: [id])
-  author             User                 @relation(fields: [createdBy], references: [id])
-  slackNotifications SlackNotification[]
-  agentJobs          AgentJob[]
-  blogChangelogs     BlogChangelogEntry[]
+  product               Product                  @relation(fields: [productId], references: [id])
+  author                User                     @relation(fields: [createdBy], references: [id])
+  slackNotifications    SlackNotification[]
+  agentJobs             AgentJob[]
+  blogChangelogs    BlogChangelogEntry[]
 
   @@index([productId, status, publishedAt])
   @@map("changelog_entries")
@@ -189,8 +189,7 @@ model User {
   slackIntegrations   SlackIntegration[]
   blogs               Blog[]
   slackNotifyUsers    ProductSlackNotifyUser[]
-  contributorIdentity Contributor?             @relation("ContributorUser")
-  contributorsLinked  Contributor[]            @relation("ContributorSlackLinker")
+  contributorsLinked  Contributor[]           @relation("ContributorSlackLinker")
 
   @@map("users")
 }
@@ -291,7 +290,7 @@ model SlackChannel {
   isDefault          Boolean  @default(false) @map("is_default")
   createdAt          DateTime @default(now()) @map("created_at")
 
-  slackIntegration SlackIntegration    @relation(fields: [slackIntegrationId], references: [id], onDelete: Cascade)
+  slackIntegration SlackIntegration  @relation(fields: [slackIntegrationId], references: [id], onDelete: Cascade)
   notifications    SlackNotification[]
 
   @@unique([slackIntegrationId, channelId])
@@ -346,10 +345,10 @@ model ProductSlackNotifyUser {
 }
 
 model AutoChangelogLock {
-  productId String                  @id @map("product_id")
-  status    AutoChangelogLockStatus @default(in_progress)
-  lockedAt  DateTime                @map("locked_at")
-  updatedAt DateTime                @updatedAt @map("updated_at")
+  productId String                   @id @map("product_id")
+  status    AutoChangelogLockStatus  @default(in_progress)
+  lockedAt  DateTime                 @map("locked_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -388,7 +387,7 @@ model AgentJob {
   completedAt  DateTime?       @map("completed_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
-  blogId String? @map("blog_id")
+  blogId         String?         @map("blog_id")
 
   product        Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
   changelogEntry ChangelogEntry? @relation(fields: [changelogId], references: [id], onDelete: SetNull)
@@ -482,7 +481,6 @@ model Contributor {
   slackLinkedAt    DateTime?                   @map("slack_linked_at")
   slackLinkedById  String?                     @map("slack_linked_by_id")
 
-  userId        String?   @unique @map("user_id")
   contributions Int       @default(0)
   firstSeenAt   DateTime  @default(now()) @map("first_seen_at")
   lastActiveAt  DateTime? @map("last_active_at")
@@ -490,8 +488,7 @@ model Contributor {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  user          User?                   @relation("ContributorUser", fields: [userId], references: [id], onDelete: SetNull)
-  slackLinkedBy User?                   @relation("ContributorSlackLinker", fields: [slackLinkedById], references: [id], onDelete: SetNull)
+  slackLinkedBy User?                  @relation("ContributorSlackLinker", fields: [slackLinkedById], references: [id], onDelete: SetNull)
   repositories  ContributorRepository[]
 
   @@index([githubLogin])
