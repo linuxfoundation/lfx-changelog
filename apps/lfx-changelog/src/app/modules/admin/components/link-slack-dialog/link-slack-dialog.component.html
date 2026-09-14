@@ -1,0 +1,43 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-4">
+  @if (error(); as errorMsg) {
+    <div
+      data-testid="link-slack-error"
+      class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+      {{ errorMsg }}
+    </div>
+  }
+
+  <div class="bg-surface-alt flex items-center gap-3 rounded-lg p-3">
+    @if (contributor().githubAvatarUrl; as avatar) {
+      <img [src]="avatar" [alt]="contributor().githubLogin" class="h-9 w-9 shrink-0 rounded-full" referrerpolicy="no-referrer" />
+    }
+    <div class="min-w-0">
+      <div class="text-text-primary truncate text-sm font-medium">{{ contributor().githubLogin }}</div>
+      @if (contributor().primaryEmail; as email) {
+        <div class="text-text-muted truncate text-xs">{{ email }}</div>
+      } @else {
+        <div class="text-text-muted truncate text-xs">No email discovered from commits</div>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="text-text-muted py-4 text-center text-sm">Loading Slack workspace directory…</div>
+  } @else {
+    <lfx-select
+      data-testid="link-slack-user-select"
+      label="Slack user"
+      [options]="slackUserOptions()"
+      [formControl]="slackUserControl"
+      [searchable]="true"
+      placeholder="Search by name or email..." />
+  }
+
+  <div class="flex justify-end gap-2 pt-2">
+    <lfx-button variant="secondary" size="sm" (clicked)="dialogService.close()">Cancel</lfx-button>
+    <lfx-button data-testid="link-slack-save-btn" variant="primary" size="sm" [loading]="saving()" (clicked)="save()">Link Slack User</lfx-button>
+  </div>
+</div>

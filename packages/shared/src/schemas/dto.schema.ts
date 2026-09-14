@@ -152,3 +152,23 @@ export const LinkBlogPostProductsRequestSchema = z
   .openapi('LinkBlogPostProductsRequest');
 
 export type LinkBlogPostProductsRequest = z.infer<typeof LinkBlogPostProductsRequestSchema>;
+
+// ── Contributor DTOs ─────────────────────────
+
+export const LinkContributorSlackRequestSchema = z
+  .object({
+    slackUserId: z.string().min(1),
+  })
+  .openapi('LinkContributorSlackRequest');
+
+export type LinkContributorSlackRequest = z.infer<typeof LinkContributorSlackRequestSchema>;
+
+export const SyncContributorsRequestSchema = z
+  .object({
+    productId: z.string().uuid().optional(),
+    repositoryId: z.string().uuid().optional(),
+  })
+  .refine((data) => !(data.productId && data.repositoryId), { message: 'productId and repositoryId cannot be used together', path: ['repositoryId'] })
+  .openapi('SyncContributorsRequest');
+
+export type SyncContributorsRequest = z.infer<typeof SyncContributorsRequestSchema>;

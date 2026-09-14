@@ -10,6 +10,7 @@ export class AdminLayoutPage {
   public readonly navChangelogs: Locator;
   public readonly navProducts: Locator;
   public readonly navRepositories: Locator;
+  public readonly navContributors: Locator;
   public readonly navUsers: Locator;
   public readonly userMenuBtn: Locator;
   public readonly userMenuPopup: Locator;
@@ -26,6 +27,7 @@ export class AdminLayoutPage {
     this.navChangelogs = page.locator('[data-testid="admin-sidebar-changelogs"]');
     this.navProducts = page.locator('[data-testid="admin-sidebar-products"]');
     this.navRepositories = page.locator('[data-testid="admin-sidebar-repositories"]');
+    this.navContributors = page.locator('[data-testid="admin-sidebar-contributors"]');
     this.navUsers = page.locator('[data-testid="admin-sidebar-users"]');
     this.userMenuBtn = page.locator('[data-testid="admin-user-menu-btn"]');
     this.userMenuPopup = page.locator('[data-testid="admin-user-menu-popup"]');
@@ -50,6 +52,10 @@ export class AdminLayoutPage {
 
   public async navigateToRepositories() {
     await this.navRepositories.click();
+  }
+
+  public async navigateToContributors() {
+    await this.navContributors.click();
   }
 
   public async navigateToUsers() {

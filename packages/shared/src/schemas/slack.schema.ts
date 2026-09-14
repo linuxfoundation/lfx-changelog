@@ -115,3 +115,17 @@ export const SlackApiResponseSchema = z
   .passthrough();
 
 export type SlackApiResponse = z.infer<typeof SlackApiResponseSchema>;
+
+export const SlackWorkspaceUserSchema = z
+  .object({
+    id: z.string(),
+    teamId: z.string(),
+    name: z.string(),
+    realName: z.string().nullable(),
+    displayName: z.string().nullable(),
+    email: z.string().nullable(),
+    avatarUrl: z.string().nullable(),
+  })
+  .openapi('SlackWorkspaceUser');
+
+export type SlackWorkspaceUser = z.infer<typeof SlackWorkspaceUserSchema>;

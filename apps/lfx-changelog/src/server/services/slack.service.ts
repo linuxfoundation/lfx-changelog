@@ -8,8 +8,9 @@ import { markdownToSlackMrkdwn, truncateSlackMrkdwn } from '../helpers/markdown-
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 
-import type { PostChangelogEntry, PostToSlackResponse, SlackApiResponse, SlackBlock, SlackBotInstallation } from '@lfx-changelog/shared';
+import type { PostChangelogEntry, PostToSlackResponse, SlackApiResponse, SlackBlock, SlackBotInstallation, SlackWorkspaceUser } from '@lfx-changelog/shared';
 import type { SlackChannel as PrismaSlackChannel, SlackIntegration as PrismaSlackIntegration } from '@prisma/client';
+import type { SlackMember } from '../interfaces/slack.interface';
 
 export class SlackService {
   private get slackClientId(): string {
@@ -288,6 +289,58 @@ export class SlackService {
     serverLogger.info({ total: channels.length, pages: page, hasMore: !!cursor }, 'Slack channels fetched');
 
     return channels;
+  }
+
+  /**
+   * List the workspace's human members via the bot token, following cursor pagination.
+   *
+   * Deactivated accounts, bots and the Slackbot pseudo-user are filtered out — none of
+   * them is a plausible target for a contributor mapping. `users.list` is a Tier 2 method
+   * (20+ req/min) and a full workspace is a handful of pages, so callers should cache the
+   * result rather than calling this per contributor.
+   */
+  public async listWorkspaceUsers(maxPages = 20): Promise<SlackWorkspaceUser[]> {
+    const token = await this.getFreshBotToken();
+    const users: SlackWorkspaceUser[] = [];
+    let cursor: string | undefined;
+    let page = 0;
+
+    do {
+      const url = new URL('https://slack.com/api/users.list');
+      url.searchParams.set('limit', '200');
+      if (cursor) url.searchParams.set('cursor', cursor);
+
+      const res = await this.slackApiGet(url.toString(), token);
+
+      if (!res.ok) {
+        serverLogger.error({ error: res.error }, 'Slack users.list failed');
+        throw new ServiceUnavailableError(`Slack users.list failed: ${res.error ?? 'unknown error'}`, {
+          operation: 'listWorkspaceUsers',
+          service: 'slack',
+        });
+      }
+
+      const members = (res['members'] as SlackMember[]) || [];
+      for (const member of members) {
+        if (member.deleted || member.is_bot || member.id === 'USLACKBOT') continue;
+        users.push({
+          id: member.id,
+          teamId: member.team_id ?? '',
+          name: member.name,
+          realName: member.real_name ?? member.profile?.real_name ?? null,
+          displayName: member.profile?.display_name || null,
+          email: member.profile?.email ?? null,
+          avatarUrl: member.profile?.image_192 ?? member.profile?.image_72 ?? null,
+        });
+      }
+
+      cursor = (res['response_metadata'] as { next_cursor?: string })?.next_cursor || undefined;
+      page++;
+    } while (cursor && page < maxPages);
+
+    serverLogger.info({ total: users.length, pages: page, hasMore: !!cursor }, 'Slack workspace users fetched');
+
+    return users;
   }
 
   /**

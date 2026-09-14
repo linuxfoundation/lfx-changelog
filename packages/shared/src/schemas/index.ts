@@ -67,6 +67,13 @@ export {
   UpdateBlogToolArgsSchema,
 } from './chat.schema.js';
 export {
+  ContributorQueryParamsSchema,
+  ContributorRepositoryLinkSchema,
+  ContributorSchema,
+  ContributorSyncResultSchema,
+  ContributorWithRelationsSchema,
+} from './contributor.schema.js';
+export {
   AssignRoleRequestSchema,
   BatchAssignRoleRequestSchema,
   CreateBlogPostRequestSchema,
@@ -75,12 +82,15 @@ export {
   CreateUserRequestSchema,
   LinkBlogPostChangelogsRequestSchema,
   LinkBlogPostProductsRequestSchema,
+  LinkContributorSlackRequestSchema,
+  SyncContributorsRequestSchema,
   UpdateBlogPostRequestSchema,
   UpdateChangelogEntryRequestSchema,
   UpdateProductRequestSchema,
 } from './dto.schema.js';
 export {
   GitHubCommitSchema,
+  GitHubContributorSchema,
   GitHubInstallationSchema,
   GitHubPullRequestSchema,
   GitHubReleaseSchema,
@@ -137,6 +147,7 @@ export {
   SlackChannelOptionSchema,
   SlackChannelSchema,
   SlackIntegrationSchema,
+  SlackWorkspaceUserSchema,
 } from './slack.schema.js';
 export { UserRoleAssignmentSchema, UserSchema } from './user.schema.js';
 
@@ -199,6 +210,7 @@ export type {
   StreamDeltaToolCall,
   UpdateBlogToolArgs,
 } from './chat.schema.js';
+export type { Contributor, ContributorQueryParams, ContributorRepositoryLink, ContributorSyncResult, ContributorWithRelations } from './contributor.schema.js';
 export type {
   AssignRoleRequest,
   BatchAssignRoleRequest,
@@ -208,12 +220,15 @@ export type {
   CreateUserRequest,
   LinkBlogPostChangelogsRequest,
   LinkBlogPostProductsRequest,
+  LinkContributorSlackRequest,
+  SyncContributorsRequest,
   UpdateBlogPostRequest,
   UpdateChangelogEntryRequest,
   UpdateProductRequest,
 } from './dto.schema.js';
 export type {
   GitHubCommit,
+  GitHubContributor,
   GitHubInstallation,
   GitHubPullRequest,
   GitHubRelease,
@@ -281,5 +296,6 @@ export type {
   SlackChannel,
   SlackChannelOption,
   SlackIntegration,
+  SlackWorkspaceUser,
 } from './slack.schema.js';
 export type { User, UserRoleAssignment } from './user.schema.js';

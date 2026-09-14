@@ -11,6 +11,7 @@ import apiKeyRouter from '../routes/api-key.route';
 import blogRouter from '../routes/blog.route';
 import changelogRouter from '../routes/changelog.route';
 import chatRouter from '../routes/chat.route';
+import contributorRouter from '../routes/contributor.route';
 import githubRouter, { releaseRouter } from '../routes/github.route';
 import mcpRouter from '../routes/mcp.route';
 import opensearchRouter from '../routes/opensearch.route';
@@ -137,6 +138,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/api-keys', apiKeyRouter);
   app.use('/api/products', productRouter);
   app.use('/api/changelogs', changelogRouter);
+  app.use('/api/contributors', contributorRouter);
   app.use('/api/users', userRouter);
   app.use('/api/github', githubRouter);
   app.use('/api/opensearch', opensearchRouter);

@@ -1,0 +1,165 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-6">
+  <div class="animate-slide-in-left flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 data-testid="contributors-heading" class="font-display text-text-primary text-2xl font-bold">Contributors</h1>
+      <p class="text-text-secondary mt-1">GitHub contributors across tracked repositories, and their Slack associations.</p>
+    </div>
+    <lfx-button data-testid="contributors-sync-btn" variant="primary" [loading]="syncing()" (clicked)="syncContributors()">
+      <i class="fa-solid fa-arrows-rotate text-xs"></i>
+      Sync from GitHub
+    </lfx-button>
+  </div>
+
+  <!-- Filters -->
+  <div class="animate-fade-in-up relative z-10 grid grid-cols-1 gap-4 [animation-delay:100ms] sm:grid-cols-3">
+    <lfx-input data-testid="contributors-search-input" label="Search" [formControl]="searchControl" placeholder="GitHub login, name, or email..." />
+    <lfx-select
+      data-testid="contributors-product-filter"
+      label="Product"
+      [options]="productOptions()"
+      [formControl]="productFilterControl"
+      placeholder="All products" />
+    <lfx-select
+      data-testid="contributors-slack-filter"
+      label="Slack"
+      [options]="slackFilterOptions"
+      [formControl]="slackFilterControl"
+      placeholder="All contributors" />
+  </div>
+
+  <!-- Table (desktop) -->
+  <div class="animate-rise-in hidden [animation-delay:150ms] md:block">
+    <lfx-table
+      [data]="contributors()"
+      [loading]="loading()"
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalItems]="totalItems()"
+      [pageSize]="pageSize()"
+      (pageChange)="onPageChange($event)"
+      emptyMessage="No contributors found. Run a sync to pull them from GitHub."
+      testId="contributors-table">
+      <ng-template lfxColumn="Contributor" let-contributor>
+        <div class="flex items-center gap-3">
+          @if (contributor.githubAvatarUrl; as avatar) {
+            <img [src]="avatar" [alt]="contributor.githubLogin" class="h-8 w-8 shrink-0 rounded-full" referrerpolicy="no-referrer" />
+          }
+          <div class="min-w-0">
+            <a [href]="contributor.githubHtmlUrl" target="_blank" rel="noopener noreferrer" class="text-text-primary hover:text-brand-700 text-sm font-medium">
+              {{ contributor.githubLogin }}
+            </a>
+            @if (contributor.primaryEmail; as email) {
+              <p class="text-text-muted truncate text-xs">{{ email }}</p>
+            }
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template lfxColumn="Products" let-contributor>
+        <div class="flex flex-wrap gap-1">
+          @for (productName of productNamesByContributor() | mapGet: contributor.id; track productName) {
+            <lfx-badge [label]="productName" size="sm" />
+          } @empty {
+            <span class="text-text-muted text-xs">—</span>
+          }
+        </div>
+      </ng-template>
+
+      <ng-template lfxColumn="Commits" lfxColumnHeaderClass="text-right" lfxColumnCellClass="text-right" let-contributor>
+        <span class="text-text-secondary text-sm tabular-nums">{{ contributor.contributions }}</span>
+      </ng-template>
+
+      <ng-template lfxColumn="Slack" let-contributor>
+        @if (contributor.slackUserId) {
+          <div class="flex items-center gap-2">
+            <i class="fa-brands fa-slack text-text-secondary text-sm"></i>
+            <span class="text-text-primary text-sm">{{ contributor.slackRealName || contributor.slackDisplayName }}</span>
+            @if (contributor.slackLinkSource === 'auto_email') {
+              <lfx-badge label="auto" size="sm" color="#64748b" />
+            }
+          </div>
+        } @else {
+          <span class="text-text-muted text-sm">Not linked</span>
+        }
+      </ng-template>
+
+      <ng-template lfxColumn="" lfxColumnCellClass="text-right" let-contributor>
+        @if (contributor.slackUserId) {
+          <lfx-button [attr.data-testid]="'contributors-unlink-' + contributor.id" variant="ghost" size="sm" (clicked)="confirmUnlink(contributor)">
+            Unlink
+          </lfx-button>
+        } @else {
+          <lfx-button [attr.data-testid]="'contributors-link-' + contributor.id" variant="ghost" size="sm" (clicked)="openLinkDialog(contributor)">
+            Link Slack
+          </lfx-button>
+        }
+      </ng-template>
+    </lfx-table>
+  </div>
+
+  <!-- Card list (mobile) -->
+  <div class="animate-rise-in space-y-3 [animation-delay:150ms] md:hidden">
+    @if (loading()) {
+      @for (_ of [1, 2, 3]; track $index) {
+        <lfx-card>
+          <div class="animate-pulse space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="bg-surface-alt h-8 w-8 rounded-full"></div>
+              <div class="bg-surface-alt h-4 w-1/3 rounded"></div>
+            </div>
+            <div class="bg-surface-alt h-3 w-1/2 rounded"></div>
+            <div class="bg-surface-alt h-5 w-20 rounded-full"></div>
+          </div>
+        </lfx-card>
+      }
+    } @else if (contributors().length === 0) {
+      <lfx-card>
+        <p class="text-text-muted text-center text-sm">No contributors found. Run a sync to pull them from GitHub.</p>
+      </lfx-card>
+    } @else {
+      @for (contributor of contributors(); track contributor.id) {
+        <lfx-card>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex min-w-0 items-center gap-3">
+                @if (contributor.githubAvatarUrl; as avatar) {
+                  <img [src]="avatar" [alt]="contributor.githubLogin" class="h-8 w-8 shrink-0 rounded-full" referrerpolicy="no-referrer" />
+                }
+                <div class="min-w-0">
+                  <p class="text-text-primary truncate text-sm font-medium">{{ contributor.githubLogin }}</p>
+                  @if (contributor.primaryEmail; as email) {
+                    <p class="text-text-secondary truncate text-xs">{{ email }}</p>
+                  }
+                </div>
+              </div>
+              @if (contributor.slackUserId) {
+                <lfx-button [attr.data-testid]="'contributors-unlink-' + contributor.id" variant="ghost" size="sm" (clicked)="confirmUnlink(contributor)">
+                  Unlink
+                </lfx-button>
+              } @else {
+                <lfx-button [attr.data-testid]="'contributors-link-' + contributor.id" variant="ghost" size="sm" (clicked)="openLinkDialog(contributor)">
+                  Link
+                </lfx-button>
+              }
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              @for (productName of productNamesByContributor() | mapGet: contributor.id; track productName) {
+                <lfx-badge [label]="productName" size="sm" />
+              }
+              <span class="text-text-muted text-xs">{{ contributor.contributions }} commits</span>
+            </div>
+            @if (contributor.slackUserId) {
+              <div class="flex items-center gap-2">
+                <i class="fa-brands fa-slack text-text-secondary text-sm"></i>
+                <span class="text-text-primary text-xs">{{ contributor.slackRealName || contributor.slackDisplayName }}</span>
+              </div>
+            }
+          </div>
+        </lfx-card>
+      }
+    }
+  </div>
+</div>
