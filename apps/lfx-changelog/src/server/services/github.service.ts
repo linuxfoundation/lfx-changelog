@@ -222,24 +222,39 @@ export class GitHubService {
     return releases.map((release) => ({ ...release, repoFullName }));
   }
 
-  /**
-   * Repository metadata needed to target a release, currently the default branch.
-   * ProductRepository does not store it, and it is the sensible default for a new tag.
-   */
   public async getRepositoryDefaultBranch(installationId: number, owner: string, repo: string): Promise<string> {
     const data = (await this.repoRequest(installationId, owner, repo, '', 'Failed to get repository')) as { default_branch?: string };
     return data.default_branch || 'main';
   }
 
-  /** Branches available as a release target, newest activity first is not guaranteed by GitHub so they arrive alphabetically. */
-  public async listBranches(installationId: number, owner: string, repo: string, perPage = 100): Promise<GitHubBranch[]> {
-    return (await this.repoRequest(installationId, owner, repo, `/branches?per_page=${perPage}`, 'Failed to list branches')) as GitHubBranch[];
+  public async listBranches(installationId: number, owner: string, repo: string): Promise<GitHubBranch[]> {
+    const branches: GitHubBranch[] = [];
+    let page = 1;
+
+    while (true) {
+      const data = (await this.repoRequest(installationId, owner, repo, `/branches?per_page=100&page=${page}`, 'Failed to list branches')) as GitHubBranch[];
+
+      branches.push(...data);
+
+      if (data.length < 100) break;
+      page++;
+    }
+
+    return branches;
   }
 
-  /**
-   * GitHub's own release-note generation from merged pull requests since the previous tag.
-   * Used to prefill the form so the author edits rather than writes from scratch.
-   */
+  public async tagExists(installationId: number, owner: string, repo: string, tagName: string): Promise<boolean> {
+    try {
+      await this.repoRequest(installationId, owner, repo, `/git/ref/tags/${encodeURIComponent(tagName)}`, 'Failed to look up tag');
+      return true;
+    } catch (error) {
+      if (error instanceof GitHubApiError && error.upstreamStatus === 404) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
   public async generateReleaseNotes(installationId: number, owner: string, repo: string, input: GenerateReleaseNotesInput): Promise<GeneratedReleaseNotes> {
     return (await this.repoRequest(installationId, owner, repo, '/releases/generate-notes', 'Failed to generate release notes', {
       tag_name: input.tagName,
@@ -248,12 +263,8 @@ export class GitHubService {
     })) as GeneratedReleaseNotes;
   }
 
-  /**
-   * Creates a published release. GitHub creates the tag at `target_commitish` as a side effect,
-   * so this is the only place the app writes a git ref — it needs Contents: write on the App.
-   *
-   * The release webhook then stores the row, so nothing is persisted here.
-   */
+  // GitHub creates the tag at `target_commitish` as a side effect, so this is the only place the
+  // app writes a git ref — the App installation needs Contents: write.
   public async createRelease(installationId: number, owner: string, repo: string, input: CreateReleaseInput): Promise<GitHubRelease> {
     const release = (await this.repoRequest(installationId, owner, repo, '/releases', 'Failed to create release', {
       tag_name: input.tagName,
@@ -579,30 +590,42 @@ export class GitHubService {
     }
   }
 
-  /**
-   * Shared request path for repository-scoped calls. A body makes it a POST.
-   *
-   * GitHub returns 422 for the cases a user can actually cause — a tag that already exists, an
-   * unknown target — so the response body is surfaced rather than flattened into a status code.
-   */
+  // Shared request path for repository-scoped release calls. A body makes it a POST. Unlike the
+  // older methods above, failures become GitHubApiError so the caller keeps GitHub's status
+  // instead of collapsing every fault into a 500.
   private async repoRequest(installationId: number, owner: string, repo: string, path: string, errorMessage: string, body?: unknown): Promise<unknown> {
     this.validateInstallationId(installationId);
-    const token = await this.getInstallationToken(installationId);
 
-    const response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}${path}`, {
-      method: body ? 'POST' : 'GET',
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
+    let response: Response;
+    try {
+      const token = await this.getInstallationToken(installationId);
+
+      response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}${path}`, {
+        method: body ? 'POST' : 'GET',
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+    } catch (error) {
+      // Token minting and transport faults both land here; neither carries a GitHub status.
+      serverLogger.error({ err: error, owner, repo, path }, errorMessage);
+      throw new GitHubApiError(errorMessage, 0, error instanceof Error ? error.message : undefined);
+    }
 
     if (!response.ok) {
       const text = await response.text();
-      serverLogger.error({ status: response.status, body: text, owner, repo, path }, errorMessage);
+
+      // A 404 is the expected answer for existence checks, so it is not logged as a fault.
+      if (response.status === 404) {
+        serverLogger.debug({ status: response.status, owner, repo, path }, errorMessage);
+      } else {
+        serverLogger.error({ status: response.status, body: text, owner, repo, path }, errorMessage);
+      }
+
       throw new GitHubApiError(errorMessage, response.status, text);
     }
 

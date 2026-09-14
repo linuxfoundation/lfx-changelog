@@ -86,14 +86,21 @@ application does not handle, so a drafted release would be invisible here until 
 Suggested tags come from the newest stored release for the repository, patch-bumped, preserving a
 leading `v` when the previous tag used one.
 
+The tag is checked before publishing and an existing one is rejected with `409`. GitHub would
+otherwise accept the release and silently ignore `targetCommitish`, publishing at whatever commit the
+existing tag points to instead of the branch the author selected.
+
 ### Failure modes
 
-| GitHub response | API response             | Usual cause                                     |
-| --------------- | ------------------------ | ----------------------------------------------- |
-| 422             | 409 `CONFLICT`           | The tag already exists                          |
-| 403 / 401       | 403 `GITHUB_FORBIDDEN`   | The App lacks `Contents: write`, or repo access |
-| 404             | 404 `NOT_FOUND`          | The App cannot see the repository               |
-| 5xx             | 502 `GITHUB_UNAVAILABLE` | GitHub is unavailable                           |
+| GitHub response | API response                   | Usual cause                                      |
+| --------------- | ------------------------------ | ------------------------------------------------ |
+| —               | 409 `CONFLICT`                 | The tag already exists (rejected before calling) |
+| 422             | 422 `GITHUB_VALIDATION_FAILED` | Unknown target branch or commit                  |
+| 403 / 401       | 403 `GITHUB_FORBIDDEN`         | The App lacks `Contents: write`, or repo access  |
+| 404             | 404 `NOT_FOUND`                | The App cannot see the repository                |
+| 5xx / no reply  | 502 `GITHUB_UNAVAILABLE`       | GitHub is unavailable, or the token call failed  |
+
+GitHub's own error text is recorded in the server logs but never returned to the caller.
 
 ## Release Syncing
 

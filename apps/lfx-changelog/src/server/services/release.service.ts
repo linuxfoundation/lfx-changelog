@@ -1,9 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { bumpPatchVersion, hasMinimumRole, UserRole } from '@lfx-changelog/shared';
+import { bumpPatchVersion, ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
 
-import { NotFoundError } from '../errors';
+import { ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
@@ -11,21 +11,13 @@ import { getPrismaClient } from './prisma.service';
 import type { CreateReleaseRequest, GeneratedReleaseNotes, GitHubRelease, ReleaseTarget } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository, UserRoleAssignment } from '@prisma/client';
 
-/** The authenticated user, as hybridAuthMiddleware attaches it. */
-type Actor = { id: string; userRoleAssignments?: UserRoleAssignment[] };
-
 export class ReleaseService {
   private readonly githubService = new GitHubService();
 
-  /**
-   * Everything the create-release form needs for one repository: the default branch to target,
-   * the branch list to choose from, and a suggested next tag derived from the newest release
-   * already stored for that repository.
-   */
-  public async getReleaseTarget(repositoryId: string, actor: Actor): Promise<ReleaseTarget> {
-    const repository = await this.requireReleasableRepository(repositoryId, actor);
+  public async getReleaseTarget(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<ReleaseTarget> {
+    const repository = await this.requireReleasableRepository(repositoryId, userRoles);
 
-    const [defaultBranch, branches, latest] = await Promise.all([
+    const [defaultBranch, branches, latestTag] = await Promise.all([
       this.githubService.getRepositoryDefaultBranch(repository.githubInstallationId, repository.owner, repository.name),
       this.githubService.listBranches(repository.githubInstallationId, repository.owner, repository.name),
       this.findLatestTag(repository.id),
@@ -35,15 +27,14 @@ export class ReleaseService {
       repositoryId: repository.id,
       fullName: repository.fullName,
       defaultBranch,
-      latestTag: latest,
-      suggestedTag: this.suggestNextTag(latest),
+      latestTag,
+      suggestedTag: this.suggestNextTag(latestTag),
       branches,
     };
   }
 
-  /** GitHub's generated notes for a prospective release, so the author edits rather than writes. */
-  public async previewNotes(repositoryId: string, tagName: string, targetCommitish: string, actor: Actor): Promise<GeneratedReleaseNotes> {
-    const repository = await this.requireReleasableRepository(repositoryId, actor);
+  public async previewNotes(repositoryId: string, tagName: string, targetCommitish: string, userRoles: UserRoleAssignment[]): Promise<GeneratedReleaseNotes> {
+    const repository = await this.requireReleasableRepository(repositoryId, userRoles);
     const previousTagName = await this.findLatestTag(repository.id);
 
     return this.githubService.generateReleaseNotes(repository.githubInstallationId, repository.owner, repository.name, {
@@ -53,12 +44,17 @@ export class ReleaseService {
     });
   }
 
-  /**
-   * Publishes a release on GitHub. Nothing is written here — the `release.published` webhook
-   * stores the row, which keeps this path and an externally created release identical.
-   */
-  public async createRelease(repositoryId: string, data: CreateReleaseRequest, actor: Actor): Promise<GitHubRelease> {
-    const repository = await this.requireReleasableRepository(repositoryId, actor);
+  // Nothing is written here — the `release.published` webhook stores the row, which keeps a
+  // release published from the UI and one published on GitHub itself on the same path.
+  public async createRelease(repositoryId: string, data: CreateReleaseRequest, userRoles: UserRoleAssignment[], userId: string): Promise<GitHubRelease> {
+    const repository = await this.requireReleasableRepository(repositoryId, userRoles);
+
+    // GitHub ignores `target_commitish` when the tag already exists, so it would publish at
+    // whatever commit the old tag points to rather than the branch the author chose.
+    const exists = await this.githubService.tagExists(repository.githubInstallationId, repository.owner, repository.name, data.tagName);
+    if (exists) {
+      throw new ConflictError(`Tag already exists: ${data.tagName}`, { operation: 'createRelease', service: 'release' });
+    }
 
     const release = await this.githubService.createRelease(repository.githubInstallationId, repository.owner, repository.name, {
       tagName: data.tagName,
@@ -68,34 +64,37 @@ export class ReleaseService {
       prerelease: data.prerelease,
     });
 
-    serverLogger.info({ repositoryId, repo: repository.fullName, tagName: data.tagName, requestedBy: actor.id }, 'Release published from the admin UI');
+    serverLogger.info({ repositoryId, repo: repository.fullName, tagName: data.tagName, requestedBy: userId }, 'Release published from the admin UI');
     return release;
   }
 
   // ── Private helpers ─────────────────────────
 
-  /**
-   * Loads a tracked repository and checks the actor administers the product that owns it.
-   *
-   * A missing repository and one outside the actor's products both surface as 404, so the
-   * endpoint cannot be used to discover which repositories exist.
-   */
-  private async requireReleasableRepository(repositoryId: string, actor: Actor): Promise<PrismaProductRepository> {
+  // A repository outside the caller's products reports 404 rather than 403, so the endpoint
+  // cannot be used to discover which repositories exist.
+  private async requireReleasableRepository(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<PrismaProductRepository> {
     const prisma = getPrismaClient();
     const repository = await prisma.productRepository.findUnique({ where: { id: repositoryId } });
-    if (!repository) {
-      throw new NotFoundError(`Repository not found: ${repositoryId}`, { operation: 'requireReleasableRepository', service: 'release' });
-    }
 
-    const assignments = (actor.userRoleAssignments ?? []) as unknown as Parameters<typeof hasMinimumRole>[0];
-    if (!hasMinimumRole(assignments, UserRole.PRODUCT_ADMIN, repository.productId)) {
+    if (!repository || !this.canAdministerProduct(userRoles, repository.productId)) {
       throw new NotFoundError(`Repository not found: ${repositoryId}`, { operation: 'requireReleasableRepository', service: 'release' });
     }
 
     return repository;
   }
 
-  /** Newest published tag already stored for the repository, used for both the suggestion and the notes window. */
+  private canAdministerProduct(userRoles: UserRoleAssignment[], productId: string): boolean {
+    if (userRoles.some((assignment) => assignment.role === UserRole.SUPER_ADMIN)) {
+      return true;
+    }
+
+    const minimumLevel = ROLE_HIERARCHY[UserRole.PRODUCT_ADMIN];
+    return userRoles.some((assignment) => {
+      const roleLevel = ROLE_HIERARCHY[assignment.role as UserRole];
+      return roleLevel !== undefined && roleLevel >= minimumLevel && (assignment.productId === null || assignment.productId === productId);
+    });
+  }
+
   private async findLatestTag(repositoryId: string): Promise<string | null> {
     const prisma = getPrismaClient();
     const latest = await prisma.gitHubRelease.findFirst({
@@ -107,7 +106,6 @@ export class ReleaseService {
     return latest?.tagName ?? null;
   }
 
-  /** Keeps the `v` prefix when the previous tag used one, since a repository's tags should stay consistent. */
   private suggestNextTag(latestTag: string | null): string {
     const next = bumpPatchVersion(latestTag);
     return latestTag?.trim().toLowerCase().startsWith('v') ? `v${next}` : next;

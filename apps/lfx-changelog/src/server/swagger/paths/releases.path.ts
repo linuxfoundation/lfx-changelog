@@ -154,6 +154,8 @@ releaseRegistry.registerPath({
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks access' },
     404: { description: 'Repository not found, or not one the caller administers' },
+    422: { description: 'GitHub rejected the request, most commonly an unknown target branch or commit' },
+    502: { description: 'GitHub was unavailable' },
   },
 });
 
@@ -172,7 +174,8 @@ releaseRegistry.registerPath({
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks Contents: write' },
     404: { description: 'Repository not found, or not one the caller administers' },
-    409: { description: 'GitHub rejected the release, most commonly because the tag already exists' },
+    409: { description: 'The tag already exists on the repository' },
+    422: { description: 'GitHub rejected the release, most commonly an unknown target branch or commit' },
     502: { description: 'GitHub was unavailable' },
   },
 });

@@ -3,39 +3,45 @@
 
 import { BaseApiError } from './base-api.error';
 
-/**
- * A failed GitHub API call, mapped to a status the caller can act on.
- *
- * Release creation fails for reasons the user causes — a tag that already exists, an unknown
- * branch, an App without write permission — so these must not collapse into a generic 500.
- */
+const UPSTREAM_STATUS_MAP: Record<number, { status: number; code: string }> = {
+  401: { status: 403, code: 'GITHUB_FORBIDDEN' },
+  403: { status: 403, code: 'GITHUB_FORBIDDEN' },
+  404: { status: 404, code: 'NOT_FOUND' },
+  422: { status: 422, code: 'GITHUB_VALIDATION_FAILED' },
+};
+
 export class GitHubApiError extends BaseApiError {
   public readonly upstreamStatus: number;
+  public readonly upstreamBody?: string;
 
-  public constructor(message: string, upstreamStatus: number, upstreamBody?: string, options: { operation?: string; service?: string } = {}) {
-    super(message, GitHubApiError.mapStatus(upstreamStatus), GitHubApiError.mapCode(upstreamStatus), {
+  public constructor(
+    message: string,
+    upstreamStatus: number,
+    upstreamBody?: string,
+    options: {
+      operation?: string;
+      service?: string;
+      path?: string;
+    } = {}
+  ) {
+    const mapped = UPSTREAM_STATUS_MAP[upstreamStatus] ?? { status: 502, code: 'GITHUB_UNAVAILABLE' };
+
+    super(message, mapped.status, mapped.code, {
+      service: 'github',
       ...options,
-      service: options.service ?? 'github',
-      metadata: { upstreamStatus, upstreamBody: upstreamBody?.slice(0, 500) },
     });
+
     this.upstreamStatus = upstreamStatus;
+    this.upstreamBody = upstreamBody?.slice(0, 500);
   }
 
-  /**
-   * 422 is GitHub's validation failure and in practice means the tag already exists, so it
-   * reads as a conflict. Anything unrecognised is an upstream fault, not a client error.
-   */
-  private static mapStatus(upstreamStatus: number): number {
-    if (upstreamStatus === 422) return 409;
-    if (upstreamStatus === 404) return 404;
-    if (upstreamStatus === 403 || upstreamStatus === 401) return 403;
-    return 502;
-  }
-
-  private static mapCode(upstreamStatus: number): string {
-    if (upstreamStatus === 422) return 'CONFLICT';
-    if (upstreamStatus === 404) return 'NOT_FOUND';
-    if (upstreamStatus === 403 || upstreamStatus === 401) return 'GITHUB_FORBIDDEN';
-    return 'GITHUB_UNAVAILABLE';
+  // GitHub's own error text stays out of `toResponse()` — it is untrusted upstream content,
+  // and `BaseApiError` spreads `metadata` straight into the client response.
+  public override getLogContext(): Record<string, any> {
+    return {
+      ...super.getLogContext(),
+      upstream_status: this.upstreamStatus,
+      upstream_body: this.upstreamBody,
+    };
   }
 }
