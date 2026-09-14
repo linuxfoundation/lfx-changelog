@@ -36,7 +36,7 @@ Two tables, plus one enum.
 
 Each row holds the GitHub identity (login, avatar, profile URL), all discovered emails as a Postgres array plus a chosen `primary_email`, the Slack association (member ID, team, display and real name, avatar), and provenance for that association: `slack_link_source` (`auto_email` or `manual`), `slack_linked_at`, and `slack_linked_by_id`. Recording _how_ a link was made means a bad auto-match is auditable rather than indistinguishable from a human decision.
 
-**ContributorRepository** — the join between a contributor and a `ProductRepository`, carrying the per-repository commit count. This is what powers the product filter on the admin page. The contributor's top-level `contributions` is the sum across repositories, refreshed at the end of each sync.
+**ContributorRepository** — the join between a contributor and a `ProductRepository`, carrying the per-repository commit count and the date that repository was last active. These links are the source of truth: `Contributor.contributions` and `Contributor.lastActiveAt` are both derived from them by a single recalculation step, so an aggregate can never outlive the links it came from. This is what powers the product filter on the admin page. The contributor's top-level `contributions` is the sum across repositories, refreshed at the end of each sync.
 
 ## Sync
 

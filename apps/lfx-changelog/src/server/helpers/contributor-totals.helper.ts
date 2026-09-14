@@ -37,19 +37,14 @@ export async function recalculateContributorTotals(prisma: PrismaLike, contribut
 
     const total = [...byRepository.values()].reduce((sum, contributions) => sum + contributions, 0);
 
-    // lastActiveAt is a cross-repository maximum too. Sync only ever grows it, so if the
-    // removed link held the newest date it would otherwise persist forever.
+    // Derived solely from the remaining links, including null when none carries a date —
+    // otherwise a removed repository's date would outlive the repository itself.
     const lastActiveAt = contributor.repositories.reduce<Date | null>(
       (latest, link) => (link.lastActiveAt && (!latest || link.lastActiveAt > latest) ? link.lastActiveAt : latest),
       null
     );
 
-    // Only write a date we actually derived — links with no dates must not erase a known one,
-    // matching the per-repository guard in ContributorService.
-    await prisma.contributor.update({
-      where: { id: contributor.id },
-      data: { contributions: total, ...(lastActiveAt ? { lastActiveAt } : {}) },
-    });
+    await prisma.contributor.update({ where: { id: contributor.id }, data: { contributions: total, lastActiveAt } });
   }
 }
 

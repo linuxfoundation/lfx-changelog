@@ -265,10 +265,10 @@ export class ContributorService {
       const mergedEmails = Array.from(new Set([...(existing?.emails ?? []), ...(profile?.emails ?? [])])).sort();
       const primaryEmail = mergedEmails.find((email) => !email.endsWith(NOREPLY_EMAIL_SUFFIX)) ?? existing?.primaryEmail ?? null;
       const name = profile?.name ?? existing?.name ?? null;
-      // Contributor.lastActiveAt is the cross-repository maximum; the link row below must carry
-      // only this repository's date, or activity in one repo leaks into another's relation.
+      // Only this repository's harvested date. Contributor.lastActiveAt is not written here —
+      // it is derived from the links by recalculateContributorTotals once the repository is done,
+      // so there is exactly one writer for the aggregate.
       const repoLastActiveAt = profile?.lastActiveAt ?? null;
-      const lastActiveAt = this.latestDate(repoLastActiveAt, existing?.lastActiveAt ?? null);
 
       const slackMatch = this.matchSlackUser(mergedEmails, slackUsersByEmail, contributor.login);
       const shouldAutoLink = Boolean(slackMatch) && !existing?.slackUserId && !claimedSlackIds.has(slackMatch!.id);
@@ -281,7 +281,6 @@ export class ContributorService {
         primaryEmail,
         emails: mergedEmails,
         isBot,
-        lastActiveAt,
         lastSyncedAt: new Date(),
       };
 
