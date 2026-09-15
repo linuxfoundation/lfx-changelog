@@ -13,7 +13,7 @@ import { ReleaseService } from '@services/release.service';
 import { ToastService } from '@services/toast.service';
 import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, of, startWith, switchMap, tap } from 'rxjs';
 
-import type { GeneratedReleaseNotes, ReleaseTarget, RepositoryWithCounts } from '@lfx-changelog/shared';
+import type { GeneratedReleaseNotes, ProductRepository, ReleaseTarget } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
@@ -28,7 +28,9 @@ export class CreateReleaseDialogComponent {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly dialogService = inject(DialogService);
 
-  public readonly repository = input.required<RepositoryWithCounts>();
+  // Deliberately the narrower ProductRepository: the product detail tab has only this shape,
+  // and the dialog needs nothing beyond the id and full name.
+  public readonly repository = input.required<ProductRepository>();
 
   protected readonly targetControl = new FormControl('', { nonNullable: true });
   protected readonly tagControl = new FormControl('', { nonNullable: true });

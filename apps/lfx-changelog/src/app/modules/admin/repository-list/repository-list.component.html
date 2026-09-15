@@ -91,11 +91,11 @@
                     </div>
                     <div class="flex justify-end gap-1 sm:justify-start">
                       <lfx-button variant="ghost" size="sm" [loading]="syncingRepo() | setIncludes: repo.id" (clicked)="syncRepository(repo.id)">
-                        <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                        <i class="fa-solid fa-arrows-rotate text-brand-600 text-xs"></i>
                         Sync
                       </lfx-button>
                       <lfx-button [attr.data-testid]="'repo-create-release-' + repo.id" variant="ghost" size="sm" (clicked)="openCreateRelease(repo)">
-                        <i class="fa-solid fa-tag text-xs"></i>
+                        <i class="fa-solid fa-tag text-new-feature text-xs"></i>
                         Release
                       </lfx-button>
                     </div>

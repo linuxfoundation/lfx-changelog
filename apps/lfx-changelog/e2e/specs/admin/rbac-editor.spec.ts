@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 import { AdminDashboardPage } from '../../pages/admin-dashboard.page.js';
 import { AdminLayoutPage } from '../../pages/admin-layout.page.js';
 import { ChangelogListPage } from '../../pages/changelog-list.page.js';
+import { ProductDetailPage } from '../../pages/product-detail.page.js';
 
 test.describe('RBAC — Editor', () => {
   test.use({ storageState: './e2e/.auth/editor.json' });
@@ -41,5 +42,20 @@ test.describe('RBAC — Editor', () => {
     await expect(layout.navChangelogs).toBeVisible();
     await expect(layout.navRepositories).not.toBeVisible();
     await expect(layout.navUsers).not.toBeVisible();
+  });
+
+  test('should not see the Release action, which requires product admin', async ({ page }) => {
+    const res = await page.request.get('/api/products');
+    const products = (await res.json()).data as { id: string; slug: string }[];
+    const easycla = products.find((p) => p.slug === 'e2e-easycla');
+    expect(easycla, 'seeded product e2e-easycla is missing').toBeDefined();
+
+    const detail = new ProductDetailPage(page);
+    await detail.goto(easycla!.id);
+    await detail.switchTab('repositories');
+
+    // The table itself is readable by an editor; only the publish action is withheld.
+    await expect(page.locator('lfx-table')).toBeVisible();
+    await expect(page.locator('[data-testid^="product-repo-create-release-"]')).toHaveCount(0);
   });
 });
