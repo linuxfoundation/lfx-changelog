@@ -128,7 +128,6 @@ export const GeneratedReleaseNotesSchema = z
 
 export type GeneratedReleaseNotes = z.infer<typeof GeneratedReleaseNotesSchema>;
 
-/** Everything the create-release form needs to prefill itself for one repository. */
 export const ReleaseTargetSchema = z
   .object({
     repositoryId: z.string().uuid(),

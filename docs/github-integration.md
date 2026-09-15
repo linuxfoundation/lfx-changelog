@@ -61,14 +61,9 @@ Each tracked repository is stored as a **ProductRepository** record linking a pr
 
 ## Creating Releases
 
-Releases can be published from the admin UI, which creates them on GitHub. The tag is created as a
-side effect at the chosen branch or commit, so this is the only place the application writes a git
-ref — **the GitHub App requires `Contents: write`**, and it is the only write permission the app uses.
-Everything else in this integration is read-only.
+Releases can be published from the admin UI, which creates them on GitHub. The tag is created as a side effect at the chosen branch or commit, so this is the only place the application writes a git ref --- **the GitHub App requires `Contents: write`**, and it is the only write permission the app uses. Everything else in this integration is read-only.
 
-Nothing is persisted by the create call. The `release.published` webhook stores the row exactly as it
-would for a release created on github.com, so a release published here and one published there are
-indistinguishable in the database.
+Nothing is persisted by the create call. The `release.published` webhook stores the row exactly as it would for a release created on github.com, so a release published here and one published there are indistinguishable in the database.
 
 | Method | Path                                        | Auth                       | Description                             |
 | ------ | ------------------------------------------- | -------------------------- | --------------------------------------- |
@@ -76,29 +71,25 @@ indistinguishable in the database.
 | POST   | `/api/releases/repositories/:repoId/notes`  | OAuth only (product_admin) | Preview GitHub-generated notes          |
 | POST   | `/api/releases/repositories/:repoId`        | OAuth only (product_admin) | Publish the release                     |
 
-Authorization is per repository: the caller must hold `product_admin` (or higher) on the product that
-owns it. A repository outside the caller's products returns `404` rather than `403`, so the endpoint
-cannot be used to enumerate repositories. API keys are rejected — session authentication only.
+Authorization is per repository: the caller must hold `product_admin` (or higher) on the product that owns it. The route applies the global role check and the service then re-checks the product, so a repository outside the caller's products returns `404` rather than `403` --- the endpoints cannot be used to enumerate repositories. API keys are rejected; session authentication only.
 
-Releases are always published, never drafted. A draft would fire GitHub's `created` event, which this
-application does not handle, so a drafted release would be invisible here until published.
+Releases are always published, never drafted. A draft would fire GitHub's `created` event, which this application does not handle, so a drafted release would be invisible here until published.
 
-Suggested tags come from the newest stored release for the repository, patch-bumped, preserving a
-leading `v` when the previous tag used one.
+Suggested tags come from the newest stored release for the repository, patch-bumped, preserving a leading `v` when the previous tag used one.
 
-The tag is checked before publishing and an existing one is rejected with `409`. GitHub would
-otherwise accept the release and silently ignore `targetCommitish`, publishing at whatever commit the
-existing tag points to instead of the branch the author selected.
+The tag is checked before publishing and an existing one is rejected with `409`. GitHub would otherwise accept the release and silently ignore `targetCommitish`, publishing at whatever commit the existing tag points to instead of the branch the author selected. A tag created in the gap between that check and the publish call is caught from GitHub's own response and reported as the same `409`.
 
 ### Failure modes
 
-| GitHub response | API response                   | Usual cause                                      |
-| --------------- | ------------------------------ | ------------------------------------------------ |
-| —               | 409 `CONFLICT`                 | The tag already exists (rejected before calling) |
-| 422             | 422 `GITHUB_VALIDATION_FAILED` | Unknown target branch or commit                  |
-| 403 / 401       | 403 `GITHUB_FORBIDDEN`         | The App lacks `Contents: write`, or repo access  |
-| 404             | 404 `NOT_FOUND`                | The App cannot see the repository                |
-| 5xx / no reply  | 502 `GITHUB_UNAVAILABLE`       | GitHub is unavailable, or the token call failed  |
+| GitHub response | API response                   | Usual cause                                     |
+| --------------- | ------------------------------ | ----------------------------------------------- |
+| 422 or none     | 409 `CONFLICT`                 | The tag already exists                          |
+| 422             | 422 `GITHUB_VALIDATION_FAILED` | Unknown target branch or commit                 |
+| 403 / 401       | 403 `GITHUB_FORBIDDEN`         | The App lacks `Contents: write`, or repo access |
+| 404             | 404 `GITHUB_NOT_FOUND`         | The App cannot see the repository               |
+| 5xx / no reply  | 502 `GITHUB_SERVICE_ERROR`     | GitHub is unavailable, or the token call failed |
+
+These statuses apply to the three endpoints above. The older read and sync methods on `GitHubService` predate this mapping and still surface upstream failures as `500`.
 
 GitHub's own error text is recorded in the server logs but never returned to the caller.
 

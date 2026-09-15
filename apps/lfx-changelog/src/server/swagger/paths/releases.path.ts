@@ -132,10 +132,14 @@ releaseRegistry.registerPath({
   security: COOKIE_AUTH,
   request: { params: repoIdParam },
   responses: {
-    200: { description: 'Release target', content: { 'application/json': { schema: createApiResponseSchema(ReleaseTargetSchema) } } },
+    200: {
+      description: 'Release target',
+      content: { 'application/json': { schema: createApiResponseSchema(ReleaseTargetSchema) } },
+    },
     401: { description: 'Unauthorized' },
-    403: { description: 'Forbidden — requires PRODUCT_ADMIN' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks access' },
     404: { description: 'Repository not found, or not one the caller administers' },
+    502: { description: 'GitHub was unavailable' },
   },
 });
 
@@ -149,7 +153,10 @@ releaseRegistry.registerPath({
   security: COOKIE_AUTH,
   request: { params: repoIdParam, body: { content: { 'application/json': { schema: GenerateReleaseNotesRequestSchema } } } },
   responses: {
-    200: { description: 'Generated notes', content: { 'application/json': { schema: createApiResponseSchema(GeneratedReleaseNotesSchema) } } },
+    200: {
+      description: 'Generated notes',
+      content: { 'application/json': { schema: createApiResponseSchema(GeneratedReleaseNotesSchema) } },
+    },
     400: { description: 'Validation failed' },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks access' },
@@ -169,7 +176,10 @@ releaseRegistry.registerPath({
   security: COOKIE_AUTH,
   request: { params: repoIdParam, body: { content: { 'application/json': { schema: CreateReleaseRequestSchema } } } },
   responses: {
-    201: { description: 'Release created', content: { 'application/json': { schema: createApiResponseSchema(GitHubReleaseSchema) } } },
+    201: {
+      description: 'Release created',
+      content: { 'application/json': { schema: createApiResponseSchema(GitHubReleaseSchema) } },
+    },
     400: { description: 'Validation failed' },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks Contents: write' },

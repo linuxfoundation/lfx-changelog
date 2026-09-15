@@ -223,7 +223,7 @@ export class GitHubService {
   }
 
   public async getRepositoryDefaultBranch(installationId: number, owner: string, repo: string): Promise<string> {
-    const data = (await this.repoRequest(installationId, owner, repo, '', 'Failed to get repository')) as { default_branch?: string };
+    const data = await this.repoRequest<{ default_branch?: string }>(installationId, owner, repo, '', 'Failed to get repository');
     return data.default_branch || 'main';
   }
 
@@ -232,7 +232,7 @@ export class GitHubService {
     let page = 1;
 
     while (true) {
-      const data = (await this.repoRequest(installationId, owner, repo, `/branches?per_page=100&page=${page}`, 'Failed to list branches')) as GitHubBranch[];
+      const data = await this.repoRequest<GitHubBranch[]>(installationId, owner, repo, `/branches?per_page=100&page=${page}`, 'Failed to list branches');
 
       branches.push(...data);
 
@@ -245,7 +245,7 @@ export class GitHubService {
 
   public async tagExists(installationId: number, owner: string, repo: string, tagName: string): Promise<boolean> {
     try {
-      await this.repoRequest(installationId, owner, repo, `/git/ref/tags/${encodeURIComponent(tagName)}`, 'Failed to look up tag');
+      await this.repoRequest<unknown>(installationId, owner, repo, `/git/ref/tags/${encodeURIComponent(tagName)}`, 'Failed to look up tag');
       return true;
     } catch (error) {
       if (error instanceof GitHubApiError && error.upstreamStatus === 404) {
@@ -256,24 +256,24 @@ export class GitHubService {
   }
 
   public async generateReleaseNotes(installationId: number, owner: string, repo: string, input: GenerateReleaseNotesInput): Promise<GeneratedReleaseNotes> {
-    return (await this.repoRequest(installationId, owner, repo, '/releases/generate-notes', 'Failed to generate release notes', {
+    return this.repoRequest<GeneratedReleaseNotes>(installationId, owner, repo, '/releases/generate-notes', 'Failed to generate release notes', {
       tag_name: input.tagName,
       target_commitish: input.targetCommitish,
       ...(input.previousTagName ? { previous_tag_name: input.previousTagName } : {}),
-    })) as GeneratedReleaseNotes;
+    });
   }
 
   // GitHub creates the tag at `target_commitish` as a side effect, so this is the only place the
   // app writes a git ref — the App installation needs Contents: write.
   public async createRelease(installationId: number, owner: string, repo: string, input: CreateReleaseInput): Promise<GitHubRelease> {
-    const release = (await this.repoRequest(installationId, owner, repo, '/releases', 'Failed to create release', {
+    const release = await this.repoRequest<GitHubRelease>(installationId, owner, repo, '/releases', 'Failed to create release', {
       tag_name: input.tagName,
       target_commitish: input.targetCommitish,
       name: input.name,
       body: input.body,
       draft: false,
       prerelease: input.prerelease ?? false,
-    })) as GitHubRelease;
+    });
 
     serverLogger.info({ owner, repo, tagName: input.tagName, targetCommitish: input.targetCommitish }, 'Created GitHub release');
     return { ...release, repoFullName: `${owner}/${repo}` };
@@ -593,7 +593,7 @@ export class GitHubService {
   // Shared request path for repository-scoped release calls. A body makes it a POST. Unlike the
   // older methods above, failures become GitHubApiError so the caller keeps GitHub's status
   // instead of collapsing every fault into a 500.
-  private async repoRequest(installationId: number, owner: string, repo: string, path: string, errorMessage: string, body?: unknown): Promise<unknown> {
+  private async repoRequest<T>(installationId: number, owner: string, repo: string, path: string, errorMessage: string, body?: unknown): Promise<T> {
     this.validateInstallationId(installationId);
 
     let response: Response;
@@ -613,7 +613,7 @@ export class GitHubService {
     } catch (error) {
       // Token minting and transport faults both land here; neither carries a GitHub status.
       serverLogger.error({ err: error, owner, repo, path }, errorMessage);
-      throw new GitHubApiError(errorMessage, 0, error instanceof Error ? error.message : undefined);
+      throw new GitHubApiError(errorMessage, { upstreamBody: error instanceof Error ? error.message : undefined });
     }
 
     if (!response.ok) {
@@ -626,9 +626,9 @@ export class GitHubService {
         serverLogger.error({ status: response.status, body: text, owner, repo, path }, errorMessage);
       }
 
-      throw new GitHubApiError(errorMessage, response.status, text);
+      throw new GitHubApiError(errorMessage, { upstreamStatus: response.status, upstreamBody: text });
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 }

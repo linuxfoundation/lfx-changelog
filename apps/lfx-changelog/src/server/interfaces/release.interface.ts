@@ -7,12 +7,17 @@ export interface FindAllPublicOptions {
   productId?: string;
 }
 
+/**
+ * Input for GitHub's release-note generation. `previousTagName` bounds the window of merged
+ * pull requests; GitHub picks the previous tag itself when it is omitted.
+ */
 export interface GenerateReleaseNotesInput {
   tagName: string;
   targetCommitish: string;
   previousTagName?: string;
 }
 
+/** Input for publishing a release. Structurally the `CreateReleaseRequest` DTO, minus the HTTP layer. */
 export interface CreateReleaseInput {
   tagName: string;
   targetCommitish: string;

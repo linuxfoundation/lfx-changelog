@@ -3,7 +3,7 @@
 
 import { bumpPatchVersion, ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
 
-import { ConflictError, NotFoundError } from '../errors';
+import { ConflictError, GitHubApiError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
@@ -56,13 +56,17 @@ export class ReleaseService {
       throw new ConflictError(`Tag already exists: ${data.tagName}`, { operation: 'createRelease', service: 'release' });
     }
 
-    const release = await this.githubService.createRelease(repository.githubInstallationId, repository.owner, repository.name, {
-      tagName: data.tagName,
-      targetCommitish: data.targetCommitish,
-      name: data.name,
-      body: data.body,
-      prerelease: data.prerelease,
-    });
+    let release: GitHubRelease;
+    try {
+      release = await this.githubService.createRelease(repository.githubInstallationId, repository.owner, repository.name, data);
+    } catch (error) {
+      // A tag created between the check above and this call still reaches GitHub, which answers
+      // 422. Reported as the same conflict so the race cannot produce a different status.
+      if (error instanceof GitHubApiError && error.upstreamStatus === 422 && error.upstreamBody?.includes('already_exists')) {
+        throw new ConflictError(`Tag already exists: ${data.tagName}`, { operation: 'createRelease', service: 'release' });
+      }
+      throw error;
+    }
 
     serverLogger.info({ repositoryId, repo: repository.fullName, tagName: data.tagName, requestedBy: userId }, 'Release published from the admin UI');
     return release;

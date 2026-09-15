@@ -45,6 +45,6 @@ export class ReleaseController {
   }
 
   private getUserRoles(req: Request): UserRoleAssignment[] {
-    return (req.dbUser?.userRoleAssignments ?? []) as UserRoleAssignment[];
+    return req.dbUser?.userRoleAssignments ?? [];
   }
 }

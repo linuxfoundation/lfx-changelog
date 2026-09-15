@@ -3,10 +3,13 @@
 
 import { BaseApiError } from './base-api.error';
 
+/** Stands in for a GitHub status when the call never produced one, e.g. a transport fault. */
+export const NO_UPSTREAM_STATUS = 0;
+
 const UPSTREAM_STATUS_MAP: Record<number, { status: number; code: string }> = {
   401: { status: 403, code: 'GITHUB_FORBIDDEN' },
   403: { status: 403, code: 'GITHUB_FORBIDDEN' },
-  404: { status: 404, code: 'NOT_FOUND' },
+  404: { status: 404, code: 'GITHUB_NOT_FOUND' },
   422: { status: 422, code: 'GITHUB_VALIDATION_FAILED' },
 };
 
@@ -15,20 +18,21 @@ export class GitHubApiError extends BaseApiError {
   public readonly upstreamBody?: string;
 
   public constructor(
-    message: string,
-    upstreamStatus: number,
-    upstreamBody?: string,
+    message = 'GitHub API request failed',
     options: {
+      upstreamStatus?: number;
+      upstreamBody?: string;
       operation?: string;
       service?: string;
       path?: string;
     } = {}
   ) {
-    const mapped = UPSTREAM_STATUS_MAP[upstreamStatus] ?? { status: 502, code: 'GITHUB_UNAVAILABLE' };
+    const { upstreamStatus = NO_UPSTREAM_STATUS, upstreamBody, ...rest } = options;
+    const mapped = UPSTREAM_STATUS_MAP[upstreamStatus] ?? { status: 502, code: 'GITHUB_SERVICE_ERROR' };
 
     super(message, mapped.status, mapped.code, {
       service: 'github',
-      ...options,
+      ...rest,
     });
 
     this.upstreamStatus = upstreamStatus;

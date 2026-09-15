@@ -50,14 +50,14 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
   });
 
   test.describe('OAuth-Only Enforcement', () => {
-    test('API key auth is rejected on release endpoints (403)', async ({}, testInfo) => {
+    test('API key auth is rejected on /api/releases/repositories/:repoId/target (403)', async ({}, testInfo) => {
       const baseURL = testInfo.project.use.baseURL as string;
 
       const createRes = await superAdminApi.post('/api/api-keys', {
         data: { name: 'release-oauth-only-test', scopes: ['products:read'], expiresInDays: 30 },
       });
       expect(createRes.status()).toBe(201);
-      const { rawKey } = (await createRes.json()).data;
+      const { rawKey, apiKey } = (await createRes.json()).data;
 
       const apiKeyCtx = await createApiKeyContext(rawKey, baseURL);
       try {
@@ -66,22 +66,23 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
         expect((await res.json()).code).toBe('AUTHORIZATION_REQUIRED');
       } finally {
         await apiKeyCtx.dispose();
+        await superAdminApi.delete(`/api/api-keys/${apiKey.id}`);
       }
     });
   });
 
   test.describe('Authorization (403)', () => {
-    test('an editor cannot read release targets', async () => {
+    test('editor cannot GET /api/releases/repositories/:repoId/target (403)', async () => {
       const res = await editorApi.get(`/api/releases/repositories/${MISSING_ID}/target`);
       expect(res.status()).toBe(403);
     });
 
-    test('an editor cannot preview release notes', async () => {
+    test('editor cannot POST /api/releases/repositories/:repoId/notes (403)', async () => {
       const res = await editorApi.post(`/api/releases/repositories/${MISSING_ID}/notes`, { data: { tagName: 'v1.0.0', targetCommitish: 'main' } });
       expect(res.status()).toBe(403);
     });
 
-    test('an editor cannot publish a release', async () => {
+    test('editor cannot POST /api/releases/repositories/:repoId (403)', async () => {
       const res = await editorApi.post(`/api/releases/repositories/${MISSING_ID}`, {
         data: { tagName: 'v1.0.0', targetCommitish: 'main', name: 'v1.0.0', body: 'notes' },
       });
@@ -90,7 +91,7 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
   });
 
   test.describe('Validation (400)', () => {
-    test('rejects a release with no tag', async () => {
+    test('POST /api/releases/repositories/:repoId rejects a missing tagName', async () => {
       const res = await superAdminApi.post(`/api/releases/repositories/${MISSING_ID}`, {
         data: { targetCommitish: 'main', name: 'v1.0.0', body: 'notes' },
       });
@@ -98,21 +99,21 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
       expect((await res.json()).code).toBe('VALIDATION_ERROR');
     });
 
-    test('rejects a blank tag', async () => {
+    test('POST /api/releases/repositories/:repoId rejects a whitespace-only tagName', async () => {
       const res = await superAdminApi.post(`/api/releases/repositories/${MISSING_ID}`, {
         data: { tagName: '   ', targetCommitish: 'main', name: 'v1.0.0', body: 'notes' },
       });
       expect(res.status()).toBe(400);
     });
 
-    test('rejects a release with no target', async () => {
+    test('POST /api/releases/repositories/:repoId rejects a missing targetCommitish', async () => {
       const res = await superAdminApi.post(`/api/releases/repositories/${MISSING_ID}`, {
         data: { tagName: 'v1.0.0', name: 'v1.0.0', body: 'notes' },
       });
       expect(res.status()).toBe(400);
     });
 
-    test('rejects a notes preview with no target', async () => {
+    test('POST /api/releases/repositories/:repoId/notes rejects a missing targetCommitish', async () => {
       const res = await superAdminApi.post(`/api/releases/repositories/${MISSING_ID}/notes`, { data: { tagName: 'v1.0.0' } });
       expect(res.status()).toBe(400);
       expect((await res.json()).code).toBe('VALIDATION_ERROR');
@@ -120,7 +121,7 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
   });
 
   test.describe('Not found (404)', () => {
-    test('an unknown repository is not found, and validation runs first', async () => {
+    test('POST /api/releases/repositories/:repoId returns 404 for an unknown repository, after validation', async () => {
       const res = await superAdminApi.post(`/api/releases/repositories/${MISSING_ID}`, {
         data: { tagName: 'v1.0.0', targetCommitish: 'main', name: 'v1.0.0', body: 'notes' },
       });
@@ -128,12 +129,12 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
       expect((await res.json()).code).toBe('NOT_FOUND');
     });
 
-    test('an unknown repository has no release target', async () => {
+    test('GET /api/releases/repositories/:repoId/target returns 404 for an unknown repository', async () => {
       const res = await superAdminApi.get(`/api/releases/repositories/${MISSING_ID}/target`);
       expect(res.status()).toBe(404);
     });
 
-    test("a repository outside the product admin's products reports 404, not 403", async () => {
+    test("GET /api/releases/repositories/:repoId/target returns 404, not 403, for another product's repository", async () => {
       const listRes = await superAdminApi.get('/api/releases/repositories');
       expect(listRes.status()).toBe(200);
 
