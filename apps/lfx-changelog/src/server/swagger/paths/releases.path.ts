@@ -9,6 +9,8 @@ import {
   GenerateReleaseNotesRequestSchema,
   GeneratedReleaseNotesSchema,
   GitHubReleaseSchema,
+  ReleaseChangesQuerySchema,
+  ReleaseChangesSchema,
   ReleaseTargetSchema,
   RepositoryWithCountsSchema,
   StoredReleaseSchema,
@@ -100,7 +102,8 @@ releaseRegistry.registerPath({
   path: '/api/releases/sync/repo/{repoId}',
   tags: ['Releases'],
   summary: 'Sync releases for a single repository',
-  description: 'Fetches releases from GitHub for a single repository and persists them in the database.\n\n**Required privilege:** SUPER_ADMIN role.',
+  description:
+    'Fetches releases from GitHub for a single repository and persists them in the database.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. A repository the caller does not administer reports 404 rather than 403.',
   security: COOKIE_AUTH,
   request: {
     params: z.object({
@@ -117,8 +120,8 @@ releaseRegistry.registerPath({
       },
     },
     401: { description: 'Unauthorized' },
-    403: { description: 'Forbidden — requires SUPER_ADMIN role' },
-    404: { description: 'Repository not found' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN or higher' },
+    404: { description: 'Repository not found, or the caller is not a PRODUCT_ADMIN for the product that owns it' },
   },
 });
 
@@ -136,6 +139,29 @@ releaseRegistry.registerPath({
       description: 'Release target',
       content: { 'application/json': { schema: createApiResponseSchema(ReleaseTargetSchema) } },
     },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — API key used on a session-only endpoint, or GitHub denied the App access' },
+    404: { description: 'Repository not found, or the caller is not a PRODUCT_ADMIN for the product that owns it' },
+    503: { description: 'GitHub rate limit reached' },
+    502: { description: 'GitHub was unavailable' },
+  },
+});
+
+releaseRegistry.registerPath({
+  method: 'get',
+  path: '/api/releases/repositories/{repoId}/changes',
+  tags: ['Releases'],
+  summary: 'Count changes since the last release',
+  description:
+    'Compares the newest stored release for the repository against the given target and reports how much has landed since, for the create-release form to show before publishing.\n\nWith no previous release every count is null.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository.',
+  security: COOKIE_AUTH,
+  request: { params: repoIdParam, query: ReleaseChangesQuerySchema },
+  responses: {
+    200: {
+      description: 'Change summary',
+      content: { 'application/json': { schema: createApiResponseSchema(ReleaseChangesSchema) } },
+    },
+    400: { description: 'Validation failed' },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — API key used on a session-only endpoint, or GitHub denied the App access' },
     404: { description: 'Repository not found, or the caller is not a PRODUCT_ADMIN for the product that owns it' },

@@ -5,7 +5,16 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, take } from 'rxjs';
 
-import type { ApiResponse, RepositoryWithCounts, StoredRelease } from '@lfx-changelog/shared';
+import type {
+  ApiResponse,
+  CreateReleaseRequest,
+  GeneratedReleaseNotes,
+  GitHubRelease,
+  ReleaseChanges,
+  ReleaseTarget,
+  RepositoryWithCounts,
+  StoredRelease,
+} from '@lfx-changelog/shared';
 import type { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -33,6 +42,35 @@ export class ReleaseService {
 
   public syncRepository(repoId: string): Observable<{ synced: number }> {
     return this.http.post<ApiResponse<{ synced: number }>>(`/api/releases/sync/repo/${repoId}`, {}).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public getReleaseTarget(repoId: string): Observable<ReleaseTarget> {
+    return this.http.get<ApiResponse<ReleaseTarget>>(`/api/releases/repositories/${repoId}/target`).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public getChanges(repoId: string, targetCommitish: string): Observable<ReleaseChanges> {
+    const params = new HttpParams().set('targetCommitish', targetCommitish);
+    return this.http.get<ApiResponse<ReleaseChanges>>(`/api/releases/repositories/${repoId}/changes`, { params }).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public previewNotes(repoId: string, tagName: string, targetCommitish: string): Observable<GeneratedReleaseNotes> {
+    return this.http.post<ApiResponse<GeneratedReleaseNotes>>(`/api/releases/repositories/${repoId}/notes`, { tagName, targetCommitish }).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public createRelease(repoId: string, data: CreateReleaseRequest): Observable<GitHubRelease> {
+    return this.http.post<ApiResponse<GitHubRelease>>(`/api/releases/repositories/${repoId}`, data).pipe(
       map((res) => res.data),
       take(1)
     );

@@ -2,17 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 import { DOCUMENT } from '@angular/common';
-import { Component, computed, DestroyRef, inject, input, OnInit, Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, OnInit, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
+import { CreateReleaseDialogComponent } from '@modules/admin/components/create-release-dialog/create-release-dialog.component';
 import { LinkRepositoriesDialogComponent } from '@modules/admin/components/link-repositories-dialog/link-repositories-dialog.component';
+import { AuthService } from '@services/auth.service';
 import { DialogService } from '@services/dialog.service';
 import { IntegrationsService } from '@services/integrations.service';
 import { ProductService } from '@services/product.service';
+import { ReleaseService } from '@services/release.service';
 import { ToastService } from '@services/toast.service';
+import { SetIncludesPipe } from '@shared/pipes/set-includes.pipe';
+import { TimeAgoPipe } from '@shared/pipes/time-ago.pipe';
 import { catchError, map, of, startWith, Subject, switchMap } from 'rxjs';
 
 import type { ProductRepository } from '@lfx-changelog/shared';
@@ -20,12 +25,14 @@ import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 
 @Component({
   selector: 'lfx-product-repositories-tab',
-  imports: [ButtonComponent, CardComponent, TableComponent, TableColumnDirective],
+  imports: [ButtonComponent, CardComponent, TableComponent, TableColumnDirective, SetIncludesPipe, TimeAgoPipe],
   templateUrl: './product-repositories-tab.component.html',
   styleUrl: './product-repositories-tab.component.css',
 })
 export class ProductRepositoriesTabComponent implements OnInit {
+  private readonly authService = inject(AuthService);
   private readonly productService = inject(ProductService);
+  private readonly releaseService = inject(ReleaseService);
   private readonly integrationsService = inject(IntegrationsService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
@@ -38,6 +45,12 @@ export class ProductRepositoriesTabComponent implements OnInit {
   private readonly refresh$ = new Subject<void>();
 
   private readonly linkedReposState: Signal<LoadingState<ProductRepository[]>> = this.initLinkedReposState();
+
+  // Editors can read this tab but can neither sync nor publish, so both actions are hidden
+  // rather than offered and then rejected. The server remains the authority either way.
+  protected readonly canAdministerProduct = computed(() => this.authService.canAdministerProduct(this.productId()));
+
+  protected readonly syncingRepo = signal<Set<string>>(new Set());
 
   protected readonly linkedRepos = computed(() => this.linkedReposState().data);
   protected readonly loading = computed(() => this.linkedReposState().loading);
@@ -66,6 +79,37 @@ export class ProductRepositoriesTabComponent implements OnInit {
     });
   }
 
+  // No onClose refresh: this table lists the linked repositories themselves, which publishing
+  // does not change, and it shows no release counts that could go stale.
+  protected openCreateRelease(repository: ProductRepository): void {
+    this.dialogService.open({
+      title: 'Create Release',
+      component: CreateReleaseDialogComponent,
+      size: 'lg',
+      inputs: { repository },
+      testId: 'create-release-dialog',
+    });
+  }
+
+  protected syncRepository(repo: ProductRepository): void {
+    this.syncingRepo.update((set) => new Set(set).add(repo.id));
+
+    this.releaseService
+      .syncRepository(repo.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.clearSyncing(repo.id);
+          this.toastService.success('Repository synced');
+          this.refresh$.next();
+        },
+        error: () => {
+          this.clearSyncing(repo.id);
+          this.toastService.error('Failed to sync repository');
+        },
+      });
+  }
+
   protected installOnNewOrg(): void {
     this.integrationsService
       .getGitHubInstallUrl(this.productId())
@@ -89,6 +133,14 @@ export class ProductRepositoriesTabComponent implements OnInit {
         },
         error: () => this.toastService.error('Failed to unlink repository'),
       });
+  }
+
+  private clearSyncing(repoId: string): void {
+    this.syncingRepo.update((set) => {
+      const next = new Set(set);
+      next.delete(repoId);
+      return next;
+    });
   }
 
   private initLinkedReposState(): Signal<LoadingState<ProductRepository[]>> {

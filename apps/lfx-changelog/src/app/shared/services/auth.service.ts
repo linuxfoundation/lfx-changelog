@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { computed, Injectable, signal } from '@angular/core';
-import { UserRole } from '@lfx-changelog/shared';
+import { ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
 
 import type { AuthUser, User } from '@lfx-changelog/shared';
 
@@ -34,5 +34,21 @@ export class AuthService {
   /** Whether the user can write (edit/publish/delete) changelogs for a given product. */
   public canEditProduct(productId: string): boolean {
     return this.hasGlobalAccess() || this.accessibleProductIds().includes(productId);
+  }
+
+  /**
+   * Whether the user administers a product, mirroring `canAdministerProduct` in ReleaseService.
+   * Affordance only — the server remains the authority and answers 404 for products the caller
+   * does not administer.
+   */
+  public canAdministerProduct(productId: string): boolean {
+    const roles = this.dbUser()?.roles ?? [];
+    if (roles.some((r) => r.role === UserRole.SUPER_ADMIN)) return true;
+
+    const minimumLevel = ROLE_HIERARCHY[UserRole.PRODUCT_ADMIN];
+    return roles.some((r) => {
+      const roleLevel = ROLE_HIERARCHY[r.role as UserRole];
+      return roleLevel !== undefined && roleLevel >= minimumLevel && (r.productId === null || r.productId === productId);
+    });
   }
 }
