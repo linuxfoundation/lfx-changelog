@@ -12,7 +12,7 @@ import blogRouter from '../routes/blog.route';
 import changelogRouter from '../routes/changelog.route';
 import chatRouter from '../routes/chat.route';
 import contributorRouter from '../routes/contributor.route';
-import githubRouter, { releaseRouter } from '../routes/github.route';
+import githubRouter from '../routes/github.route';
 import mcpRouter from '../routes/mcp.route';
 import opensearchRouter from '../routes/opensearch.route';
 import productRouter from '../routes/product.route';
@@ -142,7 +142,6 @@ export function setupRoutes(app: Express): void {
   app.use('/api/users', userRouter);
   app.use('/api/github', githubRouter);
   app.use('/api/opensearch', opensearchRouter);
-  app.use('/api/releases', releaseRouter);
   app.use('/api/slack', slackRouter);
 
   // ── API error handlers ────────────────────────────────────────────────

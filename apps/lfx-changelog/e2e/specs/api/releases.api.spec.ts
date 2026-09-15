@@ -7,7 +7,7 @@ import { TEST_FOREIGN_REPOSITORY, TEST_REPOSITORY } from '../../helpers/test-dat
 
 import type { APIRequestContext } from '@playwright/test';
 
-test.describe('Releases API (/api/releases)', () => {
+test.describe('GitHub releases API (/api/github)', () => {
   let unauthApi: APIRequestContext;
   let superAdminApi: APIRequestContext;
   let productAdminApi: APIRequestContext;
@@ -28,76 +28,76 @@ test.describe('Releases API (/api/releases)', () => {
   });
 
   test.describe('Authentication (401)', () => {
-    test('GET /api/releases returns 401 without auth', async () => {
-      const res = await unauthApi.get('/api/releases');
+    test('GET /api/github/releases returns 401 without auth', async () => {
+      const res = await unauthApi.get('/api/github/releases');
       expect(res.status()).toBe(401);
     });
 
-    test('GET /api/releases/repositories returns 401 without auth', async () => {
-      const res = await unauthApi.get('/api/releases/repositories');
+    test('GET /api/github/repositories returns 401 without auth', async () => {
+      const res = await unauthApi.get('/api/github/repositories');
       expect(res.status()).toBe(401);
     });
 
-    test('POST /api/releases/sync/:productId returns 401 without auth', async () => {
-      const res = await unauthApi.post('/api/releases/sync/fake-id');
+    test('POST /api/github/products/:productId/sync returns 401 without auth', async () => {
+      const res = await unauthApi.post('/api/github/products/fake-id/sync');
       expect(res.status()).toBe(401);
     });
 
-    test('POST /api/releases/sync/repo/:repoId returns 401 without auth', async () => {
-      const res = await unauthApi.post('/api/releases/sync/repo/fake-id');
+    test('POST /api/github/repositories/:repoId/sync returns 401 without auth', async () => {
+      const res = await unauthApi.post('/api/github/repositories/fake-id/sync');
       expect(res.status()).toBe(401);
     });
   });
 
   test.describe('Authorization (RBAC)', () => {
-    test('editor can GET /api/releases (200)', async () => {
-      const res = await editorApi.get('/api/releases');
+    test('editor can GET /api/github/releases (200)', async () => {
+      const res = await editorApi.get('/api/github/releases');
       expect(res.status()).toBe(200);
       const body = await res.json();
       expect(body.success).toBe(true);
       expect(Array.isArray(body.data)).toBe(true);
     });
 
-    test('user with no roles gets 403 on GET /api/releases', async () => {
-      const res = await userApi.get('/api/releases');
+    test('user with no roles gets 403 on GET /api/github/releases', async () => {
+      const res = await userApi.get('/api/github/releases');
       expect(res.status()).toBe(403);
     });
 
-    test('editor cannot GET /api/releases/repositories (403 — SUPER_ADMIN only)', async () => {
-      const res = await editorApi.get('/api/releases/repositories');
+    test('editor cannot GET /api/github/repositories (403 — SUPER_ADMIN only)', async () => {
+      const res = await editorApi.get('/api/github/repositories');
       expect(res.status()).toBe(403);
     });
 
-    test('editor cannot POST /api/releases/sync/:productId (403)', async () => {
-      const res = await editorApi.post('/api/releases/sync/fake-id');
+    test('editor cannot POST /api/github/products/:productId/sync (403)', async () => {
+      const res = await editorApi.post('/api/github/products/fake-id/sync');
       expect(res.status()).toBe(403);
     });
 
-    test('editor cannot POST /api/releases/sync/repo/:repoId (403)', async () => {
-      const res = await editorApi.post('/api/releases/sync/repo/fake-id');
+    test('editor cannot POST /api/github/repositories/:repoId/sync (403)', async () => {
+      const res = await editorApi.post('/api/github/repositories/fake-id/sync');
       expect(res.status()).toBe(403);
     });
 
     test('a product admin may sync a repository of a product it administers', async () => {
-      const listRes = await superAdminApi.get('/api/releases/repositories');
+      const listRes = await superAdminApi.get('/api/github/repositories');
       const repositories = (await listRes.json()).data as { id: string; fullName: string }[];
       const owned = repositories.find((repository) => repository.fullName === TEST_REPOSITORY.fullName);
       expect(owned, `seeded repository ${TEST_REPOSITORY.fullName} is missing`).toBeDefined();
 
       // The sync itself calls GitHub, which this environment cannot reach, so only the
       // authorization outcome is asserted: it must not be refused.
-      const res = await productAdminApi.post(`/api/releases/sync/repo/${owned!.id}`);
+      const res = await productAdminApi.post(`/api/github/repositories/${owned!.id}/sync`);
       expect(res.status()).not.toBe(403);
       expect(res.status()).not.toBe(404);
     });
 
     test("a product admin gets 404, not 403, syncing another product's repository", async () => {
-      const listRes = await superAdminApi.get('/api/releases/repositories');
+      const listRes = await superAdminApi.get('/api/github/repositories');
       const repositories = (await listRes.json()).data as { id: string; fullName: string }[];
       const foreign = repositories.find((repository) => repository.fullName === TEST_FOREIGN_REPOSITORY.fullName);
       expect(foreign, `seeded repository ${TEST_FOREIGN_REPOSITORY.fullName} is missing`).toBeDefined();
 
-      const res = await productAdminApi.post(`/api/releases/sync/repo/${foreign!.id}`);
+      const res = await productAdminApi.post(`/api/github/repositories/${foreign!.id}/sync`);
       expect(res.status()).toBe(404);
       expect((await res.json()).code).toBe('NOT_FOUND');
     });
@@ -105,7 +105,7 @@ test.describe('Releases API (/api/releases)', () => {
 
   test.describe('List Releases', () => {
     test('super admin can list releases with valid response structure', async () => {
-      const res = await superAdminApi.get('/api/releases');
+      const res = await superAdminApi.get('/api/github/releases');
       expect(res.status()).toBe(200);
 
       const body = await res.json();
@@ -114,7 +114,7 @@ test.describe('Releases API (/api/releases)', () => {
     });
 
     test('should respect limit parameter', async () => {
-      const res = await superAdminApi.get('/api/releases?limit=1');
+      const res = await superAdminApi.get('/api/github/releases?limit=1');
       expect(res.status()).toBe(200);
 
       const body = await res.json();
@@ -124,7 +124,7 @@ test.describe('Releases API (/api/releases)', () => {
 
   test.describe('List Repositories', () => {
     test('super admin can list repositories with counts', async () => {
-      const res = await superAdminApi.get('/api/releases/repositories');
+      const res = await superAdminApi.get('/api/github/repositories');
       expect(res.status()).toBe(200);
 
       const body = await res.json();
@@ -146,7 +146,7 @@ test.describe('Releases API (/api/releases)', () => {
   test.describe('Sync Endpoints', () => {
     test('sync for non-existent product returns empty result', async () => {
       const fakeProductId = '00000000-0000-0000-0000-000000000000';
-      const res = await superAdminApi.post(`/api/releases/sync/${fakeProductId}`);
+      const res = await superAdminApi.post(`/api/github/products/${fakeProductId}/sync`);
       expect(res.status()).toBe(200);
 
       const body = await res.json();
@@ -156,7 +156,7 @@ test.describe('Releases API (/api/releases)', () => {
 
     test('sync for non-existent repository returns 404', async () => {
       const fakeRepoId = '00000000-0000-0000-0000-000000000000';
-      const res = await superAdminApi.post(`/api/releases/sync/repo/${fakeRepoId}`);
+      const res = await superAdminApi.post(`/api/github/repositories/${fakeRepoId}/sync`);
       expect(res.status()).toBe(404);
     });
   });

@@ -40,7 +40,7 @@ Each row holds the GitHub identity (login, avatar, profile URL), all discovered 
 
 ## Sync
 
-Triggered from the admin UI ("Sync from GitHub") or `POST /api/contributors/sync`. **Always scoped to one product or one repository** — exactly one of `productId` or `repositoryId` is required. An unscoped sync would crawl every tracked repository inline in the HTTP request and exceed proxy timeouts, so the endpoint refuses it, mirroring release sync (`POST /api/releases/sync/:productId`). On the admin page the sync button acts on the selected product and stays disabled until one is chosen.
+Triggered from the admin UI ("Sync from GitHub") or `POST /api/contributors/sync`. **Always scoped to one product or one repository** — exactly one of `productId` or `repositoryId` is required. An unscoped sync would crawl every tracked repository inline in the HTTP request and exceed proxy timeouts, so the endpoint refuses it, mirroring release sync (`POST /api/github/products/:productId/sync`). On the admin page the sync button acts on the selected product and stays disabled until one is chosen.
 
 ```text
 1. Load the tracked repositories for the given product (or the single repository)

@@ -23,32 +23,32 @@ export class ReleaseService {
 
   public getLatest(limit = 5): Observable<StoredRelease[]> {
     const params = new HttpParams().set('limit', limit.toString());
-    return this.http.get<ApiResponse<StoredRelease[]>>('/api/releases', { params }).pipe(map((res) => res.data));
+    return this.http.get<ApiResponse<StoredRelease[]>>('/api/github/releases', { params }).pipe(map((res) => res.data));
   }
 
   public getRepositories(): Observable<RepositoryWithCounts[]> {
-    return this.http.get<ApiResponse<RepositoryWithCounts[]>>('/api/releases/repositories').pipe(
+    return this.http.get<ApiResponse<RepositoryWithCounts[]>>('/api/github/repositories').pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public syncProduct(productId: string): Observable<{ synced: number }> {
-    return this.http.post<ApiResponse<{ synced: number }>>(`/api/releases/sync/${productId}`, {}).pipe(
+    return this.http.post<ApiResponse<{ synced: number }>>(`/api/github/products/${productId}/sync`, {}).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public syncRepository(repoId: string): Observable<{ synced: number }> {
-    return this.http.post<ApiResponse<{ synced: number }>>(`/api/releases/sync/repo/${repoId}`, {}).pipe(
+    return this.http.post<ApiResponse<{ synced: number }>>(`/api/github/repositories/${repoId}/sync`, {}).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public getReleaseTarget(repoId: string): Observable<ReleaseTarget> {
-    return this.http.get<ApiResponse<ReleaseTarget>>(`/api/releases/repositories/${repoId}/target`).pipe(
+    return this.http.get<ApiResponse<ReleaseTarget>>(`/api/github/repositories/${repoId}/release-target`).pipe(
       map((res) => res.data),
       take(1)
     );
@@ -56,21 +56,21 @@ export class ReleaseService {
 
   public getChanges(repoId: string, targetCommitish: string): Observable<ReleaseChanges> {
     const params = new HttpParams().set('targetCommitish', targetCommitish);
-    return this.http.get<ApiResponse<ReleaseChanges>>(`/api/releases/repositories/${repoId}/changes`, { params }).pipe(
+    return this.http.get<ApiResponse<ReleaseChanges>>(`/api/github/repositories/${repoId}/changes`, { params }).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public previewNotes(repoId: string, tagName: string, targetCommitish: string): Observable<GeneratedReleaseNotes> {
-    return this.http.post<ApiResponse<GeneratedReleaseNotes>>(`/api/releases/repositories/${repoId}/notes`, { tagName, targetCommitish }).pipe(
+    return this.http.post<ApiResponse<GeneratedReleaseNotes>>(`/api/github/repositories/${repoId}/release-notes`, { tagName, targetCommitish }).pipe(
       map((res) => res.data),
       take(1)
     );
   }
 
   public createRelease(repoId: string, data: CreateReleaseRequest): Observable<GitHubRelease> {
-    return this.http.post<ApiResponse<GitHubRelease>>(`/api/releases/repositories/${repoId}`, data).pipe(
+    return this.http.post<ApiResponse<GitHubRelease>>(`/api/github/repositories/${repoId}/releases`, data).pipe(
       map((res) => res.data),
       take(1)
     );
