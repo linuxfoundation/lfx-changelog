@@ -87,8 +87,9 @@ export class RepositoryListComponent {
       inputs: { repository },
       testId: 'create-release-dialog',
       onClose: (result) => {
-        // The release.published webhook writes the row, so the new count may lag a moment.
-        if (result === 'created') this.refresh$.next();
+        // Refreshing here would race the release.published webhook and usually re-read the old
+        // count, with nothing to correct it. Syncing pulls the release from GitHub directly.
+        if (result === 'created') this.syncRepository(repository.id);
       },
     });
   }

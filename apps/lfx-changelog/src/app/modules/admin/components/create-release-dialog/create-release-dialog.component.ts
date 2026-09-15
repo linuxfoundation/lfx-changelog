@@ -62,6 +62,11 @@ export class CreateReleaseDialogComponent {
 
     this.error.set('');
     this.saving.set(true);
+    // Publishing creates a public tag, so the dialog refuses to be dismissed until it settles.
+    // takeUntilDestroyed is belt-and-braces: a destroyed dialog must never reach the shared
+    // DialogService and close whichever dialog happens to be open by then.
+    this.dialogService.busy.set(true);
+
     this.releaseService
       .createRelease(this.repository().id, {
         tagName: this.tagControl.value.trim(),
@@ -70,12 +75,15 @@ export class CreateReleaseDialogComponent {
         body: this.bodyControl.value,
         prerelease: this.prereleaseControl.value,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (release) => {
+          this.dialogService.busy.set(false);
           this.toastService.success(`Published ${release.tag_name}`);
           this.dialogService.close('created');
         },
         error: (err: unknown) => {
+          this.dialogService.busy.set(false);
           this.saving.set(false);
           this.error.set(this.messageFor(err));
         },

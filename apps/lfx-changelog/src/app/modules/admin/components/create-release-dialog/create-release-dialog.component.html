@@ -67,7 +67,7 @@
   }
 
   <div class="flex justify-end gap-2 pt-2">
-    <lfx-button variant="secondary" size="sm" (clicked)="dialogService.close()">Cancel</lfx-button>
+    <lfx-button variant="secondary" size="sm" [disabled]="saving()" (clicked)="dialogService.close()">Cancel</lfx-button>
     <lfx-button data-testid="create-release-submit" variant="primary" size="sm" [loading]="saving()" [disabled]="!canPublish()" (clicked)="publish()">
       Publish Release
     </lfx-button>
