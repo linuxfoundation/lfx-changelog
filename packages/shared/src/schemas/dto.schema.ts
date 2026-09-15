@@ -164,6 +164,14 @@ export const GenerateReleaseNotesRequestSchema = z
 
 export type GenerateReleaseNotesRequest = z.infer<typeof GenerateReleaseNotesRequestSchema>;
 
+export const ReleaseChangesQuerySchema = z
+  .object({
+    targetCommitish: z.string().trim().min(1),
+  })
+  .openapi('ReleaseChangesQuery');
+
+export type ReleaseChangesQuery = z.infer<typeof ReleaseChangesQuerySchema>;
+
 export const CreateReleaseRequestSchema = z
   .object({
     tagName: z.string().trim().min(1).openapi({ description: 'Tag to create, e.g. v1.4.0. Must not already exist on the repository.' }),

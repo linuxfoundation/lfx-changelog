@@ -134,12 +134,25 @@ export const ReleaseTargetSchema = z
     fullName: z.string(),
     defaultBranch: z.string(),
     latestTag: z.string().nullable(),
+    latestReleaseUrl: z.string().nullable(),
     suggestedTag: z.string(),
     branches: z.array(GitHubBranchSchema),
   })
   .openapi('ReleaseTarget');
 
 export type ReleaseTarget = z.infer<typeof ReleaseTargetSchema>;
+
+export const ReleaseChangesSchema = z
+  .object({
+    previousTag: z.string().nullable(),
+    previousReleaseUrl: z.string().nullable(),
+    /** Null when there is no previous release to compare against. */
+    totalCommits: z.number().nullable(),
+    compareUrl: z.string().nullable(),
+  })
+  .openapi('ReleaseChanges');
+
+export type ReleaseChanges = z.infer<typeof ReleaseChangesSchema>;
 
 export const GitHubReleaseSchema = z
   .object({

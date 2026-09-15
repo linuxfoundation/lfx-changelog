@@ -10,6 +10,7 @@ import type {
   CreateReleaseRequest,
   GeneratedReleaseNotes,
   GitHubRelease,
+  ReleaseChanges,
   ReleaseTarget,
   RepositoryWithCounts,
   StoredRelease,
@@ -48,6 +49,14 @@ export class ReleaseService {
 
   public getReleaseTarget(repoId: string): Observable<ReleaseTarget> {
     return this.http.get<ApiResponse<ReleaseTarget>>(`/api/releases/repositories/${repoId}/target`).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public getChanges(repoId: string, targetCommitish: string): Observable<ReleaseChanges> {
+    const params = new HttpParams().set('targetCommitish', targetCommitish);
+    return this.http.get<ApiResponse<ReleaseChanges>>(`/api/releases/repositories/${repoId}/changes`, { params }).pipe(
       map((res) => res.data),
       take(1)
     );

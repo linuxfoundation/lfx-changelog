@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CreateReleaseRequestSchema, GenerateReleaseNotesRequestSchema, UserRole } from '@lfx-changelog/shared';
+import { CreateReleaseRequestSchema, GenerateReleaseNotesRequestSchema, ReleaseChangesQuerySchema, UserRole } from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { GitHubController } from '../controllers/github.controller';
@@ -34,6 +34,12 @@ releaseRouter.post('/sync/repo/:repoId', authorize({ role: UserRole.PRODUCT_ADMI
 // checks the caller administers the product that owns the repository.
 releaseRouter.get('/repositories/:repoId/target', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
   releaseController.getReleaseTarget(req, res, next)
+);
+releaseRouter.get(
+  '/repositories/:repoId/changes',
+  authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }),
+  validate({ query: ReleaseChangesQuerySchema }),
+  (req, res, next) => releaseController.getChanges(req, res, next)
 );
 releaseRouter.post(
   '/repositories/:repoId/notes',

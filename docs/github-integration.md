@@ -65,11 +65,12 @@ Releases can be published from the admin UI, which creates them on GitHub. The t
 
 Nothing is persisted by the create call. The `release.published` webhook stores the row exactly as it would for a release created on github.com, so a release published here and one published there are indistinguishable in the database.
 
-| Method | Path                                        | Auth                       | Description                             |
-| ------ | ------------------------------------------- | -------------------------- | --------------------------------------- |
-| GET    | `/api/releases/repositories/:repoId/target` | OAuth only (product_admin) | Branches, default branch, suggested tag |
-| POST   | `/api/releases/repositories/:repoId/notes`  | OAuth only (product_admin) | Preview GitHub-generated notes          |
-| POST   | `/api/releases/repositories/:repoId`        | OAuth only (product_admin) | Publish the release                     |
+| Method | Path                                         | Auth                       | Description                               |
+| ------ | -------------------------------------------- | -------------------------- | ----------------------------------------- |
+| GET    | `/api/releases/repositories/:repoId/target`  | OAuth only (product_admin) | Branches, default branch, suggested tag   |
+| GET    | `/api/releases/repositories/:repoId/changes` | OAuth only (product_admin) | Commits and merges since the last release |
+| POST   | `/api/releases/repositories/:repoId/notes`   | OAuth only (product_admin) | Preview GitHub-generated notes            |
+| POST   | `/api/releases/repositories/:repoId`         | OAuth only (product_admin) | Publish the release                       |
 
 Authorization is per repository: the caller must hold `product_admin` (or higher) on the product that owns it. The route applies the global role check and the service then re-checks the product, so a repository outside the caller's products returns `404` rather than `403` --- the endpoints cannot be used to enumerate repositories. API keys are rejected; session authentication only.
 

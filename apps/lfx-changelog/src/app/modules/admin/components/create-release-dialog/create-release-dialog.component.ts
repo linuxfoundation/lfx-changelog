@@ -13,7 +13,7 @@ import { ReleaseService } from '@services/release.service';
 import { ToastService } from '@services/toast.service';
 import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, of, startWith, switchMap, tap } from 'rxjs';
 
-import type { GeneratedReleaseNotes, ProductRepository, ReleaseTarget } from '@lfx-changelog/shared';
+import type { GeneratedReleaseNotes, ProductRepository, ReleaseChanges, ReleaseTarget } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
 
 @Component({
@@ -50,11 +50,14 @@ export class CreateReleaseDialogComponent {
   private readonly notesEdited = signal(false);
 
   protected readonly target = signal<ReleaseTarget | null>(null);
+  protected readonly changes = signal<ReleaseChanges | null>(null);
+  protected readonly loadingChanges = signal(false);
   protected readonly branchOptions: Signal<SelectOption[]> = this.initBranchOptions();
   protected readonly canPublish: Signal<boolean> = this.initCanPublish();
 
   public constructor() {
     this.loadTarget();
+    this.loadChanges();
     this.autoFillNotes();
     this.trackManualNoteEdits();
   }
@@ -130,6 +133,32 @@ export class CreateReleaseDialogComponent {
         this.tagControl.setValue(target.suggestedTag);
         this.nameControl.setValue(target.suggestedTag);
         this.loading.set(false);
+      });
+  }
+
+  // Reflects the selected branch, so it refetches when the target changes rather than only
+  // describing the default branch the form opened on.
+  private loadChanges(): void {
+    this.targetControl.valueChanges
+      .pipe(
+        debounceTime(CreateReleaseDialogComponent.notesDebounceMs),
+        distinctUntilChanged(),
+        filter((target) => target.length > 0),
+        tap(() => this.loadingChanges.set(true)),
+        switchMap((target) =>
+          this.releaseService.getChanges(this.repository().id, target).pipe(
+            catchError(() => {
+              // Informational only — a failure here must not block publishing.
+              this.loadingChanges.set(false);
+              return of(null as ReleaseChanges | null);
+            })
+          )
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((changes) => {
+        this.loadingChanges.set(false);
+        this.changes.set(changes);
       });
   }
 
