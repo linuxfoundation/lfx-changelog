@@ -75,17 +75,6 @@ export class GitHubController {
     }
   }
 
-  public async syncRepositoryReleases(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const repoId = req.params['repoId'] as string;
-      const repo = await this.productService.findRepositoryById(repoId);
-      const synced = await this.githubService.syncReleasesForRepository(repo);
-      res.json({ success: true, data: { synced } });
-    } catch (error) {
-      next(error);
-    }
-  }
-
   public async listRepositoriesWithCounts(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const repos = await this.productService.findAllRepositoriesWithCounts();

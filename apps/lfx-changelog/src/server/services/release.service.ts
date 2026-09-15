@@ -72,6 +72,12 @@ export class ReleaseService {
     return release;
   }
 
+  /** Pulls the repository's releases from GitHub. Scoped the same way publishing is. */
+  public async syncRepository(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<number> {
+    const repository = await this.requireReleasableRepository(repositoryId, userRoles);
+    return this.githubService.syncReleasesForRepository(repository);
+  }
+
   // ── Private helpers ─────────────────────────
 
   // A repository outside the caller's products reports 404 rather than 403, so the endpoint
