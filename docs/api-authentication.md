@@ -131,7 +131,7 @@ The API is organized into three categories based on authentication requirements:
 - **Protected** (`/api/changelogs/*`, `/api/products/*`) --- accepts both OAuth sessions and API keys. Each endpoint declares which scope and role it requires. See the interactive [Swagger UI](https://changelog.lfx.dev/docs) for the full list of endpoints, required scopes, and request/response schemas.
 - **OAuth-only** (`/api/users/*`, `/api/api-keys/*`, `/api/ai/*`, `/api/chat/*`, `/api/github/*`, `/api/releases/repositories/:repoId*`) --- browser session only. These endpoints reject API key authentication because they involve user management, key lifecycle, AI chat conversations, release publishing, or internal integrations that should not be accessed programmatically.
 
-Note that `/api/releases` is the one prefix that mixes the two: reading and syncing releases accepts API keys, while the release **creation** endpoints under `/api/releases/repositories/:repoId` are OAuth-only. Publishing a release writes a git ref on GitHub, so it is restricted to the application UI. See [GitHub Integration](github-integration.md#creating-releases).
+`/api/releases/*` is OAuth-only in practice even though it is not a user-management prefix: none of its routes declare an API key scope, and `authorize()` rejects API key requests on any route that declares none. The release **creation** endpoints under `/api/releases/repositories/:repoId` additionally set `oauthOnly`, which rejects API keys explicitly and checks the request Origin on mutations, because publishing a release writes a git ref on GitHub. See [GitHub Integration](github-integration.md#creating-releases).
 
 ## How Authorization Works
 

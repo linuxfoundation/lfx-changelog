@@ -15,7 +15,7 @@ import {
   createApiResponseSchema,
 } from '@lfx-changelog/shared';
 
-import { API_KEY_AUTH, COOKIE_AUTH } from '../constants';
+import { COOKIE_AUTH } from '../constants';
 
 export const releaseRegistry = new OpenAPIRegistry();
 
@@ -27,7 +27,7 @@ releaseRegistry.registerPath({
   tags: ['Releases'],
   summary: 'List latest releases',
   description: 'Returns the latest non-draft releases from all linked GitHub repositories, sorted by publish date.',
-  security: API_KEY_AUTH,
+  security: COOKIE_AUTH,
   request: {
     query: z.object({
       limit: z.coerce.number().int().min(1).max(100).optional().openapi({ description: 'Maximum results to return (default 20, max 100)' }),
@@ -54,7 +54,7 @@ releaseRegistry.registerPath({
   summary: 'Sync releases for a product',
   description:
     'Fetches releases from GitHub for all linked repositories of a product and persists them in the database.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: API_KEY_AUTH,
+  security: COOKIE_AUTH,
   request: {
     params: z.object({
       productId: z.string().openapi({ description: 'Product ID to sync releases for' }),
@@ -80,7 +80,7 @@ releaseRegistry.registerPath({
   tags: ['Releases'],
   summary: 'List all repositories with release counts',
   description: 'Returns all linked GitHub repositories with their release counts and last sync timestamps.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: API_KEY_AUTH,
+  security: COOKIE_AUTH,
   responses: {
     200: {
       description: 'List of repositories with counts',
@@ -101,7 +101,7 @@ releaseRegistry.registerPath({
   tags: ['Releases'],
   summary: 'Sync releases for a single repository',
   description: 'Fetches releases from GitHub for a single repository and persists them in the database.\n\n**Required privilege:** SUPER_ADMIN role.',
-  security: API_KEY_AUTH,
+  security: COOKIE_AUTH,
   request: {
     params: z.object({
       repoId: z.string().openapi({ description: 'Repository ID to sync releases for' }),
@@ -137,8 +137,9 @@ releaseRegistry.registerPath({
       content: { 'application/json': { schema: createApiResponseSchema(ReleaseTargetSchema) } },
     },
     401: { description: 'Unauthorized' },
-    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks access' },
-    404: { description: 'Repository not found, or not one the caller administers' },
+    403: { description: 'Forbidden — API key used on a session-only endpoint, or GitHub denied the App access' },
+    404: { description: 'Repository not found, or the caller is not a PRODUCT_ADMIN for the product that owns it' },
+    503: { description: 'GitHub rate limit reached' },
     502: { description: 'GitHub was unavailable' },
   },
 });
@@ -159,9 +160,10 @@ releaseRegistry.registerPath({
     },
     400: { description: 'Validation failed' },
     401: { description: 'Unauthorized' },
-    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks access' },
-    404: { description: 'Repository not found, or not one the caller administers' },
+    403: { description: 'Forbidden — API key used on a session-only endpoint, or GitHub denied the App access' },
+    404: { description: 'Repository not found, or the caller is not a PRODUCT_ADMIN for the product that owns it' },
     422: { description: 'GitHub rejected the request, most commonly an unknown target branch or commit' },
+    503: { description: 'GitHub rate limit reached' },
     502: { description: 'GitHub was unavailable' },
   },
 });
@@ -182,10 +184,11 @@ releaseRegistry.registerPath({
     },
     400: { description: 'Validation failed' },
     401: { description: 'Unauthorized' },
-    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or the GitHub App lacks Contents: write' },
-    404: { description: 'Repository not found, or not one the caller administers' },
+    403: { description: 'Forbidden — API key used on a session-only endpoint, or the GitHub App lacks Contents: write' },
+    404: { description: 'Repository not found, or the caller is not a PRODUCT_ADMIN for the product that owns it' },
     409: { description: 'The tag already exists on the repository' },
     422: { description: 'GitHub rejected the release, most commonly an unknown target branch or commit' },
+    503: { description: 'GitHub rate limit reached' },
     502: { description: 'GitHub was unavailable' },
   },
 });

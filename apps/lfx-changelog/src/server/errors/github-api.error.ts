@@ -22,13 +22,19 @@ export class GitHubApiError extends BaseApiError {
     options: {
       upstreamStatus?: number;
       upstreamBody?: string;
+      rateLimited?: boolean;
       operation?: string;
       service?: string;
       path?: string;
     } = {}
   ) {
-    const { upstreamStatus = NO_UPSTREAM_STATUS, upstreamBody, ...rest } = options;
-    const mapped = UPSTREAM_STATUS_MAP[upstreamStatus] ?? { status: 502, code: 'GITHUB_SERVICE_ERROR' };
+    const { upstreamStatus = NO_UPSTREAM_STATUS, upstreamBody, rateLimited, ...rest } = options;
+
+    // GitHub answers 403 for rate limits as well as permissions, so a limit must not be
+    // reported as GITHUB_FORBIDDEN — it is transient and the caller should retry.
+    const mapped = rateLimited
+      ? { status: 503, code: 'GITHUB_RATE_LIMITED' }
+      : (UPSTREAM_STATUS_MAP[upstreamStatus] ?? { status: 502, code: 'GITHUB_SERVICE_ERROR' });
 
     super(message, mapped.status, mapped.code, {
       service: 'github',

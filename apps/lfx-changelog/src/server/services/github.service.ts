@@ -245,7 +245,9 @@ export class GitHubService {
 
   public async tagExists(installationId: number, owner: string, repo: string, tagName: string): Promise<boolean> {
     try {
-      await this.repoRequest<unknown>(installationId, owner, repo, `/git/ref/tags/${encodeURIComponent(tagName)}`, 'Failed to look up tag');
+      await this.repoRequest<unknown>(installationId, owner, repo, `/git/ref/tags/${encodeURIComponent(tagName)}`, 'Failed to look up tag', {
+        expect404: true,
+      });
       return true;
     } catch (error) {
       if (error instanceof GitHubApiError && error.upstreamStatus === 404) {
@@ -257,9 +259,11 @@ export class GitHubService {
 
   public async generateReleaseNotes(installationId: number, owner: string, repo: string, input: GenerateReleaseNotesInput): Promise<GeneratedReleaseNotes> {
     return this.repoRequest<GeneratedReleaseNotes>(installationId, owner, repo, '/releases/generate-notes', 'Failed to generate release notes', {
-      tag_name: input.tagName,
-      target_commitish: input.targetCommitish,
-      ...(input.previousTagName ? { previous_tag_name: input.previousTagName } : {}),
+      body: {
+        tag_name: input.tagName,
+        target_commitish: input.targetCommitish,
+        ...(input.previousTagName ? { previous_tag_name: input.previousTagName } : {}),
+      },
     });
   }
 
@@ -267,12 +271,14 @@ export class GitHubService {
   // app writes a git ref — the App installation needs Contents: write.
   public async createRelease(installationId: number, owner: string, repo: string, input: CreateReleaseInput): Promise<GitHubRelease> {
     const release = await this.repoRequest<GitHubRelease>(installationId, owner, repo, '/releases', 'Failed to create release', {
-      tag_name: input.tagName,
-      target_commitish: input.targetCommitish,
-      name: input.name,
-      body: input.body,
-      draft: false,
-      prerelease: input.prerelease ?? false,
+      body: {
+        tag_name: input.tagName,
+        target_commitish: input.targetCommitish,
+        name: input.name,
+        body: input.body,
+        draft: false,
+        prerelease: input.prerelease ?? false,
+      },
     });
 
     serverLogger.info({ owner, repo, tagName: input.tagName, targetCommitish: input.targetCommitish }, 'Created GitHub release');
@@ -593,8 +599,16 @@ export class GitHubService {
   // Shared request path for repository-scoped release calls. A body makes it a POST. Unlike the
   // older methods above, failures become GitHubApiError so the caller keeps GitHub's status
   // instead of collapsing every fault into a 500.
-  private async repoRequest<T>(installationId: number, owner: string, repo: string, path: string, errorMessage: string, body?: unknown): Promise<T> {
+  private async repoRequest<T>(
+    installationId: number,
+    owner: string,
+    repo: string,
+    path: string,
+    errorMessage: string,
+    options: { body?: unknown; expect404?: boolean } = {}
+  ): Promise<T> {
     this.validateInstallationId(installationId);
+    const { body, expect404 = false } = options;
 
     let response: Response;
     try {
@@ -618,15 +632,18 @@ export class GitHubService {
 
     if (!response.ok) {
       const text = await response.text();
+      const retryAfter = response.headers.get('retry-after');
+      const rateLimited = response.status === 403 && (response.headers.get('x-ratelimit-remaining') === '0' || retryAfter !== null);
 
-      // A 404 is the expected answer for existence checks, so it is not logged as a fault.
-      if (response.status === 404) {
+      // Only a caller that treats 404 as an answer, rather than a fault, skips the error log —
+      // everywhere else a 404 means the App lost access, which must stay in the audit trail.
+      if (expect404 && response.status === 404) {
         serverLogger.debug({ status: response.status, owner, repo, path }, errorMessage);
       } else {
-        serverLogger.error({ status: response.status, body: text, owner, repo, path }, errorMessage);
+        serverLogger.error({ status: response.status, body: text, owner, repo, path, rateLimited, retryAfter }, errorMessage);
       }
 
-      throw new GitHubApiError(errorMessage, { upstreamStatus: response.status, upstreamBody: text });
+      throw new GitHubApiError(errorMessage, { upstreamStatus: response.status, upstreamBody: text, rateLimited });
     }
 
     return response.json() as Promise<T>;

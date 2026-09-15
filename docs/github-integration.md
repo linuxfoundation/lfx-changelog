@@ -77,17 +77,22 @@ Releases are always published, never drafted. A draft would fire GitHub's `creat
 
 Suggested tags come from the newest stored release for the repository, patch-bumped, preserving a leading `v` when the previous tag used one.
 
-The tag is checked before publishing and an existing one is rejected with `409`. GitHub would otherwise accept the release and silently ignore `targetCommitish`, publishing at whatever commit the existing tag points to instead of the branch the author selected. A tag created in the gap between that check and the publish call is caught from GitHub's own response and reported as the same `409`.
+The tag is checked before publishing and an existing one is rejected with `409`. GitHub would otherwise accept the release and silently ignore `targetCommitish`, publishing at whatever commit the existing tag points to instead of the branch the author selected.
+
+That check is not atomic, so the guarantee holds up to a race rather than absolutely. If a release for the tag appears between the check and the publish call, GitHub answers `422 already_exists` and that is reported as the same `409`. If only the _tag_ appears in that window, with no release attached, GitHub publishes against it and returns success --- the one case where the selected target is not the commit released. Closing it entirely would mean creating the ref first and cleaning it up when publishing fails; the window is a single request wide and has not been judged worth that.
 
 ### Failure modes
 
-| GitHub response | API response                   | Usual cause                                     |
-| --------------- | ------------------------------ | ----------------------------------------------- |
-| 422 or none     | 409 `CONFLICT`                 | The tag already exists                          |
-| 422             | 422 `GITHUB_VALIDATION_FAILED` | Unknown target branch or commit                 |
-| 403 / 401       | 403 `GITHUB_FORBIDDEN`         | The App lacks `Contents: write`, or repo access |
-| 404             | 404 `GITHUB_NOT_FOUND`         | The App cannot see the repository               |
-| 5xx / no reply  | 502 `GITHUB_SERVICE_ERROR`     | GitHub is unavailable, or the token call failed |
+| GitHub response     | API response                   | Usual cause                                     |
+| ------------------- | ------------------------------ | ----------------------------------------------- |
+| 422 or none         | 409 `CONFLICT`                 | The tag already exists                          |
+| 422                 | 422 `GITHUB_VALIDATION_FAILED` | Unknown target branch or commit                 |
+| 403 / 401           | 403 `GITHUB_FORBIDDEN`         | The App lacks `Contents: write`, or repo access |
+| 403 + limit headers | 503 `GITHUB_RATE_LIMITED`      | Rate limited; retryable, so not a 403           |
+| 404                 | 404 `GITHUB_NOT_FOUND`         | The App cannot see the repository               |
+| 5xx / no reply      | 502 `GITHUB_SERVICE_ERROR`     | GitHub is unavailable, or the token call failed |
+
+GitHub answers `403` for rate limits as well as permission failures, so a response carrying `x-ratelimit-remaining: 0` or `retry-after` is classified as the transient case rather than reported as a permissions problem.
 
 These statuses apply to the three endpoints above. The older read and sync methods on `GitHubService` predate this mapping and still surface upstream failures as `500`.
 
