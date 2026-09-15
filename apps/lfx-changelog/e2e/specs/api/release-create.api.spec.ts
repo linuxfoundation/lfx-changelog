@@ -36,6 +36,11 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
       expect((await res.json()).code).toBe('AUTHENTICATION_REQUIRED');
     });
 
+    test('GET /api/releases/repositories/:repoId/changes returns 401 without auth', async () => {
+      const res = await unauthApi.get(`/api/releases/repositories/${MISSING_ID}/changes?targetCommitish=main`);
+      expect(res.status()).toBe(401);
+    });
+
     test('POST /api/releases/repositories/:repoId/notes returns 401 without auth', async () => {
       const res = await unauthApi.post(`/api/releases/repositories/${MISSING_ID}/notes`, { data: { tagName: 'v1.0.0', targetCommitish: 'main' } });
       expect(res.status()).toBe(401);
@@ -77,6 +82,11 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
       expect(res.status()).toBe(403);
     });
 
+    test('editor cannot GET /api/releases/repositories/:repoId/changes (403)', async () => {
+      const res = await editorApi.get(`/api/releases/repositories/${MISSING_ID}/changes?targetCommitish=main`);
+      expect(res.status()).toBe(403);
+    });
+
     test('editor cannot POST /api/releases/repositories/:repoId/notes (403)', async () => {
       const res = await editorApi.post(`/api/releases/repositories/${MISSING_ID}/notes`, { data: { tagName: 'v1.0.0', targetCommitish: 'main' } });
       expect(res.status()).toBe(403);
@@ -113,6 +123,12 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
       expect(res.status()).toBe(400);
     });
 
+    test('GET /api/releases/repositories/:repoId/changes rejects a missing targetCommitish', async () => {
+      const res = await superAdminApi.get(`/api/releases/repositories/${MISSING_ID}/changes`);
+      expect(res.status()).toBe(400);
+      expect((await res.json()).code).toBe('VALIDATION_ERROR');
+    });
+
     test('POST /api/releases/repositories/:repoId/notes rejects a missing targetCommitish', async () => {
       const res = await superAdminApi.post(`/api/releases/repositories/${MISSING_ID}/notes`, { data: { tagName: 'v1.0.0' } });
       expect(res.status()).toBe(400);
@@ -127,6 +143,11 @@ test.describe('Release creation API (/api/releases/repositories)', () => {
       });
       expect(res.status()).toBe(404);
       expect((await res.json()).code).toBe('NOT_FOUND');
+    });
+
+    test('GET /api/releases/repositories/:repoId/changes returns 404 for an unknown repository', async () => {
+      const res = await superAdminApi.get(`/api/releases/repositories/${MISSING_ID}/changes?targetCommitish=main`);
+      expect(res.status()).toBe(404);
     });
 
     test('GET /api/releases/repositories/:repoId/target returns 404 for an unknown repository', async () => {

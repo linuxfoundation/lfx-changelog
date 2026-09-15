@@ -29,7 +29,7 @@ export class DialogOutletComponent {
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     if (this.dialogService.visible()) {
-      this.dialogService.close();
+      this.dialogService.requestClose();
     }
   }
 }

@@ -39,6 +39,46 @@ test.describe('Admin Repository List', () => {
   });
 });
 
+/**
+ * The dialog loads its branches from GitHub, which the E2E environment has no credentials for,
+ * so these cover the wiring and the failure path rather than a successful publish.
+ */
+test.describe('Admin Repository List — create release dialog', () => {
+  let repoListPage: RepositoryListPage;
+
+  test.beforeEach(async ({ page }) => {
+    repoListPage = new RepositoryListPage(page);
+    await repoListPage.goto();
+  });
+
+  test('should offer a Release action on every repository row', async () => {
+    await expect(repoListPage.groupsContainer).toBeVisible();
+    expect(await repoListPage.getReleaseButtons().count()).toBeGreaterThan(0);
+  });
+
+  test('should open the create release dialog', async () => {
+    await repoListPage.getReleaseButtons().first().click();
+    await expect(repoListPage.releaseDialog).toBeVisible();
+  });
+
+  test('should surface a readable error rather than spinning forever when GitHub is unreachable', async () => {
+    await repoListPage.getReleaseButtons().first().click();
+    await expect(repoListPage.releaseDialog).toBeVisible();
+
+    await expect(repoListPage.releaseDialogError).toBeVisible({ timeout: 15000 });
+    await expect(repoListPage.releaseDialogLoading).not.toBeVisible();
+  });
+
+  test('should keep publish disabled while the form cannot be submitted', async () => {
+    await repoListPage.getReleaseButtons().first().click();
+    await expect(repoListPage.releaseDialog).toBeVisible();
+    await expect(repoListPage.releaseDialogError).toBeVisible({ timeout: 15000 });
+
+    // The target never loaded, so there is nothing valid to publish.
+    await expect(repoListPage.releaseSubmit).toBeDisabled();
+  });
+});
+
 test.describe('RBAC — Repository List Access', () => {
   test.describe('product admin', () => {
     test.use({ storageState: './e2e/.auth/product-admin.json' });

@@ -4,11 +4,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
+import { DialogService } from '@services/dialog.service';
 import { ReleaseService } from '@services/release.service';
 import { ToastService } from '@services/toast.service';
 import { SetIncludesPipe } from '@shared/pipes/set-includes.pipe';
 import { TimeAgoPipe } from '@shared/pipes/time-ago.pipe';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
+import { CreateReleaseDialogComponent } from '../components/create-release-dialog/create-release-dialog.component';
 
 import type { RepositoryWithCounts } from '@lfx-changelog/shared';
 import type { ProductGroup } from '@shared/interfaces/repository.interface';
@@ -22,6 +24,7 @@ import type { ProductGroup } from '@shared/interfaces/repository.interface';
 export class RepositoryListComponent {
   private readonly releaseService = inject(ReleaseService);
   private readonly toastService = inject(ToastService);
+  private readonly dialogService = inject(DialogService);
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   protected readonly loading = signal(true);
@@ -72,6 +75,21 @@ export class RepositoryListComponent {
           return next;
         });
         this.toastService.error('Failed to sync product');
+      },
+    });
+  }
+
+  protected openCreateRelease(repository: RepositoryWithCounts): void {
+    this.dialogService.open({
+      title: 'Create Release',
+      component: CreateReleaseDialogComponent,
+      size: 'lg',
+      inputs: { repository },
+      testId: 'create-release-dialog',
+      onClose: (result) => {
+        // Refreshing here would race the release.published webhook and usually re-read the old
+        // count, with nothing to correct it. Syncing pulls the release from GitHub directly.
+        if (result === 'created') this.syncRepository(repository.id);
       },
     });
   }
