@@ -5,7 +5,8 @@
   @if (error(); as errorMsg) {
     <div
       data-testid="create-release-error"
-      class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+      role="alert"
+      class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
       {{ errorMsg }}
     </div>
   }

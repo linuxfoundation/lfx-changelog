@@ -11,7 +11,7 @@ import { TextareaComponent } from '@components/textarea/textarea.component';
 import { DialogService } from '@services/dialog.service';
 import { ReleaseService } from '@services/release.service';
 import { ToastService } from '@services/toast.service';
-import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import type { GeneratedReleaseNotes, ProductRepository, ReleaseChanges, ReleaseTarget } from '@lfx-changelog/shared';
 import type { SelectOption } from '@shared/interfaces/form.interface';
@@ -48,6 +48,10 @@ export class CreateReleaseDialogComponent {
   // Set once the author types in the notes field, so a later tag or target change never
   // overwrites what they wrote. Programmatic fills use emitEvent: false to stay silent.
   private readonly notesEdited = signal(false);
+
+  // Set the moment the tag or target changes, before the debounce, so Publish is blocked from
+  // that instant rather than 500ms later when the request finally starts.
+  private readonly notesPending = signal(false);
 
   protected readonly target = signal<ReleaseTarget | null>(null);
   protected readonly changes = signal<ReleaseChanges | null>(null);
@@ -106,7 +110,7 @@ export class CreateReleaseDialogComponent {
     const target = toSignal(this.targetControl.valueChanges, { initialValue: this.targetControl.value });
     const name = toSignal(this.nameControl.valueChanges, { initialValue: this.nameControl.value });
 
-    return computed(() => !this.loading() && tag().trim().length > 0 && target().length > 0 && name().trim().length > 0);
+    return computed(() => !this.loading() && !this.notesPending() && tag().trim().length > 0 && target().length > 0 && name().trim().length > 0);
   }
 
   private loadTarget(): void {
@@ -168,26 +172,31 @@ export class CreateReleaseDialogComponent {
       this.targetControl.valueChanges.pipe(startWith(this.targetControl.value)),
     ])
       .pipe(
+        tap(([tag, target]) => {
+          if (this.notesEdited()) return;
+          this.notesPending.set(tag.trim().length > 0 && target.length > 0);
+        }),
         debounceTime(CreateReleaseDialogComponent.notesDebounceMs),
         distinctUntilChanged(([tagA, targetA], [tagB, targetB]) => tagA === tagB && targetA === targetB),
         filter(([tag, target]) => tag.trim().length > 0 && target.length > 0 && !this.notesEdited()),
-        tap(() => {
+        switchMap(([tag, target]) => {
           this.generatingNotes.set(true);
-          this.error.set('');
+          return this.releaseService.previewNotes(this.repository().id, tag.trim(), target).pipe(
+            // A failed preview is not fatal — the author can still write notes by hand.
+            catchError(() => of(null as GeneratedReleaseNotes | null)),
+            map((notes) => ({ notes, tag, target }))
+          );
         }),
-        switchMap(([tag, target]) =>
-          this.releaseService.previewNotes(this.repository().id, tag.trim(), target).pipe(
-            catchError(() => {
-              // A failed preview is not fatal — the author can still write notes by hand.
-              this.generatingNotes.set(false);
-              return of(null as GeneratedReleaseNotes | null);
-            })
-          )
-        ),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((notes) => {
+      .subscribe(({ notes, tag, target }) => {
         this.generatingNotes.set(false);
+
+        // Drop a response whose inputs the form has already moved past, so a slow reply cannot
+        // overwrite the notes for a tag or branch the author is no longer publishing.
+        if (tag !== this.tagControl.value || target !== this.targetControl.value) return;
+
+        this.notesPending.set(false);
         if (!notes || this.notesEdited()) return;
 
         this.bodyControl.setValue(notes.body, { emitEvent: false });
@@ -195,15 +204,21 @@ export class CreateReleaseDialogComponent {
   }
 
   private trackManualNoteEdits(): void {
-    this.bodyControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.notesEdited.set(true));
+    this.bodyControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.notesEdited.set(true);
+      this.notesPending.set(false);
+    });
   }
 
   private messageFor(err: unknown): string {
     const body = (err as { error?: { error?: string; code?: string } })?.error;
 
-    if (body?.code === 'CONFLICT') return 'That tag already exists on the repository. Choose a different tag.';
+    if (body?.code === 'CONFLICT') return 'That version tag already exists on the repository. Choose a different one.';
+    if (body?.code === 'GITHUB_VALIDATION_FAILED') return 'GitHub could not use that branch or version tag. Check the branch still exists and try again.';
     if (body?.code === 'GITHUB_FORBIDDEN') return 'GitHub rejected the request. The app may be missing write access to this repository.';
+    if (body?.code === 'GITHUB_NOT_FOUND') return 'GitHub can no longer see this repository. The app may have lost access to it.';
     if (body?.code === 'GITHUB_RATE_LIMITED') return 'GitHub is rate limiting the app. Try again shortly.';
+    if (body?.code === 'GITHUB_SERVICE_ERROR') return 'GitHub is unavailable right now. Try again shortly.';
 
     return body?.error || 'Something went wrong. Try again.';
   }

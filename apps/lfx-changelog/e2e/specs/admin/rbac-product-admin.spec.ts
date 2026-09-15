@@ -61,6 +61,7 @@ test.describe('RBAC — Product Admin', () => {
     const res = await page.request.get('/api/products');
     const products = (await res.json()).data as { id: string; slug: string }[];
     const easycla = products.find((p) => p.slug === 'e2e-easycla');
+    expect(easycla, 'seeded product e2e-easycla is missing').toBeDefined();
 
     const detail = new ProductDetailPage(page);
     await detail.goto(easycla!.id);
