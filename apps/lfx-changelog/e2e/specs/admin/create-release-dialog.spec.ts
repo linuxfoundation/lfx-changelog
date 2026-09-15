@@ -39,17 +39,17 @@ function json(route: Route, data: unknown, status = 200) {
 async function stubReleaseApi(page: Page, options: { notesDelayMs?: number } = {}) {
   const created: { payload: unknown }[] = [];
 
-  await page.route('**/api/releases/repositories/*/target', (route) => json(route, TARGET));
-  await page.route('**/api/releases/repositories/*/changes*', (route) => json(route, CHANGES));
+  await page.route('**/api/github/repositories/*/release-target', (route) => json(route, TARGET));
+  await page.route('**/api/github/repositories/*/changes*', (route) => json(route, CHANGES));
 
-  await page.route('**/api/releases/repositories/*/notes', async (route) => {
+  await page.route('**/api/github/repositories/*/release-notes', async (route) => {
     const body = route.request().postDataJSON() as { tagName: string; targetCommitish: string };
     if (options.notesDelayMs) await new Promise((resolve) => setTimeout(resolve, options.notesDelayMs));
     await json(route, { name: body.tagName, body: `Notes for ${body.tagName} from ${body.targetCommitish}` });
   });
 
   // Matches the publish route only — the sibling paths above are registered first and win.
-  await page.route(/\/api\/releases\/repositories\/[^/]+$/, async (route) => {
+  await page.route(/\/api\/github\/repositories\/[^/]+\/releases$/, async (route) => {
     if (route.request().method() !== 'POST') return route.fallback();
     created.push({ payload: route.request().postDataJSON() });
     await json(route, { id: 1, tag_name: 'v1.3.1', html_url: 'https://github.com/x/y/releases/tag/v1.3.1' }, 201);
@@ -143,7 +143,7 @@ test.describe('Create release dialog', () => {
 
   test('should explain a duplicate tag rather than showing a generic failure', async ({ page }) => {
     await stubReleaseApi(page);
-    await page.route(/\/api\/releases\/repositories\/[^/]+$/, async (route) => {
+    await page.route(/\/api\/github\/repositories\/[^/]+\/releases$/, async (route) => {
       if (route.request().method() !== 'POST') return route.fallback();
       await route.fulfill({
         status: 409,

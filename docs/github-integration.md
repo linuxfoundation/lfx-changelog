@@ -65,16 +65,16 @@ Releases can be published from the admin UI, which creates them on GitHub. The t
 
 Nothing is persisted by the create call. The `release.published` webhook stores the row exactly as it would for a release created on github.com, so a release published here and one published there are indistinguishable in the database.
 
-| Method | Path                                         | Auth                       | Description                               |
-| ------ | -------------------------------------------- | -------------------------- | ----------------------------------------- |
-| GET    | `/api/releases/repositories/:repoId/target`  | OAuth only (product_admin) | Branches, default branch, suggested tag   |
-| GET    | `/api/releases/repositories/:repoId/changes` | OAuth only (product_admin) | Commits and merges since the last release |
-| POST   | `/api/releases/repositories/:repoId/notes`   | OAuth only (product_admin) | Preview GitHub-generated notes            |
-| POST   | `/api/releases/repositories/:repoId`         | OAuth only (product_admin) | Publish the release                       |
+| Method | Path                                              | Auth                       | Description                               |
+| ------ | ------------------------------------------------- | -------------------------- | ----------------------------------------- |
+| GET    | `/api/github/repositories/:repoId/release-target` | OAuth only (product_admin) | Branches, default branch, suggested tag   |
+| GET    | `/api/github/repositories/:repoId/changes`        | OAuth only (product_admin) | Commits and merges since the last release |
+| POST   | `/api/github/repositories/:repoId/release-notes`  | OAuth only (product_admin) | Preview GitHub-generated notes            |
+| POST   | `/api/github/repositories/:repoId/releases`       | OAuth only (product_admin) | Publish the release                       |
 
 Authorization is per repository: the caller must hold `product_admin` (or higher) on the product that owns it. The route applies the global role check and the service then re-checks the product, so a repository outside the caller's products returns `404` rather than `403` --- the endpoints cannot be used to enumerate repositories. API keys are rejected; session authentication only.
 
-`POST /api/releases/sync/repo/:repoId` is scoped the same way, so a product admin can refresh the releases of a repository they administer. The product-wide `POST /api/releases/sync/:productId` remains `super_admin`.
+`POST /api/github/repositories/:repoId/sync` is scoped the same way, so a product admin can refresh the releases of a repository they administer. The product-wide `POST /api/github/products/:productId/sync` remains `super_admin`.
 
 Releases are always published, never drafted. A draft would fire GitHub's `created` event, which this application does not handle, so a drafted release would be invisible here until published.
 

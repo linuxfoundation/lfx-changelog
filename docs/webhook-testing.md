@@ -152,7 +152,7 @@ To receive real GitHub webhook deliveries on your local machine, use a tunnel se
 Query the releases endpoint to see if the release was stored (requires authentication):
 
 ```bash
-curl -s http://localhost:4204/api/releases \
+curl -s http://localhost:4204/api/github/releases \
   -H "Authorization: Bearer lfx_your-api-key" | jq '.data[:3]'
 ```
 

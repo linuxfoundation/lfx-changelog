@@ -129,9 +129,9 @@ The API is organized into three categories based on authentication requirements:
 
 - **Public** (`/public/api/*`) --- no authentication required. Read-only access to published changelogs, active products, and the public AI chat assistant.
 - **Protected** (`/api/changelogs/*`, `/api/products/*`) --- accepts both OAuth sessions and API keys. Each endpoint declares which scope and role it requires. See the interactive [Swagger UI](https://changelog.lfx.dev/docs) for the full list of endpoints, required scopes, and request/response schemas.
-- **OAuth-only** (`/api/users/*`, `/api/api-keys/*`, `/api/ai/*`, `/api/chat/*`, `/api/github/*`, `/api/releases/repositories/:repoId*`) --- browser session only. These endpoints reject API key authentication because they involve user management, key lifecycle, AI chat conversations, release publishing, or internal integrations that should not be accessed programmatically.
+- **OAuth-only** (`/api/users/*`, `/api/api-keys/*`, `/api/ai/*`, `/api/chat/*`, `/api/github/*`) --- browser session only. These endpoints reject API key authentication because they involve user management, key lifecycle, AI chat conversations, release publishing, or internal integrations that should not be accessed programmatically.
 
-`/api/releases/*` is OAuth-only in practice even though it is not a user-management prefix: none of its routes declare an API key scope, and `authorize()` rejects API key requests on any route that declares none. The release **creation** endpoints under `/api/releases/repositories/:repoId` additionally set `oauthOnly`, which rejects API keys explicitly and checks the request Origin on mutations, because publishing a release writes a git ref on GitHub. See [GitHub Integration](github-integration.md#creating-releases).
+Note that a route rejects API keys whenever it declares no scope, whether or not it sets `oauthOnly`. That is why the whole of `/api/github/*` — including the release listing and syncing routes that are not obviously "internal" — is session-only. The publishing routes under `/api/github/repositories/:repoId` additionally set `oauthOnly`, which rejects API keys explicitly and checks the request Origin on mutations, because publishing a release writes a git ref on GitHub. See [GitHub Integration](github-integration.md#creating-releases).
 
 ## How Authorization Works
 

@@ -25,7 +25,7 @@ const repoIdParam = z.object({ repoId: z.string().uuid().openapi({ description: 
 
 releaseRegistry.registerPath({
   method: 'get',
-  path: '/api/releases',
+  path: '/api/github/releases',
   tags: ['Releases'],
   summary: 'List latest releases',
   description: 'Returns the latest non-draft releases from all linked GitHub repositories, sorted by publish date.',
@@ -51,7 +51,7 @@ releaseRegistry.registerPath({
 
 releaseRegistry.registerPath({
   method: 'post',
-  path: '/api/releases/sync/{productId}',
+  path: '/api/github/products/{productId}/sync',
   tags: ['Releases'],
   summary: 'Sync releases for a product',
   description:
@@ -78,7 +78,7 @@ releaseRegistry.registerPath({
 
 releaseRegistry.registerPath({
   method: 'get',
-  path: '/api/releases/repositories',
+  path: '/api/github/repositories',
   tags: ['Releases'],
   summary: 'List all repositories with release counts',
   description: 'Returns all linked GitHub repositories with their release counts and last sync timestamps.\n\n**Required privilege:** SUPER_ADMIN role.',
@@ -99,7 +99,7 @@ releaseRegistry.registerPath({
 
 releaseRegistry.registerPath({
   method: 'post',
-  path: '/api/releases/sync/repo/{repoId}',
+  path: '/api/github/repositories/{repoId}/sync',
   tags: ['Releases'],
   summary: 'Sync releases for a single repository',
   description:
@@ -127,7 +127,7 @@ releaseRegistry.registerPath({
 
 releaseRegistry.registerPath({
   method: 'get',
-  path: '/api/releases/repositories/{repoId}/target',
+  path: '/api/github/repositories/{repoId}/release-target',
   tags: ['Releases'],
   summary: 'Get release target details for a repository',
   description:
@@ -149,7 +149,7 @@ releaseRegistry.registerPath({
 
 releaseRegistry.registerPath({
   method: 'get',
-  path: '/api/releases/repositories/{repoId}/changes',
+  path: '/api/github/repositories/{repoId}/changes',
   tags: ['Releases'],
   summary: 'Count changes since the last release',
   description:
@@ -172,7 +172,7 @@ releaseRegistry.registerPath({
 
 releaseRegistry.registerPath({
   method: 'post',
-  path: '/api/releases/repositories/{repoId}/notes',
+  path: '/api/github/repositories/{repoId}/release-notes',
   tags: ['Releases'],
   summary: 'Preview generated release notes',
   description:
@@ -196,7 +196,7 @@ releaseRegistry.registerPath({
 
 releaseRegistry.registerPath({
   method: 'post',
-  path: '/api/releases/repositories/{repoId}',
+  path: '/api/github/repositories/{repoId}/releases',
   tags: ['Releases'],
   summary: 'Publish a GitHub release',
   description:

@@ -13,50 +13,55 @@ const router = Router();
 const githubController = new GitHubController();
 const releaseController = new ReleaseController();
 
+// ── App installation ────────────────────────────────────────────────────
+
 router.get('/install-url', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.getInstallUrl(req, res, next));
 router.get('/installations', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.listInstallations(req, res, next));
 router.get('/installations/:installationId/repositories', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) =>
   githubController.listInstallationRepositories(req, res, next)
 );
 
-// ── Release routes (mounted at /api/releases) ───────────────────────────
-const releaseRouter = Router();
+// ── Stored releases ─────────────────────────────────────────────────────
 
-releaseRouter.get('/', authorize({ role: UserRole.EDITOR }), (req, res, next) => githubController.listPublicReleases(req, res, next));
-releaseRouter.get('/repositories', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.listRepositoriesWithCounts(req, res, next));
-releaseRouter.post('/sync/:productId', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.syncReleases(req, res, next));
+router.get('/releases', authorize({ role: UserRole.EDITOR }), (req, res, next) => githubController.listPublicReleases(req, res, next));
+
+// ── Tracked repositories ────────────────────────────────────────────────
+
+router.get('/repositories', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.listRepositoriesWithCounts(req, res, next));
+router.post('/products/:productId/sync', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.syncReleases(req, res, next));
+
 // Product-scoped: the service checks the caller administers the product that owns the repository,
 // so a product admin can refresh their own repositories without super admin rights. oauthOnly
-// matches the sibling release routes — it also checks Origin on mutations, which matters more
-// now that every product admin can reach this rather than only super admins.
-releaseRouter.post('/sync/repo/:repoId', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
+// matches the release routes below — it also checks Origin on mutations, which matters more now
+// that every product admin can reach this rather than only super admins.
+router.post('/repositories/:repoId/sync', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
   releaseController.syncRepository(req, res, next)
 );
 
-// ── Release creation (product-scoped; OAuth sessions only) ──────────────
-// Publishing a release creates a public tag, so API keys are rejected and the service
-// checks the caller administers the product that owns the repository.
-releaseRouter.get('/repositories/:repoId/target', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
+// ── Publishing a release (product-scoped; OAuth sessions only) ──────────
+// Publishing creates a public tag, so API keys are rejected and the service checks the caller
+// administers the product that owns the repository.
+
+router.get('/repositories/:repoId/release-target', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
   releaseController.getReleaseTarget(req, res, next)
 );
-releaseRouter.get(
+router.get(
   '/repositories/:repoId/changes',
   authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }),
   validate({ query: ReleaseChangesQuerySchema }),
   (req, res, next) => releaseController.getChanges(req, res, next)
 );
-releaseRouter.post(
-  '/repositories/:repoId/notes',
+router.post(
+  '/repositories/:repoId/release-notes',
   authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }),
   validate({ body: GenerateReleaseNotesRequestSchema }),
   (req, res, next) => releaseController.previewNotes(req, res, next)
 );
-releaseRouter.post(
-  '/repositories/:repoId',
+router.post(
+  '/repositories/:repoId/releases',
   authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }),
   validate({ body: CreateReleaseRequestSchema }),
   (req, res, next) => releaseController.createRelease(req, res, next)
 );
 
-export { releaseRouter };
 export default router;

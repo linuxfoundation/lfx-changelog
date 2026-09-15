@@ -12,11 +12,11 @@ import { agentJobRegistry } from './paths/agent-jobs.path';
 import { blogPostRegistry } from './paths/blogs.path';
 import { changelogRegistry } from './paths/changelogs.path';
 import { contributorRegistry } from './paths/contributors.path';
+import { releaseRegistry } from './paths/github-releases.path';
 import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
 import { publicProductRegistry } from './paths/public-products.path';
 import { publicRoadmapRegistry } from './paths/public-roadmap.path';
-import { releaseRegistry } from './paths/releases.path';
 import { searchRegistry } from './paths/search.path';
 import { userRegistry } from './paths/users.path';
 
