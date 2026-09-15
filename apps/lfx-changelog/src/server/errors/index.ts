@@ -7,6 +7,7 @@ export { AuthenticationError } from './authentication.error';
 export { AuthorizationError } from './authorization.error';
 export { BaseApiError } from './base-api.error';
 export { ConflictError } from './conflict.error';
+export { GitHubApiError } from './github-api.error';
 export { NotFoundError } from './not-found.error';
 export { ServiceUnavailableError } from './service-unavailable.error';
 

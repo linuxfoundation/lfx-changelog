@@ -109,6 +109,38 @@ export const GitHubContributorSchema = z
 
 export type GitHubContributor = z.infer<typeof GitHubContributorSchema>;
 
+export const GitHubBranchSchema = z
+  .object({
+    name: z.string(),
+    commit: z.object({ sha: z.string() }),
+    protected: z.boolean().optional(),
+  })
+  .openapi('GitHubBranch');
+
+export type GitHubBranch = z.infer<typeof GitHubBranchSchema>;
+
+export const GeneratedReleaseNotesSchema = z
+  .object({
+    name: z.string(),
+    body: z.string(),
+  })
+  .openapi('GeneratedReleaseNotes');
+
+export type GeneratedReleaseNotes = z.infer<typeof GeneratedReleaseNotesSchema>;
+
+export const ReleaseTargetSchema = z
+  .object({
+    repositoryId: z.string().uuid(),
+    fullName: z.string(),
+    defaultBranch: z.string(),
+    latestTag: z.string().nullable(),
+    suggestedTag: z.string(),
+    branches: z.array(GitHubBranchSchema),
+  })
+  .openapi('ReleaseTarget');
+
+export type ReleaseTarget = z.infer<typeof ReleaseTargetSchema>;
+
 export const GitHubReleaseSchema = z
   .object({
     id: z.number(),

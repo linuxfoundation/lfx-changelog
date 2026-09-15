@@ -6,7 +6,16 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 import { buildConnectionString } from '../../src/server/helpers/build-connection-string';
-import { TEST_BLOG_POSTS, TEST_CHANGELOGS, TEST_CONTRIBUTORS, TEST_PRODUCTS, TEST_REPOSITORY, TEST_ROLE_ASSIGNMENTS, TEST_USERS } from './test-data.js';
+import {
+  TEST_BLOG_POSTS,
+  TEST_CHANGELOGS,
+  TEST_CONTRIBUTORS,
+  TEST_FOREIGN_REPOSITORY,
+  TEST_PRODUCTS,
+  TEST_REPOSITORY,
+  TEST_ROLE_ASSIGNMENTS,
+  TEST_USERS,
+} from './test-data.js';
 
 let prisma: PrismaClient | null = null;
 
@@ -127,6 +136,20 @@ export async function seedTestDatabase(): Promise<void> {
       name: TEST_REPOSITORY.name,
       fullName: TEST_REPOSITORY.fullName,
       htmlUrl: TEST_REPOSITORY.htmlUrl,
+    },
+  });
+
+  const foreignRepositoryProduct = productBySlug.get(TEST_FOREIGN_REPOSITORY.productSlug);
+  if (!foreignRepositoryProduct) throw new Error(`Product not found for slug: ${TEST_FOREIGN_REPOSITORY.productSlug}`);
+
+  await client.productRepository.create({
+    data: {
+      productId: foreignRepositoryProduct.id,
+      githubInstallationId: TEST_FOREIGN_REPOSITORY.githubInstallationId,
+      owner: TEST_FOREIGN_REPOSITORY.owner,
+      name: TEST_FOREIGN_REPOSITORY.name,
+      fullName: TEST_FOREIGN_REPOSITORY.fullName,
+      htmlUrl: TEST_FOREIGN_REPOSITORY.htmlUrl,
     },
   });
 

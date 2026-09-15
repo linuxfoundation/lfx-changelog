@@ -128,6 +128,19 @@ export const TEST_REPOSITORY: TestRepository = {
 };
 
 /**
+ * Belongs to a product the product admin has no assignment for, so release endpoints can be
+ * checked for reporting 404 rather than 403 on a repository that exists but is out of scope.
+ */
+export const TEST_FOREIGN_REPOSITORY: TestRepository = {
+  productSlug: 'e2e-security',
+  githubInstallationId: 999002,
+  owner: 'linuxfoundation',
+  name: 'e2e-security-repo',
+  fullName: 'linuxfoundation/e2e-security-repo',
+  htmlUrl: 'https://github.com/linuxfoundation/e2e-security-repo',
+};
+
+/**
  * `linked-dev` and `unlink-me-dev` are both Slack-linked so the filter assertions and the
  * destructive unlink spec don't contend for the same row.
  */

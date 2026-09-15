@@ -3,11 +3,14 @@
 
 import jwt from 'jsonwebtoken';
 
+import { GitHubApiError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { getPrismaClient } from './prisma.service';
 import { ProductService } from './product.service';
 
 import type {
+  GeneratedReleaseNotes,
+  GitHubBranch,
   GitHubCommit,
   GitHubContributor,
   GitHubInstallation,
@@ -18,7 +21,7 @@ import type {
   StoredRelease,
 } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
-import type { FindAllPublicOptions } from '../interfaces/release.interface';
+import type { CreateReleaseInput, FindAllPublicOptions, GenerateReleaseNotesInput } from '../interfaces/release.interface';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -217,6 +220,69 @@ export class GitHubService {
 
     const releases = (await response.json()) as GitHubRelease[];
     return releases.map((release) => ({ ...release, repoFullName }));
+  }
+
+  public async getRepositoryDefaultBranch(installationId: number, owner: string, repo: string): Promise<string> {
+    const data = await this.repoRequest<{ default_branch?: string }>(installationId, owner, repo, '', 'Failed to get repository');
+    return data.default_branch || 'main';
+  }
+
+  public async listBranches(installationId: number, owner: string, repo: string): Promise<GitHubBranch[]> {
+    const branches: GitHubBranch[] = [];
+    let page = 1;
+
+    while (true) {
+      const data = await this.repoRequest<GitHubBranch[]>(installationId, owner, repo, `/branches?per_page=100&page=${page}`, 'Failed to list branches');
+
+      branches.push(...data);
+
+      if (data.length < 100) break;
+      page++;
+    }
+
+    return branches;
+  }
+
+  public async tagExists(installationId: number, owner: string, repo: string, tagName: string): Promise<boolean> {
+    try {
+      await this.repoRequest<unknown>(installationId, owner, repo, `/git/ref/tags/${encodeURIComponent(tagName)}`, 'Failed to look up tag', {
+        expect404: true,
+      });
+      return true;
+    } catch (error) {
+      if (error instanceof GitHubApiError && error.upstreamStatus === 404) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  public async generateReleaseNotes(installationId: number, owner: string, repo: string, input: GenerateReleaseNotesInput): Promise<GeneratedReleaseNotes> {
+    return this.repoRequest<GeneratedReleaseNotes>(installationId, owner, repo, '/releases/generate-notes', 'Failed to generate release notes', {
+      body: {
+        tag_name: input.tagName,
+        target_commitish: input.targetCommitish,
+        ...(input.previousTagName ? { previous_tag_name: input.previousTagName } : {}),
+      },
+    });
+  }
+
+  // GitHub creates the tag at `target_commitish` as a side effect, so this is the only place the
+  // app writes a git ref — the App installation needs Contents: write.
+  public async createRelease(installationId: number, owner: string, repo: string, input: CreateReleaseInput): Promise<GitHubRelease> {
+    const release = await this.repoRequest<GitHubRelease>(installationId, owner, repo, '/releases', 'Failed to create release', {
+      body: {
+        tag_name: input.tagName,
+        target_commitish: input.targetCommitish,
+        name: input.name,
+        body: input.body,
+        draft: false,
+        prerelease: input.prerelease ?? false,
+      },
+    });
+
+    serverLogger.info({ owner, repo, tagName: input.tagName, targetCommitish: input.targetCommitish }, 'Created GitHub release');
+    return { ...release, repoFullName: `${owner}/${repo}` };
   }
 
   /**
@@ -528,5 +594,58 @@ export class GitHubService {
     if (!Number.isInteger(installationId) || installationId <= 0) {
       throw new Error('Invalid installation ID');
     }
+  }
+
+  // Shared request path for repository-scoped release calls. A body makes it a POST. Unlike the
+  // older methods above, failures become GitHubApiError so the caller keeps GitHub's status
+  // instead of collapsing every fault into a 500.
+  private async repoRequest<T>(
+    installationId: number,
+    owner: string,
+    repo: string,
+    path: string,
+    errorMessage: string,
+    options: { body?: unknown; expect404?: boolean } = {}
+  ): Promise<T> {
+    this.validateInstallationId(installationId);
+    const { body, expect404 = false } = options;
+
+    let response: Response;
+    try {
+      const token = await this.getInstallationToken(installationId);
+
+      response = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}${path}`, {
+        method: body ? 'POST' : 'GET',
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+    } catch (error) {
+      // Token minting and transport faults both land here; neither carries a GitHub status.
+      serverLogger.error({ err: error, owner, repo, path }, errorMessage);
+      throw new GitHubApiError(errorMessage, { upstreamBody: error instanceof Error ? error.message : undefined });
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      const retryAfter = response.headers.get('retry-after');
+      const rateLimited = response.status === 403 && (response.headers.get('x-ratelimit-remaining') === '0' || retryAfter !== null);
+
+      // Only a caller that treats 404 as an answer, rather than a fault, skips the error log —
+      // everywhere else a 404 means the App lost access, which must stay in the audit trail.
+      if (expect404 && response.status === 404) {
+        serverLogger.debug({ status: response.status, owner, repo, path }, errorMessage);
+      } else {
+        serverLogger.error({ status: response.status, body: text, owner, repo, path, rateLimited, retryAfter }, errorMessage);
+      }
+
+      throw new GitHubApiError(errorMessage, { upstreamStatus: response.status, upstreamBody: text, rateLimited });
+    }
+
+    return response.json() as Promise<T>;
   }
 }

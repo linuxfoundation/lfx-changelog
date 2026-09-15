@@ -153,6 +153,29 @@ export const LinkBlogPostProductsRequestSchema = z
 
 export type LinkBlogPostProductsRequest = z.infer<typeof LinkBlogPostProductsRequestSchema>;
 
+// ── Release DTOs ─────────────────────────────
+
+export const GenerateReleaseNotesRequestSchema = z
+  .object({
+    tagName: z.string().trim().min(1),
+    targetCommitish: z.string().trim().min(1),
+  })
+  .openapi('GenerateReleaseNotesRequest');
+
+export type GenerateReleaseNotesRequest = z.infer<typeof GenerateReleaseNotesRequestSchema>;
+
+export const CreateReleaseRequestSchema = z
+  .object({
+    tagName: z.string().trim().min(1).openapi({ description: 'Tag to create, e.g. v1.4.0. Must not already exist on the repository.' }),
+    targetCommitish: z.string().trim().min(1).openapi({ description: 'Branch name or commit SHA the tag is created at' }),
+    name: z.string().trim().min(1).openapi({ description: 'Release title' }),
+    body: z.string().openapi({ description: 'Release notes in markdown' }),
+    prerelease: z.boolean().optional(),
+  })
+  .openapi('CreateReleaseRequest');
+
+export type CreateReleaseRequest = z.infer<typeof CreateReleaseRequestSchema>;
+
 // ── Contributor DTOs ─────────────────────────
 
 export const LinkContributorSlackRequestSchema = z
