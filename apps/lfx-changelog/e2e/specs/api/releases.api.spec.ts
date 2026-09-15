@@ -3,12 +3,14 @@
 
 import { expect, test } from '@playwright/test';
 import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
+import { TEST_FOREIGN_REPOSITORY, TEST_REPOSITORY } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
 
 test.describe('Releases API (/api/releases)', () => {
   let unauthApi: APIRequestContext;
   let superAdminApi: APIRequestContext;
+  let productAdminApi: APIRequestContext;
   let editorApi: APIRequestContext;
   let userApi: APIRequestContext;
 
@@ -16,12 +18,13 @@ test.describe('Releases API (/api/releases)', () => {
     const baseURL = testInfo.project.use.baseURL as string;
     unauthApi = await createUnauthenticatedContext(baseURL);
     superAdminApi = await createAuthenticatedContext('super_admin', baseURL);
+    productAdminApi = await createAuthenticatedContext('product_admin', baseURL);
     editorApi = await createAuthenticatedContext('editor', baseURL);
     userApi = await createAuthenticatedContext('user', baseURL);
   });
 
   test.afterAll(async () => {
-    await Promise.all([unauthApi.dispose(), superAdminApi.dispose(), editorApi.dispose(), userApi.dispose()]);
+    await Promise.all([unauthApi.dispose(), superAdminApi.dispose(), productAdminApi.dispose(), editorApi.dispose(), userApi.dispose()]);
   });
 
   test.describe('Authentication (401)', () => {
@@ -73,6 +76,30 @@ test.describe('Releases API (/api/releases)', () => {
     test('editor cannot POST /api/releases/sync/repo/:repoId (403)', async () => {
       const res = await editorApi.post('/api/releases/sync/repo/fake-id');
       expect(res.status()).toBe(403);
+    });
+
+    test('a product admin may sync a repository of a product it administers', async () => {
+      const listRes = await superAdminApi.get('/api/releases/repositories');
+      const repositories = (await listRes.json()).data as { id: string; fullName: string }[];
+      const owned = repositories.find((repository) => repository.fullName === TEST_REPOSITORY.fullName);
+      expect(owned, `seeded repository ${TEST_REPOSITORY.fullName} is missing`).toBeDefined();
+
+      // The sync itself calls GitHub, which this environment cannot reach, so only the
+      // authorization outcome is asserted: it must not be refused.
+      const res = await productAdminApi.post(`/api/releases/sync/repo/${owned!.id}`);
+      expect(res.status()).not.toBe(403);
+      expect(res.status()).not.toBe(404);
+    });
+
+    test("a product admin gets 404, not 403, syncing another product's repository", async () => {
+      const listRes = await superAdminApi.get('/api/releases/repositories');
+      const repositories = (await listRes.json()).data as { id: string; fullName: string }[];
+      const foreign = repositories.find((repository) => repository.fullName === TEST_FOREIGN_REPOSITORY.fullName);
+      expect(foreign, `seeded repository ${TEST_FOREIGN_REPOSITORY.fullName} is missing`).toBeDefined();
+
+      const res = await productAdminApi.post(`/api/releases/sync/repo/${foreign!.id}`);
+      expect(res.status()).toBe(404);
+      expect((await res.json()).code).toBe('NOT_FOUND');
     });
   });
 

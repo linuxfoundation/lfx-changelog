@@ -44,6 +44,15 @@ export class ReleaseController {
     }
   }
 
+  public async syncRepository(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const synced = await this.releaseService.syncRepository(req.params['repoId'] as string, this.getUserRoles(req));
+      res.json({ success: true, data: { synced } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   private getUserRoles(req: Request): UserRoleAssignment[] {
     return req.dbUser?.userRoleAssignments ?? [];
   }

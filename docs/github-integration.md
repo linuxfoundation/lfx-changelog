@@ -73,6 +73,8 @@ Nothing is persisted by the create call. The `release.published` webhook stores 
 
 Authorization is per repository: the caller must hold `product_admin` (or higher) on the product that owns it. The route applies the global role check and the service then re-checks the product, so a repository outside the caller's products returns `404` rather than `403` --- the endpoints cannot be used to enumerate repositories. API keys are rejected; session authentication only.
 
+`POST /api/releases/sync/repo/:repoId` is scoped the same way, so a product admin can refresh the releases of a repository they administer. The product-wide `POST /api/releases/sync/:productId` remains `super_admin`.
+
 Releases are always published, never drafted. A draft would fire GitHub's `created` event, which this application does not handle, so a drafted release would be invisible here until published.
 
 Suggested tags come from the newest stored release for the repository, patch-bumped, preserving a leading `v` when the previous tag used one.

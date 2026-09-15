@@ -100,7 +100,8 @@ releaseRegistry.registerPath({
   path: '/api/releases/sync/repo/{repoId}',
   tags: ['Releases'],
   summary: 'Sync releases for a single repository',
-  description: 'Fetches releases from GitHub for a single repository and persists them in the database.\n\n**Required privilege:** SUPER_ADMIN role.',
+  description:
+    'Fetches releases from GitHub for a single repository and persists them in the database.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. A repository the caller does not administer reports 404 rather than 403.',
   security: COOKIE_AUTH,
   request: {
     params: z.object({
@@ -117,8 +118,8 @@ releaseRegistry.registerPath({
       },
     },
     401: { description: 'Unauthorized' },
-    403: { description: 'Forbidden — requires SUPER_ADMIN role' },
-    404: { description: 'Repository not found' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN or higher' },
+    404: { description: 'Repository not found, or the caller is not a PRODUCT_ADMIN for the product that owns it' },
   },
 });
 

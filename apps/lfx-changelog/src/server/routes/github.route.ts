@@ -25,9 +25,9 @@ const releaseRouter = Router();
 releaseRouter.get('/', authorize({ role: UserRole.EDITOR }), (req, res, next) => githubController.listPublicReleases(req, res, next));
 releaseRouter.get('/repositories', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.listRepositoriesWithCounts(req, res, next));
 releaseRouter.post('/sync/:productId', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.syncReleases(req, res, next));
-releaseRouter.post('/sync/repo/:repoId', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) =>
-  githubController.syncRepositoryReleases(req, res, next)
-);
+// Product-scoped: the service checks the caller administers the product that owns the repository,
+// so a product admin can refresh their own repositories without super admin rights.
+releaseRouter.post('/sync/repo/:repoId', authorize({ role: UserRole.PRODUCT_ADMIN }), (req, res, next) => releaseController.syncRepository(req, res, next));
 
 // ── Release creation (product-scoped; OAuth sessions only) ──────────────
 // Publishing a release creates a public tag, so API keys are rejected and the service
