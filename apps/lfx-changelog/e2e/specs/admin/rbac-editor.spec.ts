@@ -54,8 +54,9 @@ test.describe('RBAC — Editor', () => {
     await detail.goto(easycla!.id);
     await detail.switchTab('repositories');
 
-    // The table itself is readable by an editor; only the publish action is withheld.
+    // The table itself is readable by an editor; the sync and publish actions are withheld.
     await expect(page.locator('lfx-table')).toBeVisible();
     await expect(page.locator('[data-testid^="product-repo-create-release-"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid^="product-repo-sync-"]')).toHaveCount(0);
   });
 });

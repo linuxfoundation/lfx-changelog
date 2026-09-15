@@ -61,7 +61,7 @@
 
       <ng-template lfxColumn="Actions" let-repo>
         <div class="flex items-center gap-1">
-          @if (canSync()) {
+          @if (canAdministerProduct()) {
             <lfx-button
               [attr.data-testid]="'product-repo-sync-' + repo.id"
               variant="ghost"
@@ -71,8 +71,6 @@
               <i class="fa-solid fa-arrows-rotate text-brand-600 text-xs"></i>
               Sync
             </lfx-button>
-          }
-          @if (canPublishReleases()) {
             <lfx-button [attr.data-testid]="'product-repo-create-release-' + repo.id" variant="ghost" size="sm" (clicked)="openCreateRelease(repo)">
               <i class="fa-solid fa-tag text-new-feature text-xs"></i>
               Release

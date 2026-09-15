@@ -46,12 +46,10 @@ export class ProductRepositoriesTabComponent implements OnInit {
 
   private readonly linkedReposState: Signal<LoadingState<ProductRepository[]>> = this.initLinkedReposState();
 
-  // Editors can read this tab but cannot publish, so the action is hidden rather than
-  // offered and then rejected with a 403.
-  protected readonly canPublishReleases = computed(() => this.authService.canAdministerProduct(this.productId()));
+  // Editors can read this tab but can neither sync nor publish, so both actions are hidden
+  // rather than offered and then rejected. The server remains the authority either way.
+  protected readonly canAdministerProduct = computed(() => this.authService.canAdministerProduct(this.productId()));
 
-  // Syncing is a SUPER_ADMIN endpoint, so a product admin would only get a 403 from it.
-  protected readonly canSync = this.authService.isSuperAdmin;
   protected readonly syncingRepo = signal<Set<string>>(new Set());
 
   protected readonly linkedRepos = computed(() => this.linkedReposState().data);

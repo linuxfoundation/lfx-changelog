@@ -57,7 +57,7 @@ test.describe('RBAC — Product Admin', () => {
     await expect(page.locator('[data-testid^="product-repo-create-release-"]').first()).toBeVisible();
   });
 
-  test('should not see the Sync action, which remains super admin only', async ({ page }) => {
+  test('should see the Sync action on a product it administers', async ({ page }) => {
     const res = await page.request.get('/api/products');
     const products = (await res.json()).data as { id: string; slug: string }[];
     const easycla = products.find((p) => p.slug === 'e2e-easycla');
@@ -66,7 +66,6 @@ test.describe('RBAC — Product Admin', () => {
     await detail.goto(easycla!.id);
     await detail.switchTab('repositories');
 
-    await expect(page.locator('[data-testid^="product-repo-create-release-"]').first()).toBeVisible();
-    await expect(page.locator('[data-testid^="product-repo-sync-"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid^="product-repo-sync-"]').first()).toBeVisible();
   });
 });
