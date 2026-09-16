@@ -28,7 +28,11 @@
       <p class="text-text-secondary mt-1 text-xs">Releases appear here once they are published on GitHub, or synced from it.</p>
     </div>
   } @else {
-    <div data-testid="release-history-list" class="border-border divide-border bg-surface divide-y rounded-lg border">
+    <!-- Scrolls within itself so the repository header and the truncation notice stay put
+         instead of the whole dialog growing past the viewport. -->
+    <div
+      data-testid="release-history-list"
+      class="border-border divide-border bg-surface max-h-[55vh] divide-y overflow-y-auto overscroll-contain rounded-lg border">
       @for (release of releases(); track release.id) {
         <div class="flex items-center gap-3 px-4 py-3">
           <div class="min-w-0 flex-1">
