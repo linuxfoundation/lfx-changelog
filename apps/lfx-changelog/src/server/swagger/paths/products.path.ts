@@ -9,6 +9,7 @@ import {
   LinkRepositoryRequestSchema,
   ProductActivitySchema,
   ProductRepositorySchema,
+  ProductRepositoryWithCountSchema,
   ProductSchema,
   UpdateProductRequestSchema,
   createApiResponseSchema,
@@ -155,7 +156,8 @@ productRegistry.registerPath({
   path: '/api/products/{id}/repositories',
   tags: ['Products'],
   summary: 'List linked repositories',
-  description: 'Returns repositories linked to a product.\n\n**Required privilege:** EDITOR role or above.',
+  description:
+    'Returns repositories linked to a product, each with the number of non-draft releases stored for it.\n\n**Required privilege:** EDITOR role or above.',
   security: API_KEY_AUTH,
   request: {
     params: z.object({
@@ -167,7 +169,7 @@ productRegistry.registerPath({
       description: 'List of linked repositories',
       content: {
         'application/json': {
-          schema: createApiResponseSchema(z.array(ProductRepositorySchema)),
+          schema: createApiResponseSchema(z.array(ProductRepositoryWithCountSchema)),
         },
       },
     },

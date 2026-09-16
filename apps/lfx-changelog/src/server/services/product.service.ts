@@ -96,7 +96,8 @@ export class ProductService {
     const repos = await prisma.productRepository.findMany({
       include: {
         product: true,
-        _count: { select: { releases: true } },
+        // Drafts are excluded from the history view, so the count must exclude them too.
+        _count: { select: { releases: { where: { isDraft: false } } } },
       },
       orderBy: [{ product: { name: 'asc' } }, { fullName: 'asc' }],
     });
@@ -137,7 +138,8 @@ export class ProductService {
     const prisma = getPrismaClient();
     const repositories = await prisma.productRepository.findMany({
       where: { productId },
-      include: { _count: { select: { releases: true } } },
+      // Drafts are excluded from the history view, so the count must exclude them too.
+      include: { _count: { select: { releases: { where: { isDraft: false } } } } },
       orderBy: { fullName: 'asc' },
     });
 

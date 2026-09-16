@@ -80,8 +80,6 @@ export class ProductRepositoriesTabComponent implements OnInit {
     });
   }
 
-  // No onClose refresh: this table lists the linked repositories themselves, which publishing
-  // does not change, and it shows no release counts that could go stale.
   protected openCreateRelease(repository: ProductRepositoryWithCount): void {
     this.dialogService.open({
       title: 'Create Release',
@@ -89,6 +87,11 @@ export class ProductRepositoriesTabComponent implements OnInit {
       size: 'lg',
       inputs: { repository },
       testId: 'create-release-dialog',
+      onClose: (result) => {
+        // The count shown in this table would otherwise sit stale until the release.published
+        // webhook lands. Syncing pulls the release from GitHub and refreshes the table.
+        if (result === 'created') this.syncRepository(repository);
+      },
     });
   }
 

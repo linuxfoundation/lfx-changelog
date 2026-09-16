@@ -1,13 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, DestroyRef, inject, input, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ReleaseService } from '@services/release.service';
 import { TimeAgoPipe } from '@shared/pipes/time-ago.pipe';
 import { catchError, of, switchMap, tap } from 'rxjs';
 
-import type { ProductRepository, StoredRelease } from '@lfx-changelog/shared';
+import type { ProductRepositoryWithCount, StoredRelease } from '@lfx-changelog/shared';
 
 @Component({
   selector: 'lfx-release-history-dialog',
@@ -19,7 +19,11 @@ export class ReleaseHistoryDialogComponent {
   private readonly releaseService = inject(ReleaseService);
   private readonly destroyRef = inject(DestroyRef);
 
-  public readonly repository = input.required<ProductRepository>();
+  // Carries the non-draft release count, which the truncation notice compares against.
+  // RepositoryWithCounts from the repositories page is assignable to this.
+  public readonly repository = input.required<ProductRepositoryWithCount>();
+
+  private static readonly maxReleases = 100;
 
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
@@ -31,7 +35,7 @@ export class ReleaseHistoryDialogComponent {
         this.failed.set(false);
       }),
       switchMap((repository) =>
-        this.releaseService.getReleasesForRepository(repository.id).pipe(
+        this.releaseService.getReleasesForRepository(repository.id, ReleaseHistoryDialogComponent.maxReleases).pipe(
           catchError(() => {
             this.failed.set(true);
             return of([] as StoredRelease[]);
@@ -43,4 +47,6 @@ export class ReleaseHistoryDialogComponent {
     ),
     { initialValue: [] as StoredRelease[] }
   );
+
+  protected readonly truncated: Signal<boolean> = computed(() => this.releases().length < this.repository().releaseCount);
 }

@@ -123,20 +123,49 @@ test.describe('GitHub releases API (/api/github)', () => {
   });
 
   test.describe('Filter by repository', () => {
-    test('returns only the releases of the requested repository', async () => {
-      const listRes = await superAdminApi.get('/api/github/repositories');
-      const repositories = (await listRes.json()).data as { id: string; fullName: string }[];
-      const owned = repositories.find((repository) => repository.fullName === TEST_REPOSITORY.fullName);
-      expect(owned, `seeded repository ${TEST_REPOSITORY.fullName} is missing`).toBeDefined();
+    async function repositoryIdFor(fullName: string): Promise<string> {
+      const res = await superAdminApi.get('/api/github/repositories');
+      const repositories = (await res.json()).data as { id: string; fullName: string }[];
+      const match = repositories.find((repository) => repository.fullName === fullName);
+      expect(match, `seeded repository ${fullName} is missing`).toBeDefined();
+      return match!.id;
+    }
 
-      const res = await superAdminApi.get(`/api/github/releases?repositoryId=${owned!.id}`);
+    test("returns that repository's releases and excludes another repository's", async () => {
+      const res = await superAdminApi.get(`/api/github/releases?repositoryId=${await repositoryIdFor(TEST_REPOSITORY.fullName)}`);
       expect(res.status()).toBe(200);
 
-      const releases = (await res.json()).data as { repositoryFullName: string }[];
-      expect(Array.isArray(releases)).toBe(true);
-      for (const release of releases) {
-        expect(release.repositoryFullName).toBe(TEST_REPOSITORY.fullName);
-      }
+      const tags = ((await res.json()).data as { tagName: string; repositoryFullName: string }[]).map((r) => r.tagName);
+
+      // Seeded on the requested repository...
+      expect(tags).toContain('v1.0.0');
+      expect(tags).toContain('v1.1.0');
+      // ...and on the other one, so an ignored filter would surface it here.
+      expect(tags).not.toContain('sec-v0.9.0');
+    });
+
+    test('excludes drafts, so the list matches the count shown in the UI', async () => {
+      const res = await superAdminApi.get(`/api/github/releases?repositoryId=${await repositoryIdFor(TEST_REPOSITORY.fullName)}`);
+      const tags = ((await res.json()).data as { tagName: string }[]).map((r) => r.tagName);
+
+      expect(tags).not.toContain('v1.3.0-draft');
+    });
+
+    test("the release count on a product's repositories matches the filtered history", async () => {
+      const productsRes = await superAdminApi.get('/api/products');
+      const products = (await productsRes.json()).data as { id: string; slug: string }[];
+      const easycla = products.find((product) => product.slug === 'e2e-easycla');
+      expect(easycla, 'seeded product e2e-easycla is missing').toBeDefined();
+
+      const reposRes = await superAdminApi.get(`/api/products/${easycla!.id}/repositories`);
+      const repositories = (await reposRes.json()).data as { id: string; fullName: string; releaseCount: number }[];
+      const tracked = repositories.find((repository) => repository.fullName === TEST_REPOSITORY.fullName);
+      expect(tracked, `seeded repository ${TEST_REPOSITORY.fullName} is missing`).toBeDefined();
+
+      const releasesRes = await superAdminApi.get(`/api/github/releases?repositoryId=${tracked!.id}`);
+      const releases = (await releasesRes.json()).data as unknown[];
+
+      expect(tracked!.releaseCount).toBe(releases.length);
     });
 
     test('an unknown repository id yields an empty list rather than an error', async () => {

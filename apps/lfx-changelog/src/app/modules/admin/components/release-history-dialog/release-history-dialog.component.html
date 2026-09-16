@@ -62,5 +62,11 @@
         </div>
       }
     </div>
+
+    @if (truncated()) {
+      <p data-testid="release-history-truncated" class="text-text-muted text-xs">
+        Showing the {{ releases().length }} most recent of {{ repository().releaseCount }} releases.
+      </p>
+    }
   }
 </div>

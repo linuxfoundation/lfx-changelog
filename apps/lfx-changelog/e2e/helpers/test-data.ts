@@ -140,6 +140,27 @@ export const TEST_FOREIGN_REPOSITORY: TestRepository = {
   htmlUrl: 'https://github.com/linuxfoundation/e2e-security-repo',
 };
 
+interface TestRelease {
+  repository: 'primary' | 'foreign';
+  githubId: number;
+  tagName: string;
+  name: string;
+  isDraft?: boolean;
+  isPrerelease?: boolean;
+}
+
+/**
+ * The draft is deliberate: release counts and the history view must agree, and both exclude
+ * drafts. Without one seeded, a count that silently included drafts would still look correct.
+ */
+export const TEST_RELEASES: TestRelease[] = [
+  { repository: 'primary', githubId: 910001, tagName: 'v1.0.0', name: 'EasyCLA v1.0.0' },
+  { repository: 'primary', githubId: 910002, tagName: 'v1.1.0', name: 'EasyCLA v1.1.0' },
+  { repository: 'primary', githubId: 910003, tagName: 'v1.2.0-rc.1', name: 'EasyCLA v1.2.0-rc.1', isPrerelease: true },
+  { repository: 'primary', githubId: 910004, tagName: 'v1.3.0-draft', name: 'Unpublished draft', isDraft: true },
+  { repository: 'foreign', githubId: 920001, tagName: 'sec-v0.9.0', name: 'Security v0.9.0' },
+];
+
 /**
  * `linked-dev` and `unlink-me-dev` are both Slack-linked so the filter assertions and the
  * destructive unlink spec don't contend for the same row.

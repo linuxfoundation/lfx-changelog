@@ -12,6 +12,7 @@ import {
   TEST_CONTRIBUTORS,
   TEST_FOREIGN_REPOSITORY,
   TEST_PRODUCTS,
+  TEST_RELEASES,
   TEST_REPOSITORY,
   TEST_ROLE_ASSIGNMENTS,
   TEST_USERS,
@@ -142,7 +143,7 @@ export async function seedTestDatabase(): Promise<void> {
   const foreignRepositoryProduct = productBySlug.get(TEST_FOREIGN_REPOSITORY.productSlug);
   if (!foreignRepositoryProduct) throw new Error(`Product not found for slug: ${TEST_FOREIGN_REPOSITORY.productSlug}`);
 
-  await client.productRepository.create({
+  const foreignRepository = await client.productRepository.create({
     data: {
       productId: foreignRepositoryProduct.id,
       githubInstallationId: TEST_FOREIGN_REPOSITORY.githubInstallationId,
@@ -152,6 +153,24 @@ export async function seedTestDatabase(): Promise<void> {
       htmlUrl: TEST_FOREIGN_REPOSITORY.htmlUrl,
     },
   });
+
+  const repositoryByKey = { primary: repository, foreign: foreignRepository };
+  for (const release of TEST_RELEASES) {
+    await client.gitHubRelease.create({
+      data: {
+        repositoryId: repositoryByKey[release.repository].id,
+        githubId: release.githubId,
+        tagName: release.tagName,
+        name: release.name,
+        htmlUrl: `${repositoryByKey[release.repository].htmlUrl}/releases/tag/${release.tagName}`,
+        isDraft: release.isDraft ?? false,
+        isPrerelease: release.isPrerelease ?? false,
+        publishedAt: release.isDraft ? null : new Date(),
+        authorLogin: 'e2e-release-bot',
+        authorAvatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
+      },
+    });
+  }
 
   for (const contributor of TEST_CONTRIBUTORS) {
     const created = await client.contributor.create({
