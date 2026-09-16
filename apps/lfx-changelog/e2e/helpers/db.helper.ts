@@ -15,6 +15,7 @@ import {
   TEST_RELEASABLE_SERVICES,
   TEST_RELEASES,
   TEST_REPOSITORY,
+  TEST_RETIRED_REPOSITORY,
   TEST_ROLE_ASSIGNMENTS,
   TEST_USERS,
 } from './test-data.js';
@@ -157,7 +158,18 @@ export async function seedTestDatabase(): Promise<void> {
     },
   });
 
-  const repositoryByKey = { primary: repository, foreign: foreignRepository };
+  const retiredRepository = await client.productRepository.create({
+    data: {
+      productId: repositoryProduct.id,
+      githubInstallationId: TEST_RETIRED_REPOSITORY.githubInstallationId,
+      owner: TEST_RETIRED_REPOSITORY.owner,
+      name: TEST_RETIRED_REPOSITORY.name,
+      fullName: TEST_RETIRED_REPOSITORY.fullName,
+      htmlUrl: TEST_RETIRED_REPOSITORY.htmlUrl,
+    },
+  });
+
+  const repositoryByKey = { primary: repository, foreign: foreignRepository, retired: retiredRepository };
 
   // Explicit, spaced timestamps: ordering by publishedAt must not depend on how fast the loop runs.
   const releaseEpoch = new Date('2026-01-01T00:00:00Z').getTime();

@@ -51,7 +51,7 @@ const TestRepositorySchema = LinkRepositoryRequestSchema.pick({ githubInstallati
 });
 
 const TestReleasableServiceSchema = z.object({
-  repository: z.enum(['primary', 'foreign']),
+  repository: z.enum(['primary', 'foreign', 'retired']),
   displayName: z.string(),
   aliases: z.array(z.string()),
   deploymentType: z.nativeEnum(DeploymentType),
@@ -60,7 +60,7 @@ const TestReleasableServiceSchema = z.object({
 });
 
 const TestReleaseSchema = z.object({
-  repository: z.enum(['primary', 'foreign']),
+  repository: z.enum(['primary', 'foreign', 'retired']),
   githubId: z.number(),
   tagName: z.string(),
   name: z.string(),
@@ -149,6 +149,20 @@ export const TEST_REPOSITORY: TestRepository = {
 };
 
 /**
+ * A releasable service is unique per repository, so the inactive fixture needs a repository of
+ * its own. It sits in the product admin's product, which is what makes "inactive is listed for
+ * nobody" meaningful — it would otherwise be visible to them.
+ */
+export const TEST_RETIRED_REPOSITORY: TestRepository = {
+  productSlug: 'e2e-easycla',
+  githubInstallationId: 999001,
+  owner: 'linuxfoundation',
+  name: 'e2e-retired-repo',
+  fullName: 'linuxfoundation/e2e-retired-repo',
+  htmlUrl: 'https://github.com/linuxfoundation/e2e-retired-repo',
+};
+
+/**
  * Belongs to a product the product admin has no assignment for, so release endpoints can be
  * checked for reporting 404 rather than 403 on a repository that exists but is out of scope.
  */
@@ -192,7 +206,7 @@ export const TEST_RELEASABLE_SERVICES: TestReleasableService[] = [
     deploymentType: DeploymentType.PLATFORM_SUBCHART,
   },
   {
-    repository: 'primary',
+    repository: 'retired',
     displayName: 'E2E Retired API',
     aliases: ['retired'],
     deploymentType: DeploymentType.STANDALONE,
