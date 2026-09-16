@@ -182,14 +182,22 @@ export const TEST_RELEASABLE_SERVICES: TestReleasableService[] = [
     repository: 'primary',
     displayName: 'E2E EasyCLA API',
     aliases: ['easycla-api', 'easycla'],
-    deploymentType: 'standalone',
+    deploymentType: DeploymentType.STANDALONE,
     appName: 'e2e-easycla-repo',
   },
   {
     repository: 'foreign',
     displayName: 'E2E Security API',
     aliases: ['security'],
-    deploymentType: 'platform_subchart',
+    deploymentType: DeploymentType.PLATFORM_SUBCHART,
+  },
+  {
+    repository: 'primary',
+    displayName: 'E2E Retired API',
+    aliases: ['retired'],
+    deploymentType: DeploymentType.STANDALONE,
+    appName: 'e2e-retired-repo',
+    isActive: false,
   },
 ];
 

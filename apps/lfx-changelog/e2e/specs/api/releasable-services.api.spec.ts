@@ -7,9 +7,16 @@ import { TEST_RELEASABLE_SERVICES } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
 
-const OWNED = TEST_RELEASABLE_SERVICES[0]!.displayName;
-const FOREIGN = TEST_RELEASABLE_SERVICES[1]!.displayName;
-const INACTIVE = TEST_RELEASABLE_SERVICES[2]!.displayName;
+/** Selected by what each fixture is for, so a missing one fails here by name rather than by index. */
+function fixtureName(predicate: (service: (typeof TEST_RELEASABLE_SERVICES)[number]) => boolean, description: string): string {
+  const match = TEST_RELEASABLE_SERVICES.find(predicate);
+  if (!match) throw new Error(`Fixture missing: ${description}. Check TEST_RELEASABLE_SERVICES in test-data.ts.`);
+  return match.displayName;
+}
+
+const OWNED = fixtureName((s) => s.repository === 'primary' && s.isActive !== false, 'an active service on the tracked repository');
+const FOREIGN = fixtureName((s) => s.repository === 'foreign', 'a service on the out-of-product repository');
+const INACTIVE = fixtureName((s) => s.isActive === false, 'an inactive service');
 
 type ServiceRow = {
   displayName: string;
