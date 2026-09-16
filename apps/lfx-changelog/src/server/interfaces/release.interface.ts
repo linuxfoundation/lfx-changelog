@@ -5,6 +5,7 @@
 export interface FindAllPublicOptions {
   limit?: number;
   productId?: string;
+  repositoryId?: string;
 }
 
 /**

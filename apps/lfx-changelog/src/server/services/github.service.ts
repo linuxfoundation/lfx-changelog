@@ -466,13 +466,28 @@ export class GitHubService {
     const releases = await prisma.gitHubRelease.findMany({
       where: {
         isDraft: false,
+        ...(options.repositoryId && { repositoryId: options.repositoryId }),
         ...(options.productId && {
           repository: { productId: options.productId },
         }),
       },
-      include: {
+      // Projected rather than included: release bodies are full markdown release notes and no
+      // consumer of this endpoint renders them, so they are not worth reading or shipping.
+      select: {
+        id: true,
+        tagName: true,
+        name: true,
+        htmlUrl: true,
+        isDraft: true,
+        isPrerelease: true,
+        publishedAt: true,
+        authorLogin: true,
+        authorAvatarUrl: true,
         repository: {
-          include: { product: true },
+          select: {
+            fullName: true,
+            product: { select: { id: true, name: true, slug: true, faIcon: true } },
+          },
         },
       },
       orderBy: { publishedAt: 'desc' },
@@ -484,7 +499,6 @@ export class GitHubService {
       tagName: r.tagName,
       name: r.name,
       htmlUrl: r.htmlUrl,
-      body: r.body,
       isDraft: r.isDraft,
       isPrerelease: r.isPrerelease,
       publishedAt: r.publishedAt?.toISOString() ?? null,

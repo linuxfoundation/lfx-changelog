@@ -122,6 +122,74 @@ test.describe('GitHub releases API (/api/github)', () => {
     });
   });
 
+  test.describe('Filter by repository', () => {
+    async function repositoryIdFor(fullName: string): Promise<string> {
+      const res = await superAdminApi.get('/api/github/repositories');
+      const repositories = (await res.json()).data as { id: string; fullName: string }[];
+      const match = repositories.find((repository) => repository.fullName === fullName);
+      expect(match, `seeded repository ${fullName} is missing`).toBeDefined();
+      return match!.id;
+    }
+
+    test("returns that repository's releases and excludes another repository's", async () => {
+      const res = await superAdminApi.get(`/api/github/releases?repositoryId=${await repositoryIdFor(TEST_REPOSITORY.fullName)}`);
+      expect(res.status()).toBe(200);
+
+      const tags = ((await res.json()).data as { tagName: string; repositoryFullName: string }[]).map((r) => r.tagName);
+
+      // Seeded on the requested repository...
+      expect(tags).toContain('v1.0.0');
+      expect(tags).toContain('v1.1.0');
+      // ...and on the other one, so an ignored filter would surface it here.
+      expect(tags).not.toContain('sec-v0.9.0');
+    });
+
+    test('excludes drafts, so the list matches the count shown in the UI', async () => {
+      const res = await superAdminApi.get(`/api/github/releases?repositoryId=${await repositoryIdFor(TEST_REPOSITORY.fullName)}`);
+      const tags = ((await res.json()).data as { tagName: string }[]).map((r) => r.tagName);
+
+      expect(tags).not.toContain('v1.3.0-draft');
+    });
+
+    test("the release count on a product's repositories matches the filtered history", async () => {
+      const productsRes = await superAdminApi.get('/api/products');
+      const products = (await productsRes.json()).data as { id: string; slug: string }[];
+      const easycla = products.find((product) => product.slug === 'e2e-easycla');
+      expect(easycla, 'seeded product e2e-easycla is missing').toBeDefined();
+
+      const reposRes = await superAdminApi.get(`/api/products/${easycla!.id}/repositories`);
+      const repositories = (await reposRes.json()).data as { id: string; fullName: string; releaseCount: number }[];
+      const tracked = repositories.find((repository) => repository.fullName === TEST_REPOSITORY.fullName);
+      expect(tracked, `seeded repository ${TEST_REPOSITORY.fullName} is missing`).toBeDefined();
+
+      const releasesRes = await superAdminApi.get(`/api/github/releases?repositoryId=${tracked!.id}`);
+      const releases = (await releasesRes.json()).data as unknown[];
+
+      expect(tracked!.releaseCount).toBe(releases.length);
+    });
+
+    /**
+     * Pins the deliberate difference from the publish and sync routes: those are product-scoped
+     * and answer 404 for another product's repository, while reading releases is org-wide for any
+     * editor. If that ever needs narrowing, this test is what should fail first.
+     */
+    test('an editor may read releases for a repository outside their products', async () => {
+      const foreignId = await repositoryIdFor(TEST_FOREIGN_REPOSITORY.fullName);
+
+      const res = await editorApi.get(`/api/github/releases?repositoryId=${foreignId}`);
+      expect(res.status()).toBe(200);
+
+      const tags = ((await res.json()).data as { tagName: string }[]).map((r) => r.tagName);
+      expect(tags).toContain('sec-v0.9.0');
+    });
+
+    test('an unknown repository id yields an empty list rather than an error', async () => {
+      const res = await superAdminApi.get(`/api/github/releases?repositoryId=${'00000000-0000-0000-0000-000000000000'}`);
+      expect(res.status()).toBe(200);
+      expect((await res.json()).data).toEqual([]);
+    });
+  });
+
   test.describe('List Repositories', () => {
     test('super admin can list repositories with counts', async () => {
       const res = await superAdminApi.get('/api/github/repositories');

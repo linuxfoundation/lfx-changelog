@@ -1,0 +1,76 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-4">
+  <div class="bg-surface-alt flex items-center gap-3 rounded-lg p-3">
+    <i class="fa-duotone fa-tag text-new-feature shrink-0 text-lg"></i>
+    <div class="min-w-0">
+      <div class="text-text-primary truncate text-sm font-medium">{{ repository().fullName }}</div>
+      <div class="text-text-muted truncate text-xs">Releases stored from GitHub, newest first</div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div data-testid="release-history-loading" class="flex items-center justify-center py-10">
+      <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-2xl" aria-label="Loading releases"></i>
+    </div>
+  } @else if (failed()) {
+    <div
+      data-testid="release-history-error"
+      role="alert"
+      class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+      Could not load the releases for this repository. Try again shortly.
+    </div>
+  } @else if (releases().length === 0) {
+    <div data-testid="release-history-empty" class="border-border bg-surface rounded-lg border px-6 py-10 text-center">
+      <i class="fa-duotone fa-tag text-text-muted mb-3 text-3xl"></i>
+      <h3 class="text-text-primary text-sm font-medium">No releases yet</h3>
+      <p class="text-text-secondary mt-1 text-xs">Releases appear here once they are published on GitHub, or synced from it.</p>
+    </div>
+  } @else {
+    <!-- Scrolls within itself so the repository header and the truncation notice stay put
+         instead of the whole dialog growing past the viewport. -->
+    <div
+      data-testid="release-history-list"
+      class="border-border divide-border bg-surface max-h-[55vh] divide-y overflow-y-auto overscroll-contain rounded-lg border">
+      @for (release of releases(); track release.id) {
+        <div class="flex items-center gap-3 px-4 py-3">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <a
+                [href]="release.htmlUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-brand-600 hover:text-brand-700 truncate text-sm font-medium hover:underline">
+                {{ release.tagName }}
+              </a>
+              @if (release.isPrerelease) {
+                <span class="bg-warning-50 text-warning-700 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium">Pre-release</span>
+              }
+            </div>
+            @if (release.name && release.name !== release.tagName) {
+              <div class="text-text-secondary mt-0.5 truncate text-xs">{{ release.name }}</div>
+            }
+          </div>
+
+          <div class="shrink-0 text-right">
+            <div class="text-text-secondary text-xs">
+              @if (release.publishedAt) {
+                {{ release.publishedAt | timeAgo }}
+              } @else {
+                Not published
+              }
+            </div>
+            <div class="text-text-muted text-xs">{{ release.authorLogin }}</div>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (truncated()) {
+      <p data-testid="release-history-truncated" class="text-text-muted text-xs">
+        Showing the {{ releases().length }} most recent of {{ repository().releaseCount }} releases.
+      </p>
+    }
+  }
+</div>

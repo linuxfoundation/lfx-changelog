@@ -53,8 +53,13 @@ export const ProductRepositorySchema = z
 
 export type ProductRepository = z.infer<typeof ProductRepositorySchema>;
 
-export const RepositoryWithCountsSchema = ProductRepositorySchema.extend({
+export const ProductRepositoryWithCountSchema = ProductRepositorySchema.extend({
   releaseCount: z.number(),
+}).openapi('ProductRepositoryWithCount');
+
+export type ProductRepositoryWithCount = z.infer<typeof ProductRepositoryWithCountSchema>;
+
+export const RepositoryWithCountsSchema = ProductRepositoryWithCountSchema.extend({
   productName: z.string(),
   productFaIcon: z.string().nullable(),
 }).openapi('RepositoryWithCounts');
@@ -187,7 +192,6 @@ export const StoredReleaseSchema = z
     tagName: z.string(),
     name: z.string().nullable(),
     htmlUrl: z.string(),
-    body: z.string().nullable(),
     isDraft: z.boolean(),
     isPrerelease: z.boolean(),
     publishedAt: z.string().nullable(),

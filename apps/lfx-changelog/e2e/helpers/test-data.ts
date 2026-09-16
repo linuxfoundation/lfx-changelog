@@ -49,6 +49,15 @@ const TestRepositorySchema = LinkRepositoryRequestSchema.pick({ githubInstallati
   productSlug: z.string(),
 });
 
+const TestReleaseSchema = z.object({
+  repository: z.enum(['primary', 'foreign']),
+  githubId: z.number(),
+  tagName: z.string(),
+  name: z.string(),
+  isDraft: z.boolean().optional(),
+  isPrerelease: z.boolean().optional(),
+});
+
 const TestContributorSchema = ContributorSchema.pick({ githubUserId: true, githubLogin: true, emails: true, contributions: true }).extend({
   name: z.string().optional(),
   primaryEmail: z.string().optional(),
@@ -62,6 +71,7 @@ type TestUser = z.infer<typeof TestUserSchema>;
 type TestRoleAssignment = z.infer<typeof TestRoleAssignmentSchema>;
 type TestChangelog = z.infer<typeof TestChangelogSchema>;
 type TestRepository = z.infer<typeof TestRepositorySchema>;
+type TestRelease = z.infer<typeof TestReleaseSchema>;
 type TestContributor = z.infer<typeof TestContributorSchema>;
 export type TestBlogPost = z.infer<typeof TestBlogPostSchema>;
 
@@ -139,6 +149,18 @@ export const TEST_FOREIGN_REPOSITORY: TestRepository = {
   fullName: 'linuxfoundation/e2e-security-repo',
   htmlUrl: 'https://github.com/linuxfoundation/e2e-security-repo',
 };
+
+/**
+ * The draft is deliberate: release counts and the history view must agree, and both exclude
+ * drafts. Without one seeded, a count that silently included drafts would still look correct.
+ */
+export const TEST_RELEASES: TestRelease[] = [
+  { repository: 'primary', githubId: 910001, tagName: 'v1.0.0', name: 'EasyCLA v1.0.0' },
+  { repository: 'primary', githubId: 910002, tagName: 'v1.1.0', name: 'EasyCLA v1.1.0' },
+  { repository: 'primary', githubId: 910003, tagName: 'v1.2.0-rc.1', name: 'EasyCLA v1.2.0-rc.1', isPrerelease: true },
+  { repository: 'primary', githubId: 910004, tagName: 'v1.3.0-draft', name: 'Unpublished draft', isDraft: true },
+  { repository: 'foreign', githubId: 920001, tagName: 'sec-v0.9.0', name: 'Security v0.9.0' },
+];
 
 /**
  * `linked-dev` and `unlink-me-dev` are both Slack-linked so the filter assertions and the

@@ -11,6 +11,7 @@ import { SetIncludesPipe } from '@shared/pipes/set-includes.pipe';
 import { TimeAgoPipe } from '@shared/pipes/time-ago.pipe';
 import { BehaviorSubject, catchError, of, switchMap, tap } from 'rxjs';
 import { CreateReleaseDialogComponent } from '../components/create-release-dialog/create-release-dialog.component';
+import { ReleaseHistoryDialogComponent } from '../components/release-history-dialog/release-history-dialog.component';
 
 import type { RepositoryWithCounts } from '@lfx-changelog/shared';
 import type { ProductGroup } from '@shared/interfaces/repository.interface';
@@ -91,6 +92,16 @@ export class RepositoryListComponent {
         // count, with nothing to correct it. Syncing pulls the release from GitHub directly.
         if (result === 'created') this.syncRepository(repository.id);
       },
+    });
+  }
+
+  protected openReleaseHistory(repository: RepositoryWithCounts): void {
+    this.dialogService.open({
+      title: 'Release History',
+      component: ReleaseHistoryDialogComponent,
+      size: 'lg',
+      inputs: { repository },
+      testId: 'release-history-dialog',
     });
   }
 

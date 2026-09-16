@@ -8,16 +8,24 @@ export class ProductDetailPage {
   public readonly heading: Locator;
   public readonly tabs: Locator;
   public readonly statusBadge: Locator;
+  public readonly releaseHistoryDialog: Locator;
+  public readonly releaseHistoryList: Locator;
 
   public constructor(public readonly page: Page) {
     this.backBtn = page.locator('[data-testid="product-detail-back-btn"]');
     this.heading = page.locator('[data-testid="product-detail-heading"]');
     this.tabs = page.locator('[data-testid="product-detail-tabs"]');
     this.statusBadge = page.locator('[data-testid="product-detail"] lfx-badge');
+    this.releaseHistoryDialog = page.locator('[data-testid="release-history-dialog"]');
+    this.releaseHistoryList = page.locator('[data-testid="release-history-list"]');
   }
 
   public async goto(id: string) {
     await this.page.goto(`/admin/products/${id}`, { waitUntil: 'networkidle' });
+  }
+
+  public getReleaseHistoryButtons(): Locator {
+    return this.page.locator('[data-testid^="product-repo-release-history-"]');
   }
 
   public async switchTab(tabValue: string) {

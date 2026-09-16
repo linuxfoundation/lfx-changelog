@@ -79,6 +79,29 @@ test.describe('Admin Repository List — create release dialog', () => {
   });
 });
 
+/** Reads seeded rows rather than GitHub, so unlike the create dialog this asserts a real render. */
+test.describe('Admin Repository List — release history', () => {
+  let repoListPage: RepositoryListPage;
+
+  test.beforeEach(async ({ page }) => {
+    repoListPage = new RepositoryListPage(page);
+    await repoListPage.goto();
+  });
+
+  test('should open the release history from the release count', async () => {
+    const counts = repoListPage.getReleaseHistoryButtons();
+    expect(await counts.count()).toBeGreaterThan(0);
+
+    await counts.first().click();
+    await expect(repoListPage.historyDialog).toBeVisible();
+
+    await expect(repoListPage.historyList).toBeVisible({ timeout: 15000 });
+    await expect(repoListPage.historyList).toContainText('v1.1.0');
+    // Drafts are excluded from both the count and this list.
+    await expect(repoListPage.historyList).not.toContainText('v1.3.0-draft');
+  });
+});
+
 test.describe('RBAC — Repository List Access', () => {
   test.describe('product admin', () => {
     test.use({ storageState: './e2e/.auth/product-admin.json' });
