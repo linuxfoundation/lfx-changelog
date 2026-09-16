@@ -26,6 +26,14 @@ export class ReleaseService {
     return this.http.get<ApiResponse<StoredRelease[]>>('/api/github/releases', { params }).pipe(map((res) => res.data));
   }
 
+  public getReleasesForRepository(repoId: string, limit = 50): Observable<StoredRelease[]> {
+    const params = new HttpParams().set('repositoryId', repoId).set('limit', limit.toString());
+    return this.http.get<ApiResponse<StoredRelease[]>>('/api/github/releases', { params }).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
   public getRepositories(): Observable<RepositoryWithCounts[]> {
     return this.http.get<ApiResponse<RepositoryWithCounts[]>>('/api/github/repositories').pipe(
       map((res) => res.data),

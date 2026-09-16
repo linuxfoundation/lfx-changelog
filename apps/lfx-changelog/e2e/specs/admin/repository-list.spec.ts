@@ -56,6 +56,19 @@ test.describe('Admin Repository List — create release dialog', () => {
     expect(await repoListPage.getReleaseButtons().count()).toBeGreaterThan(0);
   });
 
+  test('should open the release history from the release count', async ({ page }) => {
+    const counts = repoListPage.getReleaseHistoryButtons();
+    expect(await counts.count()).toBeGreaterThan(0);
+
+    await counts.first().click();
+    await expect(repoListPage.historyDialog).toBeVisible();
+
+    // The seeded repository has no stored releases, so the empty state is the expected result.
+    const listed = page.locator('[data-testid="release-history-list"]');
+    const empty = page.locator('[data-testid="release-history-empty"]');
+    await expect(listed.or(empty)).toBeVisible({ timeout: 15000 });
+  });
+
   test('should open the create release dialog', async () => {
     await repoListPage.getReleaseButtons().first().click();
     await expect(repoListPage.releaseDialog).toBeVisible();

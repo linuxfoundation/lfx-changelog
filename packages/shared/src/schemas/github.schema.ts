@@ -53,6 +53,12 @@ export const ProductRepositorySchema = z
 
 export type ProductRepository = z.infer<typeof ProductRepositorySchema>;
 
+export const ProductRepositoryWithCountSchema = ProductRepositorySchema.extend({
+  releaseCount: z.number(),
+}).openapi('ProductRepositoryWithCount');
+
+export type ProductRepositoryWithCount = z.infer<typeof ProductRepositoryWithCountSchema>;
+
 export const RepositoryWithCountsSchema = ProductRepositorySchema.extend({
   releaseCount: z.number(),
   productName: z.string(),

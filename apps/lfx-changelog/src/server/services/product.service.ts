@@ -9,7 +9,7 @@ import { serverLogger } from '../server-logger';
 
 import { getPrismaClient } from './prisma.service';
 
-import type { LinkRepositoryRequest, PublicProduct, RepositoryWithCounts } from '@lfx-changelog/shared';
+import type { LinkRepositoryRequest, ProductRepositoryWithCount, PublicProduct, RepositoryWithCounts } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
 
 export class ProductService {
@@ -126,6 +126,36 @@ export class ProductService {
       where: { productId },
       orderBy: { fullName: 'asc' },
     });
+  }
+
+  /**
+   * Repositories for the product detail page, each with how many releases are stored for it.
+   * Separate from `findRepositoriesByProductId`, whose Prisma rows the sync and activity paths
+   * pass straight to GitHubService.
+   */
+  public async findRepositoriesWithReleaseCounts(productId: string): Promise<ProductRepositoryWithCount[]> {
+    const prisma = getPrismaClient();
+    const repositories = await prisma.productRepository.findMany({
+      where: { productId },
+      include: { _count: { select: { releases: true } } },
+      orderBy: { fullName: 'asc' },
+    });
+
+    return repositories.map((repository) => ({
+      id: repository.id,
+      productId: repository.productId,
+      githubInstallationId: repository.githubInstallationId,
+      owner: repository.owner,
+      name: repository.name,
+      fullName: repository.fullName,
+      htmlUrl: repository.htmlUrl,
+      description: repository.description,
+      isPrivate: repository.isPrivate,
+      lastSyncedAt: repository.lastSyncedAt?.toISOString() ?? null,
+      createdAt: repository.createdAt.toISOString(),
+      updatedAt: repository.updatedAt.toISOString(),
+      releaseCount: repository._count.releases,
+    }));
   }
 
   public async linkRepository(productId: string, data: LinkRepositoryRequest): Promise<PrismaProductRepository> {

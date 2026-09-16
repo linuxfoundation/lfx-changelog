@@ -466,6 +466,7 @@ export class GitHubService {
     const releases = await prisma.gitHubRelease.findMany({
       where: {
         isDraft: false,
+        ...(options.repositoryId && { repositoryId: options.repositoryId }),
         ...(options.productId && {
           repository: { productId: options.productId },
         }),

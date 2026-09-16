@@ -34,6 +34,7 @@ releaseRegistry.registerPath({
     query: z.object({
       limit: z.coerce.number().int().min(1).max(100).optional().openapi({ description: 'Maximum results to return (default 20, max 100)' }),
       productId: z.string().optional().openapi({ description: 'Filter releases by product ID' }),
+      repositoryId: z.string().optional().openapi({ description: 'Filter releases by tracked repository ID' }),
     }),
   },
   responses: {

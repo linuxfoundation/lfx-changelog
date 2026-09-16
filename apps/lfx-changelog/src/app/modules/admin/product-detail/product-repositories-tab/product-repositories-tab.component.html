@@ -51,6 +51,16 @@
         }
       </ng-template>
 
+      <ng-template lfxColumn="Releases" let-repo>
+        <button
+          type="button"
+          [attr.data-testid]="'product-repo-release-history-' + repo.id"
+          (click)="openReleaseHistory(repo)"
+          class="text-brand-600 hover:text-brand-700 rounded text-xs font-medium hover:underline">
+          {{ repo.releaseCount }} {{ repo.releaseCount === 1 ? 'release' : 'releases' }}
+        </button>
+      </ng-template>
+
       <ng-template lfxColumn="Last Synced" let-repo>
         @if (repo.lastSyncedAt) {
           <span class="text-text-secondary text-xs">{{ repo.lastSyncedAt | timeAgo }}</span>

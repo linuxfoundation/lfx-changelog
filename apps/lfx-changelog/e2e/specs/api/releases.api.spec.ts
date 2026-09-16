@@ -122,6 +122,30 @@ test.describe('GitHub releases API (/api/github)', () => {
     });
   });
 
+  test.describe('Filter by repository', () => {
+    test('returns only the releases of the requested repository', async () => {
+      const listRes = await superAdminApi.get('/api/github/repositories');
+      const repositories = (await listRes.json()).data as { id: string; fullName: string }[];
+      const owned = repositories.find((repository) => repository.fullName === TEST_REPOSITORY.fullName);
+      expect(owned, `seeded repository ${TEST_REPOSITORY.fullName} is missing`).toBeDefined();
+
+      const res = await superAdminApi.get(`/api/github/releases?repositoryId=${owned!.id}`);
+      expect(res.status()).toBe(200);
+
+      const releases = (await res.json()).data as { repositoryFullName: string }[];
+      expect(Array.isArray(releases)).toBe(true);
+      for (const release of releases) {
+        expect(release.repositoryFullName).toBe(TEST_REPOSITORY.fullName);
+      }
+    });
+
+    test('an unknown repository id yields an empty list rather than an error', async () => {
+      const res = await superAdminApi.get(`/api/github/releases?repositoryId=${'00000000-0000-0000-0000-000000000000'}`);
+      expect(res.status()).toBe(200);
+      expect((await res.json()).data).toEqual([]);
+    });
+  });
+
   test.describe('List Repositories', () => {
     test('super admin can list repositories with counts', async () => {
       const res = await superAdminApi.get('/api/github/repositories');

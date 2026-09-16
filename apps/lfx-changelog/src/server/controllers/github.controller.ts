@@ -57,8 +57,9 @@ export class GitHubController {
     try {
       const limit = req.query['limit'] ? parseInt(req.query['limit'] as string, 10) : undefined;
       const productId = req.query['productId'] as string | undefined;
+      const repositoryId = req.query['repositoryId'] as string | undefined;
 
-      const releases = await this.githubService.findAllPublicReleases({ limit, productId });
+      const releases = await this.githubService.findAllPublicReleases({ limit, productId, repositoryId });
       res.json({ success: true, data: releases });
     } catch (error) {
       next(error);

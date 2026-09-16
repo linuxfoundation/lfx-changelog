@@ -10,6 +10,7 @@ import { TableColumnDirective } from '@components/table/table-column.directive';
 import { TableComponent } from '@components/table/table.component';
 import { CreateReleaseDialogComponent } from '@modules/admin/components/create-release-dialog/create-release-dialog.component';
 import { LinkRepositoriesDialogComponent } from '@modules/admin/components/link-repositories-dialog/link-repositories-dialog.component';
+import { ReleaseHistoryDialogComponent } from '@modules/admin/components/release-history-dialog/release-history-dialog.component';
 import { AuthService } from '@services/auth.service';
 import { DialogService } from '@services/dialog.service';
 import { IntegrationsService } from '@services/integrations.service';
@@ -20,7 +21,7 @@ import { SetIncludesPipe } from '@shared/pipes/set-includes.pipe';
 import { TimeAgoPipe } from '@shared/pipes/time-ago.pipe';
 import { catchError, map, of, startWith, Subject, switchMap } from 'rxjs';
 
-import type { ProductRepository } from '@lfx-changelog/shared';
+import type { ProductRepositoryWithCount } from '@lfx-changelog/shared';
 import type { LoadingState } from '@shared/interfaces/loading-state.interface';
 
 @Component({
@@ -44,7 +45,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
 
   private readonly refresh$ = new Subject<void>();
 
-  private readonly linkedReposState: Signal<LoadingState<ProductRepository[]>> = this.initLinkedReposState();
+  private readonly linkedReposState: Signal<LoadingState<ProductRepositoryWithCount[]>> = this.initLinkedReposState();
 
   // Editors can read this tab but can neither sync nor publish, so both actions are hidden
   // rather than offered and then rejected. The server remains the authority either way.
@@ -81,7 +82,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
 
   // No onClose refresh: this table lists the linked repositories themselves, which publishing
   // does not change, and it shows no release counts that could go stale.
-  protected openCreateRelease(repository: ProductRepository): void {
+  protected openCreateRelease(repository: ProductRepositoryWithCount): void {
     this.dialogService.open({
       title: 'Create Release',
       component: CreateReleaseDialogComponent,
@@ -91,7 +92,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
     });
   }
 
-  protected syncRepository(repo: ProductRepository): void {
+  protected syncRepository(repo: ProductRepositoryWithCount): void {
     this.syncingRepo.update((set) => new Set(set).add(repo.id));
 
     this.releaseService
@@ -110,6 +111,16 @@ export class ProductRepositoriesTabComponent implements OnInit {
       });
   }
 
+  protected openReleaseHistory(repository: ProductRepositoryWithCount): void {
+    this.dialogService.open({
+      title: 'Release History',
+      component: ReleaseHistoryDialogComponent,
+      size: 'lg',
+      inputs: { repository },
+      testId: 'release-history-dialog',
+    });
+  }
+
   protected installOnNewOrg(): void {
     this.integrationsService
       .getGitHubInstallUrl(this.productId())
@@ -122,7 +133,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
       });
   }
 
-  protected unlinkRepository(repo: ProductRepository): void {
+  protected unlinkRepository(repo: ProductRepositoryWithCount): void {
     this.productService
       .unlinkRepository(this.productId(), repo.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -143,14 +154,14 @@ export class ProductRepositoriesTabComponent implements OnInit {
     });
   }
 
-  private initLinkedReposState(): Signal<LoadingState<ProductRepository[]>> {
+  private initLinkedReposState(): Signal<LoadingState<ProductRepositoryWithCount[]>> {
     return toSignal(
       this.refresh$.pipe(
         switchMap(() =>
           this.productService.getRepositories(this.productId()).pipe(
             map((data) => ({ data, loading: false })),
-            catchError(() => of({ data: [] as ProductRepository[], loading: false })),
-            startWith({ data: [] as ProductRepository[], loading: true })
+            catchError(() => of({ data: [] as ProductRepositoryWithCount[], loading: false })),
+            startWith({ data: [] as ProductRepositoryWithCount[], loading: true })
           )
         )
       ),

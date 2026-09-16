@@ -82,7 +82,13 @@
                   </div>
                   <div class="space-y-2 pl-8 sm:flex sm:items-center sm:gap-4 sm:space-y-0 sm:pl-0">
                     <div class="sm:text-right">
-                      <div class="text-text-secondary text-xs font-medium">{{ repo.releaseCount }} releases</div>
+                      <button
+                        type="button"
+                        [attr.data-testid]="'repo-release-history-' + repo.id"
+                        (click)="openReleaseHistory(repo)"
+                        class="text-brand-600 hover:text-brand-700 rounded text-xs font-medium hover:underline">
+                        {{ repo.releaseCount }} {{ repo.releaseCount === 1 ? 'release' : 'releases' }}
+                      </button>
                       @if (repo.lastSyncedAt) {
                         <div class="text-text-muted text-xs">Synced {{ repo.lastSyncedAt | timeAgo }}</div>
                       } @else {
