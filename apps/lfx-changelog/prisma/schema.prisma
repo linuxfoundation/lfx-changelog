@@ -29,6 +29,11 @@ enum ApiKeyScope {
   blogs_write
 }
 
+enum DeploymentType {
+  standalone
+  platform_subchart
+}
+
 enum ChangelogSource {
   manual
   automated
@@ -116,13 +121,37 @@ model ProductRepository {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  product      Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
-  releases     GitHubRelease[]
-  contributors ContributorRepository[]
+  product           Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  releases          GitHubRelease[]
+  contributors      ContributorRepository[]
+  releasableService ReleasableService?
 
   @@unique([productId, owner, name])
   @@index([productId])
   @@map("product_repositories")
+}
+
+/// A tracked repository that can be released to the LFX environments. Keyed on the repository
+/// rather than a service name so the product link, owner/name and App installation come from the
+/// row that already holds them, and product-scoped authorization applies unchanged.
+model ReleasableService {
+  id             String         @id @default(uuid())
+  repositoryId   String         @unique @map("repository_id")
+  displayName    String         @map("display_name")
+  aliases        String[]       @default([])
+  deploymentType DeploymentType @map("deployment_type")
+  /// Argo CD application name. Null for platform_subchart, which has no application of its own.
+  appName        String?        @map("app_name")
+  /// Overrides the configured default GitOps repository when set.
+  argocdRepo     String?        @map("argocd_repo")
+  environments   String[]       @default(["staging", "prod"])
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  repository ProductRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@map("releasable_services")
 }
 
 model GitHubRelease {

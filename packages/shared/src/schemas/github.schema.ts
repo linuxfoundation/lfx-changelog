@@ -3,6 +3,8 @@
 
 import { z } from 'zod';
 
+import { DeploymentType } from '../enums/deployment-type.enum.js';
+
 export const GitHubInstallationSchema = z
   .object({
     id: z.number(),
@@ -158,6 +160,27 @@ export const ReleaseChangesSchema = z
   .openapi('ReleaseChanges');
 
 export type ReleaseChanges = z.infer<typeof ReleaseChangesSchema>;
+
+export const ReleasableServiceSchema = z
+  .object({
+    id: z.string().uuid(),
+    repositoryId: z.string().uuid(),
+    displayName: z.string(),
+    aliases: z.array(z.string()),
+    deploymentType: z.nativeEnum(DeploymentType),
+    appName: z.string().nullable(),
+    argocdRepo: z.string().nullable(),
+    environments: z.array(z.string()),
+    isActive: z.boolean(),
+    repositoryFullName: z.string(),
+    repositoryHtmlUrl: z.string(),
+    productId: z.string(),
+    productName: z.string(),
+    latestTag: z.string().nullable(),
+  })
+  .openapi('ReleasableService');
+
+export type ReleasableService = z.infer<typeof ReleasableServiceSchema>;
 
 export const GitHubReleaseSchema = z
   .object({
