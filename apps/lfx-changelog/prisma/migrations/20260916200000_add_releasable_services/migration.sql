@@ -36,3 +36,12 @@ ALTER TABLE "releasable_services" ALTER COLUMN "aliases" SET NOT NULL;
 ALTER TABLE "releasable_services" ALTER COLUMN "aliases" SET DEFAULT '{}';
 ALTER TABLE "releasable_services" ALTER COLUMN "environments" SET NOT NULL;
 ALTER TABLE "releasable_services" ALTER COLUMN "environments" SET DEFAULT ARRAY['staging', 'prod']::TEXT[];
+
+-- A standalone service deploys its own Argo CD application and must name it; a platform subchart
+-- has no application of its own, so naming one would be meaningless. Prisma cannot express this,
+-- and until a write path exists these rows are inserted directly, so the database is the only
+-- thing enforcing it.
+ALTER TABLE "releasable_services" ADD CONSTRAINT "releasable_services_app_name_matches_deployment_type" CHECK (
+  ("deployment_type" = 'standalone' AND "app_name" IS NOT NULL) OR
+  ("deployment_type" = 'platform_subchart' AND "app_name" IS NULL)
+);
