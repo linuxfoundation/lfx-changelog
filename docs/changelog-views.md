@@ -24,7 +24,7 @@ The `mark-viewed` endpoint uses `changelogs:read` (not `changelogs:write`) becau
 
 ## API Endpoints
 
-### GET `/api/changelog-views/unseen`
+### GET `/api/changelogs/views/unseen`
 
 Returns unseen changelog counts for the authenticated viewer.
 
@@ -73,7 +73,7 @@ If neither `productId` nor `productIds` is provided, returns counts for **all ac
 
 A `lastViewedAt` of `null` means the viewer has never viewed that product's changelog.
 
-### POST `/api/changelog-views/mark-viewed`
+### POST `/api/changelogs/views/mark-viewed`
 
 Marks one or more products' changelogs as viewed, updating the `lastViewedAt` timestamp.
 
@@ -121,15 +121,15 @@ No `viewerId` needed — the Auth0 session provides it automatically.
 
 ```bash
 # Get unseen counts for all products
-curl https://changelog.lfx.dev/api/changelog-views/unseen \
+curl https://changelog.lfx.dev/api/changelogs/views/unseen \
   -H "Cookie: appSession=<session_cookie>"
 
 # Get unseen count for a specific product
-curl "https://changelog.lfx.dev/api/changelog-views/unseen?productId=<uuid>" \
+curl "https://changelog.lfx.dev/api/changelogs/views/unseen?productId=<uuid>" \
   -H "Cookie: appSession=<session_cookie>"
 
 # Mark a product's changelog as viewed
-curl -X POST https://changelog.lfx.dev/api/changelog-views/mark-viewed \
+curl -X POST https://changelog.lfx.dev/api/changelogs/views/mark-viewed \
   -H "Cookie: appSession=<session_cookie>" \
   -H "Content-Type: application/json" \
   -d '{ "productId": "<uuid>" }'
@@ -141,11 +141,11 @@ API key consumers must pass `viewerId` to identify the viewer.
 
 ```bash
 # Get unseen counts for a specific viewer
-curl "https://changelog.lfx.dev/api/changelog-views/unseen?viewerId=auth0|abc123&productId=<uuid>" \
+curl "https://changelog.lfx.dev/api/changelogs/views/unseen?viewerId=auth0|abc123&productId=<uuid>" \
   -H "Authorization: Bearer lfx_your_key_here"
 
 # Mark multiple products as viewed for a viewer
-curl -X POST https://changelog.lfx.dev/api/changelog-views/mark-viewed \
+curl -X POST https://changelog.lfx.dev/api/changelogs/views/mark-viewed \
   -H "Authorization: Bearer lfx_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -158,9 +158,9 @@ curl -X POST https://changelog.lfx.dev/api/changelog-views/mark-viewed \
 
 An external LFX product (e.g., Organization Dashboard) would integrate as follows:
 
-1. **On page load** — call `GET /api/changelog-views/unseen` with the user's Auth0 `sub` as `viewerId` to get badge counts
+1. **On page load** — call `GET /api/changelogs/views/unseen` with the user's Auth0 `sub` as `viewerId` to get badge counts
 2. **Show badge** — display the `unseenCount` on a notification bell or changelog link
-3. **When user opens changelog** — call `POST /api/changelog-views/mark-viewed` with the relevant `productId` to reset the count
+3. **When user opens changelog** — call `POST /api/changelogs/views/mark-viewed` with the relevant `productId` to reset the count
 4. **Badge disappears** — subsequent calls to unseen will return `0` until new changelogs are published
 
 ## Error Responses
