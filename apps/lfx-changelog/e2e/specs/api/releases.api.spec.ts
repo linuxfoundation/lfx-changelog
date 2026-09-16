@@ -168,6 +168,21 @@ test.describe('GitHub releases API (/api/github)', () => {
       expect(tracked!.releaseCount).toBe(releases.length);
     });
 
+    /**
+     * Pins the deliberate difference from the publish and sync routes: those are product-scoped
+     * and answer 404 for another product's repository, while reading releases is org-wide for any
+     * editor. If that ever needs narrowing, this test is what should fail first.
+     */
+    test('an editor may read releases for a repository outside their products', async () => {
+      const foreignId = await repositoryIdFor(TEST_FOREIGN_REPOSITORY.fullName);
+
+      const res = await editorApi.get(`/api/github/releases?repositoryId=${foreignId}`);
+      expect(res.status()).toBe(200);
+
+      const tags = ((await res.json()).data as { tagName: string }[]).map((r) => r.tagName);
+      expect(tags).toContain('sec-v0.9.0');
+    });
+
     test('an unknown repository id yields an empty list rather than an error', async () => {
       const res = await superAdminApi.get(`/api/github/releases?repositoryId=${'00000000-0000-0000-0000-000000000000'}`);
       expect(res.status()).toBe(200);

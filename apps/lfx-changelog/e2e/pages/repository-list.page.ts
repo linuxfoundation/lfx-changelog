@@ -14,6 +14,8 @@ export class RepositoryListPage {
   public readonly releaseNameInput: Locator;
   public readonly releaseSubmit: Locator;
   public readonly historyDialog: Locator;
+  public readonly historyList: Locator;
+  public readonly historyTruncated: Locator;
 
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="repository-list-heading"]');
@@ -26,6 +28,8 @@ export class RepositoryListPage {
     this.releaseNameInput = page.locator('[data-testid="create-release-name-input"] input');
     this.releaseSubmit = page.locator('[data-testid="create-release-submit"] button');
     this.historyDialog = page.locator('[data-testid="release-history-dialog"]');
+    this.historyList = page.locator('[data-testid="release-history-list"]');
+    this.historyTruncated = page.locator('[data-testid="release-history-truncated"]');
   }
 
   public getReleaseHistoryButtons(): Locator {

@@ -49,6 +49,15 @@ const TestRepositorySchema = LinkRepositoryRequestSchema.pick({ githubInstallati
   productSlug: z.string(),
 });
 
+const TestReleaseSchema = z.object({
+  repository: z.enum(['primary', 'foreign']),
+  githubId: z.number(),
+  tagName: z.string(),
+  name: z.string(),
+  isDraft: z.boolean().optional(),
+  isPrerelease: z.boolean().optional(),
+});
+
 const TestContributorSchema = ContributorSchema.pick({ githubUserId: true, githubLogin: true, emails: true, contributions: true }).extend({
   name: z.string().optional(),
   primaryEmail: z.string().optional(),
@@ -62,6 +71,7 @@ type TestUser = z.infer<typeof TestUserSchema>;
 type TestRoleAssignment = z.infer<typeof TestRoleAssignmentSchema>;
 type TestChangelog = z.infer<typeof TestChangelogSchema>;
 type TestRepository = z.infer<typeof TestRepositorySchema>;
+type TestRelease = z.infer<typeof TestReleaseSchema>;
 type TestContributor = z.infer<typeof TestContributorSchema>;
 export type TestBlogPost = z.infer<typeof TestBlogPostSchema>;
 
@@ -139,15 +149,6 @@ export const TEST_FOREIGN_REPOSITORY: TestRepository = {
   fullName: 'linuxfoundation/e2e-security-repo',
   htmlUrl: 'https://github.com/linuxfoundation/e2e-security-repo',
 };
-
-interface TestRelease {
-  repository: 'primary' | 'foreign';
-  githubId: number;
-  tagName: string;
-  name: string;
-  isDraft?: boolean;
-  isPrerelease?: boolean;
-}
 
 /**
  * The draft is deliberate: release counts and the history view must agree, and both exclude

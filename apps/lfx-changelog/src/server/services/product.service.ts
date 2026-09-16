@@ -12,6 +12,25 @@ import { getPrismaClient } from './prisma.service';
 import type { LinkRepositoryRequest, ProductRepositoryWithCount, PublicProduct, RepositoryWithCounts } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
 
+/** Shared so the two repository read models cannot drift when a column is added. */
+function toRepositoryWithCount(repository: PrismaProductRepository & { _count: { releases: number } }): ProductRepositoryWithCount {
+  return {
+    id: repository.id,
+    productId: repository.productId,
+    githubInstallationId: repository.githubInstallationId,
+    owner: repository.owner,
+    name: repository.name,
+    fullName: repository.fullName,
+    htmlUrl: repository.htmlUrl,
+    description: repository.description,
+    isPrivate: repository.isPrivate,
+    lastSyncedAt: repository.lastSyncedAt?.toISOString() ?? null,
+    createdAt: repository.createdAt.toISOString(),
+    updatedAt: repository.updatedAt.toISOString(),
+    releaseCount: repository._count.releases,
+  };
+}
+
 export class ProductService {
   public async findAllPublic(): Promise<PublicProduct[]> {
     const prisma = getPrismaClient();
@@ -103,19 +122,7 @@ export class ProductService {
     });
 
     return repos.map((r) => ({
-      id: r.id,
-      productId: r.productId,
-      githubInstallationId: r.githubInstallationId,
-      owner: r.owner,
-      name: r.name,
-      fullName: r.fullName,
-      htmlUrl: r.htmlUrl,
-      description: r.description,
-      isPrivate: r.isPrivate,
-      lastSyncedAt: r.lastSyncedAt?.toISOString() ?? null,
-      createdAt: r.createdAt.toISOString(),
-      updatedAt: r.updatedAt.toISOString(),
-      releaseCount: r._count.releases,
+      ...toRepositoryWithCount(r),
       productName: r.product.name,
       productFaIcon: r.product.faIcon,
     }));
@@ -143,21 +150,7 @@ export class ProductService {
       orderBy: { fullName: 'asc' },
     });
 
-    return repositories.map((repository) => ({
-      id: repository.id,
-      productId: repository.productId,
-      githubInstallationId: repository.githubInstallationId,
-      owner: repository.owner,
-      name: repository.name,
-      fullName: repository.fullName,
-      htmlUrl: repository.htmlUrl,
-      description: repository.description,
-      isPrivate: repository.isPrivate,
-      lastSyncedAt: repository.lastSyncedAt?.toISOString() ?? null,
-      createdAt: repository.createdAt.toISOString(),
-      updatedAt: repository.updatedAt.toISOString(),
-      releaseCount: repository._count.releases,
-    }));
+    return repositories.map(toRepositoryWithCount);
   }
 
   public async linkRepository(productId: string, data: LinkRepositoryRequest): Promise<PrismaProductRepository> {

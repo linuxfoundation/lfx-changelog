@@ -103,7 +103,7 @@ GitHub's own error text is recorded in the server logs but never returned to the
 
 ## Release Syncing
 
-GitHub releases are stored in the database and displayed on the admin repositories page. Releases sync via two mechanisms:
+GitHub releases are stored in the database and displayed on the admin repositories page and on a product's Repositories tab. On both, the release count opens that repository's release history. Releases sync via two mechanisms:
 
 ### 1. Webhook-Driven (Real-Time)
 

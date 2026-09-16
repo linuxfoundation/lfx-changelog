@@ -47,6 +47,7 @@ export async function cleanTestDatabase(): Promise<void> {
   await client.apiKey.deleteMany();
   await client.userRoleAssignment.deleteMany();
   await client.changelogEntry.deleteMany();
+  await client.gitHubRelease.deleteMany();
   await client.contributorRepository.deleteMany();
   await client.contributor.deleteMany();
   await client.productRepository.deleteMany();

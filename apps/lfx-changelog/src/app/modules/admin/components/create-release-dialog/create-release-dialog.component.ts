@@ -28,8 +28,7 @@ export class CreateReleaseDialogComponent {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly dialogService = inject(DialogService);
 
-  // Deliberately the narrower ProductRepository: the product detail tab has only this shape,
-  // and the dialog needs nothing beyond the id and full name.
+  // The dialog needs nothing beyond the id and full name.
   public readonly repository = input.required<ProductRepository>();
 
   protected readonly targetControl = new FormControl('', { nonNullable: true });

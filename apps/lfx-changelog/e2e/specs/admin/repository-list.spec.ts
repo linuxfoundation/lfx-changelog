@@ -56,20 +56,6 @@ test.describe('Admin Repository List — create release dialog', () => {
     expect(await repoListPage.getReleaseButtons().count()).toBeGreaterThan(0);
   });
 
-  test('should open the release history from the release count', async ({ page }) => {
-    const counts = repoListPage.getReleaseHistoryButtons();
-    expect(await counts.count()).toBeGreaterThan(0);
-
-    await counts.first().click();
-    await expect(repoListPage.historyDialog).toBeVisible();
-
-    const listed = page.locator('[data-testid="release-history-list"]');
-    await expect(listed).toBeVisible({ timeout: 15000 });
-    await expect(listed).toContainText('v1.1.0');
-    // Drafts are excluded from both the count and this list.
-    await expect(listed).not.toContainText('v1.3.0-draft');
-  });
-
   test('should open the create release dialog', async () => {
     await repoListPage.getReleaseButtons().first().click();
     await expect(repoListPage.releaseDialog).toBeVisible();
@@ -90,6 +76,29 @@ test.describe('Admin Repository List — create release dialog', () => {
 
     // The target never loaded, so there is nothing valid to publish.
     await expect(repoListPage.releaseSubmit).toBeDisabled();
+  });
+});
+
+/** Reads seeded rows rather than GitHub, so unlike the create dialog this asserts a real render. */
+test.describe('Admin Repository List — release history', () => {
+  let repoListPage: RepositoryListPage;
+
+  test.beforeEach(async ({ page }) => {
+    repoListPage = new RepositoryListPage(page);
+    await repoListPage.goto();
+  });
+
+  test('should open the release history from the release count', async () => {
+    const counts = repoListPage.getReleaseHistoryButtons();
+    expect(await counts.count()).toBeGreaterThan(0);
+
+    await counts.first().click();
+    await expect(repoListPage.historyDialog).toBeVisible();
+
+    await expect(repoListPage.historyList).toBeVisible({ timeout: 15000 });
+    await expect(repoListPage.historyList).toContainText('v1.1.0');
+    // Drafts are excluded from both the count and this list.
+    await expect(repoListPage.historyList).not.toContainText('v1.3.0-draft');
   });
 });
 

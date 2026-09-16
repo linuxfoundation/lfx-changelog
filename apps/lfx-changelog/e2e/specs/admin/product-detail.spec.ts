@@ -130,15 +130,13 @@ test.describe('Product Detail — release history', () => {
     await detail.goto(easycla!.id);
     await detail.switchTab('repositories');
 
-    const counts = page.locator('[data-testid^="product-repo-release-history-"]');
+    const counts = detail.getReleaseHistoryButtons();
     await expect(counts.first()).toBeVisible();
     await counts.first().click();
 
-    await expect(page.locator('[data-testid="release-history-dialog"]')).toBeVisible();
-
-    const listed = page.locator('[data-testid="release-history-list"]');
-    await expect(listed).toBeVisible({ timeout: 15000 });
-    await expect(listed).toContainText('v1.1.0');
-    await expect(listed).not.toContainText('v1.3.0-draft');
+    await expect(detail.releaseHistoryDialog).toBeVisible();
+    await expect(detail.releaseHistoryList).toBeVisible({ timeout: 15000 });
+    await expect(detail.releaseHistoryList).toContainText('v1.1.0');
+    await expect(detail.releaseHistoryList).not.toContainText('v1.3.0-draft');
   });
 });
