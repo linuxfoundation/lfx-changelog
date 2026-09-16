@@ -118,3 +118,27 @@ test.describe('Product Detail', () => {
     }
   });
 });
+
+test.describe('Product Detail — release history', () => {
+  test('should open the release history from the product repositories tab', async ({ page }) => {
+    const res = await page.request.get('/api/products');
+    const products = (await res.json()).data as { id: string; slug: string }[];
+    const easycla = products.find((product) => product.slug === 'e2e-easycla');
+    expect(easycla, 'seeded product e2e-easycla is missing').toBeDefined();
+
+    const detail = new ProductDetailPage(page);
+    await detail.goto(easycla!.id);
+    await detail.switchTab('repositories');
+
+    const counts = page.locator('[data-testid^="product-repo-release-history-"]');
+    await expect(counts.first()).toBeVisible();
+    await counts.first().click();
+
+    await expect(page.locator('[data-testid="release-history-dialog"]')).toBeVisible();
+
+    const listed = page.locator('[data-testid="release-history-list"]');
+    await expect(listed).toBeVisible({ timeout: 15000 });
+    await expect(listed).toContainText('v1.1.0');
+    await expect(listed).not.toContainText('v1.3.0-draft');
+  });
+});

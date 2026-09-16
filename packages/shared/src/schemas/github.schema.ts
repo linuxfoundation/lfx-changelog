@@ -193,7 +193,6 @@ export const StoredReleaseSchema = z
     tagName: z.string(),
     name: z.string().nullable(),
     htmlUrl: z.string(),
-    body: z.string().nullable(),
     isDraft: z.boolean(),
     isPrerelease: z.boolean(),
     publishedAt: z.string().nullable(),
