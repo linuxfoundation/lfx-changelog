@@ -7,6 +7,7 @@ import {
   ChangelogStatus,
   ContributorSchema,
   CreateChangelogEntryRequestSchema,
+  DeploymentType,
   LinkRepositoryRequestSchema,
   UserRole,
   UserRoleAssignmentSchema,
@@ -49,8 +50,17 @@ const TestRepositorySchema = LinkRepositoryRequestSchema.pick({ githubInstallati
   productSlug: z.string(),
 });
 
+const TestReleasableServiceSchema = z.object({
+  repository: z.enum(['primary', 'foreign', 'retired']),
+  displayName: z.string(),
+  aliases: z.array(z.string()),
+  deploymentType: z.nativeEnum(DeploymentType),
+  appName: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
 const TestReleaseSchema = z.object({
-  repository: z.enum(['primary', 'foreign']),
+  repository: z.enum(['primary', 'foreign', 'retired']),
   githubId: z.number(),
   tagName: z.string(),
   name: z.string(),
@@ -72,6 +82,7 @@ type TestRoleAssignment = z.infer<typeof TestRoleAssignmentSchema>;
 type TestChangelog = z.infer<typeof TestChangelogSchema>;
 type TestRepository = z.infer<typeof TestRepositorySchema>;
 type TestRelease = z.infer<typeof TestReleaseSchema>;
+type TestReleasableService = z.infer<typeof TestReleasableServiceSchema>;
 type TestContributor = z.infer<typeof TestContributorSchema>;
 export type TestBlogPost = z.infer<typeof TestBlogPostSchema>;
 
@@ -138,6 +149,20 @@ export const TEST_REPOSITORY: TestRepository = {
 };
 
 /**
+ * A releasable service is unique per repository, so the inactive fixture needs a repository of
+ * its own. It sits in the product admin's product, which is what makes "inactive is listed for
+ * nobody" meaningful — it would otherwise be visible to them.
+ */
+export const TEST_RETIRED_REPOSITORY: TestRepository = {
+  productSlug: 'e2e-easycla',
+  githubInstallationId: 999001,
+  owner: 'linuxfoundation',
+  name: 'e2e-retired-repo',
+  fullName: 'linuxfoundation/e2e-retired-repo',
+  htmlUrl: 'https://github.com/linuxfoundation/e2e-retired-repo',
+};
+
+/**
  * Belongs to a product the product admin has no assignment for, so release endpoints can be
  * checked for reporting 404 rather than 403 on a repository that exists but is out of scope.
  */
@@ -160,6 +185,34 @@ export const TEST_RELEASES: TestRelease[] = [
   { repository: 'primary', githubId: 910003, tagName: 'v1.2.0-rc.1', name: 'EasyCLA v1.2.0-rc.1', isPrerelease: true },
   { repository: 'primary', githubId: 910004, tagName: 'v1.3.0-draft', name: 'Unpublished draft', isDraft: true },
   { repository: 'foreign', githubId: 920001, tagName: 'sec-v0.9.0', name: 'Security v0.9.0' },
+];
+
+/**
+ * The foreign entry exists so the permission filter has something it must leave out, and the
+ * inactive one so dropping the isActive filter fails a test rather than going unnoticed.
+ */
+export const TEST_RELEASABLE_SERVICES: TestReleasableService[] = [
+  {
+    repository: 'primary',
+    displayName: 'E2E EasyCLA API',
+    aliases: ['easycla-api', 'easycla'],
+    deploymentType: DeploymentType.STANDALONE,
+    appName: 'e2e-easycla-repo',
+  },
+  {
+    repository: 'foreign',
+    displayName: 'E2E Security API',
+    aliases: ['security'],
+    deploymentType: DeploymentType.PLATFORM_SUBCHART,
+  },
+  {
+    repository: 'retired',
+    displayName: 'E2E Retired API',
+    aliases: ['retired'],
+    deploymentType: DeploymentType.STANDALONE,
+    appName: 'e2e-retired-repo',
+    isActive: false,
+  },
 ];
 
 /**

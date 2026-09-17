@@ -22,6 +22,7 @@ import publicChatRouter from '../routes/public-chat.route';
 import publicProductRouter from '../routes/public-product.route';
 import publicRoadmapRouter from '../routes/public-roadmap.route';
 import publicSearchRouter from '../routes/public-search.route';
+import releasableServiceRouter from '../routes/releasable-service.route';
 import slackRouter from '../routes/slack.route';
 import userRouter from '../routes/user.route';
 import webhookRouter from '../routes/webhook.route';
@@ -141,6 +142,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/contributors', contributorRouter);
   app.use('/api/users', userRouter);
   app.use('/api/github', githubRouter);
+  app.use('/api/releases', releasableServiceRouter);
   app.use('/api/opensearch', opensearchRouter);
   app.use('/api/slack', slackRouter);
 

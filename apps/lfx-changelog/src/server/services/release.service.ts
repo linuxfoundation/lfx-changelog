@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { bumpPatchVersion, ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
+import { bumpPatchVersion, canAdministerProduct } from '@lfx-changelog/shared';
 
 import { ConflictError, GitHubApiError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
@@ -115,23 +115,11 @@ export class ReleaseService {
     const prisma = getPrismaClient();
     const repository = await prisma.productRepository.findUnique({ where: { id: repositoryId } });
 
-    if (!repository || !this.canAdministerProduct(userRoles, repository.productId)) {
+    if (!repository || !canAdministerProduct(userRoles, repository.productId)) {
       throw new NotFoundError(`Repository not found: ${repositoryId}`, { operation: 'requireReleasableRepository', service: 'release' });
     }
 
     return repository;
-  }
-
-  private canAdministerProduct(userRoles: UserRoleAssignment[], productId: string): boolean {
-    if (userRoles.some((assignment) => assignment.role === UserRole.SUPER_ADMIN)) {
-      return true;
-    }
-
-    const minimumLevel = ROLE_HIERARCHY[UserRole.PRODUCT_ADMIN];
-    return userRoles.some((assignment) => {
-      const roleLevel = ROLE_HIERARCHY[assignment.role as UserRole];
-      return roleLevel !== undefined && roleLevel >= minimumLevel && (assignment.productId === null || assignment.productId === productId);
-    });
   }
 
   private async findLatestRelease(repositoryId: string): Promise<{ tagName: string; htmlUrl: string } | null> {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { computed, Injectable, signal } from '@angular/core';
-import { ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
+import { canAdministerProduct, UserRole } from '@lfx-changelog/shared';
 
 import type { AuthUser, User } from '@lfx-changelog/shared';
 
@@ -37,18 +37,10 @@ export class AuthService {
   }
 
   /**
-   * Whether the user administers a product, mirroring `canAdministerProduct` in ReleaseService.
-   * Affordance only — the server remains the authority and answers 404 for products the caller
-   * does not administer.
+   * Whether the user administers a product. Affordance only — the server remains the authority
+   * and answers 404 for products the caller does not administer.
    */
   public canAdministerProduct(productId: string): boolean {
-    const roles = this.dbUser()?.roles ?? [];
-    if (roles.some((r) => r.role === UserRole.SUPER_ADMIN)) return true;
-
-    const minimumLevel = ROLE_HIERARCHY[UserRole.PRODUCT_ADMIN];
-    return roles.some((r) => {
-      const roleLevel = ROLE_HIERARCHY[r.role as UserRole];
-      return roleLevel !== undefined && roleLevel >= minimumLevel && (r.productId === null || r.productId === productId);
-    });
+    return canAdministerProduct(this.dbUser()?.roles ?? [], productId);
   }
 }

@@ -12,8 +12,10 @@ import {
   TEST_CONTRIBUTORS,
   TEST_FOREIGN_REPOSITORY,
   TEST_PRODUCTS,
+  TEST_RELEASABLE_SERVICES,
   TEST_RELEASES,
   TEST_REPOSITORY,
+  TEST_RETIRED_REPOSITORY,
   TEST_ROLE_ASSIGNMENTS,
   TEST_USERS,
 } from './test-data.js';
@@ -47,6 +49,7 @@ export async function cleanTestDatabase(): Promise<void> {
   await client.apiKey.deleteMany();
   await client.userRoleAssignment.deleteMany();
   await client.changelogEntry.deleteMany();
+  await client.releasableService.deleteMany();
   await client.gitHubRelease.deleteMany();
   await client.contributorRepository.deleteMany();
   await client.contributor.deleteMany();
@@ -155,8 +158,24 @@ export async function seedTestDatabase(): Promise<void> {
     },
   });
 
-  const repositoryByKey = { primary: repository, foreign: foreignRepository };
-  for (const release of TEST_RELEASES) {
+  const retiredRepository = await client.productRepository.create({
+    data: {
+      productId: repositoryProduct.id,
+      githubInstallationId: TEST_RETIRED_REPOSITORY.githubInstallationId,
+      owner: TEST_RETIRED_REPOSITORY.owner,
+      name: TEST_RETIRED_REPOSITORY.name,
+      fullName: TEST_RETIRED_REPOSITORY.fullName,
+      htmlUrl: TEST_RETIRED_REPOSITORY.htmlUrl,
+    },
+  });
+
+  const repositoryByKey = { primary: repository, foreign: foreignRepository, retired: retiredRepository };
+
+  // Explicit, spaced timestamps: ordering by publishedAt must not depend on how fast the loop runs.
+  const releaseEpoch = new Date('2026-01-01T00:00:00Z').getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  for (const [index, release] of TEST_RELEASES.entries()) {
     await client.gitHubRelease.create({
       data: {
         repositoryId: repositoryByKey[release.repository].id,
@@ -166,9 +185,22 @@ export async function seedTestDatabase(): Promise<void> {
         htmlUrl: `${repositoryByKey[release.repository].htmlUrl}/releases/tag/${release.tagName}`,
         isDraft: release.isDraft ?? false,
         isPrerelease: release.isPrerelease ?? false,
-        publishedAt: release.isDraft ? null : new Date(),
+        publishedAt: release.isDraft ? null : new Date(releaseEpoch + index * dayMs),
         authorLogin: 'e2e-release-bot',
         authorAvatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
+      },
+    });
+  }
+
+  for (const service of TEST_RELEASABLE_SERVICES) {
+    await client.releasableService.create({
+      data: {
+        repositoryId: repositoryByKey[service.repository].id,
+        displayName: service.displayName,
+        aliases: service.aliases,
+        deploymentType: service.deploymentType,
+        appName: service.appName ?? null,
+        isActive: service.isActive ?? true,
       },
     });
   }
