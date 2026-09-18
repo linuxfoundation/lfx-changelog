@@ -158,17 +158,22 @@ test.describe('Blog Agent API (/api/agent-jobs/trigger-blog)', () => {
       expect(triggerRes.status()).toBe(202);
       const jobId = (await triggerRes.json()).data.jobId;
 
-      // Cancel
+      // A job with nothing to do finishes almost immediately, so the cancel either wins (200) or
+      // arrives after the job is already terminal (400). Both outcomes are asserted, so the test
+      // cannot pass by doing nothing whichever way the race falls.
       const cancelRes = await superAdminApi.post(`/api/agent-jobs/${jobId}/cancel`);
-      // May be 200 (cancelled) or 400 (already terminal if it completed fast)
-      if (cancelRes.status() === 200) {
-        const cancelBody = await cancelRes.json();
-        expect(cancelBody.success).toBe(true);
+      expect([200, 400]).toContain(cancelRes.status());
 
-        // Verify status is now cancelled
-        const detailRes = await superAdminApi.get(`/api/agent-jobs/${jobId}`);
-        const detail = await detailRes.json();
+      const detail = await (await superAdminApi.get(`/api/agent-jobs/${jobId}`)).json();
+
+      if (cancelRes.status() === 200) {
+        expect((await cancelRes.json()).success).toBe(true);
+        // The job goes on running after the abort and writes its own outcome when it finishes.
+        // That write must not turn the cancellation back into a completion.
         expect(detail.data.status).toBe('cancelled');
+      } else {
+        expect(detail.data.status).not.toBe('cancelled');
+        expect(['completed', 'failed']).toContain(detail.data.status);
       }
     });
 
