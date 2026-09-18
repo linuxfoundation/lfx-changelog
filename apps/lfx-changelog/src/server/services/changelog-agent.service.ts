@@ -19,6 +19,7 @@ import { extractAtlassianReferences, formatAtlassianHints } from '../helpers/atl
 import { parseCriticScores } from '../helpers/critic-response.helper';
 import { serverLogger } from '../server-logger';
 import { agentJobEmitter } from './agent-job-emitter.service';
+import { finalizeAgentJob } from './agent-job-status.service';
 import { AgentMemoryService } from './agent-memory.service';
 import { ChangelogService } from './changelog.service';
 import { GitHubService } from './github.service';
@@ -234,10 +235,8 @@ export class ChangelogAgentService {
       if (repos.length === 0) {
         serverLogger.info({ jobId, productId }, 'No repositories linked — completing job with no output');
         const durationMs = Date.now() - startTime;
-        await prisma.agentJob.update({
-          where: { id: jobId },
-          data: { status: 'completed', completedAt: new Date(), durationMs, progressLog },
-        });
+        if (!(await finalizeAgentJob(jobId, { status: 'completed', completedAt: new Date(), durationMs, progressLog }))) return;
+
         agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
         this.emitTerminalEvents(jobId, {
           durationMs,
@@ -276,10 +275,8 @@ export class ChangelogAgentService {
       if (allCommits.length === 0 && allMergedPRs.length === 0 && storedReleases.length === 0) {
         serverLogger.info({ jobId, productId, sinceDate }, 'No new activity — completing job');
         const durationMs = Date.now() - startTime;
-        await prisma.agentJob.update({
-          where: { id: jobId },
-          data: { status: 'completed', completedAt: new Date(), durationMs, progressLog },
-        });
+        if (!(await finalizeAgentJob(jobId, { status: 'completed', completedAt: new Date(), durationMs, progressLog }))) return;
+
         agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
         this.emitTerminalEvents(jobId, {
           durationMs,
@@ -464,17 +461,19 @@ export class ChangelogAgentService {
             const durationMs = Date.now() - startTime;
 
             if (message.subtype === 'success') {
-              const updatedJob = await prisma.agentJob.update({
+              const finalized = await finalizeAgentJob(jobId, {
+                status: 'completed',
+                completedAt: new Date(),
+                durationMs,
+                numTurns: message.num_turns,
+                promptTokens: message.usage['input_tokens'],
+                outputTokens: message.usage['output_tokens'],
+                progressLog,
+              });
+              if (!finalized) return;
+
+              const updatedJob = await prisma.agentJob.findUniqueOrThrow({
                 where: { id: jobId },
-                data: {
-                  status: 'completed',
-                  completedAt: new Date(),
-                  durationMs,
-                  numTurns: message.num_turns,
-                  promptTokens: message.usage['input_tokens'],
-                  outputTokens: message.usage['output_tokens'],
-                  progressLog,
-                },
                 include: { changelogEntry: { select: { id: true, title: true, slug: true, status: true } }, product: { select: { name: true } } },
               });
               serverLogger.info({ jobId, productId, durationMs, numTurns: message.num_turns }, 'Agent job completed successfully');
@@ -511,19 +510,18 @@ export class ChangelogAgentService {
               });
             } else {
               const errorMsg = message.errors?.join('; ') || `Agent stopped: ${message.subtype}`;
-              await prisma.agentJob.update({
-                where: { id: jobId },
-                data: {
-                  status: 'failed',
-                  completedAt: new Date(),
-                  durationMs,
-                  numTurns: message.num_turns,
-                  promptTokens: message.usage['input_tokens'],
-                  outputTokens: message.usage['output_tokens'],
-                  errorMessage: errorMsg,
-                  progressLog,
-                },
+              const finalized = await finalizeAgentJob(jobId, {
+                status: 'failed',
+                completedAt: new Date(),
+                durationMs,
+                numTurns: message.num_turns,
+                promptTokens: message.usage['input_tokens'],
+                outputTokens: message.usage['output_tokens'],
+                errorMessage: errorMsg,
+                progressLog,
               });
+              if (!finalized) return;
+
               serverLogger.warn({ jobId, productId, error: errorMsg }, 'Agent job completed with errors');
               agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'failed' } });
               agentJobEmitter.emit(jobId, { type: 'error', data: errorMsg });
@@ -562,16 +560,7 @@ export class ChangelogAgentService {
       progressLog.push(errorEntry);
       agentJobEmitter.emit(jobId, { type: 'progress', data: errorEntry });
 
-      await prisma.agentJob.update({
-        where: { id: jobId },
-        data: {
-          status: 'failed',
-          completedAt: new Date(),
-          durationMs,
-          errorMessage,
-          progressLog,
-        },
-      });
+      if (!(await finalizeAgentJob(jobId, { status: 'failed', completedAt: new Date(), durationMs, errorMessage, progressLog }))) return;
 
       serverLogger.error({ err, jobId, productId, durationMs, timedOut }, timedOut ? 'Agent job timed out' : 'Agent job failed');
       agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'failed' } });

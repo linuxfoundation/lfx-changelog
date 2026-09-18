@@ -9,6 +9,7 @@ import { ALLOWED_BLOG_TOOLS, BLOG_AGENT_CONFIG, BLOG_AGENT_CRITIC_PROMPT, BLOG_A
 import { AgentServiceError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { agentJobEmitter } from './agent-job-emitter.service';
+import { finalizeAgentJob } from './agent-job-status.service';
 import { BlogService } from './blog.service';
 import { getPrismaClient } from './prisma.service';
 
@@ -158,10 +159,8 @@ export class BlogAgentService {
       if (changelogs.length === 0) {
         serverLogger.info({ jobId, periodStart: period.start }, 'No published changelogs in period — completing job');
         const durationMs = Date.now() - startTime;
-        await prisma.agentJob.update({
-          where: { id: jobId },
-          data: { status: 'completed', completedAt: new Date(), durationMs, progressLog },
-        });
+        if (!(await finalizeAgentJob(jobId, { status: 'completed', completedAt: new Date(), durationMs, progressLog }))) return;
+
         agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
         this.emitTerminalEvents(jobId, { durationMs, numTurns: null, promptTokens: null, outputTokens: null, changelogEntry: null, errorMessage: null });
         return;
@@ -309,18 +308,17 @@ export class BlogAgentService {
             const durationMs = Date.now() - startTime;
 
             if (message.subtype === 'success') {
-              await prisma.agentJob.update({
-                where: { id: jobId },
-                data: {
-                  status: 'completed',
-                  completedAt: new Date(),
-                  durationMs,
-                  numTurns: message.num_turns,
-                  promptTokens: message.usage['input_tokens'],
-                  outputTokens: message.usage['output_tokens'],
-                  progressLog,
-                },
+              const finalized = await finalizeAgentJob(jobId, {
+                status: 'completed',
+                completedAt: new Date(),
+                durationMs,
+                numTurns: message.num_turns,
+                promptTokens: message.usage['input_tokens'],
+                outputTokens: message.usage['output_tokens'],
+                progressLog,
               });
+              if (!finalized) return;
+
               serverLogger.info({ jobId, durationMs, numTurns: message.num_turns }, 'Blog agent job completed successfully');
               agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'completed' } });
               this.emitTerminalEvents(jobId, {
@@ -333,19 +331,18 @@ export class BlogAgentService {
               });
             } else {
               const errorMsg = message.errors?.join('; ') || `Agent stopped: ${message.subtype}`;
-              await prisma.agentJob.update({
-                where: { id: jobId },
-                data: {
-                  status: 'failed',
-                  completedAt: new Date(),
-                  durationMs,
-                  numTurns: message.num_turns,
-                  promptTokens: message.usage['input_tokens'],
-                  outputTokens: message.usage['output_tokens'],
-                  errorMessage: errorMsg,
-                  progressLog,
-                },
+              const finalized = await finalizeAgentJob(jobId, {
+                status: 'failed',
+                completedAt: new Date(),
+                durationMs,
+                numTurns: message.num_turns,
+                promptTokens: message.usage['input_tokens'],
+                outputTokens: message.usage['output_tokens'],
+                errorMessage: errorMsg,
+                progressLog,
               });
+              if (!finalized) return;
+
               serverLogger.warn({ jobId, error: errorMsg }, 'Blog agent job completed with errors');
               agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'failed' } });
               agentJobEmitter.emit(jobId, { type: 'error', data: errorMsg });
@@ -382,10 +379,7 @@ export class BlogAgentService {
       progressLog.push(errorEntry);
       agentJobEmitter.emit(jobId, { type: 'progress', data: errorEntry });
 
-      await prisma.agentJob.update({
-        where: { id: jobId },
-        data: { status: 'failed', completedAt: new Date(), durationMs, errorMessage, progressLog },
-      });
+      if (!(await finalizeAgentJob(jobId, { status: 'failed', completedAt: new Date(), durationMs, errorMessage, progressLog }))) return;
 
       serverLogger.error({ err, jobId, durationMs }, 'Blog agent job failed');
       agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'failed' } });
