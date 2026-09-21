@@ -13,6 +13,7 @@ import type {
   Product,
   ProductActivity,
   ProductRepository,
+  ProductRepositoryWithCount,
   ProductSlackNotifyUser,
   PublicProduct,
   UpdateProductRequest,
@@ -55,8 +56,8 @@ export class ProductService {
     return this.http.delete(`/api/products/${id}`, { observe: 'response' }).pipe(take(1));
   }
 
-  public getRepositories(productId: string): Observable<ProductRepository[]> {
-    return this.http.get<ApiResponse<ProductRepository[]>>(`/api/products/${productId}/repositories`).pipe(map((res) => res.data));
+  public getRepositories(productId: string): Observable<ProductRepositoryWithCount[]> {
+    return this.http.get<ApiResponse<ProductRepositoryWithCount[]>>(`/api/products/${productId}/repositories`).pipe(map((res) => res.data));
   }
 
   public linkRepository(productId: string, data: LinkRepositoryRequest): Observable<ProductRepository> {

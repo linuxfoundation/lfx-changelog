@@ -21,7 +21,7 @@ import type {
   StoredRelease,
 } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository } from '@prisma/client';
-import type { CreateReleaseInput, FindAllPublicOptions, GenerateReleaseNotesInput } from '../interfaces/release.interface';
+import type { CreateReleaseInput, FindAllPublicOptions, GenerateReleaseNotesInput, GitHubComparison } from '../interfaces/release.interface';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -243,6 +243,23 @@ export class GitHubService {
     return branches;
   }
 
+  public async getComparison(installationId: number, owner: string, repo: string, base: string, head: string): Promise<GitHubComparison> {
+    const path = `/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`;
+    const data = await this.repoRequest<{ total_commits?: number; html_url?: string; commits?: unknown[] }>(
+      installationId,
+      owner,
+      repo,
+      path,
+      'Failed to compare commits'
+    );
+
+    return {
+      // total_commits counts them all; the returned `commits` list is capped at 250.
+      totalCommits: data.total_commits ?? (data.commits ?? []).length,
+      compareUrl: data.html_url ?? null,
+    };
+  }
+
   public async tagExists(installationId: number, owner: string, repo: string, tagName: string): Promise<boolean> {
     try {
       await this.repoRequest<unknown>(installationId, owner, repo, `/git/ref/tags/${encodeURIComponent(tagName)}`, 'Failed to look up tag', {
@@ -449,13 +466,28 @@ export class GitHubService {
     const releases = await prisma.gitHubRelease.findMany({
       where: {
         isDraft: false,
+        ...(options.repositoryId && { repositoryId: options.repositoryId }),
         ...(options.productId && {
           repository: { productId: options.productId },
         }),
       },
-      include: {
+      // Projected rather than included: release bodies are full markdown release notes and no
+      // consumer of this endpoint renders them, so they are not worth reading or shipping.
+      select: {
+        id: true,
+        tagName: true,
+        name: true,
+        htmlUrl: true,
+        isDraft: true,
+        isPrerelease: true,
+        publishedAt: true,
+        authorLogin: true,
+        authorAvatarUrl: true,
         repository: {
-          include: { product: true },
+          select: {
+            fullName: true,
+            product: { select: { id: true, name: true, slug: true, faIcon: true } },
+          },
         },
       },
       orderBy: { publishedAt: 'desc' },
@@ -467,7 +499,6 @@ export class GitHubService {
       tagName: r.tagName,
       name: r.name,
       htmlUrl: r.htmlUrl,
-      body: r.body,
       isDraft: r.isDraft,
       isPrerelease: r.isPrerelease,
       publishedAt: r.publishedAt?.toISOString() ?? null,

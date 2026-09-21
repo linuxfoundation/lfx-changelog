@@ -147,13 +147,14 @@ To receive real GitHub webhook deliveries on your local machine, use a tunnel se
 
 ## Verifying Results
 
-### Public API
+### Stored releases API
 
-Query the releases endpoint to see if the release was stored (requires authentication):
+Query the releases endpoint to see if the release was stored. `/api/github/*` declares no API key
+scope, so `authorize()` rejects keys there — use a browser session cookie, not `lfx_`:
 
 ```bash
-curl -s http://localhost:4204/api/releases \
-  -H "Authorization: Bearer lfx_your-api-key" | jq '.data[:3]'
+curl -s http://localhost:4204/api/github/releases \
+  -H "Cookie: appSession=<your_session_cookie>" | jq '.data[:3]'
 ```
 
 ### Prisma Studio

@@ -57,8 +57,9 @@ export class GitHubController {
     try {
       const limit = req.query['limit'] ? parseInt(req.query['limit'] as string, 10) : undefined;
       const productId = req.query['productId'] as string | undefined;
+      const repositoryId = req.query['repositoryId'] as string | undefined;
 
-      const releases = await this.githubService.findAllPublicReleases({ limit, productId });
+      const releases = await this.githubService.findAllPublicReleases({ limit, productId, repositoryId });
       res.json({ success: true, data: releases });
     } catch (error) {
       next(error);
@@ -69,17 +70,6 @@ export class GitHubController {
     try {
       const productId = req.params['productId'] as string;
       const synced = await this.githubService.syncReleasesForProduct(productId);
-      res.json({ success: true, data: { synced } });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  public async syncRepositoryReleases(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const repoId = req.params['repoId'] as string;
-      const repo = await this.productService.findRepositoryById(repoId);
-      const synced = await this.githubService.syncReleasesForRepository(repo);
       res.json({ success: true, data: { synced } });
     } catch (error) {
       next(error);

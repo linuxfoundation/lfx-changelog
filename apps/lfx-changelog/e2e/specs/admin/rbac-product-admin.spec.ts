@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 import { AdminDashboardPage } from '../../pages/admin-dashboard.page.js';
 import { AdminLayoutPage } from '../../pages/admin-layout.page.js';
 import { ChangelogListPage } from '../../pages/changelog-list.page.js';
+import { ProductDetailPage } from '../../pages/product-detail.page.js';
 
 test.describe('RBAC — Product Admin', () => {
   test.use({ storageState: './e2e/.auth/product-admin.json' });
@@ -41,5 +42,31 @@ test.describe('RBAC — Product Admin', () => {
     await expect(layout.navChangelogs).toBeVisible();
     await expect(layout.navRepositories).not.toBeVisible();
     await expect(layout.navUsers).not.toBeVisible();
+  });
+
+  test('should see the Release action on a product it administers', async ({ page }) => {
+    const res = await page.request.get('/api/products');
+    const products = (await res.json()).data as { id: string; slug: string }[];
+    const easycla = products.find((p) => p.slug === 'e2e-easycla');
+    expect(easycla, 'seeded product e2e-easycla is missing').toBeDefined();
+
+    const detail = new ProductDetailPage(page);
+    await detail.goto(easycla!.id);
+    await detail.switchTab('repositories');
+
+    await expect(page.locator('[data-testid^="product-repo-create-release-"]').first()).toBeVisible();
+  });
+
+  test('should see the Sync action on a product it administers', async ({ page }) => {
+    const res = await page.request.get('/api/products');
+    const products = (await res.json()).data as { id: string; slug: string }[];
+    const easycla = products.find((p) => p.slug === 'e2e-easycla');
+    expect(easycla, 'seeded product e2e-easycla is missing').toBeDefined();
+
+    const detail = new ProductDetailPage(page);
+    await detail.goto(easycla!.id);
+    await detail.switchTab('repositories');
+
+    await expect(page.locator('[data-testid^="product-repo-sync-"]').first()).toBeVisible();
   });
 });

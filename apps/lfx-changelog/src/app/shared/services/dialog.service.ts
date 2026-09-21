@@ -24,16 +24,27 @@ export class DialogService {
   public readonly config = signal<DialogConfig | null>(null);
   public readonly visible = computed(() => this.config() !== null);
 
+  /** Set by a dialog running an operation that must not be abandoned halfway. */
+  public readonly busy = signal(false);
+
   public open(config: DialogConfig): void {
+    this.busy.set(false);
     this.config.set(config);
     this.lockBodyScroll(true);
   }
 
   public close(result?: unknown): void {
     const current = this.config();
+    this.busy.set(false);
     this.config.set(null);
     this.lockBodyScroll(false);
     current?.onClose?.(result);
+  }
+
+  /** Dismissal the user asked for — overlay, close button, Escape. Ignored while busy. */
+  public requestClose(result?: unknown): void {
+    if (this.busy()) return;
+    this.close(result);
   }
 
   public updateTitle(title: string): void {

@@ -7,11 +7,37 @@ export class RepositoryListPage {
   public readonly heading: Locator;
   public readonly emptyState: Locator;
   public readonly groupsContainer: Locator;
+  public readonly releaseDialog: Locator;
+  public readonly releaseDialogError: Locator;
+  public readonly releaseDialogLoading: Locator;
+  public readonly releaseTagInput: Locator;
+  public readonly releaseNameInput: Locator;
+  public readonly releaseSubmit: Locator;
+  public readonly historyDialog: Locator;
+  public readonly historyList: Locator;
+  public readonly historyTruncated: Locator;
 
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="repository-list-heading"]');
     this.emptyState = page.locator('[data-testid="repository-list-empty"]');
     this.groupsContainer = page.locator('[data-testid="repository-list-groups"]');
+    this.releaseDialog = page.locator('[data-testid="create-release-dialog"]');
+    this.releaseDialogError = page.locator('[data-testid="create-release-error"]');
+    this.releaseDialogLoading = page.locator('[data-testid="create-release-loading"]');
+    this.releaseTagInput = page.locator('[data-testid="create-release-tag-input"] input');
+    this.releaseNameInput = page.locator('[data-testid="create-release-name-input"] input');
+    this.releaseSubmit = page.locator('[data-testid="create-release-submit"] button');
+    this.historyDialog = page.locator('[data-testid="release-history-dialog"]');
+    this.historyList = page.locator('[data-testid="release-history-list"]');
+    this.historyTruncated = page.locator('[data-testid="release-history-truncated"]');
+  }
+
+  public getReleaseHistoryButtons(): Locator {
+    return this.page.locator('[data-testid^="repo-release-history-"]');
+  }
+
+  public getReleaseButtons(): Locator {
+    return this.page.locator('[data-testid^="repo-create-release-"]');
   }
 
   public async goto() {

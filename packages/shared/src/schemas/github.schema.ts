@@ -3,6 +3,8 @@
 
 import { z } from 'zod';
 
+import { DeploymentType } from '../enums/deployment-type.enum.js';
+
 export const GitHubInstallationSchema = z
   .object({
     id: z.number(),
@@ -53,8 +55,13 @@ export const ProductRepositorySchema = z
 
 export type ProductRepository = z.infer<typeof ProductRepositorySchema>;
 
-export const RepositoryWithCountsSchema = ProductRepositorySchema.extend({
+export const ProductRepositoryWithCountSchema = ProductRepositorySchema.extend({
   releaseCount: z.number(),
+}).openapi('ProductRepositoryWithCount');
+
+export type ProductRepositoryWithCount = z.infer<typeof ProductRepositoryWithCountSchema>;
+
+export const RepositoryWithCountsSchema = ProductRepositoryWithCountSchema.extend({
   productName: z.string(),
   productFaIcon: z.string().nullable(),
 }).openapi('RepositoryWithCounts');
@@ -134,12 +141,46 @@ export const ReleaseTargetSchema = z
     fullName: z.string(),
     defaultBranch: z.string(),
     latestTag: z.string().nullable(),
+    latestReleaseUrl: z.string().nullable(),
     suggestedTag: z.string(),
     branches: z.array(GitHubBranchSchema),
   })
   .openapi('ReleaseTarget');
 
 export type ReleaseTarget = z.infer<typeof ReleaseTargetSchema>;
+
+export const ReleaseChangesSchema = z
+  .object({
+    previousTag: z.string().nullable(),
+    previousReleaseUrl: z.string().nullable(),
+    /** Null when there is no previous release to compare against. */
+    totalCommits: z.number().nullable(),
+    compareUrl: z.string().nullable(),
+  })
+  .openapi('ReleaseChanges');
+
+export type ReleaseChanges = z.infer<typeof ReleaseChangesSchema>;
+
+export const ReleasableServiceSchema = z
+  .object({
+    id: z.string().uuid(),
+    repositoryId: z.string().uuid(),
+    displayName: z.string(),
+    aliases: z.array(z.string()),
+    deploymentType: z.nativeEnum(DeploymentType),
+    appName: z.string().nullable(),
+    argocdRepo: z.string().nullable(),
+    environments: z.array(z.string()),
+    isActive: z.boolean(),
+    repositoryFullName: z.string(),
+    repositoryHtmlUrl: z.string(),
+    productId: z.string(),
+    productName: z.string(),
+    latestTag: z.string().nullable(),
+  })
+  .openapi('ReleasableService');
+
+export type ReleasableService = z.infer<typeof ReleasableServiceSchema>;
 
 export const GitHubReleaseSchema = z
   .object({
@@ -174,7 +215,6 @@ export const StoredReleaseSchema = z
     tagName: z.string(),
     name: z.string().nullable(),
     htmlUrl: z.string(),
-    body: z.string().nullable(),
     isDraft: z.boolean(),
     isPrerelease: z.boolean(),
     publishedAt: z.string().nullable(),

@@ -73,7 +73,7 @@ export class ProductController {
   public async listRepositories(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const productId = req.params['id'] as string;
-      const repositories = await this.productService.findRepositoriesByProductId(productId);
+      const repositories = await this.productService.findRepositoriesWithReleaseCounts(productId);
       res.json({ success: true, data: repositories });
     } catch (error) {
       next(error);

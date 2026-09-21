@@ -1,14 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { bumpPatchVersion, ROLE_HIERARCHY, UserRole } from '@lfx-changelog/shared';
+import { bumpPatchVersion, canAdministerProduct } from '@lfx-changelog/shared';
 
 import { ConflictError, GitHubApiError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
 
-import type { CreateReleaseRequest, GeneratedReleaseNotes, GitHubRelease, ReleaseTarget } from '@lfx-changelog/shared';
+import type { CreateReleaseRequest, GeneratedReleaseNotes, GitHubRelease, ReleaseChanges, ReleaseTarget } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository, UserRoleAssignment } from '@prisma/client';
 
 export class ReleaseService {
@@ -17,25 +17,26 @@ export class ReleaseService {
   public async getReleaseTarget(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<ReleaseTarget> {
     const repository = await this.requireReleasableRepository(repositoryId, userRoles);
 
-    const [defaultBranch, branches, latestTag] = await Promise.all([
+    const [defaultBranch, branches, latest] = await Promise.all([
       this.githubService.getRepositoryDefaultBranch(repository.githubInstallationId, repository.owner, repository.name),
       this.githubService.listBranches(repository.githubInstallationId, repository.owner, repository.name),
-      this.findLatestTag(repository.id),
+      this.findLatestRelease(repository.id),
     ]);
 
     return {
       repositoryId: repository.id,
       fullName: repository.fullName,
       defaultBranch,
-      latestTag,
-      suggestedTag: this.suggestNextTag(latestTag),
+      latestTag: latest?.tagName ?? null,
+      latestReleaseUrl: latest?.htmlUrl ?? null,
+      suggestedTag: this.suggestNextTag(latest?.tagName ?? null),
       branches,
     };
   }
 
   public async previewNotes(repositoryId: string, tagName: string, targetCommitish: string, userRoles: UserRoleAssignment[]): Promise<GeneratedReleaseNotes> {
     const repository = await this.requireReleasableRepository(repositoryId, userRoles);
-    const previousTagName = await this.findLatestTag(repository.id);
+    const previousTagName = (await this.findLatestRelease(repository.id))?.tagName ?? null;
 
     return this.githubService.generateReleaseNotes(repository.githubInstallationId, repository.owner, repository.name, {
       tagName,
@@ -72,6 +73,40 @@ export class ReleaseService {
     return release;
   }
 
+  /**
+   * How much has landed on the chosen target since the newest stored release, for the form to
+   * show before publishing. Returns nulls rather than failing when there is nothing to compare.
+   */
+  public async getChanges(repositoryId: string, targetCommitish: string, userRoles: UserRoleAssignment[]): Promise<ReleaseChanges> {
+    const repository = await this.requireReleasableRepository(repositoryId, userRoles);
+    const latest = await this.findLatestRelease(repository.id);
+
+    if (!latest) {
+      return { previousTag: null, previousReleaseUrl: null, totalCommits: null, compareUrl: null };
+    }
+
+    const comparison = await this.githubService.getComparison(
+      repository.githubInstallationId,
+      repository.owner,
+      repository.name,
+      latest.tagName,
+      targetCommitish
+    );
+
+    return {
+      previousTag: latest.tagName,
+      previousReleaseUrl: latest.htmlUrl,
+      totalCommits: comparison.totalCommits,
+      compareUrl: comparison.compareUrl,
+    };
+  }
+
+  /** Pulls the repository's releases from GitHub. Scoped the same way publishing is. */
+  public async syncRepository(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<number> {
+    const repository = await this.requireReleasableRepository(repositoryId, userRoles);
+    return this.githubService.syncReleasesForRepository(repository);
+  }
+
   // ── Private helpers ─────────────────────────
 
   // A repository outside the caller's products reports 404 rather than 403, so the endpoint
@@ -80,34 +115,22 @@ export class ReleaseService {
     const prisma = getPrismaClient();
     const repository = await prisma.productRepository.findUnique({ where: { id: repositoryId } });
 
-    if (!repository || !this.canAdministerProduct(userRoles, repository.productId)) {
+    if (!repository || !canAdministerProduct(userRoles, repository.productId)) {
       throw new NotFoundError(`Repository not found: ${repositoryId}`, { operation: 'requireReleasableRepository', service: 'release' });
     }
 
     return repository;
   }
 
-  private canAdministerProduct(userRoles: UserRoleAssignment[], productId: string): boolean {
-    if (userRoles.some((assignment) => assignment.role === UserRole.SUPER_ADMIN)) {
-      return true;
-    }
-
-    const minimumLevel = ROLE_HIERARCHY[UserRole.PRODUCT_ADMIN];
-    return userRoles.some((assignment) => {
-      const roleLevel = ROLE_HIERARCHY[assignment.role as UserRole];
-      return roleLevel !== undefined && roleLevel >= minimumLevel && (assignment.productId === null || assignment.productId === productId);
-    });
-  }
-
-  private async findLatestTag(repositoryId: string): Promise<string | null> {
+  private async findLatestRelease(repositoryId: string): Promise<{ tagName: string; htmlUrl: string } | null> {
     const prisma = getPrismaClient();
     const latest = await prisma.gitHubRelease.findFirst({
       where: { repositoryId, isDraft: false },
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-      select: { tagName: true },
+      select: { tagName: true, htmlUrl: true },
     });
 
-    return latest?.tagName ?? null;
+    return latest ?? null;
   }
 
   private suggestNextTag(latestTag: string | null): string {

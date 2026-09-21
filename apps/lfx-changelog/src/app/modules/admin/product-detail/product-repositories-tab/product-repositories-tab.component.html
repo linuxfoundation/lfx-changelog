@@ -51,11 +51,46 @@
         }
       </ng-template>
 
+      <ng-template lfxColumn="Releases" let-repo>
+        <button
+          type="button"
+          [attr.data-testid]="'product-repo-release-history-' + repo.id"
+          (click)="openReleaseHistory(repo)"
+          class="text-brand-600 hover:text-brand-700 rounded text-xs font-medium hover:underline">
+          {{ repo.releaseCount }} {{ repo.releaseCount === 1 ? 'release' : 'releases' }}
+        </button>
+      </ng-template>
+
+      <ng-template lfxColumn="Last Synced" let-repo>
+        @if (repo.lastSyncedAt) {
+          <span class="text-text-secondary text-xs">{{ repo.lastSyncedAt | timeAgo }}</span>
+        } @else {
+          <span class="text-text-muted text-xs">Never synced</span>
+        }
+      </ng-template>
+
       <ng-template lfxColumn="Actions" let-repo>
-        <lfx-button variant="ghost" size="sm" (clicked)="unlinkRepository(repo)">
-          <i class="fa-solid fa-unlink text-xs"></i>
-          Unlink
-        </lfx-button>
+        <div class="flex items-center gap-1">
+          @if (canAdministerProduct()) {
+            <lfx-button
+              [attr.data-testid]="'product-repo-sync-' + repo.id"
+              variant="ghost"
+              size="sm"
+              [loading]="syncingRepo() | setIncludes: repo.id"
+              (clicked)="syncRepository(repo)">
+              <i class="fa-solid fa-arrows-rotate text-brand-600 text-xs"></i>
+              Sync
+            </lfx-button>
+            <lfx-button [attr.data-testid]="'product-repo-create-release-' + repo.id" variant="ghost" size="sm" (clicked)="openCreateRelease(repo)">
+              <i class="fa-solid fa-tag text-new-feature text-xs"></i>
+              Release
+            </lfx-button>
+          }
+          <lfx-button variant="ghost" size="sm" (clicked)="unlinkRepository(repo)">
+            <i class="fa-solid fa-unlink text-danger-600 text-xs"></i>
+            Unlink
+          </lfx-button>
+        </div>
       </ng-template>
     </lfx-table>
   }

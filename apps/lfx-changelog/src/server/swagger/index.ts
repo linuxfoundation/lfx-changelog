@@ -12,11 +12,12 @@ import { agentJobRegistry } from './paths/agent-jobs.path';
 import { blogPostRegistry } from './paths/blogs.path';
 import { changelogRegistry } from './paths/changelogs.path';
 import { contributorRegistry } from './paths/contributors.path';
+import { releaseRegistry } from './paths/github-releases.path';
 import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
 import { publicProductRegistry } from './paths/public-products.path';
 import { publicRoadmapRegistry } from './paths/public-roadmap.path';
-import { releaseRegistry } from './paths/releases.path';
+import { releasableServiceRegistry } from './paths/releasable-services.path';
 import { searchRegistry } from './paths/search.path';
 import { userRegistry } from './paths/users.path';
 
@@ -45,6 +46,7 @@ const allRegistries = [
   productRegistry,
   changelogRegistry,
   releaseRegistry,
+  releasableServiceRegistry,
   userRegistry,
   agentJobRegistry,
   contributorRegistry,
@@ -78,7 +80,8 @@ const document = generator.generateDocument({
     { name: 'Products', description: 'Authentication required' },
     { name: 'Changelogs', description: 'Authentication required' },
     { name: 'Changelog Views', description: 'Track unseen changelog entries per user — authentication required' },
-    { name: 'Releases', description: 'Authentication required' },
+    { name: 'Releases', description: 'GitHub release records — authentication required' },
+    { name: 'Releasable Services', description: 'LFX services that can be released — product_admin or above' },
     { name: 'OpenSearch', description: 'OpenSearch administration — super_admin only' },
     { name: 'Users', description: 'Authentication required' },
     { name: 'Blog Posts', description: 'Blog post management — authentication required' },

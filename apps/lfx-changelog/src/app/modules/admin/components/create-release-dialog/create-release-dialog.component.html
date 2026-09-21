@@ -1,0 +1,113 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-4">
+  @if (error(); as errorMsg) {
+    <div
+      data-testid="create-release-error"
+      role="alert"
+      class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+      {{ errorMsg }}
+    </div>
+  }
+
+  <div class="bg-surface-alt flex items-center gap-3 rounded-lg p-3">
+    <i class="fa-duotone fa-book-bookmark text-text-muted shrink-0 text-lg"></i>
+    <div class="min-w-0">
+      <div class="text-text-primary truncate text-sm font-medium">{{ repository().fullName }}</div>
+      @if (target(); as releaseTarget) {
+        <div class="text-text-muted truncate text-xs">
+          @if (releaseTarget.latestTag; as latest) {
+            Currently on {{ latest }}
+          } @else {
+            No releases published yet
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div data-testid="create-release-loading" class="flex items-center justify-center py-10">
+      <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-2xl" aria-label="Loading repository branches"></i>
+    </div>
+  } @else if (target()) {
+    <lfx-select
+      data-testid="create-release-target-select"
+      label="Release from"
+      [options]="branchOptions()"
+      [formControl]="targetControl"
+      [searchable]="true"
+      placeholder="Choose a branch..." />
+
+    @if (loadingChanges()) {
+      <p data-testid="create-release-changes-loading" class="text-text-muted -mt-2 flex items-center gap-2 text-xs">
+        <i class="fa-duotone fa-spinner-third animate-spin"></i>
+        Checking what's changed since the last release...
+      </p>
+    } @else if (changes(); as summary) {
+      <p data-testid="create-release-changes" class="text-text-secondary -mt-2 text-xs leading-relaxed">
+        @if (summary.previousTag === null) {
+          This will be the first release published for this repository.
+        } @else if (summary.totalCommits === 0) {
+          Nothing has landed on this branch since
+          <a
+            [href]="summary.previousReleaseUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-brand-600 hover:text-brand-700 font-medium hover:underline">
+            {{ summary.previousTag }}
+          </a>
+          was released, so there may be nothing new to publish.
+        } @else {
+          {{ summary.totalCommits === 1 ? 'There has been' : 'There have been' }}
+          <a [href]="summary.compareUrl" target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:text-brand-700 font-medium hover:underline">
+            {{ summary.totalCommits }} {{ summary.totalCommits === 1 ? 'change' : 'changes' }}
+          </a>
+          on this branch since
+          <a
+            [href]="summary.previousReleaseUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-brand-600 hover:text-brand-700 font-medium hover:underline">
+            {{ summary.previousTag }}
+          </a>
+          was released.
+        }
+      </p>
+    }
+
+    <lfx-input data-testid="create-release-tag-input" label="Version tag" [formControl]="tagControl" placeholder="e.g. v1.4.0" />
+
+    <lfx-input data-testid="create-release-name-input" label="Release title" [formControl]="nameControl" placeholder="Release title" />
+
+    <div>
+      <lfx-textarea
+        data-testid="create-release-body-textarea"
+        label="What's in this release"
+        [formControl]="bodyControl"
+        [rows]="10"
+        placeholder="Summarise what changed for the people reading this..." />
+      @if (generatingNotes()) {
+        <p data-testid="create-release-generating-notes" class="text-text-muted mt-1.5 flex items-center gap-2 text-xs">
+          <i class="fa-duotone fa-spinner-third animate-spin"></i>
+          Drafting notes from recent changes...
+        </p>
+      }
+    </div>
+
+    <label class="flex cursor-pointer items-center gap-2.5">
+      <input type="checkbox" class="accent-brand-600 h-4 w-4 rounded" data-testid="create-release-prerelease-checkbox" [formControl]="prereleaseControl" />
+      <span class="text-text-primary text-sm">Mark as pre-release</span>
+    </label>
+
+    <p class="text-text-muted text-xs">Publishing tags the chosen branch on GitHub and goes live straight away — releases are never saved as drafts.</p>
+  }
+
+  <div class="flex justify-end gap-2 pt-2">
+    <lfx-button variant="secondary" size="sm" [disabled]="saving()" (clicked)="dialogService.close()">Cancel</lfx-button>
+    <lfx-button data-testid="create-release-submit" variant="primary" size="sm" [loading]="saving()" [disabled]="!canPublish()" (clicked)="publish()">
+      Publish Release
+    </lfx-button>
+  </div>
+</div>

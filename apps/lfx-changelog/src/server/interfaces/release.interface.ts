@@ -5,6 +5,7 @@
 export interface FindAllPublicOptions {
   limit?: number;
   productId?: string;
+  repositoryId?: string;
 }
 
 /**
@@ -15,6 +16,12 @@ export interface GenerateReleaseNotesInput {
   tagName: string;
   targetCommitish: string;
   previousTagName?: string;
+}
+
+/** Summary of a two-dot comparison between the previous tag and a release target. */
+export interface GitHubComparison {
+  totalCommits: number;
+  compareUrl: string | null;
 }
 
 /** Input for publishing a release. Structurally the `CreateReleaseRequest` DTO, minus the HTTP layer. */
