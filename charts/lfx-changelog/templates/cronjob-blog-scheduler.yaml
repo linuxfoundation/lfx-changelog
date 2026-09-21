@@ -9,6 +9,7 @@ metadata:
   labels:
     {{- include "lfx-changelog.labels" . | nindent 4 }}
     app.kubernetes.io/component: blog-scheduler
+    tags.datadoghq.com/service: {{ include "lfx-changelog.name" . }}
 spec:
   schedule: {{ .Values.blogScheduler.schedule | quote }}
   concurrencyPolicy: Forbid
