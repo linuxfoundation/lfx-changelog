@@ -7,14 +7,15 @@ The LFX Changelog integrates with GitHub through a **GitHub App** to track repos
 
 ## Overview
 
-| Component               | Description                                                             |
-| ----------------------- | ----------------------------------------------------------------------- |
-| **GitHub App**          | Authenticates with GitHub on behalf of installed organizations          |
-| **Repository tracking** | Links GitHub repos to LFX products via the admin UI                     |
-| **Release sync**        | Stores GitHub release metadata in the database (manual sync + webhooks) |
-| **Webhook endpoint**    | Receives GitHub events (releases, pushes, merged PRs)                   |
-| **Automated changelog** | AI generates draft changelog entries from GitHub activity               |
-| **Author reassignment** | Super admins can reassign changelog authorship to any user              |
+| Component               | Description                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| **GitHub App**          | Authenticates with GitHub on behalf of installed organizations                |
+| **Repository tracking** | Links GitHub repos to LFX products via the admin UI                           |
+| **Release sync**        | Stores GitHub release metadata in the database (manual sync + webhooks)       |
+| **Webhook endpoint**    | Receives GitHub events (releases, pushes, merged PRs, workflow runs and jobs) |
+| **Release jobs**        | Follows a released tag through the repository's CI to success or failure      |
+| **Automated changelog** | AI generates draft changelog entries from GitHub activity                     |
+| **Author reassignment** | Super admins can reassign changelog authorship to any user                    |
 
 ## GitHub App Authentication
 
@@ -63,7 +64,7 @@ Each tracked repository is stored as a **ProductRepository** record linking a pr
 
 Releases can be published from the admin UI, which creates them on GitHub. The tag is created as a side effect at the chosen branch or commit, so this is the only place the application writes a git ref --- **the GitHub App requires `Contents: write`**, and it is the only write permission the app uses. Everything else in this integration is read-only.
 
-Nothing is persisted by the create call. The `release.published` webhook stores the row exactly as it would for a release created on github.com, so a release published here and one published there are indistinguishable in the database.
+The release row itself is not written by the create call --- the `release.published` webhook stores it exactly as it would for a release created on github.com. The one thing the create call does persist is the release job, because GitHub credits the App rather than a person when Changelog publishes, so the webhook has no way to learn who asked. See [Release Jobs](#release-jobs).
 
 | Method | Path                                              | Auth                       | Description                               |
 | ------ | ------------------------------------------------- | -------------------------- | ----------------------------------------- |
@@ -117,6 +118,68 @@ Triggered from the admin UI for a specific product. Fetches up to 100 releases p
 
 Each synced release is stored as a **GitHubRelease** record linked to a ProductRepository. Key fields include GitHub's release ID, tag name, release name, HTML URL, markdown body (release notes), draft/prerelease flags, publish date, and author info (login + avatar URL). Releases are uniquely constrained per repository + GitHub ID and indexed by publish date for efficient ordering.
 
+## Release Jobs
+
+Publishing a release is where Changelog's involvement in a deployment ends. The tag is what the
+repository's own CI reacts to: in `lfx-self-serve`, for example, `docker-build-tag.yml` runs on
+`v*` tags, builds and signs the image and chart, and then dispatches a version-bump workflow in
+`lfx-v2-argocd` using its own App credentials. Changelog neither opens that pull request nor has
+access to that repository.
+
+What Changelog does do is follow the run, so that publishing a release and finding out whether it
+deployed are not two different places. A **ReleaseJob** records one attempt at releasing a service:
+the tag that was published, the workflow run the repository started for it, and what that run did.
+
+### Which repositories are followed
+
+Only repositories with an active **ReleasableService** --- the catalog row that marks a tracked
+repository as something that deploys. Most tracked repositories are documentation, examples or
+libraries with no deployment of their own, and they never accrue release jobs. Retiring a service
+by clearing `isActive` stops it accruing new ones.
+
+### Lifecycle
+
+| Stage        | Trigger                                                                                              | Result                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Opened       | Publishing from Changelog, or `release.published` for a repository with an active releasable service | A `pending` job for the tag                                    |
+| Running      | `workflow_run` while the run is not yet `completed`                                                  | `running`, with the run's id, name and URL                     |
+| Created late | `workflow_run` for a released tag that has no job yet                                                | The job is created directly in the run's state                 |
+| Finished     | `workflow_run` with `status: completed`                                                              | `succeeded` if the conclusion is `success`, otherwise `failed` |
+| Detailed     | `workflow_job` for a known run                                                                       | The job's latest state appended to `steps`, keyed by name      |
+
+GitHub's conclusions are richer than those four states, so the raw `conclusion` is stored
+alongside: a cancelled run is `failed` here but still reads `cancelled` in the record.
+
+### Matching a run to a release
+
+A run carries the tag in `head_branch` when it was triggered by a tag push. A run is recorded only
+when that tag has a published (non-draft) release on a repository with an active releasable
+service, so branch builds and pull request runs are ignored without a job being invented for them.
+
+Both the publish endpoint and the webhook open jobs, and the first one wins. Publishing from
+Changelog therefore keeps the attribution, and a tag pushed straight to GitHub is still followed.
+An already-open job also counts as evidence that a tag is ours, which closes the window where a
+`workflow_run` arrives before GitHub has delivered the release.
+
+A repository with more than one workflow on `v*` tags reports whichever run was delivered most
+recently for the tag.
+
+One GitHub repository can be tracked by several products, each with its own releasable service.
+That is a job per product for the same tag, and the single workflow run reports to all of them ---
+which is why the run id is indexed rather than unique.
+
+### Required GitHub App configuration
+
+| Setting            | Value           | Why                                   |
+| ------------------ | --------------- | ------------------------------------- |
+| Permission         | `Actions: read` | Reading workflow run and job payloads |
+| Event subscription | `Workflow run`  | Run-level status                      |
+| Event subscription | `Workflow job`  | Per-job progress within a run         |
+
+Adding a permission to the App does not apply it to existing installations: **each organization
+must approve the change before its events arrive**. Until then the webhook simply receives nothing
+and release jobs stay `pending`.
+
 ## Webhook Processing
 
 ### Endpoint
@@ -137,14 +200,20 @@ The webhook endpoint accepts payloads up to **1 MB** (configured via `express.ra
 
 ### Handled Events
 
-| GitHub Event   | Actions Processed                | Behavior                                                        |
-| -------------- | -------------------------------- | --------------------------------------------------------------- |
-| `release`      | `published`, `created`, `edited` | Upserts the release in the database                             |
-| `release`      | `deleted`                        | Deletes the release from the database                           |
-| `push`         | Any                              | Triggers auto-changelog (only for pushes to default branch)     |
-| `pull_request` | `closed` (with `merged: true`)   | Triggers auto-changelog (only for PRs merged to default branch) |
+| GitHub Event   | Actions Processed                               | Behavior                                                        |
+| -------------- | ----------------------------------------------- | --------------------------------------------------------------- |
+| `release`      | `published`, `edited`                           | Upserts the release in the database                             |
+| `release`      | `deleted`                                       | Deletes the release from the database                           |
+| `push`         | Any                                             | Triggers auto-changelog (only for pushes to default branch)     |
+| `pull_request` | `closed` (with `merged: true`)                  | Triggers auto-changelog (only for PRs merged to default branch) |
+| `workflow_run` | `requested`, `in_progress`, `completed`         | Records the run against the release job for its tag             |
+| `workflow_job` | `queued`, `waiting`, `in_progress`, `completed` | Records that job's progress on the release job                  |
 
 All other event types are acknowledged with `200 OK` and silently ignored.
+
+The two workflow events return before the auto-changelog trigger. A deployment run says nothing
+about the product's changelog, and the trigger map falls back to `webhook_push` for any event it
+does not recognise, so without that early return a workflow event would run the agent.
 
 ### Repository Matching
 
@@ -174,8 +243,12 @@ Webhook received
   ├─ Parse event type from X-GitHub-Event header
   ├─ Look up ProductRepository records by repository.full_name
   │
+  ├─ Is workflow_run / workflow_job event?
+  │   ├─ YES: Record it on the release job, return 200 OK, and stop here
+  │
   ├─ Is release event?
   │   ├─ YES: Upsert/delete GitHubRelease synchronously
+  │   ├─ Open a release job when the action is `published`
   │   └─ Update ProductRepository.lastSyncedAt
   │
   ├─ Return 200 OK immediately
@@ -322,15 +395,17 @@ apps/lfx-changelog/src/server/
 │   ├── webhook.controller.ts       # Webhook event routing + auto-changelog trigger
 │   └── github.controller.ts        # GitHub App install flow + repo management
 ├── services/
-│   ├── github.service.ts           # GitHub API client (JWT auth, API calls)
-│   ├── release.service.ts          # Release CRUD + sync logic
-│   ├── auto-changelog.service.ts   # AI-powered changelog generation + locking
-│   └── changelog.service.ts        # Changelog CRUD + unpublish/delete
+│   ├── github.service.ts             # GitHub API client (JWT auth, API calls)
+│   ├── release.service.ts            # Release CRUD + sync logic
+│   ├── releasable-service.service.ts # The catalog of repositories that deploy
+│   ├── release-job.service.ts        # Release jobs driven by workflow webhooks
+│   ├── changelog-agent.service.ts    # AI-powered changelog generation + locking
+│   └── changelog.service.ts          # Changelog CRUD + unpublish/delete
 ├── routes/
-│   ├── webhook.route.ts            # POST /webhooks/github
-│   └── github.route.ts             # /api/github/* routes
+│   ├── webhook.route.ts              # POST /webhooks/github
+│   └── github.route.ts               # /api/github/* routes
 └── middleware/
-    └── verify-github-webhook.middleware.ts  # HMAC signature verification
+    └── github-webhook.middleware.ts  # HMAC signature verification
 ```
 
 ### Database Relationships
@@ -338,7 +413,9 @@ apps/lfx-changelog/src/server/
 ```text
 Product
 ├── ProductRepository (one-to-many)
-│   └── GitHubRelease (one-to-many)
+│   ├── GitHubRelease (one-to-many)
+│   └── ReleasableService (zero-or-one)
+│       └── ReleaseJob (one-to-many)
 ├── ChangelogEntry (one-to-many)
 │   ├── source: 'manual' | 'automated'
 │   └── createdBy → User

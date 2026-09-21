@@ -32,3 +32,25 @@ export interface CreateReleaseInput {
   body: string;
   prerelease?: boolean;
 }
+
+/** The parts of a `workflow_run` payload the release job reads. */
+export interface WorkflowRunPayload {
+  id: number;
+  name?: string | null;
+  head_branch?: string | null;
+  status?: string | null;
+  conclusion?: string | null;
+  html_url?: string | null;
+  run_started_at?: string | null;
+  updated_at?: string | null;
+}
+
+/** The parts of a `workflow_job` payload the release job reads. */
+export interface WorkflowJobPayload {
+  run_id: number;
+  name: string;
+  status: string;
+  conclusion?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+}

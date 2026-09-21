@@ -352,6 +352,9 @@ AUTH0_SECRET=<cookie signing secret>
 BASE_URL=http://localhost:4204
 SKIP_RATE_LIMIT=true
 
+# GitHub webhooks — any value; the webhook spec signs its own payloads with it
+GITHUB_WEBHOOK_SECRET=<any string>
+
 # Test Users (one set per role — Auth0 IDs are derived as auth0|<username>)
 E2E_SUPER_ADMIN_USERNAME=<username>
 E2E_SUPER_ADMIN_PASSWORD=<password>

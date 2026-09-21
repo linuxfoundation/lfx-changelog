@@ -182,6 +182,18 @@ export const ReleasableServiceSchema = z
 
 export type ReleasableService = z.infer<typeof ReleasableServiceSchema>;
 
+export const ReleaseJobStepSchema = z
+  .object({
+    name: z.string(),
+    status: z.string(),
+    conclusion: z.string().nullable(),
+    startedAt: z.string().nullable(),
+    completedAt: z.string().nullable(),
+  })
+  .openapi('ReleaseJobStep');
+
+export type ReleaseJobStep = z.infer<typeof ReleaseJobStepSchema>;
+
 export const GitHubReleaseSchema = z
   .object({
     id: z.number(),

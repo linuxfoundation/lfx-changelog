@@ -8,9 +8,11 @@ import { serverLogger } from '../server-logger';
 import { ChangelogAgentService } from '../services/changelog-agent.service';
 import { GitHubService } from '../services/github.service';
 import { getPrismaClient } from '../services/prisma.service';
+import { ReleaseJobService } from '../services/release-job.service';
 import { SlackService } from '../services/slack.service';
 
 import type { AgentJobTrigger, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
+import type { WorkflowJobPayload, WorkflowRunPayload } from '../interfaces/release.interface';
 
 const WEBHOOK_STATE_SECRET = process.env['WEBHOOK_STATE_SECRET'] || '';
 
@@ -18,6 +20,7 @@ export class WebhookController {
   private readonly githubService = new GitHubService();
   private readonly slackService = new SlackService();
   private readonly changelogAgentService = new ChangelogAgentService();
+  private readonly releaseJobService = new ReleaseJobService();
   /**
    * Signs a state payload for GitHub App install redirects.
    * Called when generating the install URL to embed a verifiable signature.
@@ -72,7 +75,7 @@ export class WebhookController {
 
   /**
    * Handles incoming GitHub webhook events.
-   * Accepts release, push, and pull_request events.
+   * Accepts release, push, pull_request, workflow_run, and workflow_job events.
    * Signature verification is handled by the verifyGitHubWebhook middleware.
    */
   public async githubWebhook(req: Request, res: Response): Promise<void> {
@@ -89,6 +92,8 @@ export class WebhookController {
       repository: { full_name: string; default_branch?: string };
       ref?: string;
       pull_request?: { merged?: boolean };
+      workflow_run?: WorkflowRunPayload;
+      workflow_job?: WorkflowJobPayload;
     };
     const repoFullName = body.repository?.full_name;
     if (!repoFullName) {
@@ -109,6 +114,26 @@ export class WebhookController {
 
     serverLogger.info({ event, action: body.action, repoFullName, productCount: productRepos.length }, 'Processing GitHub webhook event');
 
+    // Workflow events follow a release's CI and return here deliberately: a deployment run says
+    // nothing about the product's changelog, and the trigger map below falls back to
+    // `webhook_push` for any event it does not recognise, which would run the agent for one.
+    if (event === 'workflow_run' || event === 'workflow_job') {
+      // Per repository, the same way releases are recorded: one GitHub repository can be tracked
+      // by several products, and each gets its own release job for the tag.
+      if (event === 'workflow_run' && body.workflow_run) {
+        for (const productRepo of productRepos) {
+          await this.releaseJobService.recordWorkflowRun(productRepo.id, body.workflow_run);
+        }
+      } else if (event === 'workflow_job' && body.workflow_job) {
+        await this.releaseJobService.recordWorkflowJob(body.workflow_job);
+      } else {
+        serverLogger.warn({ event, action: body.action, repoFullName }, 'Workflow event carried no payload — ignoring');
+      }
+
+      res.status(200).json({ ok: true });
+      return;
+    }
+
     // Handle release upsert/delete synchronously (fast, idempotent)
     if (event === 'release' && body.release) {
       const releasePayload = body.release as GitHubWebhookReleasePayload;
@@ -120,6 +145,11 @@ export class WebhookController {
           serverLogger.info({ repoFullName, tag: releasePayload.tag_name, productId: productRepo.productId }, 'Deleted release via webhook');
         } else {
           await this.githubService.upsertReleaseFromWebhook(productRepo.id, releasePayload);
+          if (body.action === 'published' && !releasePayload.draft) {
+            await this.releaseJobService
+              .openForRelease(productRepo.id, releasePayload.tag_name)
+              .catch((err) => serverLogger.warn({ err, repoFullName, tag: releasePayload.tag_name }, 'Failed to open release job from webhook'));
+          }
           serverLogger.info(
             { repoFullName, tag: releasePayload.tag_name, action: body.action, productId: productRepo.productId },
             'Upserted release via webhook'
@@ -222,6 +252,16 @@ export class WebhookController {
       const repo = body['repository'] as { default_branch?: string } | undefined;
       const defaultBranch = repo?.default_branch || 'main';
       return ref === `refs/heads/${defaultBranch}`;
+    }
+
+    if (event === 'workflow_run') {
+      return ['requested', 'in_progress', 'completed'].includes(action || '');
+    }
+
+    // `waiting` means the job is held on an environment approval, which is worth showing rather
+    // than leaving the run looking stalled.
+    if (event === 'workflow_job') {
+      return ['queued', 'waiting', 'in_progress', 'completed'].includes(action || '');
     }
 
     if (event === 'pull_request') {

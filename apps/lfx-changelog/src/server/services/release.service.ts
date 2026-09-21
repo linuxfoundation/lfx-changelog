@@ -7,12 +7,14 @@ import { ConflictError, GitHubApiError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
+import { ReleaseJobService } from './release-job.service';
 
 import type { CreateReleaseRequest, GeneratedReleaseNotes, GitHubRelease, ReleaseChanges, ReleaseTarget } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository, UserRoleAssignment } from '@prisma/client';
 
 export class ReleaseService {
   private readonly githubService = new GitHubService();
+  private readonly releaseJobService = new ReleaseJobService();
 
   public async getReleaseTarget(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<ReleaseTarget> {
     const repository = await this.requireReleasableRepository(repositoryId, userRoles);
@@ -45,8 +47,9 @@ export class ReleaseService {
     });
   }
 
-  // Nothing is written here — the `release.published` webhook stores the row, which keeps a
-  // release published from the UI and one published on GitHub itself on the same path.
+  // The release row is not written here — the `release.published` webhook stores it, which keeps
+  // a release published from the UI and one published on GitHub itself on the same path. The
+  // release job is, because only this path knows who asked for it.
   public async createRelease(repositoryId: string, data: CreateReleaseRequest, userRoles: UserRoleAssignment[], userId: string): Promise<GitHubRelease> {
     const repository = await this.requireReleasableRepository(repositoryId, userRoles);
 
@@ -68,6 +71,13 @@ export class ReleaseService {
       }
       throw error;
     }
+
+    // Opened here rather than waiting for the release webhook, which cannot know who asked.
+    // Failing to open it must not fail the publish: the release exists on GitHub either way, and
+    // the webhook opens the job a moment later without the attribution.
+    await this.releaseJobService
+      .openForRelease(repositoryId, data.tagName, userId)
+      .catch((err) => serverLogger.warn({ err, repositoryId, tagName: data.tagName }, 'Failed to open release job for published release'));
 
     serverLogger.info({ repositoryId, repo: repository.fullName, tagName: data.tagName, requestedBy: userId }, 'Release published from the admin UI');
     return release;
