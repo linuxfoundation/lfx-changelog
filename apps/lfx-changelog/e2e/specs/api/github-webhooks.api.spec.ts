@@ -29,6 +29,7 @@ type WorkflowRunOverrides = {
   status?: string;
   conclusion?: string | null;
   runId?: number;
+  updatedAt?: string;
 };
 
 function workflowRunBody(fullName: string, overrides: WorkflowRunOverrides = {}): Record<string, unknown> {
@@ -46,7 +47,7 @@ function workflowRunBody(fullName: string, overrides: WorkflowRunOverrides = {})
       conclusion: overrides.conclusion === undefined ? 'success' : overrides.conclusion,
       html_url: `https://github.com/${fullName}/actions/runs/${runId}`,
       run_started_at: '2026-09-18T10:00:00Z',
-      updated_at: '2026-09-18T10:06:00Z',
+      updated_at: overrides.updatedAt ?? '2026-09-18T10:06:00Z',
     },
   };
 }
@@ -57,7 +58,7 @@ let nextReleaseId = 970_000;
  * Tags this spec publishes into the shared fixture repository. They are removed again afterwards:
  * left behind, they would become the newest stored tag and change what other specs read.
  */
-const PUBLISHED_TAGS = ['v2.0.0', 'v2.1.0-draft', 'v2.2.0', 'v2.3.0', 'v3.0.0'];
+const PUBLISHED_TAGS = ['v2.0.0', 'v2.1.0-draft', 'v2.2.0', 'v2.3.0', 'v3.0.0', 'v4.0.0', 'v4.1.0', 'v5.0.0'];
 
 function releaseBody(fullName: string, tagName: string, overrides: { action?: string; draft?: boolean } = {}): Record<string, unknown> {
   return {
@@ -196,12 +197,88 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
       expect(await jobFor('v1.3.0-draft')).toBeNull();
     });
 
+    test('a service retired while CI is running still gets its finished run', async () => {
+      const prisma = getTestPrismaClient();
+      const service = await prisma.releasableService.findFirstOrThrow({
+        where: { repository: { fullName: TEST_REPOSITORY.fullName } },
+      });
+
+      await send('release', releaseBody(TEST_REPOSITORY.fullName, 'v5.0.0'));
+      await prisma.releasableService.update({ where: { id: service.id }, data: { isActive: false } });
+
+      try {
+        const runId = nextRunId++;
+        const res = await send('workflow_run', workflowRunBody(TEST_REPOSITORY.fullName, { runId, headBranch: 'v5.0.0' }));
+        expect(res.status()).toBe(200);
+
+        // Dropping this would leave the job at `pending` with nothing left to correct it.
+        const job = await prisma.releaseJob.findFirst({ where: { tagName: 'v5.0.0', releasableServiceId: service.id } });
+        expect(job!.status).toBe('succeeded');
+      } finally {
+        await prisma.releasableService.update({ where: { id: service.id }, data: { isActive: true } });
+      }
+    });
+
     test('a retired service records nothing even for a published tag', async () => {
       const res = await send('workflow_run', workflowRunBody(TEST_RETIRED_REPOSITORY.fullName, { headBranch: 'ret-v0.1.0' }));
       expect(res.status()).toBe(200);
 
       const job = await getTestPrismaClient().releaseJob.findFirst({ where: { tagName: 'ret-v0.1.0' } });
       expect(job).toBeNull();
+    });
+  });
+
+  test.describe('Ordering deliveries for one run', () => {
+    test('a redelivery of an earlier state does not undo a finished run', async () => {
+      const runId = nextRunId++;
+      await send('release', releaseBody(TEST_REPOSITORY.fullName, 'v4.0.0'));
+      await send('workflow_run', workflowRunBody(TEST_REPOSITORY.fullName, { runId, headBranch: 'v4.0.0', updatedAt: '2026-09-18T10:06:00Z' }));
+
+      // GitHub redelivers, and does not promise order. The same run reporting an earlier state
+      // must not walk a finished job back to running.
+      const res = await send(
+        'workflow_run',
+        workflowRunBody(TEST_REPOSITORY.fullName, {
+          runId,
+          headBranch: 'v4.0.0',
+          status: 'in_progress',
+          conclusion: null,
+          updatedAt: '2026-09-18T10:02:00Z',
+        })
+      );
+      expect(res.status()).toBe(200);
+
+      const job = await jobFor('v4.0.0');
+      expect(job!.status).toBe('succeeded');
+      expect(job!.conclusion).toBe('success');
+    });
+
+    test('a re-run of a failed run moves the job back to running', async () => {
+      const runId = nextRunId++;
+      await send('release', releaseBody(TEST_REPOSITORY.fullName, 'v4.1.0'));
+      await send(
+        'workflow_run',
+        workflowRunBody(TEST_REPOSITORY.fullName, { runId, headBranch: 'v4.1.0', conclusion: 'failure', updatedAt: '2026-09-18T10:06:00Z' })
+      );
+      expect((await jobFor('v4.1.0'))!.status).toBe('failed');
+
+      // GitHub reuses the run id for a re-run, so this arrives as the same run in an earlier
+      // state — but with a later `updated_at`, which is what separates it from a redelivery.
+      const res = await send(
+        'workflow_run',
+        workflowRunBody(TEST_REPOSITORY.fullName, {
+          runId,
+          headBranch: 'v4.1.0',
+          status: 'in_progress',
+          conclusion: null,
+          updatedAt: '2026-09-18T11:00:00Z',
+        })
+      );
+      expect(res.status()).toBe(200);
+
+      const job = await jobFor('v4.1.0');
+      expect(job!.status).toBe('running');
+      expect(job!.completedAt).toBeNull();
     });
   });
 

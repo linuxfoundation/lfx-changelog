@@ -15,6 +15,7 @@ CREATE TABLE "release_jobs" (
     "workflow_run_url" TEXT,
     "workflow_name" TEXT,
     "conclusion" TEXT,
+    "run_updated_at" TIMESTAMP(3),
     "steps" JSONB NOT NULL DEFAULT '[]',
     "started_at" TIMESTAMP(3),
     "completed_at" TIMESTAMP(3),

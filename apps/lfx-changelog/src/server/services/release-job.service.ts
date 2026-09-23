@@ -58,26 +58,23 @@ export class ReleaseJobService {
     const workflowRunId = String(run.id);
     const status = this.statusFor(run);
     const isFinished = status === ReleaseJobStatus.SUCCEEDED || status === ReleaseJobStatus.FAILED;
+    // GitHub advances this on every state change, so it orders the deliveries for one run.
+    const runUpdatedAt = run.updated_at ? new Date(run.updated_at) : new Date();
 
     const existing = await prisma.releaseJob.findUnique({
       where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
-      select: { workflowRunId: true, status: true },
+      select: { workflowRunId: true },
     });
-
-    // GitHub does not promise delivery order, and redelivers. Neither may walk a run that has
-    // already finished back to running, which is the one thing this record exists to report.
-    if (existing?.workflowRunId === workflowRunId && this.isTerminal(existing.status) && !isFinished) {
-      serverLogger.debug({ repositoryId, tagName, runId: run.id, status }, 'Late workflow run delivery for a finished job — ignoring');
-      return;
-    }
 
     // A different run supersedes this tag's previous one, and the steps recorded against that
     // run are not this one's, so they start again rather than merging by job name across runs.
+    // A re-run is not a different run — GitHub reuses the id — so its steps overwrite by name.
     const supersedes = Boolean(existing?.workflowRunId) && existing?.workflowRunId !== workflowRunId;
 
     const runFields = {
       status,
       workflowRunId,
+      runUpdatedAt,
       ...(supersedes ? { steps: [] } : {}),
       workflowRunUrl: run.html_url ?? null,
       workflowName: run.name ?? null,
@@ -90,11 +87,33 @@ export class ReleaseJobService {
 
     // The create branch serves a release this application did not publish and has not yet seen a
     // `published` event for — a manual sync, or an edit to a release created on github.com.
-    await prisma.releaseJob.upsert({
-      where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
-      create: { releasableServiceId, tagName, ...runFields },
-      update: runFields,
+    if (!existing) {
+      await prisma.releaseJob.upsert({
+        where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
+        create: { releasableServiceId, tagName, ...runFields },
+        update: {},
+      });
+      serverLogger.info({ repositoryId, tagName, runId: run.id, status }, 'Opened release job from a workflow run');
+      return;
+    }
+
+    // Ordering is a condition on the write rather than a check before it. GitHub delivers
+    // `in_progress` and `completed` closely enough to be in flight together, so a read followed
+    // by an unconditional write would let the earlier delivery land last and report a finished
+    // run as still running.
+    const { count } = await prisma.releaseJob.updateMany({
+      where: {
+        releasableServiceId,
+        tagName,
+        OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lte: runUpdatedAt } }],
+      },
+      data: runFields,
     });
+
+    if (count === 0) {
+      serverLogger.debug({ repositoryId, tagName, runId: run.id, status }, 'Workflow run delivery is older than the recorded state — ignoring');
+      return;
+    }
 
     serverLogger.info({ repositoryId, tagName, runId: run.id, status, conclusion: run.conclusion }, 'Recorded workflow run on release job');
   }
@@ -143,16 +162,22 @@ export class ReleaseJobService {
    * The active releasable service whose tag this is, or null when the repository has no active
    * service or the tag is not one we released.
    *
-   * An existing job counts as evidence on its own: the publish endpoint opens one before GitHub
-   * has delivered anything, so a run can reach us while the release row is still in flight.
+   * An open job counts as evidence on its own: the publish endpoint opens one before GitHub has
+   * delivered anything, so a run can reach us while the release row is still in flight.
    */
   private async resolveReleasedTag(repositoryId: string, tagName: string): Promise<string | null> {
     const prisma = getPrismaClient();
     const service = await prisma.releasableService.findFirst({
       where: {
         repositoryId,
-        isActive: true,
-        OR: [{ jobs: { some: { tagName } } }, { repository: { releases: { some: { tagName, isDraft: false } } } }],
+        OR: [
+          // An open job is followed to the end even if the service is retired while CI is still
+          // running — otherwise the delivery that would have finished it is dropped and the job
+          // sits at `running` with nothing left to correct it.
+          { jobs: { some: { tagName } } },
+          // A job is only opened for a service still in service.
+          { isActive: true, repository: { releases: { some: { tagName, isDraft: false } } } },
+        ],
       },
       select: { id: true },
     });
@@ -169,11 +194,6 @@ export class ReleaseJobService {
     // already recorded is gone.
     serverLogger.warn({ releaseJobId, issues: parsed.error.issues }, 'Stored release job steps could not be read — restarting the list');
     return [];
-  }
-
-  /** Whether a stored status is one the job cannot move out of on its own. */
-  private isTerminal(status: string): boolean {
-    return status === ReleaseJobStatus.SUCCEEDED || status === ReleaseJobStatus.FAILED;
   }
 
   /**

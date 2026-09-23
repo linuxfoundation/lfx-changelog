@@ -163,8 +163,8 @@ model ReleasableService {
 }
 
 /// One attempt at releasing a service: the tag that was published and what the repository's CI
-/// then did with it. Created from the release webhook rather than the publish endpoint, so a tag
-/// pushed outside Changelog is tracked too.
+/// then did with it. Opened by the publish endpoint, which knows who asked, and by the release
+/// webhook, which does not — so a tag pushed outside Changelog is tracked just the same.
 model ReleaseJob {
   id                  String           @id @default(uuid())
   releasableServiceId String           @map("releasable_service_id")
@@ -183,6 +183,10 @@ model ReleaseJob {
   workflowRunUrl      String?          @map("workflow_run_url")
   workflowName        String?          @map("workflow_name")
   conclusion          String?
+  /// GitHub's own last-modified time for the run, which advances on every state change. Kept so
+  /// that deliveries for one run can be ordered: a redelivery is older and must not undo the
+  /// state it already reported, while a re-run reuses the id and is newer, so it may.
+  runUpdatedAt        DateTime?        @map("run_updated_at")
   /// Per-job progress from workflow_job events, newest state per job name.
   steps               Json             @default("[]")
 
