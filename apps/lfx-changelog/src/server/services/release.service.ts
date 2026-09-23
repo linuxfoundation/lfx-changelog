@@ -263,17 +263,16 @@ export class ReleaseService {
       completedAt: isFinished && run.updated_at ? new Date(run.updated_at) : null,
     };
 
-    // The create branch serves a release this application did not publish and has not yet seen a
-    // `published` event for — a manual sync, or an edit to a release created on github.com.
-    if (!existing) {
-      await prisma.releaseJob.upsert({
-        where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
-        create: { releasableServiceId, tagName, ...runFields },
-        update: {},
-      });
-      serverLogger.info({ repositoryId, tagName, runId: run.id, status }, 'Opened release job from a workflow run');
-      return;
-    }
+    // Make sure the row exists, without touching one that does. This serves a release the
+    // application did not publish and has not yet seen a `published` event for — a manual sync,
+    // or an edit to a release created on github.com. It deliberately does not apply the run:
+    // two first deliveries can both find no row, and whichever loses this upsert would
+    // otherwise discard its state entirely rather than fall through to the guard below.
+    await prisma.releaseJob.upsert({
+      where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
+      create: { releasableServiceId, tagName },
+      update: {},
+    });
 
     // Ordering is a condition on the write rather than a check before it. GitHub delivers
     // `in_progress` and `completed` closely enough to be in flight together, so a read followed
