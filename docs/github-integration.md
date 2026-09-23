@@ -68,6 +68,7 @@ The release row itself is not written by the create call --- the `release.publis
 
 | Method | Path                                              | Auth                       | Description                               |
 | ------ | ------------------------------------------------- | -------------------------- | ----------------------------------------- |
+| GET    | `/api/github/releases/services`                   | OAuth only (product_admin) | The services the caller may release       |
 | GET    | `/api/github/repositories/:repoId/release-target` | OAuth only (product_admin) | Branches, default branch, suggested tag   |
 | GET    | `/api/github/repositories/:repoId/changes`        | OAuth only (product_admin) | Commits and merges since the last release |
 | POST   | `/api/github/repositories/:repoId/release-notes`  | OAuth only (product_admin) | Preview GitHub-generated notes            |
@@ -396,9 +397,7 @@ apps/lfx-changelog/src/server/
 │   └── github.controller.ts        # GitHub App install flow + repo management
 ├── services/
 │   ├── github.service.ts             # GitHub API client (JWT auth, API calls)
-│   ├── release.service.ts            # Release CRUD + sync logic
-│   ├── releasable-service.service.ts # The catalog of repositories that deploy
-│   ├── release-job.service.ts        # Release jobs driven by workflow webhooks
+│   ├── release.service.ts            # Releases: publishing, the deployable catalog, and jobs
 │   ├── changelog-agent.service.ts    # AI-powered changelog generation + locking
 │   └── changelog.service.ts          # Changelog CRUD + unpublish/delete
 ├── routes/

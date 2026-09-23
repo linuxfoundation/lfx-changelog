@@ -25,6 +25,12 @@ router.get('/installations/:installationId/repositories', authorize({ role: User
 
 router.get('/releases', authorize({ role: UserRole.EDITOR }), (req, res, next) => githubController.listPublicReleases(req, res, next));
 
+// The service filters to the products the caller administers, so this returns an empty list
+// rather than revealing services they cannot release.
+router.get('/releases/services', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
+  releaseController.listReleasableServices(req, res, next)
+);
+
 // ── Tracked repositories ────────────────────────────────────────────────
 
 router.get('/repositories', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => githubController.listRepositoriesWithCounts(req, res, next));

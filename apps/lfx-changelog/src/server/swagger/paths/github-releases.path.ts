@@ -9,6 +9,7 @@ import {
   GenerateReleaseNotesRequestSchema,
   GeneratedReleaseNotesSchema,
   GitHubReleaseSchema,
+  ReleasableServiceSchema,
   ReleaseChangesQuerySchema,
   ReleaseChangesSchema,
   ReleaseTargetSchema,
@@ -217,5 +218,23 @@ releaseRegistry.registerPath({
     422: { description: 'GitHub rejected the release, most commonly an unknown target branch or commit' },
     503: { description: 'GitHub rate limit reached' },
     502: { description: 'GitHub was unavailable' },
+  },
+});
+
+releaseRegistry.registerPath({
+  method: 'get',
+  path: '/api/github/releases/services',
+  tags: ['Releasable Services'],
+  summary: 'List services the caller may release',
+  description:
+    "Returns the active releasable services whose repository belongs to a product the caller administers, each with its deployment target and the newest tag stored for it.\n\nA super admin sees every service. Services outside the caller's products are omitted rather than refused, so the list cannot be used to discover them. Inactive services are never listed.\n\n**Required privilege:** PRODUCT_ADMIN. Session authentication only.",
+  security: COOKIE_AUTH,
+  responses: {
+    200: {
+      description: 'Releasable services',
+      content: { 'application/json': { schema: createApiResponseSchema(z.array(ReleasableServiceSchema)) } },
+    },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or an API key was used' },
   },
 });
