@@ -100,7 +100,7 @@ export class BlogAgentService {
   /**
    * Cancels a running/pending blog agent job.
    */
-  public async cancelJob(jobId: string): Promise<void> {
+  public async cancelJob(jobId: string): Promise<boolean> {
     const prisma = getPrismaClient();
 
     const updated = await prisma.agentJob.updateMany({
@@ -110,7 +110,7 @@ export class BlogAgentService {
 
     if (updated.count === 0) {
       serverLogger.warn({ jobId }, 'Cancel requested but blog agent job is no longer active');
-      return;
+      return false;
     }
 
     const controller = this.activeControllers.get(jobId);
@@ -129,6 +129,8 @@ export class BlogAgentService {
     });
 
     serverLogger.info({ jobId }, 'Blog agent job cancelled');
+
+    return true;
   }
 
   private async executeJob(jobId: string, period: { start: Date; end: Date }, botUserId: string, existingDraftId: string | null): Promise<void> {
@@ -137,11 +139,17 @@ export class BlogAgentService {
     const progressLog: ProgressLogEntry[] = [];
 
     try {
-      // Mark as running
-      await prisma.agentJob.update({
-        where: { id: jobId },
+      // Guarded like every other status write: the job is launched fire-and-forget, so a cancel
+      // can land before the worker gets here, and an unconditional write would undo it.
+      const started = await prisma.agentJob.updateMany({
+        where: { id: jobId, status: 'pending' },
         data: { status: 'running', startedAt: new Date() },
       });
+      if (started.count === 0) {
+        serverLogger.info({ jobId }, 'Agent job is no longer pending — not starting it');
+        return;
+      }
+
       agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'running' } });
 
       // 1. Fetch published changelogs in the period
@@ -377,11 +385,11 @@ export class BlogAgentService {
         summary: errorMessage.slice(0, 500),
       };
       progressLog.push(errorEntry);
-      agentJobEmitter.emit(jobId, { type: 'progress', data: errorEntry });
 
       if (!(await finalizeAgentJob(jobId, { status: 'failed', completedAt: new Date(), durationMs, errorMessage, progressLog }))) return;
 
       serverLogger.error({ err, jobId, durationMs }, 'Blog agent job failed');
+      agentJobEmitter.emit(jobId, { type: 'progress', data: errorEntry });
       agentJobEmitter.emit(jobId, { type: 'status', data: { status: 'failed' } });
       agentJobEmitter.emit(jobId, { type: 'error', data: errorMessage });
       this.emitTerminalEvents(jobId, { durationMs, numTurns: null, promptTokens: null, outputTokens: null, changelogEntry: null, errorMessage });

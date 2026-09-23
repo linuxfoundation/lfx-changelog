@@ -164,6 +164,11 @@ test.describe('Blog Agent API (/api/agent-jobs/trigger-blog)', () => {
       const cancelRes = await superAdminApi.post(`/api/agent-jobs/${jobId}/cancel`);
       expect([200, 400]).toContain(cancelRes.status());
 
+      // Read after the worker has had time to finish, not immediately. The bug was a late write
+      // from the cancelled run, so reading before that write lands reports `cancelled` either
+      // way and proves nothing.
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+
       const detail = await (await superAdminApi.get(`/api/agent-jobs/${jobId}`)).json();
 
       if (cancelRes.status() === 200) {
