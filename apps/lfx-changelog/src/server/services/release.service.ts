@@ -72,12 +72,22 @@ export class ReleaseService {
       throw error;
     }
 
-    // Opened here rather than waiting for the release webhook, which cannot know who asked.
-    // Failing to open it must not fail the publish: the release exists on GitHub either way, and
-    // the webhook opens the job a moment later without the attribution.
-    await this.releaseJobService
-      .openForRelease(repositoryId, data.tagName, userId)
-      .catch((err) => serverLogger.warn({ err, repositoryId, tagName: data.tagName }, 'Failed to open release job for published release'));
+    // Opened here rather than waiting for the release webhook, which cannot know who asked. The
+    // webhook opens a job for every product tracking this repository, so this does too — one
+    // product's copy of the same release should not be the only one that knows who published it.
+    // Authorization stayed on the repository the caller named; this only records who they are.
+    //
+    // Failing to open a job must not fail the publish: the release exists on GitHub either way,
+    // and the webhook opens them a moment later without the attribution.
+    const prisma = getPrismaClient();
+    const tracking = await prisma.productRepository.findMany({ where: { fullName: repository.fullName }, select: { id: true } });
+    await Promise.all(
+      tracking.map((tracked) =>
+        this.releaseJobService
+          .openForRelease(tracked.id, data.tagName, userId)
+          .catch((err) => serverLogger.warn({ err, repositoryId: tracked.id, tagName: data.tagName }, 'Failed to open release job for published release'))
+      )
+    );
 
     serverLogger.info({ repositoryId, repo: repository.fullName, tagName: data.tagName, requestedBy: userId }, 'Release published from the admin UI');
     return release;

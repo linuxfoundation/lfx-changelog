@@ -10,6 +10,9 @@ import { getPrismaClient } from './prisma.service';
 import type { ReleaseJobStep } from '@lfx-changelog/shared';
 import type { WorkflowJobPayload, WorkflowRunPayload } from '../interfaces/release.interface';
 
+/** GitHub's job states in the order they occur. Anything unrecognised sorts first, so it loses. */
+const JOB_STATE_ORDER = ['queued', 'waiting', 'in_progress', 'completed'];
+
 export class ReleaseJobService {
   /**
    * Opens a job for a released tag. Repositories with no active releasable service are ignored —
@@ -73,7 +76,9 @@ export class ReleaseJobService {
     const runUpdatedAt = run.updated_at ? new Date(run.updated_at) : new Date();
     // `updated_at` orders the states of one run; it says nothing across runs, because a run still
     // executing when another supersedes it goes on reporting later timestamps. Start time is what
-    // separates an older run from a newer one.
+    // separates an older run from a newer one, and it has to be strictly later to take the job
+    // over: two workflows triggered by one tag push start in the same second, and letting either
+    // displace the other would leave them trading the row back and forth.
     const runStartedAt = run.run_started_at ? new Date(run.run_started_at) : runUpdatedAt;
 
     const runFields = {
@@ -134,7 +139,7 @@ export class ReleaseJobService {
                 tagName,
                 AND: [
                   { OR: [{ workflowRunId: null }, { workflowRunId: { not: workflowRunId } }] },
-                  { OR: [{ startedAt: null }, { startedAt: { lte: runStartedAt } }] },
+                  { OR: [{ startedAt: null }, { startedAt: { lt: runStartedAt } }] },
                 ],
               },
               data: { ...runFields, steps: [] },
@@ -184,11 +189,11 @@ export class ReleaseJobService {
         const stored = steps.find((step) => step.name === next.name);
 
         // Attempts are ordered, so a delayed delivery from the attempt before cannot replace the
-        // one now running. Within an attempt the run-level rule applies: a late delivery must
-        // not walk a finished job back.
+        // one now running; within an attempt the job's own states are, so a `queued` arriving
+        // after an `in_progress` cannot either. Delivery order is not promised for either.
         if (stored) {
           if (stored.attempt > next.attempt) continue;
-          if (stored.attempt === next.attempt && stored.completedAt && !next.completedAt) continue;
+          if (stored.attempt === next.attempt && this.stateRank(next.status) < this.stateRank(stored.status)) continue;
         }
 
         await tx.releaseJob.update({
@@ -249,6 +254,11 @@ export class ReleaseJobService {
     // already recorded is gone.
     serverLogger.warn({ releaseJobId, issues: parsed.error.issues }, 'Stored release job steps could not be read — restarting the list');
     return [];
+  }
+
+  /** Where a job state sits in the sequence GitHub reports, for refusing one that goes backwards. */
+  private stateRank(status: string): number {
+    return Math.max(JOB_STATE_ORDER.indexOf(status), 0);
   }
 
   /**
