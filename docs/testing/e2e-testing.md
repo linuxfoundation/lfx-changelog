@@ -57,38 +57,13 @@ apps/lfx-changelog/
 │   │   ├── admin-dashboard.page.ts
 │   │   ├── admin-layout.page.ts
 │   │   ├── changelog-detail.page.ts
-│   │   ├── changelog-editor.page.ts
-│   │   ├── changelog-feed.page.ts
 │   │   ├── changelog-list.page.ts
-│   │   ├── product-changelog.page.ts
 │   │   ├── product-detail.page.ts
-│   │   ├── product-management.page.ts
-│   │   ├── public-layout.page.ts
-│   │   └── user-management.page.ts
+│   │   └── …                     # one page object per screen under test
 │   └── specs/                    # Test specifications
 │       ├── public/               # Public-facing tests (no auth)
-│       │   ├── changelog-detail.spec.ts
-│       │   ├── changelog-feed.spec.ts
-│       │   ├── product-changelog.spec.ts
-│       │   └── theme-toggle.spec.ts
-│       ├── admin/                # Admin tests (auth required)
-│       │   ├── admin-dashboard.spec.ts
-│       │   ├── auth-flow.spec.ts
-│       │   ├── changelog-editor.spec.ts
-│       │   ├── changelog-list.spec.ts
-│       │   ├── product-detail.spec.ts
-│       │   ├── product-management.spec.ts
-│       │   ├── rbac-editor.spec.ts
-│       │   ├── rbac-no-role.spec.ts
-│       │   ├── rbac-product-admin.spec.ts
-│       │   └── user-management.spec.ts
-│       └── api/                  # API tests (no browser, direct HTTP)
-│           ├── changelogs.api.spec.ts
-│           ├── chat.api.spec.ts
-│           ├── products.api.spec.ts
-│           ├── public-changelogs.api.spec.ts
-│           ├── public-products.api.spec.ts
-│           └── users.api.spec.ts
+│       ├── admin/                # Admin tests (auth required; rbac-*.spec.ts apply a per-role storageState)
+│       └── api/                  # API tests (no browser, direct HTTP; *.api.spec.ts)
 ```
 
 ## Architecture
@@ -270,16 +245,30 @@ test.describe('GET /public/api/products', () => {
 });
 ```
 
-**What to test in each spec:**
+**What each API spec covers:**
 
-| Spec file                       | Coverage                                                                         |
-| ------------------------------- | -------------------------------------------------------------------------------- |
-| `public-products.api.spec.ts`   | Public product list, field shape, internal field exclusion, isActive             |
-| `public-changelogs.api.spec.ts` | Pagination, published-only filter, productId filter, isActive                    |
-| `products.api.spec.ts`          | Auth 401, RBAC 403, CRUD lifecycle, validation 400                               |
-| `changelogs.api.spec.ts`        | Auth 401, RBAC 403, CRUD + publish lifecycle, validation 400                     |
-| `chat.api.spec.ts`              | Auth 401, validation 400, conversation CRUD, access control (public/admin/owner) |
-| `users.api.spec.ts`             | Auth 401, /me endpoint, list users RBAC, role assign lifecycle                   |
+| Spec file                         | Coverage                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------- |
+| `agent-jobs.api.spec.ts`          | Auth 401, super-admin 403, job list and detail, manual trigger                         |
+| `api-keys.api.spec.ts`            | Auth 401, OAuth-only enforcement, CRUD lifecycle, scope enforcement, revoked rejection |
+| `blog-agent.api.spec.ts`          | Auth 401, super-admin 403, trigger and cancel lifecycle, duplicate prevention          |
+| `blog-posts.api.spec.ts`          | Auth 401, RBAC, CRUD lifecycle, slugs, product and changelog links, public blog reads  |
+| `blog-search.api.spec.ts`         | Public blog search, blog reindex                                                       |
+| `changelog-views.api.spec.ts`     | Auth 401, viewer id from session, unseen counts, mark-viewed lifecycle                 |
+| `changelogs.api.spec.ts`          | Auth 401, RBAC, CRUD + publish/unpublish, slugs, author reassignment, draft scoping    |
+| `chat.api.spec.ts`                | Auth 401, validation, same-origin, API key rejection, conversation CRUD and access     |
+| `contributors.api.spec.ts`        | Auth 401, 403, list and validation, Slack linking, delete, 404                         |
+| `mcp.api.spec.ts`                 | Initialize handshake, tool listing, public and admin tools, scope enforcement          |
+| `products.api.spec.ts`            | Auth 401, RBAC, list and detail, CRUD lifecycle, validation, isActive toggle           |
+| `public-changelogs.api.spec.ts`   | Pagination, published-only filter, productId filter, inactive product filtering        |
+| `public-products.api.spec.ts`     | Public product list, field shape, internal field exclusion, isActive                   |
+| `public-roadmap.api.spec.ts`      | Roadmap list, issue detail, comments, security                                         |
+| `releasable-services.api.spec.ts` | Auth 401, 403, per-product permission filtering, service detail                        |
+| `release-create.api.spec.ts`      | Auth 401, OAuth-only enforcement, 403, validation 400, 404                             |
+| `releases.api.spec.ts`            | Auth 401, RBAC, release and repository lists, repository filter, sync endpoints        |
+| `search.api.spec.ts`              | Public changelog search, reindex                                                       |
+| `slack.api.spec.ts`               | Auth 401, connect, integrations and channels, share, OAuth callback                    |
+| `users.api.spec.ts`               | Auth 401, /me, list users RBAC, role lifecycle, user creation, validation              |
 
 **Database helpers for API tests:**
 

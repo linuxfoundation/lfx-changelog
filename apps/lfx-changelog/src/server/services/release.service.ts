@@ -34,6 +34,8 @@ import type { WorkflowJobPayload, WorkflowRunPayload } from '../interfaces/relea
 export class ReleaseService {
   private readonly githubService = new GitHubService();
 
+  // ── Publishing a release ────────────────────
+
   public async getReleaseTarget(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<ReleaseTarget> {
     const repository = await this.requireReleasableRepository(repositoryId, userRoles);
 
@@ -142,7 +144,7 @@ export class ReleaseService {
    * is currently on. Scoped by the product that owns the repository, the same way publishing is,
    * so a product admin sees only their own and the list cannot be used to enumerate the rest.
    */
-  public async findReleasable(userRoles: UserRoleAssignment[]): Promise<ReleasableService[]> {
+  public async findReleasableServices(userRoles: UserRoleAssignment[]): Promise<ReleasableService[]> {
     const prisma = getPrismaClient();
     const productIds = administeredProductIds(userRoles);
 
@@ -207,7 +209,10 @@ export class ReleaseService {
     await prisma.releaseJob.upsert({
       where: { releasableServiceId_tagName: { releasableServiceId: service.id, tagName } },
       create: { releasableServiceId: service.id, tagName, requestedById: requestedById ?? null },
-      update: requestedById ? { requestedById } : {},
+      // Never empty: an empty `update` is compiled to a select and a plain insert instead of
+      // `ON CONFLICT`, which reopens the race this is here to settle. Rewriting the tag with
+      // its own value is the no-op that keeps it a single atomic statement.
+      update: requestedById ? { requestedById } : { tagName },
     });
 
     serverLogger.info({ repositoryId, tagName, requestedById: requestedById ?? null }, 'Opened release job for released tag');
@@ -226,6 +231,14 @@ export class ReleaseService {
     // treats as a real run and matches against every other row that stored it.
     if (!tagName || typeof run.id !== 'number') return;
 
+    // `head_branch` carries the tag only for a tag push; for anything else it is a branch name.
+    // A pull request from a branch called `v1.0.0` is not that release's CI, and on a public
+    // repository anyone can open one.
+    if (run.event !== 'push' && run.event !== 'release') {
+      serverLogger.debug({ repositoryId, tagName, runId: run.id, event: run.event }, 'Workflow run is not from a tag push — ignoring');
+      return;
+    }
+
     const prisma = getPrismaClient();
     const releasableServiceId = await this.resolveReleasedTag(repositoryId, tagName);
     if (!releasableServiceId) {
@@ -238,26 +251,19 @@ export class ReleaseService {
     const isFinished = status === ReleaseJobStatus.SUCCEEDED || status === ReleaseJobStatus.FAILED;
     // GitHub advances this on every state change, so it orders the deliveries for one run.
     const runUpdatedAt = run.updated_at ? new Date(run.updated_at) : new Date();
-
-    const existing = await prisma.releaseJob.findUnique({
-      where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
-      select: { workflowRunId: true },
-    });
-
-    // A different run supersedes this tag's previous one, and the steps recorded against that
-    // run are not this one's, so they start again rather than merging by job name across runs.
-    // A re-run is not a different run — GitHub reuses the id — so its steps overwrite by name.
-    const supersedes = Boolean(existing?.workflowRunId) && existing?.workflowRunId !== workflowRunId;
+    // `updated_at` orders the states of one run; it says nothing across runs, because a run still
+    // executing when another supersedes it goes on reporting later timestamps. Start time is what
+    // separates an older run from a newer one.
+    const runStartedAt = run.run_started_at ? new Date(run.run_started_at) : runUpdatedAt;
 
     const runFields = {
       status,
       workflowRunId,
       runUpdatedAt,
-      ...(supersedes ? { steps: [] } : {}),
       workflowRunUrl: run.html_url ?? null,
       workflowName: run.name ?? null,
       conclusion: run.conclusion ?? null,
-      startedAt: run.run_started_at ? new Date(run.run_started_at) : null,
+      startedAt: runStartedAt,
       // Taken from the payload so that a redelivery of the same event writes the same row,
       // rather than moving the finish time to whenever the redelivery happened to arrive.
       completedAt: isFinished && run.updated_at ? new Date(run.updated_at) : null,
@@ -267,27 +273,55 @@ export class ReleaseService {
     // application did not publish and has not yet seen a `published` event for — a manual sync,
     // or an edit to a release created on github.com. It deliberately does not apply the run:
     // two first deliveries can both find no row, and whichever loses this upsert would
-    // otherwise discard its state entirely rather than fall through to the guard below.
+    // otherwise discard its state entirely rather than fall through to the writes below.
     await prisma.releaseJob.upsert({
       where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
       create: { releasableServiceId, tagName },
-      update: {},
+      // See openForRelease: an empty `update` is not compiled to `ON CONFLICT`.
+      update: { tagName },
     });
 
-    // Ordering is a condition on the write rather than a check before it. GitHub delivers
-    // `in_progress` and `completed` closely enough to be in flight together, so a read followed
-    // by an unconditional write would let the earlier delivery land last and report a finished
-    // run as still running.
-    const { count } = await prisma.releaseJob.updateMany({
-      where: {
-        releasableServiceId,
-        tagName,
-        OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lte: runUpdatedAt } }],
-      },
+    // Both writes below name the run they expect to find, and refuse a delivery that is behind
+    // what is recorded. Doing that in the predicate rather than from a prior read is what makes
+    // them safe: GitHub delivers `in_progress` and `completed` closely enough to be in flight at
+    // once, and a decision taken from a snapshot is already stale by the time it is written.
+    // `updated_at` has second precision, so two transitions of a quick job share a timestamp.
+    // A delivery that reports a finished run may land on an equal one, being idempotent; one
+    // that reports an unfinished run may not, or a late `in_progress` would undo the completion
+    // it was issued a fraction of a second before. A later timestamp is a re-run and is allowed.
+    const notOlder = isFinished
+      ? { OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lte: runUpdatedAt } }] }
+      : {
+          OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lt: runUpdatedAt } }, { status: { notIn: [ReleaseJobStatus.SUCCEEDED, ReleaseJobStatus.FAILED] } }],
+        };
+
+    // The run already on this job: advance it, keeping the steps its own jobs have recorded.
+    const advanced = await prisma.releaseJob.updateMany({
+      where: { releasableServiceId, tagName, workflowRunId, ...notOlder },
       data: runFields,
     });
 
-    if (count === 0) {
+    // Otherwise this run takes the job over, and the previous run's steps are not its own. The
+    // run being replaced is named in the predicate, so a second delivery for this same run
+    // cannot wipe the steps the first one's jobs have since recorded.
+    const taken =
+      advanced.count > 0
+        ? 0
+        : (
+            await prisma.releaseJob.updateMany({
+              where: {
+                releasableServiceId,
+                tagName,
+                AND: [
+                  { OR: [{ workflowRunId: null }, { workflowRunId: { not: workflowRunId } }] },
+                  { OR: [{ startedAt: null }, { startedAt: { lte: runStartedAt } }] },
+                ],
+              },
+              data: { ...runFields, steps: [] },
+            })
+          ).count;
+
+    if (advanced.count === 0 && taken === 0) {
       serverLogger.debug({ repositoryId, tagName, runId: run.id, status }, 'Workflow run delivery is older than the recorded state — ignoring');
       return;
     }
@@ -302,20 +336,13 @@ export class ReleaseService {
    * reports to each of them.
    */
   public async recordWorkflowJob(job: WorkflowJobPayload): Promise<void> {
-    if (typeof job.run_id !== 'number') return;
+    if (typeof job.run_id !== 'number' || typeof job.id !== 'number') return;
 
     const prisma = getPrismaClient();
-    const releaseJobs = await prisma.releaseJob.findMany({
-      where: { workflowRunId: String(job.run_id) },
-      select: { id: true, steps: true },
-    });
-
-    if (releaseJobs.length === 0) {
-      serverLogger.debug({ runId: job.run_id, jobName: job.name }, 'Workflow job belongs to no release job — ignoring');
-      return;
-    }
-
+    const workflowRunId = String(job.run_id);
     const next: ReleaseJobStep = {
+      jobId: job.id,
+      attempt: job.run_attempt ?? 1,
       name: job.name,
       status: job.status,
       conclusion: job.conclusion ?? null,
@@ -323,21 +350,52 @@ export class ReleaseService {
       completedAt: job.completed_at ?? null,
     };
 
-    for (const releaseJob of releaseJobs) {
-      await prisma.releaseJob.update({
-        where: { id: releaseJob.id },
-        data: { steps: [...this.parseSteps(releaseJob.id, releaseJob.steps).filter((step) => step.name !== next.name), next] },
-      });
+    // Merging a JSON array is a read, a change and a write, so it runs inside a transaction that
+    // locks the rows first. GitHub emits the jobs of one run together — a matrix fans out, and a
+    // `needs:` edge finishes one job as it queues the next — so without the lock each delivery
+    // writes back a list it read before the other, and one of them is simply gone.
+    const matched = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string; steps: unknown }[]>`
+        SELECT "id", "steps" FROM "release_jobs" WHERE "workflow_run_id" = ${workflowRunId} FOR UPDATE
+      `;
+
+      for (const row of rows) {
+        const steps = this.parseSteps(row.id, row.steps);
+        const stored = steps.find((step) => step.name === next.name);
+
+        // Attempts are ordered, so a delayed delivery from the attempt before cannot replace the
+        // one now running. Within an attempt the run-level rule applies: a late delivery must
+        // not walk a finished job back.
+        if (stored) {
+          if (stored.attempt > next.attempt) continue;
+          if (stored.attempt === next.attempt && stored.completedAt && !next.completedAt) continue;
+        }
+
+        await tx.releaseJob.update({
+          where: { id: row.id },
+          data: { steps: [...steps.filter((step) => step.name !== next.name), next] },
+        });
+      }
+
+      return rows.length;
+    });
+
+    if (matched === 0) {
+      serverLogger.debug({ runId: job.run_id, jobName: job.name }, 'Workflow job belongs to no release job — ignoring');
+      return;
     }
 
-    serverLogger.debug({ runId: job.run_id, jobName: job.name, status: job.status, jobs: releaseJobs.length }, 'Recorded workflow job on release job');
+    serverLogger.debug({ runId: job.run_id, jobName: job.name, status: job.status, jobs: matched }, 'Recorded workflow job on release job');
   }
 
   // ── Private helpers ─────────────────────────
 
   /**
-   * The active releasable service whose tag this is, or null when the repository has no active
-   * service or the tag is not one we released.
+   * The releasable service whose tag this is, or null when the tag is not one we released.
+   *
+   * A service with an open job for the tag matches whether or not it is still active, so that
+   * retiring one mid-deploy does not strand the job already following that release. Otherwise
+   * the service must be active and the tag must have a published, non-draft release.
    *
    * An open job counts as evidence on its own: the publish endpoint opens one before GitHub has
    * delivered anything, so a run can reach us while the release row is still in flight.

@@ -15,7 +15,7 @@ export class ReleaseController {
 
   public async listReleasableServices(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const services = await this.releaseService.findReleasable(this.getUserRoles(req));
+      const services = await this.releaseService.findReleasableServices(this.getUserRoles(req));
       res.json({ success: true, data: services });
     } catch (error) {
       next(error);

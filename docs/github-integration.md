@@ -74,7 +74,9 @@ The release row itself is not written by the create call --- the `release.publis
 | POST   | `/api/github/repositories/:repoId/release-notes`  | OAuth only (product_admin) | Preview GitHub-generated notes            |
 | POST   | `/api/github/repositories/:repoId/releases`       | OAuth only (product_admin) | Publish the release                       |
 
-Authorization is per repository: the caller must hold `product_admin` (or higher) on the product that owns it. The route applies the global role check and the service then re-checks the product, so a repository outside the caller's products returns `404` rather than `403` --- the endpoints cannot be used to enumerate repositories. API keys are rejected; session authentication only.
+Authorization on the per-repository endpoints is per repository: the caller must hold `product_admin` (or higher) on the product that owns it. The route applies the global role check and the service then re-checks the product, so a repository outside the caller's products returns `404` rather than `403` --- the endpoints cannot be used to enumerate repositories. API keys are rejected; session authentication only.
+
+`GET /api/github/releases/services` is the exception, because it names no repository. It answers `200` with the active services on the products the caller administers --- every service for a super admin --- and leaves the rest out rather than refusing, so it cannot be used to discover them either.
 
 `POST /api/github/repositories/:repoId/sync` is scoped the same way, so a product admin can refresh the releases of a repository they administer. The product-wide `POST /api/github/products/:productId/sync` remains `super_admin`.
 
@@ -153,17 +155,23 @@ alongside: a cancelled run is `failed` here but still reads `cancelled` in the r
 
 ### Matching a run to a release
 
-A run carries the tag in `head_branch` when it was triggered by a tag push. A run is recorded only
-when that tag has a published (non-draft) release on a repository with an active releasable
-service, so branch builds and pull request runs are ignored without a job being invented for them.
+A run carries the tag in `head_branch` when it was triggered by a tag push, so only runs whose
+`event` is `push` or `release` are considered — for anything else `head_branch` is a branch name,
+and a pull request from a branch named like a tag is not that release's CI.
 
-Both the publish endpoint and the webhook open jobs, and the first one wins. Publishing from
-Changelog therefore keeps the attribution, and a tag pushed straight to GitHub is still followed.
-An already-open job also counts as evidence that a tag is ours, which closes the window where a
-`workflow_run` arrives before GitHub has delivered the release.
+A run is recorded when the tag already has an open job, or when it has a published (non-draft)
+release on a repository with an active releasable service. An open job matches even if the service
+has since been retired, so retiring one mid-deploy does not strand the job already following it.
 
-A repository with more than one workflow on `v*` tags reports whichever run was delivered most
-recently for the tag.
+Both the publish endpoint and the webhook open jobs, and either may get there first — GitHub
+dispatches the webhook independently of the publish request's own round-trip. Whichever creates
+the row, the publish path writes the attribution, and the webhook passes none and so cannot clear
+it. A tag pushed straight to GitHub is followed just the same, without one.
+
+Deliveries for a single run are ordered by GitHub's `updated_at` for that run, which advances on
+every state change: a redelivery is older and is refused, while a re-run reuses the id but is
+newer and is allowed. The comparison is a condition on the write, so there is no window between
+deciding and writing. A run with a different id supersedes the tag's previous one outright.
 
 One GitHub repository can be tracked by several products, each with its own releasable service.
 That is a job per product for the same tag, and the single workflow run reports to all of them ---

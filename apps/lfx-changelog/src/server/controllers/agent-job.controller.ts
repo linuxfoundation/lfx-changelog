@@ -124,10 +124,14 @@ export class AgentJobController {
         return;
       }
 
-      if (job.productId) {
-        await this.agentService.cancelJob(jobId, job.productId);
-      } else {
-        await this.blogAgentService.cancelJob(jobId);
+      // The check above is a read, and a job can finish between it and the write below. The
+      // services refuse to cancel a job that is no longer active, so report their answer rather
+      // than the read's — otherwise this returns 200 for a cancellation that never happened.
+      const cancelled = job.productId ? await this.agentService.cancelJob(jobId, job.productId) : await this.blogAgentService.cancelJob(jobId);
+
+      if (!cancelled) {
+        res.status(400).json({ success: false, error: 'Only pending or running jobs can be cancelled' });
+        return;
       }
 
       res.json({ success: true });
