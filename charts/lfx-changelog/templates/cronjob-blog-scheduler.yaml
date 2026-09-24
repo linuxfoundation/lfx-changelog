@@ -28,6 +28,7 @@ spec:
       template:
         metadata:
           labels:
+            {{- include "lfx-changelog.labels" . | nindent 12 }}
             app.kubernetes.io/component: blog-scheduler
             tags.datadoghq.com/service: {{ include "lfx-changelog.name" . }}
         spec:

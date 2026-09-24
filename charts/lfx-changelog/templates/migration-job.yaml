@@ -22,6 +22,7 @@ spec:
   template:
     metadata:
       labels:
+        {{- include "lfx-changelog.labels" . | nindent 8 }}
         app.kubernetes.io/component: migrate
     spec:
       {{- with .Values.imagePullSecrets }}
