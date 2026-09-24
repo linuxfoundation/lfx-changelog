@@ -72,21 +72,10 @@ export class ReleaseJobService {
     // GitHub advances this on every state change, so it orders the deliveries for one run.
     const runUpdatedAt = run.updated_at ? new Date(run.updated_at) : new Date();
 
-    const existing = await prisma.releaseJob.findUnique({
-      where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
-      select: { workflowRunId: true },
-    });
-
-    // A different run supersedes this tag's previous one, and the steps recorded against that
-    // run are not this one's, so they start again rather than merging by job name across runs.
-    // A re-run is not a different run — GitHub reuses the id — so its steps overwrite by name.
-    const supersedes = Boolean(existing?.workflowRunId) && existing?.workflowRunId !== workflowRunId;
-
     const runFields = {
       status,
       workflowRunId,
       runUpdatedAt,
-      ...(supersedes ? { steps: [] } : {}),
       workflowRunUrl: run.html_url ?? null,
       workflowName: run.name ?? null,
       conclusion: run.conclusion ?? null,
@@ -100,7 +89,7 @@ export class ReleaseJobService {
     // application did not publish and has not yet seen a `published` event for — a manual sync,
     // or an edit to a release created on github.com. It deliberately does not apply the run:
     // two first deliveries can both find no row, and whichever loses this upsert would
-    // otherwise discard its state entirely rather than fall through to the guard below.
+    // otherwise discard its state entirely rather than fall through to the writes below.
     await prisma.releaseJob.upsert({
       where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
       create: { releasableServiceId, tagName },
@@ -108,20 +97,36 @@ export class ReleaseJobService {
       update: { tagName },
     });
 
-    // Ordering is a condition on the write rather than a check before it. GitHub delivers
-    // `in_progress` and `completed` closely enough to be in flight together, so a read followed
-    // by an unconditional write would let the earlier delivery land last and report a finished
-    // run as still running.
-    const { count } = await prisma.releaseJob.updateMany({
-      where: {
-        releasableServiceId,
-        tagName,
-        OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lte: runUpdatedAt } }],
-      },
+    // Both writes below name the run they expect to find, and refuse a delivery older than what
+    // is recorded. Doing that in the predicate rather than from a prior read is what makes them
+    // safe: GitHub delivers `in_progress` and `completed` closely enough to be in flight at
+    // once, and a decision taken from a snapshot is already stale by the time it is written.
+    const notOlder = { OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lte: runUpdatedAt } }] };
+
+    // The run already on this job: advance it, keeping the steps its own jobs have recorded.
+    const advanced = await prisma.releaseJob.updateMany({
+      where: { releasableServiceId, tagName, workflowRunId, ...notOlder },
       data: runFields,
     });
 
-    if (count === 0) {
+    // Otherwise this run takes the job over, and the previous run's steps are not its own. The
+    // run being replaced is named in the predicate, so a second delivery for this same run
+    // cannot wipe the steps the first one's jobs have since recorded.
+    const taken =
+      advanced.count > 0
+        ? 0
+        : (
+            await prisma.releaseJob.updateMany({
+              where: {
+                releasableServiceId,
+                tagName,
+                AND: [{ OR: [{ workflowRunId: null }, { workflowRunId: { not: workflowRunId } }] }, notOlder],
+              },
+              data: { ...runFields, steps: [] },
+            })
+          ).count;
+
+    if (advanced.count === 0 && taken === 0) {
       serverLogger.debug({ repositoryId, tagName, runId: run.id, status }, 'Workflow run delivery is older than the recorded state — ignoring');
       return;
     }
