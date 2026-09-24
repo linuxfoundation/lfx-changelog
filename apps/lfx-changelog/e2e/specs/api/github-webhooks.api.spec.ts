@@ -61,7 +61,7 @@ let nextReleaseId = 970_000;
  * Tags this spec publishes into the shared fixture repository. They are removed again afterwards:
  * left behind, they would become the newest stored tag and change what other specs read.
  */
-const PUBLISHED_TAGS = ['v2.0.0', 'v2.1.0-draft', 'v2.2.0', 'v2.3.0', 'v3.0.0', 'v4.0.0', 'v4.1.0', 'v5.0.0', 'v6.0.0', 'v6.1.0', 'v6.2.0', 'v7.0.0'];
+const PUBLISHED_TAGS = ['v2.0.0', 'v2.1.0-draft', 'v2.2.0', 'v2.3.0', 'v3.0.0', 'v4.0.0', 'v4.1.0', 'v4.2.0', 'v5.0.0', 'v6.0.0', 'v6.1.0', 'v6.2.0', 'v7.0.0'];
 
 function releaseBody(fullName: string, tagName: string, overrides: { action?: string; draft?: boolean } = {}): Record<string, unknown> {
   return {
@@ -266,6 +266,29 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
       const job = await jobFor('v4.0.0');
       expect(job!.status).toBe('succeeded');
       expect(job!.conclusion).toBe('success');
+    });
+
+    test("a delivery sharing the finished run's timestamp does not undo it", async () => {
+      const runId = nextRunId++;
+      await send('release', releaseBody(TEST_REPOSITORY.fullName, 'v4.2.0'));
+      await send('workflow_run', workflowRunBody(TEST_REPOSITORY.fullName, { runId, headBranch: 'v4.2.0', updatedAt: '2026-09-18T10:06:00Z' }));
+
+      // GitHub reports `updated_at` to the second, so a quick job's `in_progress` and
+      // `completed` can carry the same one. Arriving second, it must still lose.
+      const res = await send(
+        'workflow_run',
+        workflowRunBody(TEST_REPOSITORY.fullName, {
+          runId,
+          headBranch: 'v4.2.0',
+          status: 'in_progress',
+          conclusion: null,
+          updatedAt: '2026-09-18T10:06:00Z',
+        })
+      );
+      expect(res.status()).toBe(200);
+
+      const job = await jobFor('v4.2.0');
+      expect(job!.status).toBe('succeeded');
     });
 
     test('a re-run of a failed run moves the job back to running', async () => {

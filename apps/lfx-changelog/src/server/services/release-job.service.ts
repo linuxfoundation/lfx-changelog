@@ -105,7 +105,15 @@ export class ReleaseJobService {
     // what is recorded. Doing that in the predicate rather than from a prior read is what makes
     // them safe: GitHub delivers `in_progress` and `completed` closely enough to be in flight at
     // once, and a decision taken from a snapshot is already stale by the time it is written.
-    const notOlder = { OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lte: runUpdatedAt } }] };
+    // `updated_at` has second precision, so two transitions of a quick job share a timestamp.
+    // A delivery that reports a finished run may land on an equal one, being idempotent; one
+    // that reports an unfinished run may not, or a late `in_progress` would undo the completion
+    // it was issued a fraction of a second before. A later timestamp is a re-run and is allowed.
+    const notOlder = isFinished
+      ? { OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lte: runUpdatedAt } }] }
+      : {
+          OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lt: runUpdatedAt } }, { status: { notIn: [ReleaseJobStatus.SUCCEEDED, ReleaseJobStatus.FAILED] } }],
+        };
 
     // The run already on this job: advance it, keeping the steps its own jobs have recorded.
     const advanced = await prisma.releaseJob.updateMany({
