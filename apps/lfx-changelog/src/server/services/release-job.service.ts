@@ -29,7 +29,10 @@ export class ReleaseJobService {
     await prisma.releaseJob.upsert({
       where: { releasableServiceId_tagName: { releasableServiceId: service.id, tagName } },
       create: { releasableServiceId: service.id, tagName, requestedById: requestedById ?? null },
-      update: requestedById ? { requestedById } : {},
+      // Never empty: an empty `update` is compiled to a select and a plain insert instead of
+      // `ON CONFLICT`, which reopens the race this is here to settle. Rewriting the tag with
+      // its own value is the no-op that keeps it a single atomic statement.
+      update: requestedById ? { requestedById } : { tagName },
     });
 
     serverLogger.info({ repositoryId, tagName, requestedById: requestedById ?? null }, 'Opened release job for released tag');
@@ -47,6 +50,14 @@ export class ReleaseJobService {
     // Without a usable id the row would store the string "undefined", which the job lookup then
     // treats as a real run and matches against every other row that stored it.
     if (!tagName || typeof run.id !== 'number') return;
+
+    // `head_branch` carries the tag only for a tag push; for anything else it is a branch name.
+    // A pull request from a branch called `v1.0.0` is not that release's CI, and on a public
+    // repository anyone can open one.
+    if (run.event !== 'push' && run.event !== 'release') {
+      serverLogger.debug({ repositoryId, tagName, runId: run.id, event: run.event }, 'Workflow run is not from a tag push — ignoring');
+      return;
+    }
 
     const prisma = getPrismaClient();
     const releasableServiceId = await this.resolveReleasedTag(repositoryId, tagName);
@@ -93,7 +104,8 @@ export class ReleaseJobService {
     await prisma.releaseJob.upsert({
       where: { releasableServiceId_tagName: { releasableServiceId, tagName } },
       create: { releasableServiceId, tagName },
-      update: {},
+      // See openForRelease: an empty `update` is not compiled to `ON CONFLICT`.
+      update: { tagName },
     });
 
     // Ordering is a condition on the write rather than a check before it. GitHub delivers
@@ -124,20 +136,12 @@ export class ReleaseJobService {
    * reports to each of them.
    */
   public async recordWorkflowJob(job: WorkflowJobPayload): Promise<void> {
-    if (typeof job.run_id !== 'number') return;
+    if (typeof job.run_id !== 'number' || typeof job.id !== 'number') return;
 
     const prisma = getPrismaClient();
-    const releaseJobs = await prisma.releaseJob.findMany({
-      where: { workflowRunId: String(job.run_id) },
-      select: { id: true, steps: true },
-    });
-
-    if (releaseJobs.length === 0) {
-      serverLogger.debug({ runId: job.run_id, jobName: job.name }, 'Workflow job belongs to no release job — ignoring');
-      return;
-    }
-
+    const workflowRunId = String(job.run_id);
     const next: ReleaseJobStep = {
+      jobId: job.id,
       name: job.name,
       status: job.status,
       conclusion: job.conclusion ?? null,
@@ -145,21 +149,48 @@ export class ReleaseJobService {
       completedAt: job.completed_at ?? null,
     };
 
-    for (const releaseJob of releaseJobs) {
-      await prisma.releaseJob.update({
-        where: { id: releaseJob.id },
-        data: { steps: [...this.parseSteps(releaseJob.id, releaseJob.steps).filter((step) => step.name !== next.name), next] },
-      });
+    // Merging a JSON array is a read, a change and a write, so it runs inside a transaction that
+    // locks the rows first. GitHub emits the jobs of one run together — a matrix fans out, and a
+    // `needs:` edge finishes one job as it queues the next — so without the lock each delivery
+    // writes back a list it read before the other, and one of them is simply gone.
+    const matched = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string; steps: unknown }[]>`
+        SELECT "id", "steps" FROM "release_jobs" WHERE "workflow_run_id" = ${workflowRunId} FOR UPDATE
+      `;
+
+      for (const row of rows) {
+        const steps = this.parseSteps(row.id, row.steps);
+        const stored = steps.find((step) => step.name === next.name);
+
+        // The same rule the run level uses: a late delivery must not walk a finished job back.
+        // A different job id is a different attempt, so it replaces rather than losing to this.
+        if (stored && stored.jobId === next.jobId && stored.completedAt && !next.completedAt) continue;
+
+        await tx.releaseJob.update({
+          where: { id: row.id },
+          data: { steps: [...steps.filter((step) => step.name !== next.name), next] },
+        });
+      }
+
+      return rows.length;
+    });
+
+    if (matched === 0) {
+      serverLogger.debug({ runId: job.run_id, jobName: job.name }, 'Workflow job belongs to no release job — ignoring');
+      return;
     }
 
-    serverLogger.debug({ runId: job.run_id, jobName: job.name, status: job.status, jobs: releaseJobs.length }, 'Recorded workflow job on release job');
+    serverLogger.debug({ runId: job.run_id, jobName: job.name, status: job.status, jobs: matched }, 'Recorded workflow job on release job');
   }
 
   // ── Private helpers ─────────────────────────
 
   /**
-   * The active releasable service whose tag this is, or null when the repository has no active
-   * service or the tag is not one we released.
+   * The releasable service whose tag this is, or null when the tag is not one we released.
+   *
+   * A service with an open job for the tag matches whether or not it is still active, so that
+   * retiring one mid-deploy does not strand the job already following that release. Otherwise
+   * the service must be active and the tag must have a published, non-draft release.
    *
    * An open job counts as evidence on its own: the publish endpoint opens one before GitHub has
    * delivered anything, so a run can reach us while the release row is still in flight.

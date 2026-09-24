@@ -128,6 +128,8 @@ export class WebhookController {
         await this.releaseJobService.recordWorkflowJob(body.workflow_job);
       } else {
         serverLogger.warn({ event, action: body.action, repoFullName }, 'Workflow event carried no payload — ignoring');
+        res.status(200).json({ ok: true, ignored: true });
+        return;
       }
 
       res.status(200).json({ ok: true });

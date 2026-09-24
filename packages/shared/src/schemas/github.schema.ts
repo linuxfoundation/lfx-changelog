@@ -184,6 +184,8 @@ export type ReleasableService = z.infer<typeof ReleasableServiceSchema>;
 
 export const ReleaseJobStepSchema = z
   .object({
+    /** GitHub's id for this attempt of the job. A re-run of the same workflow run issues new ones. */
+    jobId: z.number(),
     name: z.string(),
     status: z.string(),
     conclusion: z.string().nullable(),

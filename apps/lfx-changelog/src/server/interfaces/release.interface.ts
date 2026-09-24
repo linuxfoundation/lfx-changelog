@@ -43,10 +43,12 @@ export interface WorkflowRunPayload {
   html_url?: string | null;
   run_started_at?: string | null;
   updated_at?: string | null;
+  event?: string | null;
 }
 
 /** The parts of a `workflow_job` payload the release job reads. */
 export interface WorkflowJobPayload {
+  id: number;
   run_id: number;
   name: string;
   status: string;
