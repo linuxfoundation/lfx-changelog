@@ -149,7 +149,28 @@ test.describe('Blog Agent API (/api/agent-jobs/trigger-blog)', () => {
       await superAdminApi.post(`/api/agent-jobs/${jobId}/cancel`);
     });
 
-    test('cancel a blog agent job returns 200', async () => {
+    test('cancelling a job that is genuinely still active sticks', async () => {
+      const prisma = getTestPrismaClient();
+      // Seeded rather than triggered. A real blog job with nothing to do finishes in about four
+      // milliseconds, so a triggered one is almost always terminal by the time the cancel
+      // arrives — which leaves the branch this is about unexercised.
+      const job = await prisma.agentJob.create({
+        data: { trigger: 'newsletter_monthly', status: 'running', progressLog: [], startedAt: new Date() },
+      });
+
+      try {
+        const res = await superAdminApi.post(`/api/agent-jobs/${job.id}/cancel`);
+        expect(res.status()).toBe(200);
+        expect((await res.json()).success).toBe(true);
+
+        const detail = await (await superAdminApi.get(`/api/agent-jobs/${job.id}`)).json();
+        expect(detail.data.status).toBe('cancelled');
+      } finally {
+        await prisma.agentJob.delete({ where: { id: job.id } }).catch(() => undefined);
+      }
+    });
+
+    test('cancelling a real triggered job reports the outcome it actually achieved', async () => {
       const triggerRes = await superAdminApi.post(`/api/agent-jobs/trigger-blog/monthly?year=${testYear}&month=${testMonth - 2}`);
       if (triggerRes.status() === 502) {
         test.skip();
