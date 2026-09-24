@@ -149,7 +149,28 @@ test.describe('Blog Agent API (/api/agent-jobs/trigger-blog)', () => {
       await superAdminApi.post(`/api/agent-jobs/${jobId}/cancel`);
     });
 
-    test('cancel a blog agent job returns 200', async () => {
+    test('cancelling a job that is genuinely still active sticks', async () => {
+      const prisma = getTestPrismaClient();
+      // Seeded rather than triggered. A real blog job with nothing to do finishes in about four
+      // milliseconds, so a triggered one is almost always terminal by the time the cancel
+      // arrives — which leaves the branch this is about unexercised.
+      const job = await prisma.agentJob.create({
+        data: { trigger: 'newsletter_monthly', status: 'running', progressLog: [], startedAt: new Date() },
+      });
+
+      try {
+        const res = await superAdminApi.post(`/api/agent-jobs/${job.id}/cancel`);
+        expect(res.status()).toBe(200);
+        expect((await res.json()).success).toBe(true);
+
+        const detail = await (await superAdminApi.get(`/api/agent-jobs/${job.id}`)).json();
+        expect(detail.data.status).toBe('cancelled');
+      } finally {
+        await prisma.agentJob.delete({ where: { id: job.id } }).catch(() => undefined);
+      }
+    });
+
+    test('cancelling a real triggered job reports the outcome it actually achieved', async () => {
       const triggerRes = await superAdminApi.post(`/api/agent-jobs/trigger-blog/monthly?year=${testYear}&month=${testMonth - 2}`);
       if (triggerRes.status() === 502) {
         test.skip();
@@ -158,17 +179,27 @@ test.describe('Blog Agent API (/api/agent-jobs/trigger-blog)', () => {
       expect(triggerRes.status()).toBe(202);
       const jobId = (await triggerRes.json()).data.jobId;
 
-      // Cancel
+      // A job with nothing to do finishes almost immediately, so the cancel either wins (200) or
+      // arrives after the job is already terminal (400). Both outcomes are asserted, so the test
+      // cannot pass by doing nothing whichever way the race falls.
       const cancelRes = await superAdminApi.post(`/api/agent-jobs/${jobId}/cancel`);
-      // May be 200 (cancelled) or 400 (already terminal if it completed fast)
-      if (cancelRes.status() === 200) {
-        const cancelBody = await cancelRes.json();
-        expect(cancelBody.success).toBe(true);
+      expect([200, 400]).toContain(cancelRes.status());
 
-        // Verify status is now cancelled
-        const detailRes = await superAdminApi.get(`/api/agent-jobs/${jobId}`);
-        const detail = await detailRes.json();
+      // Read after the worker has had time to finish, not immediately. The bug was a late write
+      // from the cancelled run, so reading before that write lands reports `cancelled` either
+      // way and proves nothing.
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+
+      const detail = await (await superAdminApi.get(`/api/agent-jobs/${jobId}`)).json();
+
+      if (cancelRes.status() === 200) {
+        expect((await cancelRes.json()).success).toBe(true);
+        // The job goes on running after the abort and writes its own outcome when it finishes.
+        // That write must not turn the cancellation back into a completion.
         expect(detail.data.status).toBe('cancelled');
+      } else {
+        expect(detail.data.status).not.toBe('cancelled');
+        expect(['completed', 'failed']).toContain(detail.data.status);
       }
     });
 
