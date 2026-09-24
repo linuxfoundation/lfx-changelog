@@ -30,6 +30,7 @@ type WorkflowRunOverrides = {
   conclusion?: string | null;
   runId?: number;
   updatedAt?: string;
+  startedAt?: string;
   event?: string;
 };
 
@@ -47,7 +48,7 @@ function workflowRunBody(fullName: string, overrides: WorkflowRunOverrides = {})
       status,
       conclusion: overrides.conclusion === undefined ? 'success' : overrides.conclusion,
       html_url: `https://github.com/${fullName}/actions/runs/${runId}`,
-      run_started_at: '2026-09-18T10:00:00Z',
+      run_started_at: overrides.startedAt ?? '2026-09-18T10:00:00Z',
       updated_at: overrides.updatedAt ?? '2026-09-18T10:06:00Z',
       event: overrides.event ?? 'push',
     },
@@ -60,7 +61,7 @@ let nextReleaseId = 970_000;
  * Tags this spec publishes into the shared fixture repository. They are removed again afterwards:
  * left behind, they would become the newest stored tag and change what other specs read.
  */
-const PUBLISHED_TAGS = ['v2.0.0', 'v2.1.0-draft', 'v2.2.0', 'v2.3.0', 'v3.0.0', 'v4.0.0', 'v4.1.0', 'v5.0.0', 'v6.0.0', 'v6.1.0', 'v7.0.0'];
+const PUBLISHED_TAGS = ['v2.0.0', 'v2.1.0-draft', 'v2.2.0', 'v2.3.0', 'v3.0.0', 'v4.0.0', 'v4.1.0', 'v5.0.0', 'v6.0.0', 'v6.1.0', 'v6.2.0', 'v7.0.0'];
 
 function releaseBody(fullName: string, tagName: string, overrides: { action?: string; draft?: boolean } = {}): Record<string, unknown> {
   return {
@@ -309,6 +310,7 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
         workflow_job: {
           id: 6_000_001,
           run_id: runA,
+          run_attempt: 1,
           name: 'build-and-push',
           status: 'completed',
           conclusion: 'success',
@@ -330,11 +332,54 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
       await send('workflow_job', {
         action: 'completed',
         repository: { full_name: TEST_REPOSITORY.fullName, default_branch: 'main' },
-        workflow_job: { id: 6_000_002, run_id: runA, name: 'stale', status: 'completed', conclusion: 'success', started_at: null, completed_at: null },
+        workflow_job: {
+          id: 6_000_002,
+          run_id: runA,
+          run_attempt: 1,
+          name: 'stale',
+          status: 'completed',
+          conclusion: 'success',
+          started_at: null,
+          completed_at: null,
+        },
       });
       expect(z.array(ReleaseJobStepSchema).parse((await jobFor('v6.0.0'))!.steps)).toEqual([]);
 
       await prisma.releaseJob.deleteMany({ where: { tagName: 'v6.0.0' } });
+    });
+
+    test('a superseded run that is still executing cannot take the job back', async () => {
+      await send('release', releaseBody(TEST_REPOSITORY.fullName, 'v6.2.0'));
+
+      // A is still running when B, a later run for the same tag, takes the job over.
+      const runA = nextRunId++;
+      const runB = nextRunId++;
+      await send(
+        'workflow_run',
+        workflowRunBody(TEST_REPOSITORY.fullName, {
+          runId: runA,
+          headBranch: 'v6.2.0',
+          status: 'in_progress',
+          conclusion: null,
+          startedAt: '2026-09-18T10:00:00Z',
+          updatedAt: '2026-09-18T10:01:00Z',
+        })
+      );
+      await send(
+        'workflow_run',
+        workflowRunBody(TEST_REPOSITORY.fullName, { runId: runB, headBranch: 'v6.2.0', startedAt: '2026-09-18T10:10:00Z', updatedAt: '2026-09-18T10:12:00Z' })
+      );
+      expect((await jobFor('v6.2.0'))!.workflowRunId).toBe(String(runB));
+
+      // A now finishes. Its `updated_at` is the newest thing seen, but it started before B, and
+      // start time is what orders one run against another.
+      const res = await send(
+        'workflow_run',
+        workflowRunBody(TEST_REPOSITORY.fullName, { runId: runA, headBranch: 'v6.2.0', startedAt: '2026-09-18T10:00:00Z', updatedAt: '2026-09-18T10:30:00Z' })
+      );
+      expect(res.status()).toBe(200);
+
+      expect((await jobFor('v6.2.0'))!.workflowRunId, 'the superseded run must not reclaim the job').toBe(String(runB));
     });
 
     test("a re-run keeps the tag but replaces that job's recorded attempt", async () => {
@@ -342,12 +387,13 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
       const runId = nextRunId++;
       await send('workflow_run', workflowRunBody(TEST_REPOSITORY.fullName, { runId, headBranch: 'v6.1.0', updatedAt: '2026-09-18T10:06:00Z' }));
 
-      const jobEvent = (id: number, status: string, completedAt: string | null) => ({
+      const jobEvent = (id: number, attempt: number, status: string, completedAt: string | null) => ({
         action: status === 'completed' ? 'completed' : 'in_progress',
         repository: { full_name: TEST_REPOSITORY.fullName, default_branch: 'main' },
         workflow_job: {
           id,
           run_id: runId,
+          run_attempt: attempt,
           name: 'build-and-push',
           status,
           conclusion: status === 'completed' ? 'failure' : null,
@@ -356,19 +402,19 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
         },
       });
 
-      await send('workflow_job', jobEvent(6_100_001, 'completed', '2026-09-18T10:05:00Z'));
-      // GitHub reuses the run id for a re-run but issues a new job id, which is what separates a
+      await send('workflow_job', jobEvent(6_100_001, 1, 'completed', '2026-09-18T10:05:00Z'));
+      // GitHub reuses the run id for a re-run and raises the attempt, which is what separates a
       // fresh attempt from a late delivery of the finished one.
-      await send('workflow_job', jobEvent(6_100_002, 'in_progress', null));
+      await send('workflow_job', jobEvent(6_100_002, 2, 'in_progress', null));
 
       const steps = z.array(ReleaseJobStepSchema).parse((await jobFor('v6.1.0'))!.steps);
       expect(steps).toHaveLength(1);
-      expect(steps[0]).toMatchObject({ jobId: 6_100_002, status: 'in_progress' });
+      expect(steps[0]).toMatchObject({ jobId: 6_100_002, attempt: 2, status: 'in_progress' });
 
-      // A late delivery of the first attempt must not win.
-      await send('workflow_job', jobEvent(6_100_002, 'queued', null));
+      // A delivery from the attempt before must not replace the one now running.
+      await send('workflow_job', jobEvent(6_100_001, 1, 'completed', '2026-09-18T10:05:00Z'));
       const after = z.array(ReleaseJobStepSchema).parse((await jobFor('v6.1.0'))!.steps);
-      expect(after[0]).toMatchObject({ jobId: 6_100_002, status: 'queued' });
+      expect(after[0], 'the older attempt must not come back').toMatchObject({ jobId: 6_100_002, attempt: 2, status: 'in_progress' });
     });
   });
 
@@ -427,6 +473,7 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
         workflow_job: {
           id: 5_100_000 + (runId % 1000),
           run_id: runId,
+          run_attempt: 1,
           name: 'build-and-push',
           status,
           conclusion,
@@ -453,6 +500,7 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
         workflow_job: {
           id: 5_200_001,
           run_id: 9_999_999_999,
+          run_attempt: 1,
           name: 'orphan',
           status: 'completed',
           conclusion: 'success',
@@ -531,6 +579,7 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
         workflow_job: {
           id: 5_300_001,
           run_id: runId,
+          run_attempt: 1,
           name: 'build-and-push',
           status: 'completed',
           conclusion: 'success',

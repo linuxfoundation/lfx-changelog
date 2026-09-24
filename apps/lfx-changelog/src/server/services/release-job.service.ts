@@ -71,6 +71,10 @@ export class ReleaseJobService {
     const isFinished = status === ReleaseJobStatus.SUCCEEDED || status === ReleaseJobStatus.FAILED;
     // GitHub advances this on every state change, so it orders the deliveries for one run.
     const runUpdatedAt = run.updated_at ? new Date(run.updated_at) : new Date();
+    // `updated_at` orders the states of one run; it says nothing across runs, because a run still
+    // executing when another supersedes it goes on reporting later timestamps. Start time is what
+    // separates an older run from a newer one.
+    const runStartedAt = run.run_started_at ? new Date(run.run_started_at) : runUpdatedAt;
 
     const runFields = {
       status,
@@ -79,7 +83,7 @@ export class ReleaseJobService {
       workflowRunUrl: run.html_url ?? null,
       workflowName: run.name ?? null,
       conclusion: run.conclusion ?? null,
-      startedAt: run.run_started_at ? new Date(run.run_started_at) : null,
+      startedAt: runStartedAt,
       // Taken from the payload so that a redelivery of the same event writes the same row,
       // rather than moving the finish time to whenever the redelivery happened to arrive.
       completedAt: isFinished && run.updated_at ? new Date(run.updated_at) : null,
@@ -97,9 +101,9 @@ export class ReleaseJobService {
       update: { tagName },
     });
 
-    // Both writes below name the run they expect to find, and refuse a delivery older than what
-    // is recorded. Doing that in the predicate rather than from a prior read is what makes them
-    // safe: GitHub delivers `in_progress` and `completed` closely enough to be in flight at
+    // Both writes below name the run they expect to find, and refuse a delivery that is behind
+    // what is recorded. Doing that in the predicate rather than from a prior read is what makes
+    // them safe: GitHub delivers `in_progress` and `completed` closely enough to be in flight at
     // once, and a decision taken from a snapshot is already stale by the time it is written.
     const notOlder = { OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lte: runUpdatedAt } }] };
 
@@ -120,7 +124,10 @@ export class ReleaseJobService {
               where: {
                 releasableServiceId,
                 tagName,
-                AND: [{ OR: [{ workflowRunId: null }, { workflowRunId: { not: workflowRunId } }] }, notOlder],
+                AND: [
+                  { OR: [{ workflowRunId: null }, { workflowRunId: { not: workflowRunId } }] },
+                  { OR: [{ startedAt: null }, { startedAt: { lte: runStartedAt } }] },
+                ],
               },
               data: { ...runFields, steps: [] },
             })
@@ -147,6 +154,7 @@ export class ReleaseJobService {
     const workflowRunId = String(job.run_id);
     const next: ReleaseJobStep = {
       jobId: job.id,
+      attempt: job.run_attempt ?? 1,
       name: job.name,
       status: job.status,
       conclusion: job.conclusion ?? null,
@@ -167,9 +175,13 @@ export class ReleaseJobService {
         const steps = this.parseSteps(row.id, row.steps);
         const stored = steps.find((step) => step.name === next.name);
 
-        // The same rule the run level uses: a late delivery must not walk a finished job back.
-        // A different job id is a different attempt, so it replaces rather than losing to this.
-        if (stored && stored.jobId === next.jobId && stored.completedAt && !next.completedAt) continue;
+        // Attempts are ordered, so a delayed delivery from the attempt before cannot replace the
+        // one now running. Within an attempt the run-level rule applies: a late delivery must
+        // not walk a finished job back.
+        if (stored) {
+          if (stored.attempt > next.attempt) continue;
+          if (stored.attempt === next.attempt && stored.completedAt && !next.completedAt) continue;
+        }
 
         await tx.releaseJob.update({
           where: { id: row.id },

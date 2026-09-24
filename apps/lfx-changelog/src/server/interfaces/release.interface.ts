@@ -50,6 +50,7 @@ export interface WorkflowRunPayload {
 export interface WorkflowJobPayload {
   id: number;
   run_id: number;
+  run_attempt?: number;
   name: string;
   status: string;
   conclusion?: string | null;
