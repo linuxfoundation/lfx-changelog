@@ -22,6 +22,9 @@ import type {
 import type { ProductRepository as PrismaProductRepository, UserRoleAssignment } from '@prisma/client';
 import type { WorkflowJobPayload, WorkflowRunPayload } from '../interfaces/release.interface';
 
+/** GitHub's job states in the order they occur. Anything unrecognised sorts first, so it loses. */
+const JOB_STATE_ORDER = ['queued', 'waiting', 'in_progress', 'completed'];
+
 /**
  * Everything a release is: publishing one, the catalog of services that can be released, and the
  * job that follows a published tag through its repository's CI.
@@ -31,9 +34,6 @@ import type { WorkflowJobPayload, WorkflowRunPayload } from '../interfaces/relea
  * job section is reached from the GitHub webhook, which has no caller, so those methods
  * authorize nothing and must not be called on a user's behalf without a check in front of them.
  */
-/** GitHub's job states in the order they occur. Anything unrecognised sorts first, so it loses. */
-const JOB_STATE_ORDER = ['queued', 'waiting', 'in_progress', 'completed'];
-
 export class ReleaseService {
   private readonly githubService = new GitHubService();
 
