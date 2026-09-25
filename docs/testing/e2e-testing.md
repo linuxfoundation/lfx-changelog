@@ -62,7 +62,7 @@ apps/lfx-changelog/
 │   │   └── …                     # one page object per screen under test
 │   └── specs/                    # Test specifications
 │       ├── public/               # Public-facing tests (no auth)
-│       ├── admin/                # Admin tests (auth required; rbac-*.spec.ts log in per role)
+│       ├── admin/                # Admin tests (auth required; rbac-*.spec.ts apply a per-role storageState)
 │       └── api/                  # API tests (no browser, direct HTTP; *.api.spec.ts)
 ```
 
@@ -340,6 +340,9 @@ AUTH0_SECRET=<cookie signing secret>
 # App
 BASE_URL=http://localhost:4204
 SKIP_RATE_LIMIT=true
+
+# GitHub webhooks — any value; the webhook spec signs its own payloads with it
+GITHUB_WEBHOOK_SECRET=<any string>
 
 # Test Users (one set per role — Auth0 IDs are derived as auth0|<username>)
 E2E_SUPER_ADMIN_USERNAME=<username>

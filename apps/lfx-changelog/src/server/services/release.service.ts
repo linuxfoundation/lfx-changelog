@@ -7,12 +7,14 @@ import { ConflictError, GitHubApiError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 import { GitHubService } from './github.service';
 import { getPrismaClient } from './prisma.service';
+import { ReleaseJobService } from './release-job.service';
 
 import type { CreateReleaseRequest, GeneratedReleaseNotes, GitHubRelease, ReleaseChanges, ReleaseTarget } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository, UserRoleAssignment } from '@prisma/client';
 
 export class ReleaseService {
   private readonly githubService = new GitHubService();
+  private readonly releaseJobService = new ReleaseJobService();
 
   public async getReleaseTarget(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<ReleaseTarget> {
     const repository = await this.requireReleasableRepository(repositoryId, userRoles);
@@ -45,8 +47,9 @@ export class ReleaseService {
     });
   }
 
-  // Nothing is written here — the `release.published` webhook stores the row, which keeps a
-  // release published from the UI and one published on GitHub itself on the same path.
+  // The release row is not written here — the `release.published` webhook stores it, which keeps
+  // a release published from the UI and one published on GitHub itself on the same path. The
+  // release job is, because only this path knows who asked for it.
   public async createRelease(repositoryId: string, data: CreateReleaseRequest, userRoles: UserRoleAssignment[], userId: string): Promise<GitHubRelease> {
     const repository = await this.requireReleasableRepository(repositoryId, userRoles);
 
@@ -67,6 +70,21 @@ export class ReleaseService {
         throw new ConflictError(`Tag already exists: ${data.tagName}`, { operation: 'createRelease', service: 'release' });
       }
       throw error;
+    }
+
+    // Opened here rather than waiting for the release webhook, which cannot know who asked. The
+    // webhook opens a job for every product tracking this repository, so this does too — one
+    // product's copy of the same release should not be the only one that knows who published it.
+    // Authorization stayed on the repository the caller named; this only records who they are.
+    //
+    // Failing to open a job must not fail the publish: the release exists on GitHub either way,
+    // and the webhook opens them a moment later without the attribution.
+    try {
+      const prisma = getPrismaClient();
+      const tracking = await prisma.productRepository.findMany({ where: { fullName: repository.fullName }, select: { id: true } });
+      await Promise.all(tracking.map((tracked) => this.releaseJobService.openForRelease(tracked.id, data.tagName, userId)));
+    } catch (err) {
+      serverLogger.warn({ err, repositoryId, tagName: data.tagName }, 'Failed to open release job for published release');
     }
 
     serverLogger.info({ repositoryId, repo: repository.fullName, tagName: data.tagName, requestedBy: userId }, 'Release published from the admin UI');

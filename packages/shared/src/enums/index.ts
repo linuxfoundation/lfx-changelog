@@ -8,4 +8,5 @@ export { ChangelogSource } from './changelog-source.enum.js';
 export { ChangelogStatus } from './changelog-status.enum.js';
 export { ContributorSlackLinkSource } from './contributor-slack-link-source.enum.js';
 export { DeploymentType } from './deployment-type.enum.js';
+export { ReleaseJobStatus } from './release-job-status.enum.js';
 export { UserRole } from './user-role.enum.js';
