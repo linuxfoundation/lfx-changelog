@@ -145,7 +145,7 @@ by clearing `isActive` stops it accruing new ones.
 | Running      | `workflow_run` while the run is not yet `completed`                                                  | `running`, with the run's id, name and URL                     |
 | Created late | `workflow_run` for a released tag that has no job yet                                                | The job is created directly in the run's state                 |
 | Finished     | `workflow_run` with `status: completed`                                                              | `succeeded` if the conclusion is `success`, otherwise `failed` |
-| Detailed     | `workflow_job` for a known run                                                                       | The job's latest state appended to `steps`, keyed by name      |
+| Detailed     | `workflow_job` for a known run                                                                       | The job's latest state in `steps`, keyed by job id             |
 
 GitHub's conclusions are richer than those four states, so the raw `conclusion` is stored
 alongside: a cancelled run is `failed` here but still reads `cancelled` in the record.

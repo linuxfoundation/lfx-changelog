@@ -193,19 +193,25 @@ export class ReleaseJobService {
 
       for (const row of rows) {
         const steps = this.parseSteps(row.id, row.steps);
-        const stored = steps.find((step) => step.name === next.name);
 
-        // Attempts are ordered, so a delayed delivery from the attempt before cannot replace the
-        // one now running; within an attempt the job's own states are, so a `queued` arriving
-        // after an `in_progress` cannot either. Delivery order is not promised for either.
-        if (stored) {
-          if (stored.attempt > next.attempt) continue;
-          if (stored.attempt === next.attempt && this.stateRank(next.status) < this.stateRank(stored.status)) continue;
-        }
+        // Keyed by job id, not by name: a name is a display label and two jobs in one workflow
+        // can share it, which would collapse them into one entry and lose a job.
+        const stored = steps.find((step) => step.jobId === next.jobId);
+        const latestAttempt = steps.reduce((highest, step) => Math.max(highest, step.attempt), 0);
+
+        // Delivery order is promised for neither attempts nor the states within one, so both are
+        // ordered here: a delivery from a superseded attempt is refused, and so is a `queued`
+        // arriving after the `in_progress` of the same job.
+        if (next.attempt < latestAttempt) continue;
+        if (stored && this.stateRank(next.status) < this.stateRank(stored.status)) continue;
+
+        // A newer attempt starts the list again — the jobs of the attempt it replaced are not
+        // its own — while within an attempt only this job's own entry is rewritten.
+        const kept = steps.filter((step) => step.attempt === next.attempt && step.jobId !== next.jobId);
 
         await tx.releaseJob.update({
           where: { id: row.id },
-          data: { steps: [...steps.filter((step) => step.name !== next.name), next] },
+          data: { steps: [...kept, next] },
         });
       }
 
