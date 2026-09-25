@@ -8,7 +8,7 @@ import { serverLogger } from '../server-logger';
 import { ChangelogAgentService } from '../services/changelog-agent.service';
 import { GitHubService } from '../services/github.service';
 import { getPrismaClient } from '../services/prisma.service';
-import { ReleaseJobService } from '../services/release-job.service';
+import { ReleaseService } from '../services/release.service';
 import { SlackService } from '../services/slack.service';
 
 import type { AgentJobTrigger, GitHubWebhookReleasePayload } from '@lfx-changelog/shared';
@@ -20,7 +20,7 @@ export class WebhookController {
   private readonly githubService = new GitHubService();
   private readonly slackService = new SlackService();
   private readonly changelogAgentService = new ChangelogAgentService();
-  private readonly releaseJobService = new ReleaseJobService();
+  private readonly releaseService = new ReleaseService();
   /**
    * Signs a state payload for GitHub App install redirects.
    * Called when generating the install URL to embed a verifiable signature.
@@ -122,10 +122,10 @@ export class WebhookController {
       // by several products, and each gets its own release job for the tag.
       if (event === 'workflow_run' && body.workflow_run) {
         for (const productRepo of productRepos) {
-          await this.releaseJobService.recordWorkflowRun(productRepo.id, body.workflow_run);
+          await this.releaseService.recordWorkflowRun(productRepo.id, body.workflow_run);
         }
       } else if (event === 'workflow_job' && body.workflow_job) {
-        await this.releaseJobService.recordWorkflowJob(body.workflow_job);
+        await this.releaseService.recordWorkflowJob(body.workflow_job);
       } else {
         serverLogger.warn({ event, action: body.action, repoFullName }, 'Workflow event carried no payload — ignoring');
         res.status(200).json({ ok: true, ignored: true });
@@ -148,8 +148,8 @@ export class WebhookController {
         } else {
           await this.githubService.upsertReleaseFromWebhook(productRepo.id, releasePayload);
           if (body.action === 'published' && !releasePayload.draft) {
-            await this.releaseJobService
-              .openForRelease(productRepo.id, releasePayload.tag_name)
+            await this.releaseService
+              .openReleaseJob(productRepo.id, releasePayload.tag_name)
               .catch((err) => serverLogger.warn({ err, repoFullName, tag: releasePayload.tag_name }, 'Failed to open release job from webhook'));
           }
           serverLogger.info(

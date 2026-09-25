@@ -13,6 +13,15 @@ import type { UserRoleAssignment } from '@prisma/client';
 export class ReleaseController {
   private readonly releaseService = new ReleaseService();
 
+  public async listReleasableServices(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const services = await this.releaseService.findReleasableServices(this.getUserRoles(req));
+      res.json({ success: true, data: services });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public async getReleaseTarget(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const target = await this.releaseService.getReleaseTarget(req.params['repoId'] as string, this.getUserRoles(req));

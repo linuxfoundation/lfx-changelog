@@ -68,12 +68,15 @@ The release row itself is not written by the create call --- the `release.publis
 
 | Method | Path                                              | Auth                       | Description                               |
 | ------ | ------------------------------------------------- | -------------------------- | ----------------------------------------- |
+| GET    | `/api/github/releases/services`                   | OAuth only (product_admin) | The services the caller may release       |
 | GET    | `/api/github/repositories/:repoId/release-target` | OAuth only (product_admin) | Branches, default branch, suggested tag   |
 | GET    | `/api/github/repositories/:repoId/changes`        | OAuth only (product_admin) | Commits and merges since the last release |
 | POST   | `/api/github/repositories/:repoId/release-notes`  | OAuth only (product_admin) | Preview GitHub-generated notes            |
 | POST   | `/api/github/repositories/:repoId/releases`       | OAuth only (product_admin) | Publish the release                       |
 
-Authorization is per repository: the caller must hold `product_admin` (or higher) on the product that owns it. The route applies the global role check and the service then re-checks the product, so a repository outside the caller's products returns `404` rather than `403` --- the endpoints cannot be used to enumerate repositories. API keys are rejected; session authentication only.
+Authorization on the per-repository endpoints is per repository: the caller must hold `product_admin` (or higher) on the product that owns it. The route applies the global role check and the service then re-checks the product, so a repository outside the caller's products returns `404` rather than `403` --- the endpoints cannot be used to enumerate repositories. API keys are rejected; session authentication only.
+
+`GET /api/github/releases/services` is the exception, because it names no repository. It answers `200` with the active services on the products the caller administers --- every service for a super admin --- and leaves the rest out rather than refusing, so it cannot be used to discover them either.
 
 `POST /api/github/repositories/:repoId/sync` is scoped the same way, so a product admin can refresh the releases of a repository they administer. The product-wide `POST /api/github/products/:productId/sync` remains `super_admin`.
 
@@ -405,9 +408,7 @@ apps/lfx-changelog/src/server/
 │   └── github.controller.ts        # GitHub App install flow + repo management
 ├── services/
 │   ├── github.service.ts             # GitHub API client (JWT auth, API calls)
-│   ├── release.service.ts            # Release CRUD + sync logic
-│   ├── releasable-service.service.ts # The catalog of repositories that deploy
-│   ├── release-job.service.ts        # Release jobs driven by workflow webhooks
+│   ├── release.service.ts            # Releases: publishing, the deployable catalog, and jobs
 │   ├── changelog-agent.service.ts    # AI-powered changelog generation + locking
 │   └── changelog.service.ts          # Changelog CRUD + unpublish/delete
 ├── routes/
