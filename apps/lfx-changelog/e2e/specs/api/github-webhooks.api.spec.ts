@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { createUnauthenticatedContext } from '../../helpers/api.helper.js';
 import { getTestPrismaClient } from '../../helpers/db.helper.js';
-import { TEST_FOREIGN_REPOSITORY, TEST_REPOSITORY, TEST_RETIRED_REPOSITORY } from '../../helpers/test-data.js';
+import { TEST_FOREIGN_REPOSITORY, TEST_RELEASES, TEST_REPOSITORY, TEST_RETIRED_REPOSITORY } from '../../helpers/test-data.js';
 
 import type { APIRequestContext, APIResponse } from '@playwright/test';
 
@@ -58,26 +58,11 @@ function workflowRunBody(fullName: string, overrides: WorkflowRunOverrides = {})
 let nextReleaseId = 970_000;
 
 /**
- * Tags this spec publishes into the shared fixture repository. They are removed again afterwards:
- * left behind, they would become the newest stored tag and change what other specs read.
+ * The tags the seed creates. Anything else in the table was published by a case here, so the
+ * cleanup keys off this rather than a hand-kept list of what the cases happen to publish — one
+ * that drifts silently, and whose omissions surface as another spec's newest tag being wrong.
  */
-const PUBLISHED_TAGS = [
-  'v2.0.0',
-  'v2.1.0-draft',
-  'v2.2.0',
-  'v2.3.0',
-  'v3.0.0',
-  'v4.0.0',
-  'v4.1.0',
-  'v4.2.0',
-  'v5.0.0',
-  'v6.0.0',
-  'v6.1.0',
-  'v6.2.0',
-  'v6.3.0',
-  'v7.0.0',
-  'v8.0.0',
-];
+const SEEDED_TAGS = TEST_RELEASES.map((release) => release.tagName);
 
 function releaseBody(fullName: string, tagName: string, overrides: { action?: string; draft?: boolean } = {}): Record<string, unknown> {
   return {
@@ -128,7 +113,7 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
   test.afterAll(async () => {
     const prisma = getTestPrismaClient();
     await prisma.releaseJob.deleteMany();
-    await prisma.gitHubRelease.deleteMany({ where: { tagName: { in: PUBLISHED_TAGS } } });
+    await prisma.gitHubRelease.deleteMany({ where: { tagName: { notIn: SEEDED_TAGS } } });
     await api.dispose();
   });
 
@@ -305,6 +290,30 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
 
       const job = await jobFor('v4.2.0');
       expect(job!.status).toBe('succeeded');
+    });
+
+    test('a run already attached is carried from running to succeeded', async () => {
+      // The ordinary path, and the only one that reaches the advance write with a finished
+      // status. Every other case here attaches a run that is already over, which takes the
+      // takeover write instead, so this branch had no coverage at all.
+      const runId = nextRunId++;
+      const updatedAt = '2026-09-18T10:06:00Z';
+      await send('release', releaseBody(TEST_REPOSITORY.fullName, 'v9.0.0'));
+      await send(
+        'workflow_run',
+        workflowRunBody(TEST_REPOSITORY.fullName, { runId, headBranch: 'v9.0.0', status: 'in_progress', conclusion: null, updatedAt })
+      );
+      expect((await jobFor('v9.0.0'))!.status).toBe('running');
+
+      // A quick job reports both states in the same second, so this has to land on an equal
+      // timestamp rather than a later one.
+      const res = await send('workflow_run', workflowRunBody(TEST_REPOSITORY.fullName, { runId, headBranch: 'v9.0.0', updatedAt }));
+      expect(res.status()).toBe(200);
+
+      const job = await jobFor('v9.0.0');
+      expect(job!.status).toBe('succeeded');
+      expect(job!.workflowRunId).toBe(String(runId));
+      expect(job!.completedAt?.toISOString()).toBe(new Date(updatedAt).toISOString());
     });
 
     test('a re-run of a failed run moves the job back to running', async () => {

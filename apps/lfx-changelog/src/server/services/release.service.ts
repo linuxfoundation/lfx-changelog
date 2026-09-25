@@ -311,34 +311,41 @@ export class ReleaseService {
         };
 
     // The run already on this job: advance it, keeping the steps its own jobs have recorded.
-    const advanced = await prisma.releaseJob.updateMany({
-      where: { releasableServiceId, tagName, workflowRunId, ...notOlder },
-      data: runFields,
-    });
+    // Two statements, and a concurrent delivery of the same run can attach it between them: the
+    // first write looks for a run that is not yet recorded, and by the time the second runs the
+    // peer has set both the run and its start time, so that matches nothing either. Nothing
+    // about this delivery is stale, so it goes round once more rather than being dropped —
+    // GitHub does not redeliver, and the event that loses is usually the run's last.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      // The run already on this job: advance it, keeping the steps its own jobs have recorded.
+      const advanced = await prisma.releaseJob.updateMany({
+        where: { releasableServiceId, tagName, workflowRunId, ...notOlder },
+        data: runFields,
+      });
 
-    // Otherwise this run takes the job over, and the previous run's steps are not its own. The
-    // run being replaced is named in the predicate, so a second delivery for this same run
-    // cannot wipe the steps the first one's jobs have since recorded.
-    const taken =
-      advanced.count > 0
-        ? 0
-        : (
-            await prisma.releaseJob.updateMany({
-              where: {
-                releasableServiceId,
-                tagName,
-                AND: [
-                  { OR: [{ workflowRunId: null }, { workflowRunId: { not: workflowRunId } }] },
-                  { OR: [{ startedAt: null }, { startedAt: { lt: runStartedAt } }] },
-                ],
-              },
-              data: { ...runFields, steps: [] },
-            })
-          ).count;
+      if (advanced.count > 0) break;
 
-    if (advanced.count === 0 && taken === 0) {
-      serverLogger.debug({ repositoryId, tagName, runId: run.id, status }, 'Workflow run delivery is older than the recorded state — ignoring');
-      return;
+      // Otherwise this run takes the job over, and the previous run's steps are not its own. The
+      // run being replaced is named in the predicate, so a second delivery for this same run
+      // cannot wipe the steps the first one's jobs have since recorded.
+      const taken = await prisma.releaseJob.updateMany({
+        where: {
+          releasableServiceId,
+          tagName,
+          AND: [
+            { OR: [{ workflowRunId: null }, { workflowRunId: { not: workflowRunId } }] },
+            { OR: [{ startedAt: null }, { startedAt: { lt: runStartedAt } }] },
+          ],
+        },
+        data: { ...runFields, steps: [] },
+      });
+
+      if (taken.count > 0) break;
+
+      if (attempt === 1) {
+        serverLogger.debug({ repositoryId, tagName, runId: run.id, status }, 'Workflow run delivery is behind the recorded state — ignoring');
+        return;
+      }
     }
 
     serverLogger.info({ repositoryId, tagName, runId: run.id, status, conclusion: run.conclusion }, 'Recorded workflow run on release job');

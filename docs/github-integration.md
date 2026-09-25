@@ -171,7 +171,10 @@ it. A tag pushed straight to GitHub is followed just the same, without one.
 Deliveries for a single run are ordered by GitHub's `updated_at` for that run, which advances on
 every state change: a redelivery is older and is refused, while a re-run reuses the id but is
 newer and is allowed. The comparison is a condition on the write, so there is no window between
-deciding and writing. A run with a different id supersedes the tag's previous one outright.
+deciding and writing. A run with a different id takes the job over only when its `run_started_at` is strictly later
+than the recorded run's, and its steps then start again. A superseded run that finishes late
+cannot take the job back, and when one tag push starts two workflows in the same second, whichever
+was recorded first keeps it.
 
 One GitHub repository can be tracked by several products, each with its own releasable service.
 That is a job per product for the same tag, and the single workflow run reports to all of them ---
