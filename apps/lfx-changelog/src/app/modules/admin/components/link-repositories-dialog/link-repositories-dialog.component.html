@@ -18,10 +18,15 @@
         </div>
       } @else {
         <p class="text-text-secondary text-sm">Choose the GitHub organization to browse repositories from.</p>
-        <lfx-select label="Organization" [options]="installationOptions()" placeholder="Select an organization..." [formControl]="installationControl" />
+        <lfx-select
+          data-testid="link-repos-org-select"
+          label="Organization"
+          [options]="installationOptions()"
+          placeholder="Select an organization..."
+          [formControl]="installationControl" />
         <div class="flex justify-end gap-3 pt-2">
           <lfx-button variant="secondary" (clicked)="dialogService.close()">Cancel</lfx-button>
-          <lfx-button variant="primary" [disabled]="!installationControl.value" (clicked)="goToSelectRepos()">Next</lfx-button>
+          <lfx-button data-testid="link-repos-next" variant="primary" [disabled]="!installationControl.value" (clicked)="goToSelectRepos()">Next</lfx-button>
         </div>
       }
     </div>
@@ -34,39 +39,72 @@
         </div>
       } @else if (availableRepos().length === 0) {
         <div class="py-6 text-center">
-          <p class="text-text-muted text-sm">No repositories found for this installation.</p>
+          <p data-testid="link-repos-empty" class="text-text-muted text-sm">No repositories found for this installation.</p>
         </div>
       } @else {
-        <p class="text-text-secondary text-sm">Select repositories to link. {{ selectedCount() }} selected.</p>
-        <div class="border-border divide-border max-h-[360px] divide-y overflow-y-auto rounded-lg border">
-          @for (repo of availableRepos(); track repo.full_name) {
-            <label class="hover:bg-surface-alt flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors">
-              <input
-                type="checkbox"
-                [formControl]="repoControls()[repo.full_name]"
-                class="text-brand-600 focus:ring-brand-500 h-4 w-4 rounded border-gray-300" />
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-text-primary truncate text-sm font-medium">{{ repo.name }}</span>
-                  @if (repo.private) {
-                    <span
-                      class="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                      >Private</span
-                    >
-                  }
-                </div>
-                @if (repo.description) {
-                  <p class="text-text-muted mt-0.5 truncate text-xs">{{ repo.description }}</p>
-                }
-              </div>
-            </label>
+        <div class="relative">
+          <input
+            #repoSearchInput
+            type="search"
+            data-testid="link-repos-search-input"
+            aria-label="Search repositories by name"
+            placeholder="Search repositories by name…"
+            autocomplete="off"
+            [formControl]="repoSearchControl"
+            (keydown.escape)="onRepoSearchEscape($event)"
+            class="border-border bg-surface text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:ring-brand-500/20 w-full rounded-lg border py-2.5 pr-9 pl-9 text-sm transition-colors focus:ring-2 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none" />
+          <div class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <i class="fa-duotone fa-magnifying-glass text-text-muted text-sm"></i>
+          </div>
+          @if (repoSearchTerm()) {
+            <button
+              type="button"
+              data-testid="link-repos-search-clear"
+              (click)="clearRepoSearch()"
+              class="text-text-muted hover:text-text-primary absolute inset-y-0 right-3 flex items-center text-sm transition-colors"
+              aria-label="Clear search">
+              <i class="fa-duotone fa-xmark"></i>
+            </button>
           }
         </div>
+        <p data-testid="link-repos-selected-count" class="text-text-secondary text-sm">Select repositories to link. {{ selectedCount() }} selected.</p>
+        @if (filteredRepos().length === 0) {
+          <p data-testid="link-repos-no-matches" role="status" class="text-text-muted py-6 text-center text-sm">
+            No repositories match "{{ repoSearchTerm().trim() }}".
+          </p>
+        } @else {
+          <div data-testid="link-repos-list" class="border-border divide-border max-h-[360px] divide-y overflow-y-auto rounded-lg border">
+            @for (repo of filteredRepos(); track repo.full_name) {
+              <label
+                [attr.data-testid]="'link-repos-item-' + repo.full_name"
+                class="hover:bg-surface-alt flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors">
+                <input
+                  type="checkbox"
+                  [formControl]="repoControls()[repo.full_name]"
+                  class="text-brand-600 focus:ring-brand-500 h-4 w-4 rounded border-gray-300" />
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-text-primary truncate text-sm font-medium">{{ repo.name }}</span>
+                    @if (repo.private) {
+                      <span
+                        class="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                        >Private</span
+                      >
+                    }
+                  </div>
+                  @if (repo.description) {
+                    <p class="text-text-muted mt-0.5 truncate text-xs">{{ repo.description }}</p>
+                  }
+                </div>
+              </label>
+            }
+          </div>
+        }
       }
       <div class="flex justify-end gap-3 pt-2">
-        <lfx-button variant="ghost" (clicked)="goBackToInstallations()">Back</lfx-button>
+        <lfx-button data-testid="link-repos-back" variant="ghost" (clicked)="goBackToInstallations()">Back</lfx-button>
         <lfx-button variant="secondary" (clicked)="dialogService.close()">Cancel</lfx-button>
-        <lfx-button variant="primary" [loading]="saving()" [disabled]="selectedCount() === 0" (clicked)="linkSelected()">
+        <lfx-button data-testid="link-repos-submit" variant="primary" [loading]="saving()" [disabled]="selectedCount() === 0" (clicked)="linkSelected()">
           Link Selected ({{ selectedCount() }})
         </lfx-button>
       </div>

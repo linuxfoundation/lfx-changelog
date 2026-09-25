@@ -41,10 +41,10 @@ Products can be linked to one or more GitHub repositories. This enables release 
 
 ### Admin UI Flow
 
-1. Navigate to a product's detail page in the admin dashboard
-2. Click **Connect Repository** to initiate the GitHub App installation flow
-3. Select an organization and grant access to specific repositories
-4. After installation, linked repositories appear in the product's repository list
+1. Open a product's detail page and go to the **Repositories** tab.
+2. Click **Add Repository**, choose a GitHub organization, and click **Next**. If the app isn't installed on that organization yet, use **Install on New Org** first.
+3. Optionally type part of a repository name in the search box. Matching ignores case, looks anywhere in the name, and does not search descriptions. Checked repositories stay selected while a search hides them. Escape clears the search; pressing it again with an empty search closes the dialog.
+4. Check the repositories to link and click **Link Selected**. They then appear in the product's repository list.
 
 ### Data Model
 
