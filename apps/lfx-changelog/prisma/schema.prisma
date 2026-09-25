@@ -187,7 +187,7 @@ model ReleaseJob {
   /// that deliveries for one run can be ordered: a redelivery is older and must not undo the
   /// state it already reported, while a re-run reuses the id and is newer, so it may.
   runUpdatedAt        DateTime?        @map("run_updated_at")
-  /// Per-job progress from workflow_job events, newest state per job name.
+  /// Per-job progress from workflow_job events, newest state per job, for the newest attempt.
   steps               Json             @default("[]")
 
   startedAt           DateTime?        @map("started_at")

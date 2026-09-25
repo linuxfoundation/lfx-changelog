@@ -590,6 +590,27 @@ test.describe('GitHub webhooks API (/webhooks/github)', () => {
       expect(steps[0], 'a delayed queued must not replace in_progress').toMatchObject({ name: 'deploy', status: 'in_progress' });
     });
 
+    test('two jobs sharing a display name are both kept', async () => {
+      const runId = nextRunId++;
+      await send('release', releaseBody(TEST_REPOSITORY.fullName, 'v10.0.0'));
+      await send('workflow_run', workflowRunBody(TEST_REPOSITORY.fullName, { runId, headBranch: 'v10.0.0', status: 'in_progress', conclusion: null }));
+
+      // `name` is a display label, and nothing stops two jobs in one workflow carrying the same
+      // one. Keyed by name, the second would overwrite the first and a job would vanish.
+      const jobEvent = (id: number) => ({
+        action: 'completed',
+        repository: { full_name: TEST_REPOSITORY.fullName, default_branch: 'main' },
+        workflow_job: { id, run_id: runId, run_attempt: 1, name: 'publish', status: 'completed', conclusion: 'success', started_at: null, completed_at: null },
+      });
+
+      await send('workflow_job', jobEvent(10_000_001));
+      await send('workflow_job', jobEvent(10_000_002));
+
+      const steps = z.array(ReleaseJobStepSchema).parse((await jobFor('v10.0.0'))!.steps);
+      expect(steps).toHaveLength(2);
+      expect(steps.map((step) => step.jobId).sort()).toEqual([10_000_001, 10_000_002]);
+    });
+
     test('a job for an unknown run is ignored', async () => {
       const body = {
         action: 'completed',
