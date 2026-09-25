@@ -74,6 +74,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
         productId: this.productId(),
         callbackInstallationId: this.callbackInstallationId(),
       },
+      testId: 'link-repositories-dialog',
       onClose: (result) => {
         if (result === 'linked') this.refresh$.next();
       },

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DOCUMENT } from '@angular/common';
-import { Component, computed, DestroyRef, inject, input, OnInit, signal, Signal } from '@angular/core';
+import { afterRenderEffect, Component, computed, DestroyRef, ElementRef, inject, input, OnInit, signal, Signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -38,6 +38,9 @@ export class LinkRepositoriesDialogComponent implements OnInit {
   private readonly fetchRepos$ = new Subject<number>();
 
   protected readonly installationControl = new FormControl('', { nonNullable: true });
+  protected readonly repoSearchControl = new FormControl('', { nonNullable: true });
+
+  private readonly repoSearchInput = viewChild<ElementRef<HTMLInputElement>>('repoSearchInput');
 
   protected readonly dialogStep = signal<'select-installation' | 'select-repos'>('select-installation');
   protected readonly saving = signal(false);
@@ -59,6 +62,22 @@ export class LinkRepositoriesDialogComponent implements OnInit {
     }))
   );
   protected readonly selectedCount: Signal<number> = computed(() => this.selectedRepos().size);
+
+  protected readonly repoSearchTerm: Signal<string> = toSignal(this.repoSearchControl.valueChanges, { initialValue: '' });
+  private readonly normalizedSearchTerm: Signal<string> = computed(() => this.repoSearchTerm().trim().toLowerCase());
+  // Rendering only: selection, the selected count and linkSelected() must keep using availableRepos()
+  // so repositories hidden by the search stay selected and still get linked.
+  protected readonly filteredRepos: Signal<GitHubRepository[]> = computed(() => {
+    const term = this.normalizedSearchTerm();
+    const repos = this.availableRepos();
+    return term ? repos.filter((r) => r.name.toLowerCase().includes(term)) : repos;
+  });
+
+  public constructor() {
+    afterRenderEffect(() => {
+      this.repoSearchInput()?.nativeElement.focus();
+    });
+  }
 
   public ngOnInit(): void {
     this.fetchInstallations$.next();
@@ -88,6 +107,7 @@ export class LinkRepositoriesDialogComponent implements OnInit {
 
     this.dialogStep.set('select-repos');
     this.selectedRepos.set(new Set());
+    this.repoSearchControl.setValue('');
     this.fetchRepos$.next(installationId);
     this.updateDialogTitle();
   }
@@ -95,6 +115,19 @@ export class LinkRepositoriesDialogComponent implements OnInit {
   protected goBackToInstallations(): void {
     this.dialogStep.set('select-installation');
     this.updateDialogTitle();
+  }
+
+  protected clearRepoSearch(): void {
+    this.repoSearchControl.setValue('');
+    this.repoSearchInput()?.nativeElement.focus();
+  }
+
+  protected onRepoSearchEscape(event: Event): void {
+    // With an empty search, let Escape reach the dialog outlet's document listener so it closes the dialog.
+    if (!this.repoSearchControl.value) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.repoSearchControl.setValue('');
   }
 
   protected linkSelected(): void {
