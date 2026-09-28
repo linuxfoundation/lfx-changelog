@@ -102,8 +102,17 @@ export class ReleaseService {
     //
     // Failing to open a job must not fail the publish: the release exists on GitHub either way,
     // and the webhook opens them a moment later without the attribution.
+    // Guarded, because both of these run after GitHub has already created the release: a
+    // transient database error here would otherwise report a failed publish for a release that
+    // exists, and the retry would be refused as a duplicate tag. The lookup falls back to the
+    // repository the caller named, and each job is caught on its own so one failure does not
+    // suppress the rest.
     const prisma = getPrismaClient();
-    const tracking = await prisma.productRepository.findMany({ where: { fullName: repository.fullName }, select: { id: true } });
+    const tracking = await prisma.productRepository.findMany({ where: { fullName: repository.fullName }, select: { id: true } }).catch((err) => {
+      serverLogger.warn({ err, repositoryId, tagName: data.tagName }, 'Failed to find the products tracking a published release');
+      return [{ id: repositoryId }];
+    });
+
     await Promise.all(
       tracking.map((tracked) =>
         this.openReleaseJob(tracked.id, data.tagName, userId).catch((err) =>
@@ -310,12 +319,11 @@ export class ReleaseService {
           OR: [{ runUpdatedAt: null }, { runUpdatedAt: { lt: runUpdatedAt } }, { status: { notIn: [ReleaseJobStatus.SUCCEEDED, ReleaseJobStatus.FAILED] } }],
         };
 
-    // The run already on this job: advance it, keeping the steps its own jobs have recorded.
-    // Two statements, and a concurrent delivery of the same run can attach it between them: the
-    // first write looks for a run that is not yet recorded, and by the time the second runs the
-    // peer has set both the run and its start time, so that matches nothing either. Nothing
-    // about this delivery is stale, so it goes round once more rather than being dropped —
-    // GitHub does not redeliver, and the event that loses is usually the run's last.
+    // Attaching a run is two statements, and a concurrent delivery of the same run can attach it
+    // between them: the first write looks for a run that is not yet recorded, and by the time
+    // the second runs the peer has set both the run and its start time, so that matches nothing
+    // either. Nothing about this delivery is stale, so it goes round once more rather than being
+    // dropped — GitHub does not redeliver, and the event that loses is usually the run's last.
     for (let attempt = 0; attempt < 2; attempt += 1) {
       // The run already on this job: advance it, keeping the steps its own jobs have recorded.
       const advanced = await prisma.releaseJob.updateMany({
@@ -352,7 +360,9 @@ export class ReleaseService {
   }
 
   /**
-   * Records one job's progress within a run, keyed by name so repeated deliveries overwrite.
+   * Records one job's progress within a run, keyed by GitHub's job id. A later state of that
+   * job replaces its entry; an earlier state, or a delivery from a superseded run attempt, is
+   * refused; a newer attempt starts the list again.
    *
    * A repository tracked by several products has a release job per product, and the single run
    * reports to each of them.
