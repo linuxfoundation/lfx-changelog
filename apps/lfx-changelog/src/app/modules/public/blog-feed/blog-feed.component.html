@@ -63,7 +63,12 @@
                     }
                     @if (post.author) {
                       <span>&middot;</span>
-                      <span>{{ post.author.name }}</span>
+                      <span>
+                        {{ post.author.name }}
+                        @if (post.author.former) {
+                          <span class="text-text-muted">(Former user)</span>
+                        }
+                      </span>
                     }
                   </div>
                 </div>

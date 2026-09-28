@@ -43,4 +43,8 @@ export class UserService {
   public removeRole(userId: string, roleId: string): Observable<HttpResponse<unknown>> {
     return this.http.delete(`/api/users/${userId}/roles/${roleId}`, { observe: 'response' }).pipe(take(1));
   }
+
+  public delete(userId: string): Observable<HttpResponse<unknown>> {
+    return this.http.delete(`/api/users/${userId}`, { observe: 'response' }).pipe(take(1));
+  }
 }

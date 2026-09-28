@@ -41,9 +41,21 @@
       </ng-template>
 
       <ng-template lfxColumn="Actions" let-user>
-        <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
-          >Manage Roles</lfx-button
-        >
+        <div class="flex items-center gap-1">
+          <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
+            >Manage Roles</lfx-button
+          >
+          <button
+            type="button"
+            [attr.data-testid]="'user-management-remove-' + user.id"
+            class="btn btn-ghost inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs"
+            [disabled]="!!removeBlockedReason(user)"
+            [title]="removeBlockedReason(user) ?? 'Remove user'"
+            [attr.aria-label]="removeAriaLabel(user)"
+            (click)="openRemoveDialog(user)">
+            <i class="fa-solid fa-trash text-xs"></i>
+          </button>
+        </div>
       </ng-template>
     </lfx-table>
   </div>
@@ -79,9 +91,21 @@
                   <p class="text-text-secondary truncate text-xs">{{ user.email }}</p>
                 </div>
               </div>
-              <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)">
-                Manage
-              </lfx-button>
+              <div class="flex shrink-0 items-center gap-1">
+                <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)">
+                  Manage
+                </lfx-button>
+                <button
+                  type="button"
+                  [attr.data-testid]="'user-management-remove-' + user.id"
+                  class="btn btn-ghost inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs"
+                  [disabled]="!!removeBlockedReason(user)"
+                  [title]="removeBlockedReason(user) ?? 'Remove user'"
+                  [attr.aria-label]="removeAriaLabel(user)"
+                  (click)="openRemoveDialog(user)">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </div>
             </div>
             @if (user.roles?.length) {
               <div class="flex flex-wrap gap-1">

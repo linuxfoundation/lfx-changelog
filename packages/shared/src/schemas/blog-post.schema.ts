@@ -20,7 +20,7 @@ export const BlogPostSchema = z
     publishedAt: z.string().nullable(),
     periodStart: z.string().nullable(),
     periodEnd: z.string().nullable(),
-    createdBy: z.string().uuid(),
+    createdBy: z.string().uuid().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   })

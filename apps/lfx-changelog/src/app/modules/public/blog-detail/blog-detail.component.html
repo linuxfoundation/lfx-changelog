@@ -41,7 +41,12 @@
             @if (post.author) {
               <div data-testid="blog-detail-author">
                 <h3 class="text-text-muted text-xs font-medium tracking-wider uppercase">Author</h3>
-                <p class="text-text-primary mt-1 text-sm">{{ post.author.name }}</p>
+                <p class="text-text-primary mt-1 text-sm">
+                  {{ post.author.name }}
+                  @if (post.author.former) {
+                    <span class="text-text-muted font-normal">Former user</span>
+                  }
+                </p>
               </div>
             }
 

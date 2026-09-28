@@ -376,7 +376,7 @@ export async function seedTestOpenSearch(): Promise<void> {
         coverImageUrl: blog.coverImageUrl,
         publishedAt: blog.publishedAt?.toISOString() ?? null,
         createdAt: blog.createdAt.toISOString(),
-        authorName: blog.author?.name ?? 'Unknown',
+        authorName: blog.author?.name ?? blog.authorName ?? 'Unknown',
         authorAvatarUrl: blog.author?.avatarUrl ?? null,
         productNames: blog.products?.map((p) => p.product.name) ?? [],
         productIds: blog.products?.map((p) => p.product.id) ?? [],

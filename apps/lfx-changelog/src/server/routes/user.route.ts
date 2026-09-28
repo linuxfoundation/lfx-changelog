@@ -23,5 +23,6 @@ router.post('/:id/roles/batch', authorize({ role: UserRole.PRODUCT_ADMIN }), val
   userController.batchAssignRoles(req, res, next)
 );
 router.delete('/:id/roles/:roleId', authorize({ role: UserRole.PRODUCT_ADMIN }), (req, res, next) => userController.removeRole(req, res, next));
+router.delete('/:id', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => userController.remove(req, res, next));
 
 export default router;

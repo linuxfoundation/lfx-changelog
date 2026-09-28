@@ -5,6 +5,7 @@ import { BOT_EMAIL, ChangelogStatus as ChangelogStatusEnum, MAX_PAGE_SIZE } from
 import { ChangelogStatus, Prisma, ChangelogEntry as PrismaChangelogEntry } from '@prisma/client';
 
 import { ConflictError, NotFoundError } from '../errors';
+import { mapPublicAuthor } from '../helpers/map-public-author.helper';
 import { serverLogger } from '../server-logger';
 import { AgentMemoryService } from './agent-memory.service';
 import { getPrismaClient } from './prisma.service';
@@ -47,13 +48,15 @@ export class ChangelogService {
             createdAt: true,
             product: { select: { id: true, name: true, slug: true, description: true, faIcon: true } },
             author: { select: { id: true, name: true, avatarUrl: true } },
+            authorName: true,
+            authorAvatarUrl: true,
           },
         }),
         prisma.changelogEntry.count({ where }),
       ]);
 
       return {
-        data: data as PublicChangelogEntry[],
+        data: data.map((entry) => this.toPublicEntry(entry)),
         total,
         page,
         pageSize: limit,
@@ -109,7 +112,7 @@ export class ChangelogService {
     ]);
 
     return {
-      data,
+      data: data.map((entry) => this.withMappedAuthor(entry)),
       total,
       page,
       pageSize: limit,
@@ -133,12 +136,14 @@ export class ChangelogService {
         createdAt: true,
         product: { select: { id: true, name: true, slug: true, description: true, faIcon: true } },
         author: { select: { id: true, name: true, avatarUrl: true } },
+        authorName: true,
+        authorAvatarUrl: true,
       },
     });
     if (!entry) {
       throw new NotFoundError(`Published changelog entry not found: ${identifier}`, { operation: 'findPublishedByIdentifier', service: 'changelog' });
     }
-    return entry as PublicChangelogEntry;
+    return this.toPublicEntry(entry);
   }
 
   public async create(data: {
@@ -167,7 +172,7 @@ export class ChangelogService {
         include: { product: true, author: true },
       });
       this.syncToOpenSearch(entry);
-      return entry;
+      return this.withMappedAuthor(entry);
     } catch (error) {
       throw this.handleUniqueConstraint(error, data.slug) ?? error;
     }
@@ -209,7 +214,7 @@ export class ChangelogService {
     } else {
       this.syncToOpenSearch(updated);
     }
-    return updated;
+    return this.withMappedAuthor(updated);
   }
 
   public async publish(id: string, publishedByUserId?: string): Promise<PrismaChangelogEntry> {
@@ -243,7 +248,7 @@ export class ChangelogService {
         .catch((err) => serverLogger.warn({ err, id: published.id }, 'Failed to capture correction'));
     }
 
-    return published;
+    return this.withMappedAuthor(published);
   }
 
   public async unpublish(id: string): Promise<PrismaChangelogEntry> {
@@ -258,7 +263,7 @@ export class ChangelogService {
       include: { product: true, author: true },
     });
     this.searchService.deleteDocument(id).catch((err) => serverLogger.warn({ err, id }, 'Failed to remove changelog from OpenSearch'));
-    return draft;
+    return this.withMappedAuthor(draft);
   }
 
   public async delete(id: string): Promise<void> {
@@ -323,7 +328,7 @@ export class ChangelogService {
     if (!entry) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'findById', service: 'changelog' });
     }
-    return entry;
+    return this.withMappedAuthor(entry);
   }
 
   public async findByIdForSlack(
@@ -340,7 +345,8 @@ export class ChangelogService {
     if (!entry) {
       throw new NotFoundError(`Changelog entry not found: ${id}`, { operation: 'findByIdForSlack', service: 'changelog' });
     }
-    return entry;
+    const mappedAuthor = mapPublicAuthor(entry.author, entry);
+    return { ...entry, author: mappedAuthor ? { name: mappedAuthor.name } : null };
   }
 
   // ── View tracking ───────────────────────────
@@ -448,6 +454,41 @@ export class ChangelogService {
     };
 
     this.searchService.indexDocument(doc).catch((err) => serverLogger.warn({ err, id: entry.id }, 'Failed to sync changelog to OpenSearch'));
+  }
+
+  private toPublicEntry(entry: {
+    id: string;
+    slug: string | null;
+    title: string;
+    description: string;
+    version: string | null;
+    status: string;
+    publishedAt: Date | string | null;
+    createdAt: Date | string;
+    product?: PublicChangelogEntry['product'];
+    author?: { id: string; name: string; avatarUrl: string | null } | null;
+    authorName?: string | null;
+    authorAvatarUrl?: string | null;
+  }): PublicChangelogEntry {
+    const { author, authorName, authorAvatarUrl, ...rest } = entry;
+    return {
+      ...rest,
+      author: mapPublicAuthor(author, { authorName, authorAvatarUrl }),
+    } as PublicChangelogEntry;
+  }
+
+  private withMappedAuthor<
+    T extends {
+      author?: { id: string; name: string; avatarUrl: string | null } | null;
+      authorName?: string | null;
+      authorAvatarUrl?: string | null;
+    },
+  >(entry: T) {
+    const { authorName, authorAvatarUrl, author, ...rest } = entry;
+    return {
+      ...rest,
+      author: mapPublicAuthor(author, { authorName, authorAvatarUrl }),
+    };
   }
 
   private handleUniqueConstraint(error: unknown, slug?: string): ConflictError | null {

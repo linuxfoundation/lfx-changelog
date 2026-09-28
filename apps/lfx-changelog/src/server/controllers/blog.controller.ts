@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { BlogService } from '../services/blog.service';
+import { mapPublicAuthor } from '../helpers/map-public-author.helper';
 
 import type { NextFunction, Request, Response } from 'express';
 
@@ -130,6 +131,7 @@ export class BlogController {
   private flattenBlogPost(post: any) {
     return {
       ...post,
+      author: mapPublicAuthor(post.author, post),
       products: post.products?.map((bp: any) => bp.product),
       changelogEntries: post.changelogs?.map((bc: any) => bc.changelogEntry),
     };

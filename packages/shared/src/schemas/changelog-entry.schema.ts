@@ -7,7 +7,7 @@ import { ChangelogSource } from '../enums/changelog-source.enum.js';
 import { ChangelogStatus } from '../enums/changelog-status.enum.js';
 import { QualityScoreDataSchema } from './agent-memory.schema.js';
 import { ProductSchema } from './product.schema.js';
-import { UserSchema } from './user.schema.js';
+import { PublicAuthorSchema } from './public.schema.js';
 
 export const ChangelogEntrySchema = z
   .object({
@@ -21,7 +21,7 @@ export const ChangelogEntrySchema = z
     status: z.nativeEnum(ChangelogStatus),
     qualityScore: QualityScoreDataSchema.nullable().optional(),
     publishedAt: z.string().nullable(),
-    createdBy: z.string(),
+    createdBy: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
   })
@@ -31,7 +31,7 @@ export type ChangelogEntry = z.infer<typeof ChangelogEntrySchema>;
 
 export const ChangelogEntryWithRelationsSchema = ChangelogEntrySchema.extend({
   product: ProductSchema.optional(),
-  author: UserSchema.optional(),
+  author: PublicAuthorSchema.optional(),
 }).openapi('ChangelogEntryWithRelations');
 
 export type ChangelogEntryWithRelations = z.infer<typeof ChangelogEntryWithRelationsSchema>;

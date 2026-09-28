@@ -4,6 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
 import { TEST_PRODUCTS, TEST_USERS } from '../../helpers/test-data.js';
+import { expectToast } from '../../helpers/toast.helper.js';
 import { UserManagementPage } from '../../pages/user-management.page.js';
 
 test.describe('User Management', () => {
@@ -155,5 +156,73 @@ test.describe('User Management', () => {
     } finally {
       await activateProduct(targetProduct.slug);
     }
+  });
+
+  test('should display a remove control next to Manage Roles', async () => {
+    const manageButtons = userPage.page.locator('[data-testid^="user-management-manage-roles-"]');
+    await expect(manageButtons.first()).toBeVisible();
+    await expect(userPage.getRemoveButtons().first()).toBeVisible();
+  });
+
+  test('own-row and last Super Admin trash is visible, disabled, and does not open confirm', async () => {
+    const meRes = await userPage.page.request.get('/api/users/me');
+    const me = (await meRes.json()).data;
+    const removeBtn = userPage.getRemoveButton(me.id);
+    await expect(removeBtn).toBeVisible();
+    await expect(removeBtn).toBeDisabled();
+    const title = await removeBtn.getAttribute('title');
+    expect(title === 'You cannot remove your own account' || title === 'The last Super Admin cannot be removed').toBe(true);
+
+    await removeBtn.click({ force: true });
+    await expect(userPage.removeDialog).not.toBeVisible();
+  });
+
+  test('canceling remove confirmation leaves the user listed', async () => {
+    const email = `e2e-ui-cancel-${Date.now()}@example.com`;
+    await userPage.openAddUserDialog();
+    await expect(userPage.addUserDialog).toBeVisible();
+    await userPage.addUserEmailInput.locator('input').fill(email);
+    await userPage.addUserNameInput.locator('input').fill('E2E Cancel Remove');
+    await userPage.selectOption(userPage.addUserRoleSelect, 'Editor');
+    await userPage.selectMultiOption(userPage.addUserProductSelect, 'E2E EasyCLA');
+    await userPage.addUserCreateBtn.click();
+    await expect(userPage.addUserDialog).not.toBeVisible();
+
+    const usersRes = await userPage.page.request.get('/api/users');
+    const users = (await usersRes.json()).data;
+    const target = users.find((u: { email: string }) => u.email === email);
+    expect(target).toBeDefined();
+
+    await userPage.openRemoveDialog(target.id);
+    await expect(userPage.removeDialog).toBeVisible();
+    await userPage.cancelRemove();
+    await expect(userPage.removeDialog).not.toBeVisible();
+    await expect(userPage.getRemoveButton(target.id)).toBeVisible();
+  });
+
+  test('confirming remove deletes the user, refreshes the list, and shows a success toast', async ({ page }) => {
+    const email = `e2e-ui-remove-${Date.now()}@example.com`;
+    const name = 'E2E Confirm Remove';
+    await userPage.openAddUserDialog();
+    await expect(userPage.addUserDialog).toBeVisible();
+    await userPage.addUserEmailInput.locator('input').fill(email);
+    await userPage.addUserNameInput.locator('input').fill(name);
+    await userPage.selectOption(userPage.addUserRoleSelect, 'Editor');
+    await userPage.selectMultiOption(userPage.addUserProductSelect, 'E2E EasyCLA');
+    await userPage.addUserCreateBtn.click();
+    await expect(userPage.addUserDialog).not.toBeVisible();
+
+    const usersRes = await userPage.page.request.get('/api/users');
+    const users = (await usersRes.json()).data;
+    const target = users.find((u: { email: string }) => u.email === email);
+    expect(target).toBeDefined();
+
+    await userPage.openRemoveDialog(target.id);
+    await expect(userPage.removeDialog).toBeVisible();
+    await expect(userPage.removeDialog).toContainText(name);
+    await userPage.confirmRemove();
+    await expect(userPage.removeDialog).not.toBeVisible();
+    await expectToast(page, `${name} removed`, 'success');
+    await expect(userPage.getRemoveButton(target.id)).toHaveCount(0);
   });
 });

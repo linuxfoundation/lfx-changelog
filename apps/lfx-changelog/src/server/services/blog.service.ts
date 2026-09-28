@@ -14,7 +14,9 @@ import type { BlogPostQueryParams, PaginatedResponse } from '@lfx-changelog/shar
 type PaginatedResult<T> = Omit<PaginatedResponse<T>, 'success'>;
 
 type BlogWithRelations = PrismaBlog & {
-  author?: { id: string; name: string; avatarUrl: string | null };
+  author?: { id: string; name: string; avatarUrl: string | null } | null;
+  authorName?: string | null;
+  authorAvatarUrl?: string | null;
   products?: { product: { id: string; name: string; slug: string; description: string | null; faIcon: string | null } }[];
   changelogs?: {
     changelogEntry: {

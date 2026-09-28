@@ -91,6 +91,8 @@ type BlogWithRelationsForIndex = {
   publishedAt: Date | null;
   createdAt: Date;
   author?: { name: string | null; avatarUrl: string | null } | null;
+  authorName?: string | null;
+  authorAvatarUrl?: string | null;
   products?: { product: { id: string; name: string } }[] | null;
 };
 
@@ -106,8 +108,8 @@ export function toBlogDocument(blog: BlogWithRelationsForIndex): BlogDocument {
     coverImageUrl: blog.coverImageUrl,
     publishedAt: blog.publishedAt?.toISOString() ?? null,
     createdAt: blog.createdAt.toISOString(),
-    authorName: blog.author?.name ?? 'Unknown',
-    authorAvatarUrl: blog.author?.avatarUrl ?? null,
+    authorName: blog.author?.name ?? blog.authorName ?? 'Unknown',
+    authorAvatarUrl: blog.author?.avatarUrl ?? blog.authorAvatarUrl ?? null,
     productNames: blog.products?.map((p) => p.product.name) ?? [],
     productIds: blog.products?.map((p) => p.product.id) ?? [],
   };

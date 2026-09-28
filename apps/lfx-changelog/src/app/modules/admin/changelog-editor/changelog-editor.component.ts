@@ -348,7 +348,7 @@ export class ChangelogEditorComponent {
           this.descriptionControl.setValue(entry.description);
           this.versionControl.setValue(entry.version ?? '');
           this.productIdControl.setValue(entry.productId);
-          this.authorControl.setValue(entry.createdBy);
+          this.authorControl.setValue(entry.createdBy ?? '');
           this.loading.set(false);
         })
       )

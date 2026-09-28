@@ -218,4 +218,178 @@ test.describe('Protected Users API (/api/users)', () => {
       expect(res.status()).toBe(400);
     });
   });
+
+  test.describe('DELETE /api/users/:id', () => {
+    let testProductId: string;
+
+    test.beforeAll(async () => {
+      const productsRes = await superAdminApi.get('/api/products');
+      const products = (await productsRes.json()).data;
+      const product = products.find((p: any) => p.slug === TEST_PRODUCTS[0]!.slug);
+      testProductId = product.id;
+    });
+
+    async function createThrowaway(role: 'editor' | 'super_admin' = 'editor'): Promise<{ id: string; email: string; name: string }> {
+      const email = `e2e-delete-${role}-${Date.now()}@example.com`;
+      const name = `E2E Delete ${role} ${Date.now()}`;
+      const res = await superAdminApi.post('/api/users', {
+        data: { email, name, role, productId: role === 'super_admin' ? undefined : testProductId },
+      });
+      expect(res.status()).toBe(201);
+      const body = await res.json();
+      return { id: body.data.id, email, name };
+    }
+
+    test('returns 401 without auth', async () => {
+      const res = await unauthApi.delete('/api/users/00000000-0000-0000-0000-000000000000');
+      expect(res.status()).toBe(401);
+    });
+
+    test('editor gets 403', async () => {
+      const throwaway = await createThrowaway();
+      const res = await editorApi.delete(`/api/users/${throwaway.id}`);
+      expect(res.status()).toBe(403);
+    });
+
+    test('product_admin gets 403', async () => {
+      const throwaway = await createThrowaway();
+      const res = await productAdminApi.delete(`/api/users/${throwaway.id}`);
+      expect(res.status()).toBe(403);
+    });
+
+    test('returns 404 for unknown id', async () => {
+      const res = await superAdminApi.delete('/api/users/00000000-0000-0000-0000-000000000000');
+      expect(res.status()).toBe(404);
+      const body = await res.json();
+      expect(body.code).toBe('NOT_FOUND');
+    });
+
+    test('returns 403 when deleting self if another Super Admin remains', async () => {
+      const extraSa = await createThrowaway('super_admin');
+      try {
+        const meRes = await superAdminApi.get('/api/users/me');
+        const me = (await meRes.json()).data;
+        const res = await superAdminApi.delete(`/api/users/${me.id}`);
+        expect(res.status()).toBe(403);
+        const body = await res.json();
+        expect(body.error).toBe('You cannot remove your own account');
+      } finally {
+        await superAdminApi.delete(`/api/users/${extraSa.id}`);
+      }
+    });
+
+    test('returns 409 when deleting the last Super Admin', async () => {
+      const meRes = await superAdminApi.get('/api/users/me');
+      const me = (await meRes.json()).data;
+      const listRes = await superAdminApi.get('/api/users');
+      const users = (await listRes.json()).data as Array<{ id: string; email: string; roles?: Array<{ role: string }> }>;
+      for (const user of users) {
+        const isSuperAdmin = user.roles?.some((role) => role.role === 'super_admin');
+        if (isSuperAdmin && user.id !== me.id && user.email.includes('e2e-delete-')) {
+          await superAdminApi.delete(`/api/users/${user.id}`);
+        }
+      }
+
+      const res = await superAdminApi.delete(`/api/users/${me.id}`);
+      expect(res.status()).toBe(409);
+      const body = await res.json();
+      expect(body.code).toBe('CONFLICT');
+      expect(body.error).toBe('The last Super Admin cannot be removed');
+    });
+
+    test('super_admin can delete a throwaway user (204)', async () => {
+      const throwaway = await createThrowaway();
+      const res = await superAdminApi.delete(`/api/users/${throwaway.id}`);
+      expect(res.status()).toBe(204);
+
+      const listRes = await superAdminApi.get('/api/users');
+      const users = (await listRes.json()).data;
+      expect(users.find((u: any) => u.id === throwaway.id)).toBeUndefined();
+    });
+
+    test('retains authored content with author.former === true', async () => {
+      const throwaway = await createThrowaway();
+      const slug = `e2e-former-author-${Date.now()}`;
+      const createRes = await superAdminApi.post('/api/changelogs', {
+        data: {
+          productId: testProductId,
+          slug,
+          title: 'Former author entry',
+          description: 'Written by a user who will be removed.',
+          version: '0.0.1',
+          status: 'draft',
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      const entryId = (await createRes.json()).data.id;
+
+      const reassignRes = await superAdminApi.put(`/api/changelogs/${entryId}`, {
+        data: { createdBy: throwaway.id },
+      });
+      expect(reassignRes.status()).toBe(200);
+
+      const publishRes = await superAdminApi.patch(`/api/changelogs/${entryId}/publish`);
+      expect(publishRes.status()).toBe(200);
+
+      const deleteRes = await superAdminApi.delete(`/api/users/${throwaway.id}`);
+      expect(deleteRes.status()).toBe(204);
+
+      const publicRes = await unauthApi.get(`/public/api/changelogs/${slug}`);
+      expect(publicRes.status()).toBe(200);
+      const author = (await publicRes.json()).data.author;
+      expect(author.name).toBe(throwaway.name);
+      expect(author.former).toBe(true);
+      expect(author.id).toBeNull();
+    });
+
+    test('re-adding the same email creates a new user id', async () => {
+      const throwaway = await createThrowaway();
+      const { email, name } = throwaway;
+      const deleteRes = await superAdminApi.delete(`/api/users/${throwaway.id}`);
+      expect(deleteRes.status()).toBe(204);
+
+      const recreateRes = await superAdminApi.post('/api/users', {
+        data: { email, name, role: 'editor', productId: testProductId },
+      });
+      expect(recreateRes.status()).toBe(201);
+      const recreated = (await recreateRes.json()).data;
+      expect(recreated.id).not.toBe(throwaway.id);
+      expect(recreated.email).toBe(email);
+    });
+
+    test('personal API keys stop working after delete', async ({}, testInfo) => {
+      const { createHash, randomBytes } = await import('node:crypto');
+      const { getTestPrismaClient } = await import('../../helpers/db.helper.js');
+      const { createApiKeyContext } = await import('../../helpers/api.helper.js');
+
+      const throwaway = await createThrowaway();
+      const rawKey = 'lfx_' + randomBytes(24).toString('base64url');
+      const prisma = getTestPrismaClient();
+      await prisma.apiKey.create({
+        data: {
+          userId: throwaway.id,
+          name: 'delete-test-key',
+          keyPrefix: rawKey.slice(0, 12),
+          keyHash: createHash('sha256').update(rawKey).digest('hex'),
+          scopes: ['products_read'],
+          expiresAt: new Date(Date.now() + 86400000),
+        },
+      });
+
+      const baseURL = testInfo.project.use.baseURL as string;
+      const keyCtx = await createApiKeyContext(rawKey, baseURL);
+      try {
+        const before = await keyCtx.get('/api/products');
+        expect(before.status()).toBe(200);
+
+        const deleteRes = await superAdminApi.delete(`/api/users/${throwaway.id}`);
+        expect(deleteRes.status()).toBe(204);
+
+        const after = await keyCtx.get('/api/products');
+        expect(after.status()).toBe(401);
+      } finally {
+        await keyCtx.dispose();
+      }
+    });
+  });
 });

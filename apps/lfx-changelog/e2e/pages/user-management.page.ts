@@ -20,6 +20,7 @@ export class UserManagementPage {
   public readonly addUserProductSelect: Locator;
   public readonly addUserCreateBtn: Locator;
   public readonly addUserError: Locator;
+  public readonly removeDialog: Locator;
 
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="user-management-heading"]');
@@ -37,6 +38,7 @@ export class UserManagementPage {
     this.addUserProductSelect = page.locator('[data-testid="add-user-product-select"]');
     this.addUserCreateBtn = page.locator('[data-testid="add-user-create-btn"]');
     this.addUserError = page.locator('[data-testid="add-user-error"]');
+    this.removeDialog = page.locator('[data-testid="user-management-remove-dialog"]');
   }
 
   public async goto() {
@@ -65,5 +67,25 @@ export class UserManagementPage {
     await combobox.click();
     await selectLocator.locator(`button[role="option"]`, { hasText: optionLabel }).click();
     await combobox.click();
+  }
+
+  public getRemoveButton(userId: string): Locator {
+    return this.page.locator(`[data-testid="user-management-remove-${userId}"]`);
+  }
+
+  public getRemoveButtons(): Locator {
+    return this.page.locator('[data-testid^="user-management-remove-"]');
+  }
+
+  public async openRemoveDialog(userId: string) {
+    await this.getRemoveButton(userId).click();
+  }
+
+  public async confirmRemove() {
+    await this.removeDialog.getByRole('button', { name: 'Remove' }).click();
+  }
+
+  public async cancelRemove() {
+    await this.removeDialog.getByRole('button', { name: 'Cancel' }).click();
   }
 }

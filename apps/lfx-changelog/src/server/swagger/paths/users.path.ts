@@ -136,3 +136,25 @@ userRegistry.registerPath({
     404: { description: 'User or role assignment not found' },
   },
 });
+
+userRegistry.registerPath({
+  method: 'delete',
+  path: '/api/users/{id}',
+  tags: ['Users'],
+  summary: 'Remove a user',
+  description:
+    'Hard-deletes a directory user and all of their role assignments. Authored changelog entries and blog posts remain with a former-user author snapshot.\n\n**Required privilege:** SUPER_ADMIN role. Callers cannot remove themselves. The last Super Admin cannot be removed.',
+  security: COOKIE_AUTH,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ description: 'User ID' }),
+    }),
+  },
+  responses: {
+    204: { description: 'User deleted' },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — caller is not Super Admin, or caller is the target' },
+    404: { description: 'User not found' },
+    409: { description: 'Conflict — the last Super Admin cannot be removed' },
+  },
+});

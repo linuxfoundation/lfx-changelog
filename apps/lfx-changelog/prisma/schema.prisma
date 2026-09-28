@@ -238,12 +238,14 @@ model ChangelogEntry {
   status      ChangelogStatus   @default(draft)
   qualityScore Json?            @map("quality_score")
   publishedAt DateTime?         @map("published_at")
-  createdBy   String            @map("created_by")
+  createdBy   String?           @map("created_by")
+  authorName  String?           @map("author_name")
+  authorAvatarUrl String?       @map("author_avatar_url")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
 
   product               Product                  @relation(fields: [productId], references: [id])
-  author                User                     @relation(fields: [createdBy], references: [id])
+  author                User?                    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   slackNotifications    SlackNotification[]
   agentJobs             AgentJob[]
   blogChangelogs    BlogChangelogEntry[]
@@ -281,7 +283,7 @@ model UserRoleAssignment {
   role      UserRole
   createdAt DateTime @default(now()) @map("created_at")
 
-  user    User     @relation(fields: [userId], references: [id])
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id])
 
   @@unique([userId, productId, role])
@@ -503,11 +505,13 @@ model Blog {
   publishedAt   DateTime?  @map("published_at")
   periodStart   DateTime?  @map("period_start")
   periodEnd     DateTime?  @map("period_end")
-  createdBy     String     @map("created_by")
+  createdBy     String?    @map("created_by")
+  authorName    String?    @map("author_name")
+  authorAvatarUrl String?  @map("author_avatar_url")
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  author     User                 @relation(fields: [createdBy], references: [id])
+  author     User?                @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   products   BlogProduct[]
   changelogs BlogChangelogEntry[]
   agentJobs  AgentJob[]

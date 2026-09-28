@@ -77,4 +77,13 @@ export class UserController {
       next(error);
     }
   }
+
+  public async remove(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await this.userService.delete(req.params['id'] as string, req.dbUser!.id);
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  }
 }

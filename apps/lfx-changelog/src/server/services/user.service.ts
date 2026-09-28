@@ -3,13 +3,17 @@
 
 import { Prisma, UserRoleAssignment as PrismaRoleAssignment, User as PrismaUser, UserRole as PrismaUserRole } from '@prisma/client';
 
-import { ConflictError, NotFoundError } from '../errors';
+import { AuthorizationError, ConflictError, NotFoundError } from '../errors';
+import { serverLogger } from '../server-logger';
 
 import { getPrismaClient } from './prisma.service';
+import { SearchService, toBlogDocument } from './search.service';
 
 const USER_INCLUDE = { userRoleAssignments: { include: { product: true } } } as const;
 
 export class UserService {
+  private readonly searchService = new SearchService();
+
   public async findByEmail(email: string): Promise<PrismaUser | null> {
     const prisma = getPrismaClient();
     return prisma.user.findUnique({
@@ -130,5 +134,64 @@ export class UserService {
       throw new NotFoundError(`Role assignment not found: ${roleId}`, { operation: 'removeRole', service: 'user' });
     }
     await prisma.userRoleAssignment.delete({ where: { id: roleId } });
+  }
+
+  public async delete(id: string, callerId: string): Promise<void> {
+    const prisma = getPrismaClient();
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target) {
+      throw new NotFoundError(`User not found: ${id}`, { operation: 'delete', service: 'user' });
+    }
+
+    const superAdminCount = await prisma.user.count({
+      where: { userRoleAssignments: { some: { role: PrismaUserRole.super_admin } } },
+    });
+    const targetIsSuperAdmin =
+      (await prisma.userRoleAssignment.count({
+        where: { userId: id, role: PrismaUserRole.super_admin },
+      })) > 0;
+
+    // Last-Super-Admin is checked before self so a sole Super Admin deleting themselves
+    // is 409 (org invariant) rather than 403. Self-delete with other Super Admins remaining is 403.
+    if (targetIsSuperAdmin && superAdminCount <= 1) {
+      throw new ConflictError('The last Super Admin cannot be removed', { operation: 'delete', service: 'user' });
+    }
+
+    if (id === callerId) {
+      throw new AuthorizationError('You cannot remove your own account', { operation: 'delete', service: 'user' });
+    }
+
+    const snapshotName = target.name.trim() || 'Former user';
+    const snapshotAvatar = target.avatarUrl;
+
+    const authoredBlogs = await prisma.blog.findMany({
+      where: { createdBy: id, status: 'published' },
+      include: { products: { include: { product: { select: { id: true, name: true } } } } },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.changelogEntry.updateMany({
+        where: { createdBy: id },
+        data: { authorName: snapshotName, authorAvatarUrl: snapshotAvatar },
+      });
+      await tx.blog.updateMany({
+        where: { createdBy: id },
+        data: { authorName: snapshotName, authorAvatarUrl: snapshotAvatar },
+      });
+      await tx.user.delete({ where: { id } });
+    });
+
+    for (const blog of authoredBlogs) {
+      this.searchService
+        .indexBlogDocument(
+          toBlogDocument({
+            ...blog,
+            author: null,
+            authorName: snapshotName,
+            authorAvatarUrl: snapshotAvatar,
+          })
+        )
+        .catch((err) => serverLogger.warn({ err, id: blog.id }, 'Failed to update blog author in OpenSearch after user delete'));
+    }
   }
 }

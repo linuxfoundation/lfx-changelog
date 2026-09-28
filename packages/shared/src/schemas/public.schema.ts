@@ -20,9 +20,10 @@ export type PublicProduct = z.infer<typeof PublicProductSchema>;
 
 export const PublicAuthorSchema = z
   .object({
-    id: z.string(),
+    id: z.string().nullable(),
     name: z.string(),
     avatarUrl: z.string().nullable(),
+    former: z.boolean(),
   })
   .openapi('PublicAuthor');
 

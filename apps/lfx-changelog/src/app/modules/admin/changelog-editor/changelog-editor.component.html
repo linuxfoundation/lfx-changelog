@@ -153,7 +153,12 @@
         <div class="space-y-1.5">
           <label class="text-text-primary text-sm font-medium">Author</label>
           <div class="flex items-center gap-3">
-            <span class="text-text-secondary text-sm">{{ existingEntry()?.author?.name ?? 'Unknown' }}</span>
+            <span class="text-text-secondary text-sm">
+              {{ existingEntry()?.author?.name ?? 'Unknown' }}
+              @if (existingEntry()?.author?.former) {
+                <span class="text-text-muted text-xs">Former user</span>
+              }
+            </span>
             @if (isSuperAdmin()) {
               @if (!showAuthorPicker()) {
                 <lfx-button data-testid="changelog-editor-change-author-btn" variant="ghost" size="sm" (clicked)="openAuthorPicker()">
