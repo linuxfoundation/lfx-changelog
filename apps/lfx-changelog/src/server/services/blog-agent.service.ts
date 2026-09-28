@@ -99,6 +99,9 @@ export class BlogAgentService {
 
   /**
    * Cancels a running/pending blog agent job.
+   *
+   * Returns true when this call cancelled it, false when it was already terminal — which is a
+   * refusal rather than a failure, and is what the endpoint answers 400 for.
    */
   public async cancelJob(jobId: string): Promise<boolean> {
     const prisma = getPrismaClient();
@@ -146,7 +149,7 @@ export class BlogAgentService {
         data: { status: 'running', startedAt: new Date() },
       });
       if (started.count === 0) {
-        serverLogger.info({ jobId }, 'Agent job is no longer pending — not starting it');
+        serverLogger.info({ jobId }, 'Blog agent job is no longer pending — not starting it');
         return;
       }
 

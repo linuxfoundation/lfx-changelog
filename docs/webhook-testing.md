@@ -137,7 +137,7 @@ To receive real GitHub webhook deliveries on your local machine, use a tunnel se
    - Go to your GitHub App settings > Webhook
    - Set the webhook URL to `https://abc123.ngrok-free.app/webhooks/github`
    - Set the secret to match your `GITHUB_WEBHOOK_SECRET`
-   - Subscribe to **Release** events
+   - Subscribe to **Release** events, and to **Workflow run** and **Workflow job** to exercise release jobs
 
 4. **Trigger a release** on a tracked repository (create/edit a release on GitHub).
 
@@ -176,11 +176,12 @@ INFO: GitHub webhook release event for untracked repository — ignoring  repoFu
 
 ## Troubleshooting
 
-| Symptom                       | Cause                                                                 | Fix                                                                        |
-| ----------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `500` — secret not configured | `GITHUB_WEBHOOK_SECRET` is empty or missing in `.env`                 | Add the variable and restart the server                                    |
-| `401` — missing signature     | Request has no `X-Hub-Signature-256` header                           | Ensure the curl script includes the `-H "X-Hub-Signature-256: ..."` header |
-| `401` — invalid signature     | Secret mismatch between `.env` and the value used to sign the payload | Make sure both sides use the exact same secret string                      |
-| `200` with `ignored: true`    | Repository `full_name` is not in the `ProductRepository` table        | Add the repo to a product via the admin UI or seed the database            |
-| `200` with `ignored: true`    | Event type is not `release`                                           | Set `X-GitHub-Event: release` header                                       |
-| `400` — empty body            | Request body is missing or not valid JSON                             | Ensure `-d "$PAYLOAD"` is included and the JSON is valid                   |
+| Symptom                       | Cause                                                                                | Fix                                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `500` — secret not configured | `GITHUB_WEBHOOK_SECRET` is empty or missing in `.env`                                | Add the variable and restart the server                                                     |
+| `401` — missing signature     | Request has no `X-Hub-Signature-256` header                                          | Ensure the curl script includes the `-H "X-Hub-Signature-256: ..."` header                  |
+| `401` — invalid signature     | Secret mismatch between `.env` and the value used to sign the payload                | Make sure both sides use the exact same secret string                                       |
+| `200` with `ignored: true`    | Repository `full_name` is not in the `ProductRepository` table                       | Add the repo to a product via the admin UI or seed the database                             |
+| `200` with `ignored: true`    | Event type is not one the webhook handles                                            | Set `X-GitHub-Event` to `release`, `push`, `pull_request`, `workflow_run` or `workflow_job` |
+| `200`, but no release job     | The tag has no published release, or the repository has no active releasable service | Publish the release first, and check the service catalog                                    |
+| `400` — empty body            | Request body is missing or not valid JSON                                            | Ensure `-d "$PAYLOAD"` is included and the JSON is valid                                    |
