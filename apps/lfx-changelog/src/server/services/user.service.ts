@@ -138,48 +138,72 @@ export class UserService {
 
   public async delete(id: string, callerId: string): Promise<void> {
     const prisma = getPrismaClient();
-    const target = await prisma.user.findUnique({ where: { id } });
-    if (!target) {
-      throw new NotFoundError(`User not found: ${id}`, { operation: 'delete', service: 'user' });
-    }
+    let snapshotName = 'Former user';
+    let snapshotAvatar: string | null = null;
+    type AuthoredBlogForIndex = {
+      id: string;
+      slug: string;
+      title: string;
+      excerpt: string | null;
+      description: string;
+      type: string;
+      status: string;
+      coverImageUrl: string | null;
+      publishedAt: Date | null;
+      createdAt: Date;
+      products: { product: { id: string; name: string } }[];
+    };
+    let authoredBlogs: AuthoredBlogForIndex[] = [];
 
-    const superAdminCount = await prisma.user.count({
-      where: { userRoleAssignments: { some: { role: PrismaUserRole.super_admin } } },
-    });
-    const targetIsSuperAdmin =
-      (await prisma.userRoleAssignment.count({
-        where: { userId: id, role: PrismaUserRole.super_admin },
-      })) > 0;
+    await prisma.$transaction(
+      async (tx) => {
+        // FOR UPDATE blocks concurrent inserts that FK this user until the snapshot + delete commit.
+        const locked = await tx.$queryRaw<{ id: string; name: string; avatar_url: string | null }[]>`
+          SELECT "id", "name", "avatar_url" FROM "users" WHERE "id" = ${id} FOR UPDATE
+        `;
+        const target = locked[0];
+        if (!target) {
+          throw new NotFoundError(`User not found: ${id}`, { operation: 'delete', service: 'user' });
+        }
 
-    // Last-Super-Admin is checked before self so a sole Super Admin deleting themselves
-    // is 409 (org invariant) rather than 403. Self-delete with other Super Admins remaining is 403.
-    if (targetIsSuperAdmin && superAdminCount <= 1) {
-      throw new ConflictError('The last Super Admin cannot be removed', { operation: 'delete', service: 'user' });
-    }
+        const superAdminCount = await tx.user.count({
+          where: { userRoleAssignments: { some: { role: PrismaUserRole.super_admin } } },
+        });
+        const targetIsSuperAdmin =
+          (await tx.userRoleAssignment.count({
+            where: { userId: id, role: PrismaUserRole.super_admin },
+          })) > 0;
 
-    if (id === callerId) {
-      throw new AuthorizationError('You cannot remove your own account', { operation: 'delete', service: 'user' });
-    }
+        // Last-Super-Admin is checked before self so a sole Super Admin deleting themselves
+        // is 409 (org invariant) rather than 403. Self-delete with other Super Admins remaining is 403.
+        if (targetIsSuperAdmin && superAdminCount <= 1) {
+          throw new ConflictError('The last Super Admin cannot be removed', { operation: 'delete', service: 'user' });
+        }
 
-    const snapshotName = target.name.trim() || 'Former user';
-    const snapshotAvatar = target.avatarUrl;
+        if (id === callerId) {
+          throw new AuthorizationError('You cannot remove your own account', { operation: 'delete', service: 'user' });
+        }
 
-    const authoredBlogs = await prisma.blog.findMany({
-      where: { createdBy: id, status: 'published' },
-      include: { products: { include: { product: { select: { id: true, name: true } } } } },
-    });
+        snapshotName = target.name.trim() || 'Former user';
+        snapshotAvatar = target.avatar_url;
 
-    await prisma.$transaction(async (tx) => {
-      await tx.changelogEntry.updateMany({
-        where: { createdBy: id },
-        data: { authorName: snapshotName, authorAvatarUrl: snapshotAvatar },
-      });
-      await tx.blog.updateMany({
-        where: { createdBy: id },
-        data: { authorName: snapshotName, authorAvatarUrl: snapshotAvatar },
-      });
-      await tx.user.delete({ where: { id } });
-    });
+        authoredBlogs = await tx.blog.findMany({
+          where: { createdBy: id, status: 'published' },
+          include: { products: { include: { product: { select: { id: true, name: true } } } } },
+        });
+
+        await tx.changelogEntry.updateMany({
+          where: { createdBy: id },
+          data: { authorName: snapshotName, authorAvatarUrl: snapshotAvatar },
+        });
+        await tx.blog.updateMany({
+          where: { createdBy: id },
+          data: { authorName: snapshotName, authorAvatarUrl: snapshotAvatar },
+        });
+        await tx.user.delete({ where: { id } });
+      },
+      { isolationLevel: 'Serializable' }
+    );
 
     for (const blog of authoredBlogs) {
       this.searchService

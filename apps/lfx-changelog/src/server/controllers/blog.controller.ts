@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { BlogService } from '../services/blog.service';
 import { mapPublicAuthor } from '../helpers/map-public-author.helper';
+import { BlogService, type BlogWithRelations } from '../services/blog.service';
 
 import type { NextFunction, Request, Response } from 'express';
 
@@ -128,12 +128,13 @@ export class BlogController {
     }
   }
 
-  private flattenBlogPost(post: any) {
+  private flattenBlogPost(post: BlogWithRelations) {
+    const { author, authorName, authorAvatarUrl, products, changelogs, ...rest } = post;
     return {
-      ...post,
-      author: mapPublicAuthor(post.author, post),
-      products: post.products?.map((bp: any) => bp.product),
-      changelogEntries: post.changelogs?.map((bc: any) => bc.changelogEntry),
+      ...rest,
+      author: mapPublicAuthor(author, { authorName, authorAvatarUrl }),
+      products: products?.map((bp) => bp.product),
+      changelogEntries: changelogs?.map((bc) => bc.changelogEntry),
     };
   }
 }

@@ -70,11 +70,11 @@ export class UserManagementPage {
   }
 
   public getRemoveButton(userId: string): Locator {
-    return this.page.locator(`[data-testid="user-management-remove-${userId}"]`);
+    return this.table.locator(`[data-testid="user-management-remove-${userId}"]`);
   }
 
   public getRemoveButtons(): Locator {
-    return this.page.locator('[data-testid^="user-management-remove-"]');
+    return this.table.locator('[data-testid^="user-management-remove-"]');
   }
 
   public async openRemoveDialog(userId: string) {

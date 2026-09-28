@@ -3,6 +3,7 @@
 
 import { expect, test } from '@playwright/test';
 import { createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
+import { getTestPrismaClient } from '../../helpers/db.helper.js';
 import { TEST_PRODUCTS, TEST_USERS } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
@@ -331,6 +332,23 @@ test.describe('Protected Users API (/api/users)', () => {
       const publishRes = await superAdminApi.patch(`/api/changelogs/${entryId}/publish`);
       expect(publishRes.status()).toBe(200);
 
+      const blogSlug = `e2e-former-blog-author-${Date.now()}`;
+      const blogCreateRes = await superAdminApi.post('/api/blogs', {
+        data: {
+          title: 'Former author blog',
+          slug: blogSlug,
+          description: 'Written by a user who will be removed.',
+          type: 'product_newsletter',
+          status: 'draft',
+        },
+      });
+      expect(blogCreateRes.status()).toBe(201);
+      const blogId = (await blogCreateRes.json()).data.id;
+      await getTestPrismaClient().blog.update({ where: { id: blogId }, data: { createdBy: throwaway.id } });
+
+      const blogPublishRes = await superAdminApi.patch(`/api/blogs/${blogId}/publish`);
+      expect(blogPublishRes.status()).toBe(200);
+
       const deleteRes = await superAdminApi.delete(`/api/users/${throwaway.id}`);
       expect(deleteRes.status()).toBe(204);
 
@@ -340,6 +358,13 @@ test.describe('Protected Users API (/api/users)', () => {
       expect(author.name).toBe(throwaway.name);
       expect(author.former).toBe(true);
       expect(author.id).toBeNull();
+
+      const publicBlogRes = await unauthApi.get(`/public/api/blog/${blogSlug}`);
+      expect(publicBlogRes.status()).toBe(200);
+      const blogAuthor = (await publicBlogRes.json()).data.author;
+      expect(blogAuthor.name).toBe(throwaway.name);
+      expect(blogAuthor.former).toBe(true);
+      expect(blogAuthor.id).toBeNull();
     });
 
     test('re-adding the same email creates a new user id', async () => {

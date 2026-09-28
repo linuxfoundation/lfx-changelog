@@ -11,9 +11,17 @@ import { AgentMemoryService } from './agent-memory.service';
 import { getPrismaClient } from './prisma.service';
 import { SearchService } from './search.service';
 
-import type { ChangelogDocument, ChangelogQueryParams, PaginatedResponse, PublicChangelogEntry, UnseenCount } from '@lfx-changelog/shared';
+import type { ChangelogDocument, ChangelogQueryParams, PaginatedResponse, PublicAuthor, PublicChangelogEntry, UnseenCount } from '@lfx-changelog/shared';
 
 type PaginatedResult<T> = Omit<PaginatedResponse<T>, 'success'>;
+
+type ChangelogEntryWithAuthorInclude = Prisma.ChangelogEntryGetPayload<{
+  include: { product: true; author: true };
+}>;
+
+type ChangelogEntryWithMappedAuthor = Omit<ChangelogEntryWithAuthorInclude, 'author' | 'authorName' | 'authorAvatarUrl'> & {
+  author?: PublicAuthor;
+};
 
 export class ChangelogService {
   private readonly searchService = new SearchService();
@@ -68,7 +76,7 @@ export class ChangelogService {
     }
   }
 
-  public async findAll(params: ChangelogQueryParams & { accessibleProductIds?: string[] }): Promise<PaginatedResult<PrismaChangelogEntry>> {
+  public async findAll(params: ChangelogQueryParams & { accessibleProductIds?: string[] }): Promise<PaginatedResult<ChangelogEntryWithMappedAuthor>> {
     const prisma = getPrismaClient();
     const { page, limit, skip } = this.sanitizePagination(params);
 
@@ -155,7 +163,7 @@ export class ChangelogService {
     status?: string;
     source?: string;
     createdBy: string;
-  }): Promise<PrismaChangelogEntry> {
+  }): Promise<ChangelogEntryWithMappedAuthor> {
     const prisma = getPrismaClient();
     try {
       const entry = await prisma.changelogEntry.create({
@@ -188,7 +196,7 @@ export class ChangelogService {
       status?: string;
       createdBy?: string;
     }
-  ): Promise<PrismaChangelogEntry> {
+  ): Promise<ChangelogEntryWithMappedAuthor> {
     const prisma = getPrismaClient();
     const existing = await prisma.changelogEntry.findUnique({ where: { id } });
     if (!existing) {
@@ -197,7 +205,7 @@ export class ChangelogService {
 
     const updateData: Record<string, unknown> = { ...data };
 
-    let updated: PrismaChangelogEntry;
+    let updated: ChangelogEntryWithAuthorInclude;
     try {
       updated = await prisma.changelogEntry.update({
         where: { id },
@@ -217,7 +225,7 @@ export class ChangelogService {
     return this.withMappedAuthor(updated);
   }
 
-  public async publish(id: string, publishedByUserId?: string): Promise<PrismaChangelogEntry> {
+  public async publish(id: string, publishedByUserId?: string): Promise<ChangelogEntryWithMappedAuthor> {
     const prisma = getPrismaClient();
     const entry = await prisma.changelogEntry.findUnique({
       where: { id },
@@ -251,7 +259,7 @@ export class ChangelogService {
     return this.withMappedAuthor(published);
   }
 
-  public async unpublish(id: string): Promise<PrismaChangelogEntry> {
+  public async unpublish(id: string): Promise<ChangelogEntryWithMappedAuthor> {
     const prisma = getPrismaClient();
     const entry = await prisma.changelogEntry.findUnique({ where: { id } });
     if (!entry) {
@@ -319,7 +327,7 @@ export class ChangelogService {
     });
   }
 
-  public async findById(id: string): Promise<PrismaChangelogEntry> {
+  public async findById(id: string): Promise<ChangelogEntryWithMappedAuthor> {
     const prisma = getPrismaClient();
     const entry = await prisma.changelogEntry.findUnique({
       where: { id },
@@ -477,13 +485,7 @@ export class ChangelogService {
     } as PublicChangelogEntry;
   }
 
-  private withMappedAuthor<
-    T extends {
-      author?: { id: string; name: string; avatarUrl: string | null } | null;
-      authorName?: string | null;
-      authorAvatarUrl?: string | null;
-    },
-  >(entry: T) {
+  private withMappedAuthor(entry: ChangelogEntryWithAuthorInclude): ChangelogEntryWithMappedAuthor {
     const { authorName, authorAvatarUrl, author, ...rest } = entry;
     return {
       ...rest,
