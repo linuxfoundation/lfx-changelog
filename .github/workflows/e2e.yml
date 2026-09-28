@@ -82,6 +82,8 @@ jobs:
           echo "SLACK_CLIENT_SECRET=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
           echo "SLACK_TOKEN_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "WEBHOOK_STATE_SECRET=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+          # GitHub App webhooks — the spec signs its own payloads with this, so any value works
+          echo "GITHUB_WEBHOOK_SECRET=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
 
       - name: Generate Prisma client
         run: yarn workspace lfx-changelog prisma generate

@@ -100,6 +100,9 @@ export class ChangelogAgentService {
   /**
    * Cancels a running/pending agent job.
    * Aborts the controller if active, updates DB status, clears lock, and emits SSE events.
+   *
+   * Returns true when this call cancelled it, false when it was already terminal — which is a
+   * refusal rather than a failure, and is what the endpoint answers 400 for.
    */
   public async cancelJob(jobId: string, productId: string): Promise<boolean> {
     const prisma = getPrismaClient();

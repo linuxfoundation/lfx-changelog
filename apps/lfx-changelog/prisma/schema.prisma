@@ -34,6 +34,13 @@ enum DeploymentType {
   platform_subchart
 }
 
+enum ReleaseJobStatus {
+  pending
+  running
+  succeeded
+  failed
+}
+
 enum ChangelogSource {
   manual
   automated
@@ -150,8 +157,51 @@ model ReleasableService {
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
   repository ProductRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  jobs       ReleaseJob[]
 
   @@map("releasable_services")
+}
+
+/// One attempt at releasing a service: the tag that was published and what the repository's CI
+/// then did with it. Opened by the publish endpoint, which knows who asked, and by the release
+/// webhook, which does not — so a tag pushed outside Changelog is tracked just the same.
+model ReleaseJob {
+  id                  String           @id @default(uuid())
+  releasableServiceId String           @map("releasable_service_id")
+  tagName             String           @map("tag_name")
+  status              ReleaseJobStatus @default(pending)
+  /// Who asked for the release in Changelog. Null for a tag pushed straight to GitHub, and for
+  /// one published before this was recorded. GitHub credits the App rather than a person when
+  /// Changelog publishes, so this is the only place the human behind it is known.
+  requestedById       String?          @map("requested_by_id")
+
+  /// Run ids exceed a 32-bit int and are only ever compared or interpolated into a URL, so they
+  /// are stored as text rather than BigInt, which JSON cannot serialise. Not unique: a run is
+  /// unique on GitHub, but a repository tracked by several products has a job per product and
+  /// the one run reports to all of them.
+  workflowRunId       String?          @map("workflow_run_id")
+  workflowRunUrl      String?          @map("workflow_run_url")
+  workflowName        String?          @map("workflow_name")
+  conclusion          String?
+  /// GitHub's own last-modified time for the run, which advances on every state change. Kept so
+  /// that deliveries for one run can be ordered: a redelivery is older and must not undo the
+  /// state it already reported, while a re-run reuses the id and is newer, so it may.
+  runUpdatedAt        DateTime?        @map("run_updated_at")
+  /// Per-job progress from workflow_job events, newest state per job, for the newest attempt.
+  steps               Json             @default("[]")
+
+  startedAt           DateTime?        @map("started_at")
+  completedAt         DateTime?        @map("completed_at")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  releasableService ReleasableService @relation(fields: [releasableServiceId], references: [id], onDelete: Cascade)
+  requestedBy       User?             @relation(fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@unique([releasableServiceId, tagName])
+  @@index([releasableServiceId, createdAt])
+  @@index([workflowRunId])
+  @@map("release_jobs")
 }
 
 model GitHubRelease {
@@ -219,6 +269,7 @@ model User {
   blogs               Blog[]
   slackNotifyUsers    ProductSlackNotifyUser[]
   contributorsLinked  Contributor[]           @relation("ContributorSlackLinker")
+  releaseJobs         ReleaseJob[]
 
   @@map("users")
 }
