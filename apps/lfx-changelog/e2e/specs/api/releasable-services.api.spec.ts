@@ -27,14 +27,14 @@ type ServiceRow = {
   productName: string;
 };
 
-test.describe('Releasable services API (/api/releases/services)', () => {
+test.describe('Releasable services API (/api/github/releases/services)', () => {
   let unauthApi: APIRequestContext;
   let superAdminApi: APIRequestContext;
   let productAdminApi: APIRequestContext;
   let editorApi: APIRequestContext;
 
   async function listAs(api: APIRequestContext): Promise<ServiceRow[]> {
-    const res = await api.get('/api/releases/services');
+    const res = await api.get('/api/github/releases/services');
     expect(res.status()).toBe(200);
 
     const body = await res.json();
@@ -55,8 +55,8 @@ test.describe('Releasable services API (/api/releases/services)', () => {
   });
 
   test.describe('Authentication (401)', () => {
-    test('GET /api/releases/services returns 401 without auth', async () => {
-      const res = await unauthApi.get('/api/releases/services');
+    test('GET /api/github/releases/services returns 401 without auth', async () => {
+      const res = await unauthApi.get('/api/github/releases/services');
       expect(res.status()).toBe(401);
       expect((await res.json()).code).toBe('AUTHENTICATION_REQUIRED');
     });
@@ -73,7 +73,7 @@ test.describe('Releasable services API (/api/releases/services)', () => {
 
       const apiKeyCtx = await createApiKeyContext(rawKey, baseURL);
       try {
-        const res = await apiKeyCtx.get('/api/releases/services');
+        const res = await apiKeyCtx.get('/api/github/releases/services');
         expect(res.status()).toBe(403);
         expect((await res.json()).code).toBe('AUTHORIZATION_REQUIRED');
       } finally {
@@ -83,7 +83,7 @@ test.describe('Releasable services API (/api/releases/services)', () => {
     });
 
     test('an editor cannot list releasable services', async () => {
-      const res = await editorApi.get('/api/releases/services');
+      const res = await editorApi.get('/api/github/releases/services');
       expect(res.status()).toBe(403);
     });
   });
