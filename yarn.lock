@@ -575,77 +575,77 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk-darwin-arm64@npm:0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk-darwin-arm64@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk-darwin-arm64@npm:0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk-darwin-arm64@npm:0.3.284"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk-darwin-x64@npm:0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk-darwin-x64@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk-darwin-x64@npm:0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk-darwin-x64@npm:0.3.284"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk-linux-arm64-musl@npm:0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk-linux-arm64-musl@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk-linux-arm64-musl@npm:0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk-linux-arm64-musl@npm:0.3.284"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk-linux-arm64@npm:0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk-linux-arm64@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk-linux-arm64@npm:0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk-linux-arm64@npm:0.3.284"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk-linux-x64-musl@npm:0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk-linux-x64-musl@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk-linux-x64-musl@npm:0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk-linux-x64-musl@npm:0.3.284"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk-linux-x64@npm:0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk-linux-x64@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk-linux-x64@npm:0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk-linux-x64@npm:0.3.284"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk-win32-arm64@npm:0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk-win32-arm64@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk-win32-arm64@npm:0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk-win32-arm64@npm:0.3.284"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk-win32-x64@npm:0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk-win32-x64@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk-win32-x64@npm:0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk-win32-x64@npm:0.3.284"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@anthropic-ai/claude-agent-sdk@npm:^0.2.128":
-  version: 0.2.128
-  resolution: "@anthropic-ai/claude-agent-sdk@npm:0.2.128"
+"@anthropic-ai/claude-agent-sdk@npm:^0.3.284":
+  version: 0.3.284
+  resolution: "@anthropic-ai/claude-agent-sdk@npm:0.3.284"
   dependencies:
-    "@anthropic-ai/claude-agent-sdk-darwin-arm64": "npm:0.2.128"
-    "@anthropic-ai/claude-agent-sdk-darwin-x64": "npm:0.2.128"
-    "@anthropic-ai/claude-agent-sdk-linux-arm64": "npm:0.2.128"
-    "@anthropic-ai/claude-agent-sdk-linux-arm64-musl": "npm:0.2.128"
-    "@anthropic-ai/claude-agent-sdk-linux-x64": "npm:0.2.128"
-    "@anthropic-ai/claude-agent-sdk-linux-x64-musl": "npm:0.2.128"
-    "@anthropic-ai/claude-agent-sdk-win32-arm64": "npm:0.2.128"
-    "@anthropic-ai/claude-agent-sdk-win32-x64": "npm:0.2.128"
-    "@anthropic-ai/sdk": "npm:^0.81.0"
-    "@modelcontextprotocol/sdk": "npm:^1.29.0"
+    "@anthropic-ai/claude-agent-sdk-darwin-arm64": "npm:0.3.284"
+    "@anthropic-ai/claude-agent-sdk-darwin-x64": "npm:0.3.284"
+    "@anthropic-ai/claude-agent-sdk-linux-arm64": "npm:0.3.284"
+    "@anthropic-ai/claude-agent-sdk-linux-arm64-musl": "npm:0.3.284"
+    "@anthropic-ai/claude-agent-sdk-linux-x64": "npm:0.3.284"
+    "@anthropic-ai/claude-agent-sdk-linux-x64-musl": "npm:0.3.284"
+    "@anthropic-ai/claude-agent-sdk-win32-arm64": "npm:0.3.284"
+    "@anthropic-ai/claude-agent-sdk-win32-x64": "npm:0.3.284"
   peerDependencies:
+    "@anthropic-ai/sdk": ">=0.93.0"
+    "@modelcontextprotocol/sdk": ^1.29.0
     zod: ^4.0.0
   dependenciesMeta:
     "@anthropic-ai/claude-agent-sdk-darwin-arm64":
@@ -664,15 +664,16 @@ __metadata:
       optional: true
     "@anthropic-ai/claude-agent-sdk-win32-x64":
       optional: true
-  checksum: 10c0/8920f17ec6331ced6beaa4623adb8b1a53831c7a7cefa28f28b3de64f6beb4095764c5f1461d0be7726053e960964e27c74d6447271ae55dfee2e6ff13f9b172
+  checksum: 10c0/3d6773deb68e26b5aefbea0c1ec56462c1c149c53c67b209c968ed6713e949ec58cc817c2cb069c1c2086135a38bb6fd60f25f83d2a1c674d69e031e06b2c2ff
   languageName: node
   linkType: hard
 
-"@anthropic-ai/sdk@npm:^0.81.0":
-  version: 0.81.0
-  resolution: "@anthropic-ai/sdk@npm:0.81.0"
+"@anthropic-ai/sdk@npm:^0.129.0":
+  version: 0.129.0
+  resolution: "@anthropic-ai/sdk@npm:0.129.0"
   dependencies:
     json-schema-to-ts: "npm:^3.1.1"
+    standardwebhooks: "npm:^1.0.0"
   peerDependencies:
     zod: ^3.25.0 || ^4.0.0
   peerDependenciesMeta:
@@ -680,7 +681,7 @@ __metadata:
       optional: true
   bin:
     anthropic-ai-sdk: bin/cli
-  checksum: 10c0/9ce1de04f88c05a74e67d07e8707d74815df8a9ad4977fbd7ad6fc146cef521214f11c4faeab5f5c00d76ee5671bf4e223dadf0e2f98c2c979aa9e33c8f89d8d
+  checksum: 10c0/d4eba38c978ef5ecf9cce4e47b5dd927a78e1b20c6725a7cb61a77cf6e9dfa4543767165c7a8499f9c949466093e8e3d8c8416bdb0c0d78de81d54a8b2b93f6d
   languageName: node
   linkType: hard
 
@@ -992,9 +993,9 @@ __metadata:
   linkType: hard
 
 "@babel/runtime@npm:^7.18.3":
-  version: 7.29.2
-  resolution: "@babel/runtime@npm:7.29.2"
-  checksum: 10c0/30b80a0140d16467792e1bbeb06f655b0dab70407da38dfac7fedae9c859f9ae9d846ef14ad77bd3814c064295fe9b1bc551f1541ea14646ae9f22b71a8bc17a
+  version: 7.29.7
+  resolution: "@babel/runtime@npm:7.29.7"
+  checksum: 10c0/ca11572f7146b21e0bde6a9ed4bb6a89eafbee5f0944c7eb54d0d8a2dac962c33638a1d611e14faa71dfbb92b4b5f9236232208568a6b7d5c6f3f39ddb91771e
   languageName: node
   linkType: hard
 
@@ -1675,15 +1676,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hono/node-server@npm:^1.19.9":
-  version: 1.19.9
-  resolution: "@hono/node-server@npm:1.19.9"
-  peerDependencies:
-    hono: ^4
-  checksum: 10c0/de18c06b6b266dc45fe55fb82053bd1da8fe84939c49b6fbab4d2448b679d54ab5affbf8b15de9bead26f29b1755284d770aafb5ad14a8e4b3cfb4f79334554e
-  languageName: node
-  linkType: hard
-
 "@hono/node-server@npm:^1.19.9 || ^2.0.5":
   version: 2.1.3
   resolution: "@hono/node-server@npm:2.1.3"
@@ -2199,39 +2191,6 @@ __metadata:
     zod:
       optional: false
   checksum: 10c0/6d12d5c88048b42b0d64906222f804eecbfc0aae02fc42a200d2438f037276cc7863510a8ce649e82c96d5972f62a58bfbdedf79624b0558a607738f5e58b97e
-  languageName: node
-  linkType: hard
-
-"@modelcontextprotocol/sdk@npm:^1.29.0":
-  version: 1.29.0
-  resolution: "@modelcontextprotocol/sdk@npm:1.29.0"
-  dependencies:
-    "@hono/node-server": "npm:^1.19.9"
-    ajv: "npm:^8.17.1"
-    ajv-formats: "npm:^3.0.1"
-    content-type: "npm:^1.0.5"
-    cors: "npm:^2.8.5"
-    cross-spawn: "npm:^7.0.5"
-    eventsource: "npm:^3.0.2"
-    eventsource-parser: "npm:^3.0.0"
-    express: "npm:^5.2.1"
-    express-rate-limit: "npm:^8.2.1"
-    hono: "npm:^4.11.4"
-    jose: "npm:^6.1.3"
-    json-schema-typed: "npm:^8.0.2"
-    pkce-challenge: "npm:^5.0.0"
-    raw-body: "npm:^3.0.0"
-    zod: "npm:^3.25 || ^4.0"
-    zod-to-json-schema: "npm:^3.25.1"
-  peerDependencies:
-    "@cfworker/json-schema": ^4.1.1
-    zod: ^3.25 || ^4.0
-  peerDependenciesMeta:
-    "@cfworker/json-schema":
-      optional: true
-    zod:
-      optional: false
-  checksum: 10c0/7c4bc339205b1652330cd4e6b121cc859079655f2b9c0506bbb15563ba0d07924bda3d949705530532db7f4d2cb86d633dc8f92bc32803d97c7bece2ac63e29f
   languageName: node
   linkType: hard
 
@@ -4519,6 +4478,13 @@ __metadata:
   version: 4.0.0
   resolution: "@sindresorhus/merge-streams@npm:4.0.0"
   checksum: 10c0/482ee543629aa1933b332f811a1ae805a213681ecdd98c042b1c1b89387df63e7812248bb4df3910b02b3cc5589d3d73e4393f30e197c9dde18046ccd471fc6b
+  languageName: node
+  linkType: hard
+
+"@stablelib/base64@npm:^1.0.0":
+  version: 1.0.1
+  resolution: "@stablelib/base64@npm:1.0.1"
+  checksum: 10c0/6330720f021819d19cecfe274111b79a256caa81df478d6b0ae7effc8842b96915b6aeed85926ff05b4d48ec1fc78ad043d928b730ee4e6cc6e8cba6aa097bed
   languageName: node
   linkType: hard
 
@@ -7565,6 +7531,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fast-sha256@npm:^1.3.0":
+  version: 1.3.0
+  resolution: "fast-sha256@npm:1.3.0"
+  checksum: 10c0/87f9e4baa7639576cf60a2b6235c9f436e1a1c52323abbd8a705b5bea8355500acf176f2aed0c14f2ecd6d6007e26151461bab2f27b8953bcca8d9d6b76a86e4
+  languageName: node
+  linkType: hard
+
 "fast-uri@npm:^3.0.1":
   version: 3.1.0
   resolution: "fast-uri@npm:3.1.0"
@@ -9008,13 +8981,15 @@ __metadata:
     "@angular/platform-server": "npm:^20.3.32"
     "@angular/router": "npm:^20.3.32"
     "@angular/ssr": "npm:^20.3.37"
-    "@anthropic-ai/claude-agent-sdk": "npm:^0.2.128"
+    "@anthropic-ai/claude-agent-sdk": "npm:^0.3.284"
+    "@anthropic-ai/sdk": "npm:^0.129.0"
     "@asteasolutions/zod-to-openapi": "npm:^9.1.0"
     "@datadog/browser-rum": "npm:7.14.0"
     "@eslint/js": "npm:^9.39.5"
     "@lfx-changelog/mcp-server": "workspace:*"
     "@lfx-changelog/shared": "workspace:*"
     "@linuxfoundation/lfx-ui-core": "npm:^0.2.0"
+    "@modelcontextprotocol/sdk": "npm:^1.31.0"
     "@opensearch-project/opensearch": "npm:~3.6.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/auto-instrumentations-node": "npm:^0.80.0"
@@ -12056,6 +12031,16 @@ __metadata:
   dependencies:
     minipass: "npm:^7.0.3"
   checksum: 10c0/cf6408a18676c57ff2ed06b8a20dc64bb3e748e5c7e095332e6aecaa2b8422b1e94a739a8453bf65156a8a47afe23757ba4ab52d3ea3b62322dc40875763e17a
+  languageName: node
+  linkType: hard
+
+"standardwebhooks@npm:^1.0.0":
+  version: 1.1.1
+  resolution: "standardwebhooks@npm:1.1.1"
+  dependencies:
+    "@stablelib/base64": "npm:^1.0.0"
+    fast-sha256: "npm:^1.3.0"
+  checksum: 10c0/6971c8f12a718c26779f03219db62ca7af9f6f584f6810a0d5288cb19946777968f4e3bc2fd71d8e1bf11b5f423c48b6a83f762093a4db4d68ba2cc12095fd4f
   languageName: node
   linkType: hard
 

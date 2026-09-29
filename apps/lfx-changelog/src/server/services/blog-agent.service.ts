@@ -663,6 +663,7 @@ export class BlogAgentService {
 
     return createSdkMcpServer({
       name: 'blog-tools',
+      alwaysLoad: true,
       tools: [getChangelogsForPeriod, searchPastBlogs, createBlogDraft, updateBlogDraft, validateBlogDraft],
     });
   }
