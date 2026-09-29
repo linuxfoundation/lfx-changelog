@@ -17,7 +17,6 @@ import { productRegistry } from './paths/products.path';
 import { publicChangelogRegistry } from './paths/public-changelogs.path';
 import { publicProductRegistry } from './paths/public-products.path';
 import { publicRoadmapRegistry } from './paths/public-roadmap.path';
-import { releasableServiceRegistry } from './paths/releasable-services.path';
 import { searchRegistry } from './paths/search.path';
 import { userRegistry } from './paths/users.path';
 
@@ -46,7 +45,6 @@ const allRegistries = [
   productRegistry,
   changelogRegistry,
   releaseRegistry,
-  releasableServiceRegistry,
   userRegistry,
   agentJobRegistry,
   contributorRegistry,
