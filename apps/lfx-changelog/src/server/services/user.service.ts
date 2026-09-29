@@ -8,7 +8,7 @@ import { AuthorizationError, ConflictError, NotFoundError } from '../errors';
 import { serverLogger } from '../server-logger';
 
 import { getPrismaClient } from './prisma.service';
-import { SearchService, toBlogDocument } from './search.service';
+import { SearchService } from './search.service';
 
 import type { UpdateUserRequest } from '@lfx-changelog/shared';
 
@@ -42,6 +42,9 @@ export class UserService {
 
   public async createWithRole(data: { email: string; name: string; role: string; productId?: string; productIds?: string[] }): Promise<PrismaUser> {
     const prisma = getPrismaClient();
+    if (data.email === BOT_EMAIL) {
+      throw new ConflictError('That email is reserved for the automation bot', { operation: 'createWithRole', service: 'user' });
+    }
     let resolvedProductIds: (string | null)[] = [null];
     if (data.productIds?.length) {
       resolvedProductIds = data.productIds;
@@ -106,31 +109,29 @@ export class UserService {
   }
 
   public async assignRole(userId: string, role: string, productId: string | null): Promise<PrismaRoleAssignment> {
-    const prisma = getPrismaClient();
-    await this.findActiveById(userId, 'assignRole');
-    return prisma.userRoleAssignment.create({
-      data: {
-        userId,
-        role: role as PrismaUserRole,
-        productId,
-      },
-      include: { product: true },
-    });
+    return this.withActiveUser(userId, 'assignRole', (tx) =>
+      tx.userRoleAssignment.create({
+        data: {
+          userId,
+          role: role as PrismaUserRole,
+          productId,
+        },
+        include: { product: true },
+      })
+    );
   }
 
   public async assignRoles(userId: string, role: string, productIds: string[]): Promise<PrismaUser> {
-    const prisma = getPrismaClient();
-    await this.findActiveById(userId, 'assignRoles');
-    await prisma.$transaction(async (tx) => {
-      await tx.userRoleAssignment.createMany({
+    await this.withActiveUser(userId, 'assignRoles', (tx) =>
+      tx.userRoleAssignment.createMany({
         data: productIds.map((pid) => ({
           userId,
           role: role as PrismaUserRole,
           productId: pid || null,
         })),
         skipDuplicates: true,
-      });
-    });
+      })
+    );
     return this.findById(userId);
   }
 
@@ -153,6 +154,9 @@ export class UserService {
     if (emailChanged && existing.email === BOT_EMAIL) {
       throw new ConflictError("The automation bot's email cannot be changed", { operation: 'update', service: 'user' });
     }
+    if (emailChanged && data.email === BOT_EMAIL) {
+      throw new ConflictError('That email is reserved for the automation bot', { operation: 'update', service: 'user' });
+    }
 
     let updated: PrismaUser;
     try {
@@ -170,7 +174,9 @@ export class UserService {
 
     serverLogger.info({ userId: id, updatedBy: callerId, fields: Object.keys(data) }, 'User updated');
     if (data.name !== undefined && data.name !== existing.name) {
-      this.reindexAuthoredBlogs(id).catch((err) => serverLogger.warn({ err, userId: id }, 'Failed to reindex blogs after user rename'));
+      this.searchService
+        .indexPublishedBlogs({ createdBy: id })
+        .catch((err) => serverLogger.warn({ err, userId: id }, 'Failed to reindex blogs after user rename'));
     }
     return updated;
   }
@@ -178,7 +184,7 @@ export class UserService {
   public async deactivate(id: string, callerId: string): Promise<PrismaUser> {
     const prisma = getPrismaClient();
     try {
-      // Serializable so two concurrent deactivations can't each count the other as the remaining Super Admin
+      // Serializable so concurrent deactivations can't each count the other as the last Super Admin, and a racing withActiveUser() write fails with P2034
       await prisma.$transaction(
         async (tx) => {
           const target = await tx.user.findUnique({ where: { id }, include: { userRoleAssignments: true } });
@@ -204,15 +210,13 @@ export class UserService {
           const now = new Date();
           await tx.userRoleAssignment.deleteMany({ where: { userId: id } });
           await tx.apiKey.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: now } });
+          await tx.productSlackNotifyUser.deleteMany({ where: { userId: id } });
           await tx.user.update({ where: { id }, data: { deactivatedAt: now } });
         },
         { isolationLevel: 'Serializable' }
       );
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
-        throw new ConflictError('Another change to this user was in progress. Try again.', { operation: 'deactivate', service: 'user' });
-      }
-      throw error;
+      this.rethrowConcurrencyConflict(error, 'deactivate');
     }
 
     serverLogger.info({ userId: id, deactivatedBy: callerId }, 'User deactivated');
@@ -224,28 +228,42 @@ export class UserService {
     const user = await this.findById(id);
     if (!user.deactivatedAt) return user;
 
-    await prisma.user.update({ where: { id }, data: { deactivatedAt: null } });
+    const now = new Date();
+    // Clears any key or role that escaped deactivate(), so reactivation never restores access
+    await prisma.$transaction([
+      prisma.apiKey.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: now } }),
+      prisma.userRoleAssignment.deleteMany({ where: { userId: id } }),
+      prisma.user.update({ where: { id }, data: { deactivatedAt: null } }),
+    ]);
     serverLogger.info({ userId: id, reactivatedBy: callerId }, 'User reactivated');
     return this.findById(id);
   }
 
-  private async findActiveById(id: string, operation: string): Promise<PrismaUser> {
-    const user = await this.findById(id);
-    if (user.deactivatedAt) {
-      throw new ConflictError('Reactivate this user before assigning roles', { operation, service: 'user' });
+  private async withActiveUser<T>(userId: string, operation: string, write: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    const prisma = getPrismaClient();
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          const user = await tx.user.findUnique({ where: { id: userId }, select: { deactivatedAt: true } });
+          if (!user) {
+            throw new NotFoundError(`User not found: ${userId}`, { operation, service: 'user' });
+          }
+          if (user.deactivatedAt) {
+            throw new ConflictError('Reactivate this user before assigning roles', { operation, service: 'user' });
+          }
+          return write(tx);
+        },
+        { isolationLevel: 'Serializable' }
+      );
+    } catch (error) {
+      this.rethrowConcurrencyConflict(error, operation);
     }
-    return user;
   }
 
-  private async reindexAuthoredBlogs(userId: string): Promise<void> {
-    const prisma = getPrismaClient();
-    const blogs = await prisma.blog.findMany({
-      where: { createdBy: userId, status: 'published' },
-      include: {
-        author: { select: { name: true, avatarUrl: true } },
-        products: { include: { product: { select: { id: true, name: true } } } },
-      },
-    });
-    await Promise.all(blogs.map((blog) => this.searchService.indexBlogDocument(toBlogDocument(blog))));
+  private rethrowConcurrencyConflict(error: unknown, operation: string): never {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+      throw new ConflictError('Another change to this user was in progress. Try again.', { operation, service: 'user' });
+    }
+    throw error;
   }
 }

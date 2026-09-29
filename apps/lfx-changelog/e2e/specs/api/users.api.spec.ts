@@ -268,8 +268,10 @@ test.describe('Protected Users API (/api/users)', () => {
       expect((await res.json()).error).toBe('You cannot deactivate your own account');
     });
 
-    test('deactivating strips roles, blocks role assignment, and keeps the user listed', async () => {
+    test('deactivating strips roles and Slack subscriptions, blocks re-granting them, and keeps the user listed', async () => {
       const throwaway = await createThrowaway();
+      const prisma = getTestPrismaClient();
+      await prisma.productSlackNotifyUser.create({ data: { productId: testProductId, userId: throwaway.id } });
 
       const res = await superAdminApi.post(`/api/users/${throwaway.id}/deactivate`);
       expect(res.status()).toBe(200);
@@ -282,6 +284,10 @@ test.describe('Protected Users API (/api/users)', () => {
 
       const assignRes = await superAdminApi.post(`/api/users/${throwaway.id}/roles`, { data: { role: 'editor', productId: testProductId } });
       expect(assignRes.status()).toBe(409);
+
+      expect(await prisma.productSlackNotifyUser.count({ where: { userId: throwaway.id } })).toBe(0);
+      const notifyRes = await superAdminApi.post(`/api/products/${testProductId}/notify-users`, { data: { userId: throwaway.id } });
+      expect(notifyRes.status()).toBe(409);
 
       const again = await superAdminApi.post(`/api/users/${throwaway.id}/deactivate`);
       expect(again.status()).toBe(200);
@@ -306,12 +312,13 @@ test.describe('Protected Users API (/api/users)', () => {
       await prisma.user.update({ where: { email: editorEmail }, data: { deactivatedAt: new Date() } });
       try {
         expect((await editorApi.get('/api/changelogs?limit=1')).status()).toBe(403);
+        expect((await editorApi.get('/api/users/me')).status()).toBe(403);
       } finally {
         await prisma.user.update({ where: { email: editorEmail }, data: { deactivatedAt: null } });
       }
     });
 
-    test('an unrevoked API key is still rejected while its owner is deactivated', async ({}, testInfo) => {
+    test('a key or role that escapes deactivation is rejected, and cleared on reactivate', async ({}, testInfo) => {
       const throwaway = await createThrowaway();
       const rawKey = 'lfx_' + randomBytes(24).toString('base64url');
       const prisma = getTestPrismaClient();
@@ -330,6 +337,11 @@ test.describe('Protected Users API (/api/users)', () => {
       try {
         expect((await superAdminApi.post(`/api/users/${throwaway.id}/deactivate`)).status()).toBe(200);
         await prisma.apiKey.updateMany({ where: { userId: throwaway.id }, data: { revokedAt: null } });
+        expect((await keyApi.get('/api/products')).status()).toBe(401);
+
+        await prisma.userRoleAssignment.create({ data: { userId: throwaway.id, role: 'editor', productId: testProductId } });
+        const reactivated = (await (await superAdminApi.post(`/api/users/${throwaway.id}/reactivate`)).json()).data;
+        expect(reactivated.roles).toEqual([]);
         expect((await keyApi.get('/api/products')).status()).toBe(401);
       } finally {
         await keyApi.dispose();
@@ -350,6 +362,17 @@ test.describe('Protected Users API (/api/users)', () => {
       const patchRes = await superAdminApi.patch(`/api/users/${bot.id}`, { data: { email: `renamed-${BOT_EMAIL}` } });
       expect(patchRes.status()).toBe(409);
       expect((await patchRes.json()).error).toBe("The automation bot's email cannot be changed");
+    });
+
+    test('BOT_EMAIL is reserved: it cannot be given to another user or used for a new one', async () => {
+      const throwaway = await createThrowaway();
+      const patchRes = await superAdminApi.patch(`/api/users/${throwaway.id}`, { data: { email: BOT_EMAIL } });
+      expect(patchRes.status()).toBe(409);
+      expect((await patchRes.json()).error).toBe('That email is reserved for the automation bot');
+
+      const createRes = await superAdminApi.post('/api/users', { data: { email: BOT_EMAIL, name: 'Impostor', role: 'editor', productId: testProductId } });
+      expect(createRes.status()).toBe(409);
+      expect((await createRes.json()).error).toBe('That email is reserved for the automation bot');
     });
 
     test('personal API keys stop working after deactivate and stay revoked after reactivate', async ({}, testInfo) => {

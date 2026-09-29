@@ -142,12 +142,12 @@ The `authorize()` middleware factory consolidates all authorization logic into a
 ```text
 Request
   │
-  ├─ Has API key? ──► Validate key (hash, expiration, revocation)
+  ├─ Has API key? ──► Validate key (hash, expiration, revocation, owner not deactivated)
   │                    └─► Check required scope
   │                    └─► Fall through to role checks
   │
   └─ Has session? ──► Validate OIDC session
-                       └─► Look up user in DB
+                       └─► Look up active (not deactivated) user in DB
                        └─► Fall through to role checks
                               │
                               ├─ productRole? ──► Check user's product-scoped role
@@ -223,7 +223,7 @@ https://changelog.lfx.dev/docs
 Returned when:
 
 - No API key or session cookie is provided
-- The API key is invalid, expired, or revoked
+- The API key is invalid, expired, or revoked, or its owner has been deactivated
 
 ### Authorization Errors (403)
 

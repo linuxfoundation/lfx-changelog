@@ -203,6 +203,7 @@ Documents are indexed automatically via fire-and-forget calls when content chang
 | Blog unpublished                | Document removed from index               |
 | Blog deleted                    | Document removed from index               |
 | Blog products/changelogs linked | Document re-indexed with new associations |
+| Author renamed                  | Author's published blogs re-indexed       |
 
 Index operations are **asynchronous and non-blocking** --- if OpenSearch is temporarily unavailable, the failure is logged but doesn't affect the API response.
 

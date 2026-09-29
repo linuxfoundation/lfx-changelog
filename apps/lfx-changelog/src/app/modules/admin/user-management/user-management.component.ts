@@ -112,7 +112,7 @@ export class UserManagementComponent {
       component: ConfirmDialogComponent,
       testId: 'user-management-deactivate-dialog',
       inputs: {
-        message: `Deactivate ${user.name} (${user.email})? All of their roles are removed and their API keys are revoked. Their published posts are unchanged, and you can reactivate them later.`,
+        message: `Deactivate ${user.name} (${user.email})? All of their roles are removed, their API keys are revoked, and they're unsubscribed from Slack draft notifications. Their published posts are unchanged, and you can reactivate them later.`,
         confirmLabel: 'Deactivate',
         danger: true,
       },

@@ -122,6 +122,7 @@ export {
   OpenSearchHitsResponseSchema,
   OpenSearchQueryClauseSchema,
   OpenSearchSearchResponseSchema,
+  ReindexResultSchema,
 } from './opensearch.schema.js';
 export { AddSlackNotifyUserRequestSchema, ProductSchema, ProductSlackNotifyUserSchema } from './product.schema.js';
 export { PublicAuthorSchema, PublicChangelogEntrySchema, PublicProductSchema } from './public.schema.js';
@@ -278,6 +279,7 @@ export type {
   OpenSearchHitsResponse,
   OpenSearchQueryClause,
   OpenSearchSearchResponse,
+  ReindexResult,
 } from './opensearch.schema.js';
 export type { AddSlackNotifyUserRequest, Product, ProductSlackNotifyUser } from './product.schema.js';
 export type { PublicAuthor, PublicChangelogEntry, PublicProduct } from './public.schema.js';

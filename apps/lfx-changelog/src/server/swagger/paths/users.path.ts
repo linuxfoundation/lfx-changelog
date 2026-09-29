@@ -34,6 +34,7 @@ userRegistry.registerPath({
       },
     },
     401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — the signed-in user is not in the directory or is deactivated' },
   },
 });
 
@@ -85,7 +86,7 @@ userRegistry.registerPath({
     },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires SUPER_ADMIN role' },
-    409: { description: 'Conflict — user with this email already exists' },
+    409: { description: 'Conflict — user with this email already exists, or the email is reserved for the automation bot' },
   },
 });
 
@@ -120,6 +121,7 @@ userRegistry.registerPath({
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN role or above' },
     404: { description: 'User not found' },
+    409: { description: 'Conflict — user is deactivated; reactivate before assigning roles' },
   },
 });
 
@@ -150,7 +152,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'Deactivate a user',
   description:
-    "Removes all of the user's role assignments, revokes their API keys, and marks them deactivated so they no longer resolve as a signed-in user. Authored content is untouched. Idempotent.\n\n**Required privilege:** SUPER_ADMIN role. Callers cannot deactivate themselves, the automation bot, or the last Super Admin.",
+    "Removes all of the user's role assignments, revokes their API keys, removes their Slack draft-notification subscriptions, and marks them deactivated so they no longer resolve as a signed-in user. Authored content is untouched. Idempotent.\n\n**Required privilege:** SUPER_ADMIN role. Callers cannot deactivate themselves, the automation bot, or the last Super Admin.",
   security: COOKIE_AUTH,
   request: {
     params: z.object({
@@ -179,7 +181,7 @@ userRegistry.registerPath({
   tags: ['Users'],
   summary: 'Reactivate a user',
   description:
-    'Clears the deactivated flag so the user can sign in again. No roles or API keys are restored; assign roles afterwards. Idempotent.\n\n**Required privilege:** SUPER_ADMIN role.',
+    'Clears the deactivated flag so the user can sign in again. Any role assignment or unrevoked API key left on the user is cleared in the same transaction, so nothing is restored; assign roles afterwards. Idempotent.\n\n**Required privilege:** SUPER_ADMIN role.',
   security: COOKIE_AUTH,
   request: {
     params: z.object({

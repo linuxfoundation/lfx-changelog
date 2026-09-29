@@ -5,6 +5,7 @@ import { UserRole } from '@lfx-changelog/shared';
 import { User as PrismaUser } from '@prisma/client';
 import { NextFunction, Request, Response } from 'express';
 
+import { AuthorizationError } from '../errors';
 import { UserService } from '../services/user.service';
 
 import type { BatchAssignRoleRequest, CreateUserRequest, UpdateUserRequest } from '@lfx-changelog/shared';
@@ -19,7 +20,11 @@ export class UserController {
 
   public async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      res.json({ success: true, data: mapUser(req.dbUser!) });
+      if (!req.dbUser) {
+        next(new AuthorizationError('No user context available', { path: req.path }));
+        return;
+      }
+      res.json({ success: true, data: mapUser(req.dbUser) });
     } catch (error) {
       next(error);
     }

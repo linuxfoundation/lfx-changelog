@@ -197,10 +197,11 @@ test.describe('User Management', () => {
     await userPage.table.locator(`[data-testid="user-management-edit-${userId}"] button`).click();
     const dialog = page.locator('[data-testid="edit-user-dialog"]');
     await expect(dialog).toBeVisible();
-    await dialog.locator('[data-testid="edit-user-name-input"] input').fill('E2E UI Edited');
+    const newName = `E2E UI Edited ${Date.now()}`;
+    await dialog.locator('[data-testid="edit-user-name-input"] input').fill(newName);
     await dialog.locator('[data-testid="edit-user-save-btn"] button').click();
 
     await expectToast(page, 'User updated', 'success');
-    await expect(userPage.table).toContainText('E2E UI Edited');
+    await expect(userPage.getRows().filter({ has: page.locator(`[data-testid="user-management-edit-${userId}"]`) })).toContainText(newName);
   });
 });
