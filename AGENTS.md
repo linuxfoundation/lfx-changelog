@@ -6,6 +6,21 @@ Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changel
 
 ---
 
+## Commands
+
+```bash
+yarn build            # turbo build of shared → mcp-server → app; the ONLY typecheck gate
+yarn lint             # ESLint only — passes on code that won't compile
+yarn start            # dev server on http://localhost:4204
+yarn docker:up        # local Postgres/OpenSearch
+yarn db:generate      # regenerate Prisma client — required after any prisma/@prisma/* bump (no postinstall hook)
+yarn workspace lfx-changelog test   # Playwright E2E (uses .env.e2e + *-test containers)
+```
+
+See `README.md` for env vars, setup and the full script list.
+
+---
+
 ## Styling
 
 - **Tailwind CSS v4** — CSS-first config via `@theme` block in `styles.css`, no `tailwind.config.js`
@@ -23,3 +38,12 @@ Monorepo: Turborepo + Yarn 4 workspaces. Angular 20 SSR app at `apps/lfx-changel
   - `npx` is allowed for one-off tools not in the workspace or when required by upstream docs/CI (e.g., `npx playwright`, `npx @modelcontextprotocol/inspector`, `npx tsx`)
 - **Always use `docker compose`** instead of `docker-compose`
 - **Use `yarn lint` to lint** — not `yarn eslint`
+
+---
+
+## Gotchas
+
+- **Pre-commit hook** runs `check-headers.sh`, `yarn format` (re-stages files), `yarn lint` and `yarn build` — commits are slow and may reformat staged files.
+- **License header** (`Copyright The Linux Foundation…` / `SPDX-License-Identifier: MIT`) is required on every source file; CI enforces it.
+- **`turbo.json` has `agentGuidance: false`** deliberately — without it turbo rewrites this file with its own boilerplate.
+- **Dependency upgrades:** Angular packages stay within the current major (range updates only); `@opensearch-project/opensearch` is held at `~3.6.0` until opensearch-js#1154 (3.9.0 drops `field` from terms aggregation types) is fixed.
