@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, type McpServerConfig, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 import { z } from 'zod';
 
@@ -603,10 +603,8 @@ export class ChangelogAgentService {
     agentJobEmitter.removeAllForJob(jobId);
   }
 
-  private buildMcpServers(
-    mcpServer: ReturnType<typeof createSdkMcpServer>
-  ): Record<string, ReturnType<typeof createSdkMcpServer> | { type: 'http'; url: string; headers?: Record<string, string> }> {
-    const servers: Record<string, ReturnType<typeof createSdkMcpServer> | { type: 'http'; url: string; headers?: Record<string, string> }> = {
+  private buildMcpServers(mcpServer: ReturnType<typeof createSdkMcpServer>): Record<string, McpServerConfig> {
+    const servers: Record<string, McpServerConfig> = {
       'changelog-tools': mcpServer,
     };
 
@@ -618,6 +616,7 @@ export class ChangelogAgentService {
       servers['atlassian'] = {
         type: 'http',
         url: atlassianUrl,
+        alwaysLoad: true,
         headers: {
           Authorization: `Basic ${Buffer.from(`${atlassianEmail}:${atlassianToken}`).toString('base64')}`,
         },
@@ -871,6 +870,7 @@ export class ChangelogAgentService {
 
     return createSdkMcpServer({
       name: 'changelog-tools',
+      alwaysLoad: true,
       tools: [searchPastChangelogs, createChangelogDraft, updateChangelogDraft, getLatestVersion, validateChangelogDraft],
     });
   }

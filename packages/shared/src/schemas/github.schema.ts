@@ -4,6 +4,7 @@
 import { z } from 'zod';
 
 import { DeploymentType } from '../enums/deployment-type.enum.js';
+import { ReleaseJobStatus } from '../enums/release-job-status.enum.js';
 
 export const GitHubInstallationSchema = z
   .object({
@@ -197,6 +198,38 @@ export const ReleaseJobStepSchema = z
   .openapi('ReleaseJobStep');
 
 export type ReleaseJobStep = z.infer<typeof ReleaseJobStepSchema>;
+
+export const ReleaseJobsQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).optional().openapi({ description: 'Newest jobs to return (max: 100)' }),
+  })
+  .openapi('ReleaseJobsQuery');
+
+export type ReleaseJobsQuery = z.infer<typeof ReleaseJobsQuerySchema>;
+
+export const ReleaseJobSummarySchema = z
+  .object({
+    tagName: z.string(),
+    status: z.nativeEnum(ReleaseJobStatus),
+    /** GitHub's own word for the outcome, which is richer than the four states. */
+    conclusion: z.string().nullable(),
+    workflowName: z.string().nullable(),
+    workflowRunUrl: z.string().nullable(),
+    startedAt: z.string().nullable(),
+    completedAt: z.string().nullable(),
+    /**
+     * Who published from Changelog. Null when no requester was ever recorded: a tag pushed
+     * straight to GitHub, or a publish whose attribution write failed — opening the job is
+     * best-effort so that it cannot fail a release that GitHub has already created. Delivery
+     * order does not cost attribution: the publish path fills it in whether it created the row
+     * or found one the webhook had already opened.
+     */
+    requestedBy: z.string().nullable(),
+    steps: z.array(ReleaseJobStepSchema),
+  })
+  .openapi('ReleaseJobSummary');
+
+export type ReleaseJobSummary = z.infer<typeof ReleaseJobSummarySchema>;
 
 export const GitHubReleaseSchema = z
   .object({
