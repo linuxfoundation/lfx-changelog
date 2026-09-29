@@ -265,6 +265,7 @@ test.describe('GET /public/api/products', () => {
 | `public-roadmap.api.spec.ts`      | Roadmap list, issue detail, comments, security                                         |
 | `releasable-services.api.spec.ts` | Auth 401, 403, per-product permission filtering, service detail                        |
 | `release-create.api.spec.ts`      | Auth 401, OAuth-only enforcement, 403, validation 400, 404                             |
+| `release-jobs.api.spec.ts`        | Auth 401, 403, 404 scoping, listing and ordering, attribution, retired services, limit |
 | `releases.api.spec.ts`            | Auth 401, RBAC, release and repository lists, repository filter, sync endpoints        |
 | `search.api.spec.ts`              | Public changelog search, reindex                                                       |
 | `slack.api.spec.ts`               | Auth 401, connect, integrations and channels, share, OAuth callback                    |

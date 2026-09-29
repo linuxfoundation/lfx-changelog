@@ -183,10 +183,14 @@ which is why the run id is indexed rather than unique.
 
 ### Reading them back
 
-`GET /api/github/repositories/:repoId/release-jobs` returns one entry per tag released from the
-repository, newest first: the workflow run that built it, what that run did, and the per-job steps
-inside it. A tag published from Changelog carries who asked for it; one pushed straight to GitHub
-does not, because GitHub credits the App rather than a person.
+`GET /api/github/repositories/:repoId/release-jobs` returns the tags released from the repository,
+newest first: the workflow run that built each one, what that run did, and the per-job steps inside
+it. It takes the same `limit` as the releases list it sits beside, defaulting to 50, because there
+is one job per tag and they are never pruned.
+
+GitHub credits the App when Changelog publishes, so only the publish request knows who asked.
+`requestedBy` carries that person when it was recorded, and is null otherwise --- a tag pushed
+straight to GitHub, or a publish whose job the webhook happened to open first.
 
 A repository that is not releasable at all has no jobs, so the route answers with an empty list
 rather than an error --- most tracked repositories are documentation or libraries.

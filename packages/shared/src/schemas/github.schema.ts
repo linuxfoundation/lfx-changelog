@@ -199,6 +199,14 @@ export const ReleaseJobStepSchema = z
 
 export type ReleaseJobStep = z.infer<typeof ReleaseJobStepSchema>;
 
+export const ReleaseJobsQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).optional().openapi({ description: 'Newest jobs to return (max: 100)' }),
+  })
+  .openapi('ReleaseJobsQuery');
+
+export type ReleaseJobsQuery = z.infer<typeof ReleaseJobsQuerySchema>;
+
 export const ReleaseJobSummarySchema = z
   .object({
     tagName: z.string(),
@@ -209,7 +217,10 @@ export const ReleaseJobSummarySchema = z
     workflowRunUrl: z.string().nullable(),
     startedAt: z.string().nullable(),
     completedAt: z.string().nullable(),
-    /** Who published from Changelog. Null for a tag pushed straight to GitHub. */
+    /**
+     * Who published from Changelog. Null when no requester was recorded: a tag pushed straight
+     * to GitHub, or a publish whose job the webhook opened first and so carries no requester.
+     */
     requestedBy: z.string().nullable(),
     steps: z.array(ReleaseJobStepSchema),
   })

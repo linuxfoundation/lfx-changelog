@@ -13,6 +13,7 @@ import {
   ReleaseChangesQuerySchema,
   ReleaseChangesSchema,
   ReleaseJobSummarySchema,
+  ReleaseJobsQuerySchema,
   ReleaseTargetSchema,
   RepositoryWithCountsSchema,
   StoredReleaseSchema,
@@ -244,11 +245,11 @@ releaseRegistry.registerPath({
   method: 'get',
   path: '/api/github/repositories/{repoId}/release-jobs',
   tags: ['Releases'],
-  summary: 'What CI did with each tag released from a repository',
+  summary: 'List release jobs for a repository',
   description:
-    "Returns one entry per tag released from the repository, newest first, with the workflow run that built it and what that run did.\n\nA repository that is not releasable has no jobs and returns an empty list. Retiring a service does not hide what it already released — `isActive` governs whether new jobs are opened, not whether past ones can be read. A tag published from Changelog carries who asked for it; one pushed straight to GitHub does not, because GitHub credits the App rather than a person.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. A repository outside the caller's products returns 404 rather than 403. Session authentication only.",
+    "Returns one entry per tag released from the repository, newest first, with the workflow run that built it and what that run did.\n\nA repository that is not releasable has no jobs and returns an empty list. Retiring a service does not hide what it already released — `isActive` governs whether new jobs are opened, not whether past ones can be read. GitHub credits the App when Changelog publishes, so only the publish request knows the person — `requestedBy` carries it when it was recorded, and is null otherwise: a tag pushed straight to GitHub, or a publish whose job the webhook opened first.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. A repository outside the caller's products returns 404 rather than 403. Session authentication only.",
   security: COOKIE_AUTH,
-  request: { params: z.object({ repoId: z.string().uuid() }) },
+  request: { params: repoIdParam, query: ReleaseJobsQuerySchema },
   responses: {
     200: {
       description: 'Release jobs for the repository',

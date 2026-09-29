@@ -22,6 +22,14 @@ const JOBS = [
   { tagName: 'v1.1.0', status: 'failed', conclusion: 'cancelled', attributed: false },
 ];
 
+/**
+ * Explicit, spaced timestamps, as the seed helper does for releases: `created_at` is millisecond
+ * precision, so two inserts in one loop can tie and leave the newest-first assertion to chance.
+ */
+const JOB_EPOCH = new Date('2026-01-01T00:00:00Z').getTime();
+const RAN_FROM = '2026-09-18T10:00:00.000Z';
+const RAN_TO = '2026-09-18T10:06:00.000Z';
+
 test.describe('Release jobs API (/api/github/repositories/:repoId/release-jobs)', () => {
   let unauthApi: APIRequestContext;
   let superAdminApi: APIRequestContext;
@@ -61,6 +69,9 @@ test.describe('Release jobs API (/api/github/repositories/:repoId/release-jobs)'
           workflowName: 'Docker Build - Release',
           workflowRunUrl: `https://github.com/${TEST_REPOSITORY.fullName}/actions/runs/${9_000_000 + index}`,
           workflowRunId: String(9_000_000 + index),
+          createdAt: new Date(JOB_EPOCH + index * 60_000),
+          startedAt: new Date(RAN_FROM),
+          completedAt: new Date(RAN_TO),
           requestedById: job.attributed ? user.id : null,
           steps: [{ jobId: 1, attempt: 1, name: 'build-and-push', status: 'completed', conclusion: 'success', startedAt: null, completedAt: null }],
         },
@@ -122,7 +133,14 @@ test.describe('Release jobs API (/api/github/repositories/:repoId/release-jobs)'
       expect(jobs.map((job) => job.tagName)).toEqual(['v1.1.0', 'v1.0.0']);
 
       const succeeded = jobs.find((job) => job.tagName === 'v1.0.0');
-      expect(succeeded).toMatchObject({ status: 'succeeded', conclusion: 'success', workflowName: 'Docker Build - Release' });
+      expect(succeeded).toMatchObject({
+        status: 'succeeded',
+        conclusion: 'success',
+        workflowName: 'Docker Build - Release',
+        // Asserted as real values: with both null, a swapped source column would ship unnoticed.
+        startedAt: RAN_FROM,
+        completedAt: RAN_TO,
+      });
       expect(succeeded!.workflowRunUrl).toContain('/actions/runs/');
       expect(succeeded!.steps).toHaveLength(1);
 
@@ -137,6 +155,18 @@ test.describe('Release jobs API (/api/github/repositories/:repoId/release-jobs)'
 
       expect(jobs.find((job) => job.tagName === 'v1.0.0')!.requestedBy).toBeTruthy();
       expect(jobs.find((job) => job.tagName === 'v1.1.0')!.requestedBy).toBeNull();
+    });
+
+    test('limit bounds the list, and an out-of-range one is refused', async () => {
+      const capped = await productAdminApi.get(`/api/github/repositories/${repositoryId}/release-jobs?limit=1`);
+      expect(capped.status()).toBe(200);
+
+      const jobs = z.array(ReleaseJobSummarySchema).parse((await capped.json()).data);
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].tagName, 'the newest is the one kept').toBe('v1.1.0');
+
+      expect((await productAdminApi.get(`/api/github/repositories/${repositoryId}/release-jobs?limit=0`)).status()).toBe(400);
+      expect((await productAdminApi.get(`/api/github/repositories/${repositoryId}/release-jobs?limit=101`)).status()).toBe(400);
     });
 
     test('a retired service still shows what it released', async () => {

@@ -3,7 +3,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { ReleaseChangesQuerySchema } from '@lfx-changelog/shared';
+import { ReleaseChangesQuerySchema, ReleaseJobsQuerySchema } from '@lfx-changelog/shared';
 
 import { ReleaseService } from '../services/release.service';
 
@@ -24,7 +24,10 @@ export class ReleaseController {
 
   public async listReleaseJobs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const jobs = await this.releaseService.findReleaseJobs(req.params['repoId'] as string, this.getUserRoles(req));
+      // Re-parsed rather than cast: `validate` cannot assign back to the read-only Express 5
+      // query, so the coerced value only exists here. The route already validated it.
+      const { limit } = ReleaseJobsQuerySchema.parse(req.query);
+      const jobs = await this.releaseService.findReleaseJobs(req.params['repoId'] as string, this.getUserRoles(req), limit);
       res.json({ success: true, data: jobs });
     } catch (error) {
       next(error);
