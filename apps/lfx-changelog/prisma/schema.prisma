@@ -253,13 +253,14 @@ model ChangelogEntry {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  auth0Id   String?  @unique @map("auth0_id")
-  email     String   @unique
-  name      String
-  avatarUrl String?  @map("avatar_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id            String    @id @default(uuid())
+  auth0Id       String?   @unique @map("auth0_id")
+  email         String    @unique
+  name          String
+  avatarUrl     String?   @map("avatar_url")
+  deactivatedAt DateTime? @map("deactivated_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   changelogEntries    ChangelogEntry[]
   userRoleAssignments UserRoleAssignment[]

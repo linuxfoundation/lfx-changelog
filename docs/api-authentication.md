@@ -129,7 +129,7 @@ The API is organized into three categories based on authentication requirements:
 
 - **Public** (`/public/api/*`) --- no authentication required. Read-only access to published changelogs, active products, and the public AI chat assistant.
 - **Protected** (`/api/changelogs/*`, `/api/products/*`) --- accepts both OAuth sessions and API keys. Each endpoint declares which scope and role it requires. See the interactive [Swagger UI](https://changelog.lfx.dev/docs) for the full list of endpoints, required scopes, and request/response schemas.
-- **OAuth-only** (`/api/users/*`, `/api/api-keys/*`, `/api/ai/*`, `/api/chat/*`, `/api/github/*`, `/api/releases/*`) --- browser session only. These endpoints reject API key authentication because they involve user management, key lifecycle, AI chat conversations, release publishing, release orchestration, or internal integrations that should not be accessed programmatically.
+- **OAuth-only** (`/api/users/*`, `/api/api-keys/*`, `/api/ai/*`, `/api/chat/*`, `/api/github/*`) --- browser session only. These endpoints reject API key authentication because they involve user management, key lifecycle, AI chat conversations, release publishing, release orchestration, or internal integrations that should not be accessed programmatically.
 
 Note that a route rejects API keys whenever it declares no scope, whether or not it sets `oauthOnly`. That is why the whole of `/api/github/*` — including the release listing and syncing routes that are not obviously "internal" — is session-only. The publishing routes under `/api/github/repositories/:repoId` additionally set `oauthOnly`, which rejects API keys explicitly and checks the request Origin on mutations, because publishing a release writes a git ref on GitHub. See [GitHub Integration](github-integration.md#creating-releases).
 
@@ -142,12 +142,12 @@ The `authorize()` middleware factory consolidates all authorization logic into a
 ```text
 Request
   │
-  ├─ Has API key? ──► Validate key (hash, expiration, revocation)
+  ├─ Has API key? ──► Validate key (hash, expiration, revocation, owner not deactivated)
   │                    └─► Check required scope
   │                    └─► Fall through to role checks
   │
   └─ Has session? ──► Validate OIDC session
-                       └─► Look up user in DB
+                       └─► Look up active (not deactivated) user in DB
                        └─► Fall through to role checks
                               │
                               ├─ productRole? ──► Check user's product-scoped role
@@ -223,7 +223,7 @@ https://changelog.lfx.dev/docs
 Returned when:
 
 - No API key or session cookie is provided
-- The API key is invalid, expired, or revoked
+- The API key is invalid, expired, or revoked, or its owner has been deactivated
 
 ### Authorization Errors (403)
 

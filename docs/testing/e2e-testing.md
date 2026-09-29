@@ -268,7 +268,7 @@ test.describe('GET /public/api/products', () => {
 | `releases.api.spec.ts`            | Auth 401, RBAC, release and repository lists, repository filter, sync endpoints        |
 | `search.api.spec.ts`              | Public changelog search, reindex                                                       |
 | `slack.api.spec.ts`               | Auth 401, connect, integrations and channels, share, OAuth callback                    |
-| `users.api.spec.ts`               | Auth 401, /me, list users RBAC, role lifecycle, user creation, validation              |
+| `users.api.spec.ts`               | Auth 401, /me, RBAC, role lifecycle, create, validation, edit, deactivate/reactivate   |
 
 **Database helpers for API tests:**
 

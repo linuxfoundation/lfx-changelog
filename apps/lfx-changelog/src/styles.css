@@ -54,6 +54,9 @@
   --color-danger-600: #dc2626;
   --color-danger-700: #b91c1c;
   --color-danger-800: #991b1b;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-danger-text: #b91c1c;
 
   /* ── Category colors ── */
   --color-bug-fix: #dc2626;
@@ -136,6 +139,9 @@
   --color-danger-600: #ef4444;
   --color-danger-700: #dc2626;
   --color-danger-800: #b91c1c;
+  --color-danger-bg: #450a0a;
+  --color-danger-border: #991b1b;
+  --color-danger-text: #fca5a5;
 
   --color-bug-fix: #f87171;
   --color-new-feature: #34d399;

@@ -9,6 +9,7 @@ import { getPrismaClient } from './prisma.service';
 
 import type { AggregationContainer } from '@opensearch-project/opensearch/api/_types/_common.aggregations.js';
 import type { Hit } from '@opensearch-project/opensearch/api/_types/_core.search.js';
+import type { Prisma } from '@prisma/client';
 
 import type {
   BlogDocument,
@@ -17,6 +18,7 @@ import type {
   OpenSearchAggBucket,
   OpenSearchBulkAction,
   OpenSearchBulkResponse,
+  ReindexResult,
   SearchHit,
   SearchQueryParams,
   SearchResponse,
@@ -77,7 +79,7 @@ const INDEX_CONFIGS: Record<SearchTarget, IndexConfig> = {
 let osClient: Client | null = null;
 
 // ── Blog document mapping helper ─────────────────────────────────────────────
-// Shared between BlogService.syncToOpenSearch() and SearchService.reindexAllBlogs()
+// Every path that writes a blog document to the index builds it here, so the document shape stays in one place
 
 type BlogWithRelationsForIndex = {
   id: string;
@@ -533,6 +535,17 @@ export class SearchService {
 
     await this.ensureBlogsIndex();
 
+    const result = await this.indexPublishedBlogs();
+    serverLogger.info(result, 'Blog reindex completed');
+    return result;
+  }
+
+  public async indexPublishedBlogs(where: Prisma.BlogWhereInput = {}): Promise<ReindexResult> {
+    const os = this.getClient();
+    if (!os) {
+      return { indexed: 0, errors: 0 };
+    }
+
     const prisma = getPrismaClient();
     let indexed = 0;
     let errors = 0;
@@ -540,7 +553,7 @@ export class SearchService {
 
     while (true) {
       const blogs = await prisma.blog.findMany({
-        where: { status: 'published' },
+        where: { ...where, status: 'published' },
         include: {
           author: { select: { name: true, avatarUrl: true } },
           products: { include: { product: { select: { id: true, name: true } } } },
@@ -559,29 +572,26 @@ export class SearchService {
         bulkBody.push(doc);
       }
 
-      if (bulkBody.length > 0) {
-        const bulkResult = await os.bulk({ body: bulkBody, refresh: 'wait_for' });
-        const bulkResponse = bulkResult.body as OpenSearchBulkResponse;
-        if (bulkResponse.errors) {
-          for (const item of bulkResponse.items) {
-            const action = item.index || item.create;
-            if (action?.error) {
-              errors++;
-              serverLogger.warn({ error: action.error, id: action._id }, 'Failed to index blog during reindex');
-            } else {
-              indexed++;
-            }
+      const bulkResult = await os.bulk({ body: bulkBody, refresh: 'wait_for' });
+      const bulkResponse = bulkResult.body as OpenSearchBulkResponse;
+      if (bulkResponse.errors) {
+        for (const item of bulkResponse.items) {
+          const action = item.index || item.create;
+          if (action?.error) {
+            errors++;
+            serverLogger.warn({ error: action.error, id: action._id }, 'Failed to index blog during reindex');
+          } else {
+            indexed++;
           }
-        } else {
-          indexed += bulkResponse.items.length;
         }
+      } else {
+        indexed += bulkResponse.items.length;
       }
 
       skip += blogs.length;
       serverLogger.info({ indexed, errors, batch: skip }, 'Blog reindex progress');
     }
 
-    serverLogger.info({ indexed, errors }, 'Blog reindex completed');
     return { indexed, errors };
   }
 }

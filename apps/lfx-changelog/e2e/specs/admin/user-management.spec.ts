@@ -4,6 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { activateProduct, deactivateProduct } from '../../helpers/db.helper.js';
 import { TEST_PRODUCTS, TEST_USERS } from '../../helpers/test-data.js';
+import { expectToast } from '../../helpers/toast.helper.js';
 import { UserManagementPage } from '../../pages/user-management.page.js';
 
 test.describe('User Management', () => {
@@ -155,5 +156,52 @@ test.describe('User Management', () => {
     } finally {
       await activateProduct(targetProduct.slug);
     }
+  });
+
+  test('own row cannot be deactivated', async () => {
+    const me = (await (await userPage.page.request.get('/api/users/me')).json()).data;
+    await expect(userPage.getDeactivateButton(me.id)).toBeDisabled();
+  });
+
+  test('deactivating and reactivating a user updates the row', async ({ page }) => {
+    const email = `e2e-ui-deactivate-${Date.now()}@example.com`;
+    const name = 'E2E UI Deactivate';
+    const createRes = await page.request.post('/api/users', {
+      data: { email, name, role: 'editor', productId: (await (await page.request.get('/api/products')).json()).data[0].id },
+    });
+    expect(createRes.status()).toBe(201);
+    const userId = (await createRes.json()).data.id;
+    await userPage.goto();
+
+    await userPage.getDeactivateButton(userId).click();
+    await expect(userPage.deactivateDialog).toBeVisible();
+    await expect(userPage.deactivateDialog).toContainText(name);
+    await userPage.deactivateDialog.getByRole('button', { name: 'Deactivate' }).click();
+    await expectToast(page, `${name} deactivated`, 'success');
+    await expect(userPage.getDeactivatedBadge(userId)).toBeVisible();
+
+    await userPage.getReactivateButton(userId).click();
+    await expectToast(page, `${name} reactivated`, 'success');
+    await expect(userPage.getDeactivatedBadge(userId)).toHaveCount(0);
+    await expect(userPage.getDeactivateButton(userId)).toBeEnabled();
+  });
+
+  test('editing a user updates their name in the list', async ({ page }) => {
+    const email = `e2e-ui-edit-${Date.now()}@example.com`;
+    const createRes = await page.request.post('/api/users', {
+      data: { email, name: 'E2E UI Edit', role: 'editor', productId: (await (await page.request.get('/api/products')).json()).data[0].id },
+    });
+    const userId = (await createRes.json()).data.id;
+    await userPage.goto();
+
+    await userPage.table.locator(`[data-testid="user-management-edit-${userId}"] button`).click();
+    const dialog = page.locator('[data-testid="edit-user-dialog"]');
+    await expect(dialog).toBeVisible();
+    const newName = `E2E UI Edited ${Date.now()}`;
+    await dialog.locator('[data-testid="edit-user-name-input"] input').fill(newName);
+    await dialog.locator('[data-testid="edit-user-save-btn"] button').click();
+
+    await expectToast(page, 'User updated', 'success');
+    await expect(userPage.getRows().filter({ has: page.locator(`[data-testid="user-management-edit-${userId}"]`) })).toContainText(newName);
   });
 });

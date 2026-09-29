@@ -20,6 +20,14 @@ export type PaginatedResponse<T> = {
   totalPages: number;
 };
 
+export const ApiErrorResponseSchema = z.object({
+  error: z.string(),
+  code: z.string().optional(),
+  path: z.string().optional(),
+});
+
+export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
+
 /** Creates a typed ApiResponse schema for a given data schema. */
 export function createApiResponseSchema<T extends ZodType>(dataSchema: T) {
   return z.object({

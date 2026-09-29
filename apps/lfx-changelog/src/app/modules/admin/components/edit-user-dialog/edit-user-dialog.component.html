@@ -1,0 +1,27 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="space-y-4">
+  <div role="alert" aria-live="assertive">
+    @if (error(); as errorMsg) {
+      <div data-testid="edit-user-error" class="border-danger-border bg-danger-bg text-danger-text rounded-lg border px-3 py-2 text-sm">
+        {{ errorMsg }}
+      </div>
+    }
+  </div>
+  <lfx-input data-testid="edit-user-name-input" label="Name" [formControl]="nameControl" placeholder="Full name" />
+  <div class="space-y-1">
+    <lfx-input data-testid="edit-user-email-input" label="Email" [formControl]="emailControl" placeholder="user@example.com" type="email" />
+    <p class="text-text-secondary text-xs">
+      @if (isSelf()) {
+        You cannot change your own email.
+      } @else {
+        Sign-in is matched by email. After a change, they must sign in with the new address.
+      }
+    </p>
+  </div>
+  <div class="flex justify-end gap-2 pt-2">
+    <lfx-button variant="secondary" size="sm" (clicked)="dialogService.close()">Cancel</lfx-button>
+    <lfx-button data-testid="edit-user-save-btn" variant="primary" size="sm" [loading]="saving()" (clicked)="save()">Save</lfx-button>
+  </div>
+</div>

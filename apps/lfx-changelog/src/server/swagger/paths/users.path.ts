@@ -4,7 +4,14 @@
 import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
-import { AssignRoleRequestSchema, CreateUserRequestSchema, UserRoleAssignmentSchema, UserSchema, createApiResponseSchema } from '@lfx-changelog/shared';
+import {
+  AssignRoleRequestSchema,
+  CreateUserRequestSchema,
+  UpdateUserRequestSchema,
+  UserRoleAssignmentSchema,
+  UserSchema,
+  createApiResponseSchema,
+} from '@lfx-changelog/shared';
 
 import { COOKIE_AUTH } from '../constants';
 
@@ -27,6 +34,7 @@ userRegistry.registerPath({
       },
     },
     401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — the signed-in user is not in the directory or is deactivated' },
   },
 });
 
@@ -78,7 +86,7 @@ userRegistry.registerPath({
     },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires SUPER_ADMIN role' },
-    409: { description: 'Conflict — user with this email already exists' },
+    409: { description: 'Conflict — user with this email already exists, or the email is reserved for the automation bot' },
   },
 });
 
@@ -113,6 +121,7 @@ userRegistry.registerPath({
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN role or above' },
     404: { description: 'User not found' },
+    409: { description: 'Conflict — user is deactivated; reactivate before assigning roles' },
   },
 });
 
@@ -134,5 +143,99 @@ userRegistry.registerPath({
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN role or above' },
     404: { description: 'User or role assignment not found' },
+  },
+});
+
+userRegistry.registerPath({
+  method: 'post',
+  path: '/api/users/{id}/deactivate',
+  tags: ['Users'],
+  summary: 'Deactivate a user',
+  description:
+    "Removes all of the user's role assignments, revokes their API keys, removes their Slack draft-notification subscriptions, and marks them deactivated so they no longer resolve as a signed-in user. Authored content is untouched. Idempotent.\n\n**Required privilege:** SUPER_ADMIN role. Callers cannot deactivate themselves, the automation bot, or the last Super Admin.",
+  security: COOKIE_AUTH,
+  request: {
+    params: z.object({
+      id: z.string().openapi({ description: 'User ID' }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'User deactivated',
+      content: {
+        'application/json': {
+          schema: createApiResponseSchema(UserSchema),
+        },
+      },
+    },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires SUPER_ADMIN role, or caller is the target' },
+    404: { description: 'User not found' },
+    409: { description: 'Conflict — last Super Admin, automation bot, or a concurrent change' },
+  },
+});
+
+userRegistry.registerPath({
+  method: 'post',
+  path: '/api/users/{id}/reactivate',
+  tags: ['Users'],
+  summary: 'Reactivate a user',
+  description:
+    'Clears the deactivated flag so the user can sign in again. Any role assignment or unrevoked API key left on the user is cleared in the same transaction, so nothing is restored; assign roles afterwards. Idempotent.\n\n**Required privilege:** SUPER_ADMIN role.',
+  security: COOKIE_AUTH,
+  request: {
+    params: z.object({
+      id: z.string().openapi({ description: 'User ID' }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'User reactivated',
+      content: {
+        'application/json': {
+          schema: createApiResponseSchema(UserSchema),
+        },
+      },
+    },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires SUPER_ADMIN role' },
+    404: { description: 'User not found' },
+  },
+});
+
+userRegistry.registerPath({
+  method: 'patch',
+  path: '/api/users/{id}',
+  tags: ['Users'],
+  summary: 'Update a user',
+  description:
+    "Updates a user's name and/or email. Sign-in is matched by email, so after an email change the person must sign in with the new address.\n\n**Required privilege:** SUPER_ADMIN role. Callers cannot change their own email, and the automation bot's email cannot be changed.",
+  security: COOKIE_AUTH,
+  request: {
+    params: z.object({
+      id: z.string().openapi({ description: 'User ID' }),
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: UpdateUserRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'User updated',
+      content: {
+        'application/json': {
+          schema: createApiResponseSchema(UserSchema),
+        },
+      },
+    },
+    400: { description: 'Validation error' },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires SUPER_ADMIN role, or caller is changing their own email' },
+    404: { description: 'User not found' },
+    409: { description: 'Conflict — email already in use, or the automation bot email' },
   },
 });

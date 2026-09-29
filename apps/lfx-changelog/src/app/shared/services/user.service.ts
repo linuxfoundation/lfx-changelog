@@ -5,7 +5,7 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, take, type Observable } from 'rxjs';
 
-import type { ApiResponse, CreateUserRequest, User, UserRoleAssignment } from '@lfx-changelog/shared';
+import type { ApiResponse, CreateUserRequest, UpdateUserRequest, User, UserRoleAssignment } from '@lfx-changelog/shared';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -42,5 +42,26 @@ export class UserService {
 
   public removeRole(userId: string, roleId: string): Observable<HttpResponse<unknown>> {
     return this.http.delete(`/api/users/${userId}/roles/${roleId}`, { observe: 'response' }).pipe(take(1));
+  }
+
+  public update(userId: string, data: UpdateUserRequest): Observable<User> {
+    return this.http.patch<ApiResponse<User>>(`/api/users/${userId}`, data).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public deactivate(userId: string): Observable<User> {
+    return this.http.post<ApiResponse<User>>(`/api/users/${userId}/deactivate`, {}).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  public reactivate(userId: string): Observable<User> {
+    return this.http.post<ApiResponse<User>>(`/api/users/${userId}/reactivate`, {}).pipe(
+      map((res) => res.data),
+      take(1)
+    );
   }
 }
