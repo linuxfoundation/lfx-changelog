@@ -1070,34 +1070,45 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@datadog/browser-core@npm:6.33.0":
-  version: 6.33.0
-  resolution: "@datadog/browser-core@npm:6.33.0"
-  checksum: 10c0/137a504b755295eec3381445e76cd9e01c5edd92d8b308e1481a86407b8916f695e35771bd3f148f27754f01d75b808180fd9c08f4401066150527e27609309b
+"@datadog/browser-core@npm:7.14.0":
+  version: 7.14.0
+  resolution: "@datadog/browser-core@npm:7.14.0"
+  dependencies:
+    "@datadog/js-core": "npm:0.0.15"
+  checksum: 10c0/691f47a40cf2124cbfae2c461be2a2278587a3f6e0b90e17a1317a2dc81b8c76e3b7f2a7e22f6aac4cab5336b002e1711312711cc05728ae24fd734db7c4469e
   languageName: node
   linkType: hard
 
-"@datadog/browser-rum-core@npm:6.33.0":
-  version: 6.33.0
-  resolution: "@datadog/browser-rum-core@npm:6.33.0"
+"@datadog/browser-rum-core@npm:7.14.0":
+  version: 7.14.0
+  resolution: "@datadog/browser-rum-core@npm:7.14.0"
   dependencies:
-    "@datadog/browser-core": "npm:6.33.0"
-  checksum: 10c0/04626272ebbe86c7265fbbc7aa343dabaf5dfc4ce335e8d0643a020d659c86112f9d5303ff958a7c8e65d0379cafa613240b6a861bf7987180437bee6a8414d2
+    "@datadog/browser-core": "npm:7.14.0"
+    "@datadog/js-core": "npm:0.0.15"
+  checksum: 10c0/3a64682e135c1535f6a144e098c6f578e212a9506a8171a7dc75c7b5a7d48040e7794a0de4f4a60db8870a87f1208b8f186fccec82ad23dc8a7e722bd90a471e
   languageName: node
   linkType: hard
 
-"@datadog/browser-rum@npm:6.33.0":
-  version: 6.33.0
-  resolution: "@datadog/browser-rum@npm:6.33.0"
+"@datadog/browser-rum@npm:7.14.0":
+  version: 7.14.0
+  resolution: "@datadog/browser-rum@npm:7.14.0"
   dependencies:
-    "@datadog/browser-core": "npm:6.33.0"
-    "@datadog/browser-rum-core": "npm:6.33.0"
+    "@datadog/browser-core": "npm:7.14.0"
+    "@datadog/browser-rum-core": "npm:7.14.0"
+    "@datadog/js-core": "npm:0.0.15"
   peerDependencies:
-    "@datadog/browser-logs": 6.33.0
+    "@datadog/browser-logs": 7.14.0
   peerDependenciesMeta:
     "@datadog/browser-logs":
       optional: true
-  checksum: 10c0/bd307e60fdecfd5c1068caf632efeb7088eb940d6a2d0a6a5799c87d9c60973e74c714b9eaa45d4f527cba5fbf547ec5ed32442e50e787ef6ccfb5076e3420fc
+  checksum: 10c0/2b547a0567e1943467b40c951c8be69fe91920810ff293ae79cfbdd656029e1e2a39b5d2870ecf7f3bc8fe6e7e1eaecd364e2ebd2f1af01e496d903e21ea8ec9
+  languageName: node
+  linkType: hard
+
+"@datadog/js-core@npm:0.0.15":
+  version: 0.0.15
+  resolution: "@datadog/js-core@npm:0.0.15"
+  checksum: 10c0/d4f6dd8baa69c52dd7c7c259df9d9480a30df1a6a867cfca7f510f25c3dc6b7285fa720c9173c27f471ba40430cf46da6d0f51c9dd948dc577aac2fe77c06bdd
   languageName: node
   linkType: hard
 
@@ -8999,7 +9010,7 @@ __metadata:
     "@angular/ssr": "npm:^20.3.37"
     "@anthropic-ai/claude-agent-sdk": "npm:^0.2.128"
     "@asteasolutions/zod-to-openapi": "npm:^9.1.0"
-    "@datadog/browser-rum": "npm:6.33.0"
+    "@datadog/browser-rum": "npm:7.14.0"
     "@eslint/js": "npm:^9.39.5"
     "@lfx-changelog/mcp-server": "workspace:*"
     "@lfx-changelog/shared": "workspace:*"
