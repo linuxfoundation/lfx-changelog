@@ -17,6 +17,7 @@ import type {
   ReleasableService,
   ReleaseChanges,
   ReleaseJobStep,
+  ReleaseJobSummary,
   ReleaseTarget,
 } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository, UserRoleAssignment } from '@prisma/client';
@@ -25,14 +26,17 @@ import type { WorkflowJobPayload, WorkflowRunPayload } from '../interfaces/relea
 /** GitHub's job states in the order they occur. Anything unrecognised sorts first, so it loses. */
 const JOB_STATE_ORDER = ['queued', 'waiting', 'in_progress', 'completed'];
 
+/** Matches what the release history asks for; the releases list is capped the same way. */
+const DEFAULT_RELEASE_JOB_LIMIT = 50;
+
 /**
  * Everything a release is: publishing one, the catalog of services that can be released, and the
  * job that follows a published tag through its repository's CI.
  *
- * The first two sections are reached from a request and take the caller's roles — every one of
- * them goes through `requireReleasableRepository` or filters by administered product. The release
- * job section is reached from the GitHub webhook, which has no caller, so those methods
- * authorize nothing and must not be called on a user's behalf without a check in front of them.
+ * The first three sections are reached from a request and take the caller's roles — every one of
+ * them goes through `requireReleasableRepository` or filters by administered product. The last
+ * section is reached from the GitHub webhook, which has no caller, so those methods authorize
+ * nothing and must not be called on a user's behalf without a check in front of them.
  */
 export class ReleaseService {
   private readonly githubService = new GitHubService();
@@ -211,6 +215,43 @@ export class ReleaseService {
     }));
   }
 
+  // ── Reading release jobs back ────────────────
+
+  /**
+   * What CI did with each tag released from this repository, newest first, for the release
+   * history to show alongside the releases themselves. Bounded like the releases list it sits
+   * beside, because there is one job per tag and they are never pruned.
+   *
+   * Deliberately not filtered by `isActive`: that decides whether new jobs are opened, not
+   * whether past ones can be read. A service retired mid-deploy still has its finishing run
+   * recorded, and a release that happened stays in the history of the repository it shipped from.
+   *
+   * Scoped like every other per-repository route: a repository outside the caller's products is
+   * a 404 rather than a 403, so these cannot be used to enumerate repositories.
+   */
+  public async findReleaseJobs(repositoryId: string, userRoles: UserRoleAssignment[], limit = DEFAULT_RELEASE_JOB_LIMIT): Promise<ReleaseJobSummary[]> {
+    await this.requireReleasableRepository(repositoryId, userRoles);
+
+    const prisma = getPrismaClient();
+    const jobs = await prisma.releaseJob.findMany({
+      where: { releasableService: { repositoryId } },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: { requestedBy: { select: { name: true, email: true } } },
+    });
+
+    return jobs.map((job) => ({
+      tagName: job.tagName,
+      status: job.status as ReleaseJobStatus,
+      conclusion: job.conclusion,
+      workflowName: job.workflowName,
+      workflowRunUrl: job.workflowRunUrl,
+      startedAt: job.startedAt?.toISOString() ?? null,
+      completedAt: job.completedAt?.toISOString() ?? null,
+      requestedBy: job.requestedBy?.name ?? job.requestedBy?.email ?? null,
+      steps: this.parseSteps(job.id, job.steps),
+    }));
+  }
   // ── Release jobs: what CI did with a published tag ─────
 
   /**
@@ -392,6 +433,8 @@ export class ReleaseService {
       `;
 
       for (const row of rows) {
+        // Unreadable steps come back empty, and the merge below then rebuilds the list from this
+        // one event — whatever was already recorded for that attempt is gone.
         const steps = this.parseSteps(row.id, row.steps);
 
         // Keyed by job id, not by name: a name is a display label and two jobs in one workflow
@@ -463,9 +506,7 @@ export class ReleaseService {
     const parsed = z.array(ReleaseJobStepSchema).safeParse(steps);
     if (parsed.success) return parsed.data;
 
-    // Loud, because the merge below then rebuilds the list from this one event and whatever was
-    // already recorded is gone.
-    serverLogger.warn({ releaseJobId, issues: parsed.error.issues }, 'Stored release job steps could not be read — restarting the list');
+    serverLogger.warn({ releaseJobId, issues: parsed.error.issues }, 'Stored release job steps could not be read');
     return [];
   }
 

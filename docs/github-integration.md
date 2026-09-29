@@ -69,6 +69,7 @@ The release row itself is not written by the create call --- the `release.publis
 | Method | Path                                              | Auth                       | Description                               |
 | ------ | ------------------------------------------------- | -------------------------- | ----------------------------------------- |
 | GET    | `/api/github/releases/services`                   | OAuth only (product_admin) | The services the caller may release       |
+| GET    | `/api/github/repositories/:repoId/release-jobs`   | OAuth only (product_admin) | What CI did with each released tag        |
 | GET    | `/api/github/repositories/:repoId/release-target` | OAuth only (product_admin) | Branches, default branch, suggested tag   |
 | GET    | `/api/github/repositories/:repoId/changes`        | OAuth only (product_admin) | Commits and merges since the last release |
 | POST   | `/api/github/repositories/:repoId/release-notes`  | OAuth only (product_admin) | Preview GitHub-generated notes            |
@@ -179,6 +180,28 @@ was recorded first keeps it.
 One GitHub repository can be tracked by several products, each with its own releasable service.
 That is a job per product for the same tag, and the single workflow run reports to all of them ---
 which is why the run id is indexed rather than unique.
+
+### Reading them back
+
+`GET /api/github/repositories/:repoId/release-jobs` returns the tags released from the repository,
+newest first: the workflow run that built each one, what that run did, and the per-job steps inside
+it. It takes the same `limit` as the releases list it sits beside, defaulting to 50, because there
+is one job per tag and they are never pruned.
+
+GitHub credits the App when Changelog publishes, so only the publish request knows who asked.
+`requestedBy` carries that person when it was recorded, and is null when it never was --- a tag
+pushed straight to GitHub, or a publish whose attribution write failed, since opening the job is
+best-effort and must not fail a release GitHub has already created.
+
+Delivery order does not cost attribution. The publish path writes the requester whether it created
+the job or found one the webhook had already opened.
+
+A repository that is not releasable at all has no jobs, so the route answers with an empty list
+rather than an error --- most tracked repositories are documentation or libraries.
+
+Retiring a service does not hide what it already released. `isActive` decides whether new jobs are
+opened, not whether past ones are readable: a service retired mid-deploy still has its finishing
+run recorded, and hiding that afterwards would lose the outcome of a release that happened.
 
 ### Required GitHub App configuration
 

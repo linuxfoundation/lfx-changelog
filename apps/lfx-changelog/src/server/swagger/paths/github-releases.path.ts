@@ -12,6 +12,8 @@ import {
   ReleasableServiceSchema,
   ReleaseChangesQuerySchema,
   ReleaseChangesSchema,
+  ReleaseJobSummarySchema,
+  ReleaseJobsQuerySchema,
   ReleaseTargetSchema,
   RepositoryWithCountsSchema,
   StoredReleaseSchema,
@@ -236,5 +238,25 @@ releaseRegistry.registerPath({
     },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN, or an API key was used' },
+  },
+});
+
+releaseRegistry.registerPath({
+  method: 'get',
+  path: '/api/github/repositories/{repoId}/release-jobs',
+  tags: ['Releases'],
+  summary: 'List release jobs for a repository',
+  description:
+    "Returns one entry per tag released from the repository, newest first, with the workflow run that built it and what that run did.\n\nA repository that is not releasable has no jobs and returns an empty list. Retiring a service does not hide what it already released — `isActive` governs whether new jobs are opened, not whether past ones can be read. GitHub credits the App when Changelog publishes, so only the publish request knows the person. `requestedBy` carries it when it was recorded, and is null when it never was: a tag pushed straight to GitHub, or a publish whose attribution write failed. Delivery order does not cost attribution — the publish path fills it in whether it created the job or found one the webhook had already opened.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. A repository outside the caller's products returns 404 rather than 403. Session authentication only.",
+  security: COOKIE_AUTH,
+  request: { params: repoIdParam, query: ReleaseJobsQuerySchema },
+  responses: {
+    200: {
+      description: 'Release jobs for the repository',
+      content: { 'application/json': { schema: createApiResponseSchema(z.array(ReleaseJobSummarySchema)) } },
+    },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or an API key was used' },
+    404: { description: "Repository not found, or outside the caller's products" },
   },
 });
