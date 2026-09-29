@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { expect, test } from '@playwright/test';
+import { getTestPrismaClient } from '../../helpers/db.helper.js';
+import { TEST_REPOSITORY } from '../../helpers/test-data.js';
 import { AdminLayoutPage } from '../../pages/admin-layout.page.js';
 import { RepositoryListPage } from '../../pages/repository-list.page.js';
 
@@ -99,6 +101,41 @@ test.describe('Admin Repository List — release history', () => {
     await expect(repoListPage.historyList).toContainText('v1.1.0');
     // Drafts are excluded from both the count and this list.
     await expect(repoListPage.historyList).not.toContainText('v1.3.0-draft');
+  });
+
+  test('shows what CI did with a released tag, linked to the run', async () => {
+    const prisma = getTestPrismaClient();
+    const service = await prisma.releasableService.findFirstOrThrow({ where: { repository: { fullName: TEST_REPOSITORY.fullName } } });
+    const runUrl = `https://github.com/${TEST_REPOSITORY.fullName}/actions/runs/7700001`;
+
+    await prisma.releaseJob.create({
+      data: {
+        releasableServiceId: service.id,
+        tagName: 'v1.1.0',
+        status: 'succeeded',
+        conclusion: 'success',
+        workflowName: 'Docker Build - Release',
+        workflowRunUrl: runUrl,
+        workflowRunId: '7700001',
+      },
+    });
+
+    try {
+      await repoListPage.goto();
+      await repoListPage.getReleaseHistoryButtons().first().click();
+      await expect(repoListPage.historyList).toBeVisible({ timeout: 15000 });
+
+      const badge = repoListPage.getDeploymentBadge('v1.1.0');
+      // "Built", not "Deployed": the run proves the image was built and the version bump
+      // dispatched, and the Argo pull request lands in a repository this app cannot see.
+      await expect(badge).toHaveText(/Built/);
+      await expect(badge).toHaveAttribute('href', runUrl);
+
+      // A tag with no job shows nothing rather than an empty or invented state.
+      await expect(repoListPage.getDeploymentBadge('v1.0.0')).toHaveCount(0);
+    } finally {
+      await prisma.releaseJob.deleteMany({ where: { tagName: 'v1.1.0' } });
+    }
   });
 });
 

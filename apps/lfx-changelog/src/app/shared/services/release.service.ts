@@ -11,6 +11,7 @@ import type {
   GeneratedReleaseNotes,
   GitHubRelease,
   ReleaseChanges,
+  ReleaseJobSummary,
   ReleaseTarget,
   RepositoryWithCounts,
   StoredRelease,
@@ -29,6 +30,15 @@ export class ReleaseService {
   public getReleasesForRepository(repoId: string, limit = 50): Observable<StoredRelease[]> {
     const params = new HttpParams().set('repositoryId', repoId).set('limit', limit.toString());
     return this.http.get<ApiResponse<StoredRelease[]>>('/api/github/releases', { params }).pipe(
+      map((res) => res.data),
+      take(1)
+    );
+  }
+
+  /** What CI did with each tag this repository released, for the history to show alongside them. */
+  public getReleaseJobsForRepository(repoId: string, limit = 50): Observable<ReleaseJobSummary[]> {
+    const params = new HttpParams().set('limit', limit.toString());
+    return this.http.get<ApiResponse<ReleaseJobSummary[]>>(`/api/github/repositories/${repoId}/release-jobs`, { params }).pipe(
       map((res) => res.data),
       take(1)
     );
