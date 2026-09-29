@@ -218,8 +218,11 @@ export const ReleaseJobSummarySchema = z
     startedAt: z.string().nullable(),
     completedAt: z.string().nullable(),
     /**
-     * Who published from Changelog. Null when no requester was recorded: a tag pushed straight
-     * to GitHub, or a publish whose job the webhook opened first and so carries no requester.
+     * Who published from Changelog. Null when no requester was ever recorded: a tag pushed
+     * straight to GitHub, or a publish whose attribution write failed — opening the job is
+     * best-effort so that it cannot fail a release that GitHub has already created. Delivery
+     * order does not cost attribution: the publish path fills it in whether it created the row
+     * or found one the webhook had already opened.
      */
     requestedBy: z.string().nullable(),
     steps: z.array(ReleaseJobStepSchema),

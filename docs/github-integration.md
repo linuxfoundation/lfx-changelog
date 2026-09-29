@@ -189,8 +189,12 @@ it. It takes the same `limit` as the releases list it sits beside, defaulting to
 is one job per tag and they are never pruned.
 
 GitHub credits the App when Changelog publishes, so only the publish request knows who asked.
-`requestedBy` carries that person when it was recorded, and is null otherwise --- a tag pushed
-straight to GitHub, or a publish whose job the webhook happened to open first.
+`requestedBy` carries that person when it was recorded, and is null when it never was --- a tag
+pushed straight to GitHub, or a publish whose attribution write failed, since opening the job is
+best-effort and must not fail a release GitHub has already created.
+
+Delivery order does not cost attribution. The publish path writes the requester whether it created
+the job or found one the webhook had already opened.
 
 A repository that is not releasable at all has no jobs, so the route answers with an empty list
 rather than an error --- most tracked repositories are documentation or libraries.
