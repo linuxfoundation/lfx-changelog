@@ -12,6 +12,7 @@ export const MOCK_USERS: User[] = [
     email: USER_PERSONAS.SUPER_ADMIN.email,
     name: USER_PERSONAS.SUPER_ADMIN.name,
     avatarUrl: USER_PERSONAS.SUPER_ADMIN.avatarUrl,
+    deactivatedAt: null,
     createdAt: '2024-01-10T08:00:00.000Z',
     updatedAt: '2024-06-15T12:00:00.000Z',
     roles: [
@@ -29,6 +30,7 @@ export const MOCK_USERS: User[] = [
     email: USER_PERSONAS.PRODUCT_ADMIN_1.email,
     name: USER_PERSONAS.PRODUCT_ADMIN_1.name,
     avatarUrl: USER_PERSONAS.PRODUCT_ADMIN_1.avatarUrl,
+    deactivatedAt: null,
     createdAt: '2024-02-05T10:30:00.000Z',
     updatedAt: '2024-07-20T09:00:00.000Z',
     roles: [
@@ -52,6 +54,7 @@ export const MOCK_USERS: User[] = [
     email: USER_PERSONAS.EDITOR_1.email,
     name: USER_PERSONAS.EDITOR_1.name,
     avatarUrl: USER_PERSONAS.EDITOR_1.avatarUrl,
+    deactivatedAt: null,
     createdAt: '2024-03-12T14:15:00.000Z',
     updatedAt: '2024-08-10T16:30:00.000Z',
     roles: [
@@ -75,6 +78,7 @@ export const MOCK_USERS: User[] = [
     email: USER_PERSONAS.PRODUCT_ADMIN_2.email,
     name: USER_PERSONAS.PRODUCT_ADMIN_2.name,
     avatarUrl: USER_PERSONAS.PRODUCT_ADMIN_2.avatarUrl,
+    deactivatedAt: null,
     createdAt: '2024-01-20T09:00:00.000Z',
     updatedAt: '2024-05-28T11:45:00.000Z',
     roles: [
@@ -92,6 +96,7 @@ export const MOCK_USERS: User[] = [
     email: USER_PERSONAS.EDITOR_2.email,
     name: USER_PERSONAS.EDITOR_2.name,
     avatarUrl: USER_PERSONAS.EDITOR_2.avatarUrl,
+    deactivatedAt: null,
     createdAt: '2024-04-01T11:00:00.000Z',
     updatedAt: '2024-09-05T14:20:00.000Z',
     roles: [
@@ -115,6 +120,7 @@ export const MOCK_USERS: User[] = [
     email: USER_PERSONAS.EDITOR_3.email,
     name: USER_PERSONAS.EDITOR_3.name,
     avatarUrl: USER_PERSONAS.EDITOR_3.avatarUrl,
+    deactivatedAt: null,
     createdAt: '2024-05-10T13:30:00.000Z',
     updatedAt: '2024-09-18T10:00:00.000Z',
     roles: [

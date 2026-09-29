@@ -118,7 +118,8 @@ export class ApiKeyService {
       throw new AuthenticationError('Invalid API key');
     }
 
-    if (apiKey.revokedAt) {
+    // deactivatedAt is a backstop: a key created concurrently with deactivation, or on any path outside deactivate(), escapes the bulk revoke
+    if (apiKey.revokedAt || apiKey.user.deactivatedAt) {
       throw new AuthenticationError('API key has been revoked');
     }
 

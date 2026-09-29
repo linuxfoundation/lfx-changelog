@@ -77,7 +77,7 @@ const INDEX_CONFIGS: Record<SearchTarget, IndexConfig> = {
 let osClient: Client | null = null;
 
 // ── Blog document mapping helper ─────────────────────────────────────────────
-// Shared between BlogService.syncToOpenSearch() and SearchService.reindexAllBlogs()
+// Every path that writes a blog document to the index builds it here, so the document shape stays in one place
 
 type BlogWithRelationsForIndex = {
   id: string;

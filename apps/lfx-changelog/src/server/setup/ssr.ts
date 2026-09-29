@@ -48,6 +48,7 @@ export function setupSsr(app: Express): void {
               email: prismaUser.email,
               name: prismaUser.name,
               avatarUrl: prismaUser.avatarUrl || '',
+              deactivatedAt: prismaUser.deactivatedAt?.toISOString() ?? null,
               createdAt: prismaUser.createdAt.toISOString(),
               updatedAt: prismaUser.updatedAt.toISOString(),
               roles: ((prismaUser as any).userRoleAssignments || []).map((r: any) => ({

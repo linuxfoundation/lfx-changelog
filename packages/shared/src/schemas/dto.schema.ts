@@ -96,6 +96,16 @@ export const CreateUserRequestSchema = z
 
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
+export const UpdateUserRequestSchema = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    email: z.string().trim().email().optional(),
+  })
+  .refine((data) => data.name !== undefined || data.email !== undefined, { message: 'Provide a name or email to update' })
+  .openapi('UpdateUserRequest');
+
+export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
+
 // ── Blog Post DTOs ───────────────────────────
 
 export const CreateBlogPostRequestSchema = z

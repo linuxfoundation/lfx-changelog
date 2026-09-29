@@ -20,6 +20,7 @@ export class UserManagementPage {
   public readonly addUserProductSelect: Locator;
   public readonly addUserCreateBtn: Locator;
   public readonly addUserError: Locator;
+  public readonly deactivateDialog: Locator;
 
   public constructor(public readonly page: Page) {
     this.heading = page.locator('[data-testid="user-management-heading"]');
@@ -37,6 +38,7 @@ export class UserManagementPage {
     this.addUserProductSelect = page.locator('[data-testid="add-user-product-select"]');
     this.addUserCreateBtn = page.locator('[data-testid="add-user-create-btn"]');
     this.addUserError = page.locator('[data-testid="add-user-error"]');
+    this.deactivateDialog = page.locator('[data-testid="user-management-deactivate-dialog"]');
   }
 
   public async goto() {
@@ -65,5 +67,17 @@ export class UserManagementPage {
     await combobox.click();
     await selectLocator.locator(`button[role="option"]`, { hasText: optionLabel }).click();
     await combobox.click();
+  }
+
+  public getDeactivateButton(userId: string): Locator {
+    return this.table.locator(`[data-testid="user-management-deactivate-${userId}"] button`);
+  }
+
+  public getReactivateButton(userId: string): Locator {
+    return this.table.locator(`[data-testid="user-management-reactivate-${userId}"] button`);
+  }
+
+  public getDeactivatedBadge(userId: string): Locator {
+    return this.table.locator(`[data-testid="user-management-deactivated-${userId}"]`);
   }
 }

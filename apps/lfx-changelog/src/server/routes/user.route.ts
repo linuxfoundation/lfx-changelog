@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { AssignRoleRequestSchema, BatchAssignRoleRequestSchema, CreateUserRequestSchema, UserRole } from '@lfx-changelog/shared';
+import { AssignRoleRequestSchema, BatchAssignRoleRequestSchema, CreateUserRequestSchema, UpdateUserRequestSchema, UserRole } from '@lfx-changelog/shared';
 import { Router } from 'express';
 
 import { UserController } from '../controllers/user.controller';
@@ -22,6 +22,11 @@ router.post('/:id/roles', authorize({ role: UserRole.PRODUCT_ADMIN }), validate(
 router.post('/:id/roles/batch', authorize({ role: UserRole.PRODUCT_ADMIN }), validate({ body: BatchAssignRoleRequestSchema }), (req, res, next) =>
   userController.batchAssignRoles(req, res, next)
 );
+router.patch('/:id', authorize({ role: UserRole.SUPER_ADMIN }), validate({ body: UpdateUserRequestSchema }), (req, res, next) =>
+  userController.update(req, res, next)
+);
+router.post('/:id/deactivate', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => userController.deactivate(req, res, next));
+router.post('/:id/reactivate', authorize({ role: UserRole.SUPER_ADMIN }), (req, res, next) => userController.reactivate(req, res, next));
 router.delete('/:id/roles/:roleId', authorize({ role: UserRole.PRODUCT_ADMIN }), (req, res, next) => userController.removeRole(req, res, next));
 
 export default router;

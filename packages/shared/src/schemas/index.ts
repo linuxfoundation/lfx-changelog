@@ -44,7 +44,7 @@ export {
   OpenAIToolChatResponseSchema,
 } from './ai.schema.js';
 export { ApiKeySchema, CreateApiKeyRequestSchema, CreateApiKeyResponseSchema } from './api-key.schema.js';
-export { createApiResponseSchema, createPaginatedResponseSchema } from './api-response.schema.js';
+export { ApiErrorResponseSchema, createApiResponseSchema, createPaginatedResponseSchema } from './api-response.schema.js';
 export { AuthContextSchema, AuthUserSchema } from './auth.schema.js';
 export { BlogPostQueryParamsSchema, BlogPostSchema, BlogPostWithRelationsSchema } from './blog-post.schema.js';
 export { ChangelogEntrySchema, ChangelogEntryWithRelationsSchema } from './changelog-entry.schema.js';
@@ -91,6 +91,7 @@ export {
   UpdateBlogPostRequestSchema,
   UpdateChangelogEntryRequestSchema,
   UpdateProductRequestSchema,
+  UpdateUserRequestSchema,
 } from './dto.schema.js';
 export {
   GeneratedReleaseNotesSchema,
@@ -198,7 +199,7 @@ export type {
   OpenAIToolChatResponse,
 } from './ai.schema.js';
 export type { ApiKey, ApiKeyScopeMetadata, CreateApiKeyRequest, CreateApiKeyResponse } from './api-key.schema.js';
-export type { ApiResponse, PaginatedResponse } from './api-response.schema.js';
+export type { ApiErrorResponse, ApiResponse, PaginatedResponse } from './api-response.schema.js';
 export type { AuthContext, AuthUser } from './auth.schema.js';
 export type { BlogPost, BlogPostQueryParams, BlogPostWithRelations } from './blog-post.schema.js';
 export type { ChangelogEntry, ChangelogEntryWithRelations } from './changelog-entry.schema.js';
@@ -246,6 +247,7 @@ export type {
   UpdateBlogPostRequest,
   UpdateChangelogEntryRequest,
   UpdateProductRequest,
+  UpdateUserRequest,
 } from './dto.schema.js';
 export type {
   GeneratedReleaseNotes,

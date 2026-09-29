@@ -7,7 +7,7 @@ import { NextFunction, Request, Response } from 'express';
 
 import { UserService } from '../services/user.service';
 
-import type { BatchAssignRoleRequest, CreateUserRequest } from '@lfx-changelog/shared';
+import type { BatchAssignRoleRequest, CreateUserRequest, UpdateUserRequest } from '@lfx-changelog/shared';
 
 function mapUser(prismaUser: PrismaUser & { userRoleAssignments?: any[] }) {
   const { userRoleAssignments, ...rest } = prismaUser;
@@ -73,6 +73,33 @@ export class UserController {
     try {
       await this.userService.removeRole(req.params['roleId'] as string);
       res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async update(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = await this.userService.update(req.params['id'] as string, req.body as UpdateUserRequest, req.dbUser!.id);
+      res.json({ success: true, data: mapUser(user) });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async deactivate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = await this.userService.deactivate(req.params['id'] as string, req.dbUser!.id);
+      res.json({ success: true, data: mapUser(user) });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public async reactivate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = await this.userService.reactivate(req.params['id'] as string, req.dbUser!.id);
+      res.json({ success: true, data: mapUser(user) });
     } catch (error) {
       next(error);
     }
