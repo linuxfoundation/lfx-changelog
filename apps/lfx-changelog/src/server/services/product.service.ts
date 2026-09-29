@@ -3,7 +3,7 @@
 
 import { Product as PrismaProduct } from '@prisma/client';
 
-import { NotFoundError } from '../errors';
+import { ConflictError, NotFoundError } from '../errors';
 import { findContributorsForRepositories, recalculateContributorTotals } from '../helpers/contributor-totals.helper';
 import { serverLogger } from '../server-logger';
 
@@ -230,6 +230,9 @@ export class ProductService {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new NotFoundError(`User not found: ${userId}`, { operation: 'addNotifyUser', service: 'product' });
+    }
+    if (user.deactivatedAt) {
+      throw new ConflictError('Reactivate this user before subscribing them to notifications', { operation: 'addNotifyUser', service: 'product' });
     }
     return prisma.productSlackNotifyUser.upsert({
       where: { productId_userId: { productId, userId } },

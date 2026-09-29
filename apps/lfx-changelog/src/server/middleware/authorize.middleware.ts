@@ -20,7 +20,7 @@ interface AuthorizeOptions {
   productRole?: UserRole;
   /** Resolve product ID from changelog entry :id param before productRole check. */
   resolveProductId?: boolean;
-  /** Reject API key auth entirely + check Origin on mutations (POST/DELETE). */
+  /** Reject API key auth entirely + check Origin on mutations (POST/DELETE). Without role/productRole, still requires a resolved user. */
   oauthOnly?: boolean;
 }
 
@@ -60,8 +60,12 @@ export function authorize(options: AuthorizeOptions = {}) {
           }
         }
 
-        // If no role checks are needed, we're done
+        // If no role checks are needed, only a resolved user is required
         if (!options.productRole && !options.role) {
+          if (!req.dbUser) {
+            next(new AuthorizationError('No user context available', { path: req.path }));
+            return;
+          }
           next();
           return;
         }

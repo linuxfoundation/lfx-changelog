@@ -46,7 +46,7 @@ export class ProductNotificationsTabComponent {
   protected readonly userOptions = computed(() => {
     const existing = new Set(this.notifyUsers().map((n) => n.userId));
     return this.allUsers()
-      .filter((u) => !existing.has(u.id))
+      .filter((u) => !u.deactivatedAt && !existing.has(u.id))
       .map((u) => ({ label: `${u.name} (${u.email})`, value: u.id }));
   });
 

@@ -18,7 +18,7 @@
     <lfx-table [data]="users()" [loading]="loading()" testId="user-management-table">
       <ng-template lfxColumn="User" let-user>
         <div class="flex items-center gap-3">
-          <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
+          <lfx-avatar [class.opacity-60]="user.deactivatedAt" [src]="user.avatarUrl" [name]="user.name" size="sm" />
           <span class="text-text-primary text-sm font-medium">{{ user.name }}</span>
         </div>
       </ng-template>
@@ -29,6 +29,13 @@
 
       <ng-template lfxColumn="Roles" let-user>
         <div class="flex flex-wrap gap-1">
+          @if (user.deactivatedAt) {
+            <span
+              [attr.data-testid]="'user-management-deactivated-' + user.id"
+              class="bg-surface-alt text-text-secondary inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
+              >Deactivated</span
+            >
+          }
           @for (ra of user.roles; track ra.id) {
             <div class="flex items-center gap-1">
               <lfx-badge [label]="ra.role | roleLabel" [color]="ra.role | roleColor" size="sm" />
@@ -41,9 +48,32 @@
       </ng-template>
 
       <ng-template lfxColumn="Actions" let-user>
-        <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
-          >Manage Roles</lfx-button
-        >
+        <div class="flex items-center gap-1">
+          <lfx-button [attr.data-testid]="'user-management-edit-' + user.id" variant="ghost" size="sm" (clicked)="openEditDialog(user)">Edit</lfx-button>
+          @if (user.deactivatedAt) {
+            <lfx-button [attr.data-testid]="'user-management-reactivate-' + user.id" variant="ghost" size="sm" (clicked)="reactivate(user)"
+              >Reactivate</lfx-button
+            >
+          } @else {
+            <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)"
+              >Manage Roles</lfx-button
+            >
+            @let blockedReason = deactivateBlockedReasons().get(user.id);
+            <span [title]="blockedReason ?? ''">
+              <lfx-button
+                [attr.data-testid]="'user-management-deactivate-' + user.id"
+                variant="ghost"
+                size="sm"
+                [disabled]="!!blockedReason"
+                (clicked)="openDeactivateDialog(user)">
+                Deactivate
+                @if (blockedReason) {
+                  <span class="sr-only">: {{ blockedReason }}</span>
+                }
+              </lfx-button>
+            </span>
+          }
+        </div>
       </ng-template>
     </lfx-table>
   </div>
@@ -73,16 +103,48 @@
           <div class="space-y-3">
             <div class="flex items-center justify-between gap-2">
               <div class="flex min-w-0 items-center gap-3">
-                <lfx-avatar [src]="user.avatarUrl" [name]="user.name" size="sm" />
+                <lfx-avatar [class.opacity-60]="user.deactivatedAt" [src]="user.avatarUrl" [name]="user.name" size="sm" />
                 <div class="min-w-0">
                   <p class="text-text-primary truncate text-sm font-medium">{{ user.name }}</p>
                   <p class="text-text-secondary truncate text-xs">{{ user.email }}</p>
                 </div>
               </div>
-              <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)">
-                Manage
-              </lfx-button>
+              <div class="flex shrink-0 items-center gap-1">
+                <lfx-button [attr.data-testid]="'user-management-edit-' + user.id" variant="ghost" size="sm" (clicked)="openEditDialog(user)">
+                  Edit
+                </lfx-button>
+                @if (user.deactivatedAt) {
+                  <lfx-button [attr.data-testid]="'user-management-reactivate-' + user.id" variant="ghost" size="sm" (clicked)="reactivate(user)">
+                    Reactivate
+                  </lfx-button>
+                } @else {
+                  <lfx-button [attr.data-testid]="'user-management-manage-roles-' + user.id" variant="ghost" size="sm" (clicked)="openRoleDialog(user)">
+                    Manage
+                  </lfx-button>
+                  @let blockedReason = deactivateBlockedReasons().get(user.id);
+                  <span [title]="blockedReason ?? ''">
+                    <lfx-button
+                      [attr.data-testid]="'user-management-deactivate-' + user.id"
+                      variant="ghost"
+                      size="sm"
+                      [disabled]="!!blockedReason"
+                      (clicked)="openDeactivateDialog(user)">
+                      Deactivate
+                      @if (blockedReason) {
+                        <span class="sr-only">: {{ blockedReason }}</span>
+                      }
+                    </lfx-button>
+                  </span>
+                }
+              </div>
             </div>
+            @if (user.deactivatedAt) {
+              <span
+                [attr.data-testid]="'user-management-deactivated-' + user.id"
+                class="bg-surface-alt text-text-secondary inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
+                >Deactivated</span
+              >
+            }
             @if (user.roles?.length) {
               <div class="flex flex-wrap gap-1">
                 @for (ra of user.roles; track ra.id) {

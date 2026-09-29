@@ -81,3 +81,10 @@ export const OpenSearchBulkResponseSchema = z.object({
 });
 
 export type OpenSearchBulkResponse = z.infer<typeof OpenSearchBulkResponseSchema>;
+
+export const ReindexResultSchema = z.object({
+  indexed: z.number(),
+  errors: z.number(),
+});
+
+export type ReindexResult = z.infer<typeof ReindexResultSchema>;

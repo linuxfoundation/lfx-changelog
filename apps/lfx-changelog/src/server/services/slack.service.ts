@@ -495,13 +495,13 @@ export class SlackService {
   // ── Bot-token DM notifications ─────────────────────
 
   /**
-   * Look up all Slack notify users for a product and send each a DM.
+   * Look up the active Slack notify users for a product and send each a DM.
    * Individual failures are logged but do not abort the others.
    */
   public async sendDraftReadyDms(productId: string, entry: { id: string; title: string }, productName: string): Promise<string[]> {
     const prisma = getPrismaClient();
     const rows = await prisma.productSlackNotifyUser.findMany({
-      where: { productId },
+      where: { productId, user: { deactivatedAt: null } },
       include: { user: { select: { email: true, name: true } } },
     });
 
