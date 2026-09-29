@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DOCUMENT } from '@angular/common';
-import { Component, computed, DestroyRef, inject, input, OnInit, Signal, signal } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { Component, computed, DestroyRef, inject, input, OnInit, PLATFORM_ID, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -39,6 +39,7 @@ export class ProductRepositoriesTabComponent implements OnInit {
   private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
+  private readonly platformId = inject(PLATFORM_ID);
 
   public readonly productId = input.required<string>();
   public readonly callbackInstallationId = input<string | null>(null);
@@ -59,8 +60,9 @@ export class ProductRepositoriesTabComponent implements OnInit {
   public ngOnInit(): void {
     this.refresh$.next();
 
+    // Opening during SSR would fetch GitHub data on the server for a dialog that is only interactive in the browser.
     const callbackId = this.callbackInstallationId();
-    if (callbackId) {
+    if (callbackId && isPlatformBrowser(this.platformId)) {
       this.openAddDialog();
     }
   }

@@ -32,7 +32,7 @@
     </div>
   }
   @case ('select-repos') {
-    <div class="space-y-4">
+    <div class="space-y-4" (keydown.escape)="onRepoStepEscape($event)">
       @if (loadingRepos()) {
         <div class="flex items-center justify-center py-8">
           <i class="fa-duotone fa-spinner-third text-brand-600 animate-spin text-xl"></i>
@@ -51,12 +51,11 @@
             placeholder="Search repositories by name…"
             autocomplete="off"
             [formControl]="repoSearchControl"
-            (keydown.escape)="onRepoSearchEscape($event)"
             class="border-border bg-surface text-text-primary placeholder:text-text-muted focus:border-brand-500 focus:ring-brand-500/20 w-full rounded-lg border py-2.5 pr-9 pl-9 text-sm transition-colors focus:ring-2 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none" />
           <div class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
             <i class="fa-duotone fa-magnifying-glass text-text-muted text-sm"></i>
           </div>
-          @if (repoSearchTerm()) {
+          @if (normalizedSearchTerm()) {
             <button
               type="button"
               data-testid="link-repos-search-clear"
@@ -68,10 +67,9 @@
           }
         </div>
         <p data-testid="link-repos-selected-count" class="text-text-secondary text-sm">Select repositories to link. {{ selectedCount() }} selected.</p>
+        <p data-testid="link-repos-search-status" role="status" class="sr-only">{{ noMatchesMessage() }}</p>
         @if (filteredRepos().length === 0) {
-          <p data-testid="link-repos-no-matches" role="status" class="text-text-muted py-6 text-center text-sm">
-            No repositories match "{{ repoSearchTerm().trim() }}".
-          </p>
+          <p data-testid="link-repos-no-matches" class="text-text-muted py-6 text-center text-sm">{{ noMatchesMessage() }}</p>
         } @else {
           <div data-testid="link-repos-list" class="border-border divide-border max-h-[360px] divide-y overflow-y-auto rounded-lg border">
             @for (repo of filteredRepos(); track repo.full_name) {

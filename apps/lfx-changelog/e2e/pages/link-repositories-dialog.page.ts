@@ -13,6 +13,7 @@ export class LinkRepositoriesDialogPage {
   public readonly selectedCount: Locator;
   public readonly list: Locator;
   public readonly noMatches: Locator;
+  public readonly searchStatus: Locator;
   public readonly empty: Locator;
   public readonly submitBtn: Locator;
   public readonly closeBtn: Locator;
@@ -28,6 +29,7 @@ export class LinkRepositoriesDialogPage {
     this.selectedCount = page.locator('[data-testid="link-repos-selected-count"]');
     this.list = page.locator('[data-testid="link-repos-list"]');
     this.noMatches = page.locator('[data-testid="link-repos-no-matches"]');
+    this.searchStatus = page.locator('[data-testid="link-repos-search-status"]');
     this.empty = page.locator('[data-testid="link-repos-empty"]');
     this.submitBtn = page.locator('[data-testid="link-repos-submit"]');
     this.closeBtn = page.locator('[data-testid="dialog-close-btn"]');

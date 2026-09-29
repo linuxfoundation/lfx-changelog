@@ -44,7 +44,7 @@ Products can be linked to one or more GitHub repositories. This enables release 
 
 1. Open a product's detail page and go to the **Repositories** tab.
 2. Click **Add Repository**, choose a GitHub organization, and click **Next**. If the app isn't installed on that organization yet, use **Install on New Org** first.
-3. Optionally type part of a repository name in the search box. Matching ignores case, looks anywhere in the name, and does not search descriptions. Checked repositories stay selected while a search hides them. Escape clears the search; pressing it again with an empty search closes the dialog.
+3. Optionally type part of a repository name in the search box. Matching ignores case, looks anywhere in the name, and does not search descriptions. Checked repositories stay selected while a search hides them. While a search is active, Escape clears it instead of closing the dialog, whether focus is in the search box or in the repository list; with an empty search, Escape closes the dialog.
 4. Check the repositories to link and click **Link Selected**. They then appear in the product's repository list.
 
 ### Data Model

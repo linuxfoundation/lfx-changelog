@@ -142,6 +142,7 @@ test.describe('Link repositories dialog', () => {
 
       await dialog.search('   ');
       await expectVisibleRepos(dialog, ALL_NAMES);
+      await expect(dialog.searchClearBtn).toBeHidden();
     });
 
     test('should match special characters literally', async () => {
@@ -186,8 +187,28 @@ test.describe('Link repositories dialog', () => {
       await expect(dialog.selectedCount).toContainText('1 selected');
     });
 
+    test('should clear the search on Escape while a repository checkbox has focus', async () => {
+      await dialog.search('easy');
+      const checkbox = dialog.checkbox('linuxfoundation/easycla');
+      await checkbox.check();
+      await checkbox.press('Escape');
+
+      await expect(dialog.dialog).toBeVisible();
+      await expect(dialog.searchInput).toHaveValue('');
+      await expect(dialog.searchInput).toBeFocused();
+      await expectVisibleRepos(dialog, ALL_NAMES);
+      await expect(checkbox).toBeChecked();
+      await expect(dialog.selectedCount).toContainText('1 selected');
+    });
+
     test('should close the dialog on Escape when the search is empty', async () => {
       await expect(dialog.searchInput).toBeFocused();
+      await dialog.searchInput.press('Escape');
+      await expect(dialog.dialog).toBeHidden();
+    });
+
+    test('should treat a search of only spaces as empty when Escape is pressed', async () => {
+      await dialog.search('   ');
       await dialog.searchInput.press('Escape');
       await expect(dialog.dialog).toBeHidden();
     });
@@ -262,10 +283,12 @@ test.describe('Link repositories dialog', () => {
 
   test.describe('no matches', () => {
     test('should explain that nothing matches and keep the search box', async () => {
+      await expect(dialog.searchStatus).toHaveText('');
       await dialog.search('zzzz-nothing');
 
       await expect(dialog.noMatches).toBeVisible();
       await expect(dialog.noMatches).toHaveText('No repositories match "zzzz-nothing".');
+      await expect(dialog.searchStatus).toHaveText('No repositories match "zzzz-nothing".');
       await expect(dialog.searchInput).toBeVisible();
       await expect(dialog.list).toBeHidden();
       await expect(dialog.empty).toBeHidden();
@@ -308,9 +331,6 @@ test.describe('Link repositories dialog — install callback', () => {
     await stubLinkRepoApi(page);
     const productId = await getProductId(page);
 
-    // A full page load renders on the server first, where these stubs don't apply. The server's
-    // fetches for the fake installation fail, and failed responses aren't transferred to the
-    // browser, so the browser fetches again and gets the stubbed data.
     await page.goto(`/admin/products/${productId}?tab=repositories&installation_id=${INSTALLATION.id}`, { waitUntil: 'networkidle' });
 
     await expect(dialog.searchInput).toBeVisible();

@@ -63,15 +63,13 @@ export class LinkRepositoriesDialogComponent implements OnInit {
   );
   protected readonly selectedCount: Signal<number> = computed(() => this.selectedRepos().size);
 
-  protected readonly repoSearchTerm: Signal<string> = toSignal(this.repoSearchControl.valueChanges, { initialValue: '' });
-  private readonly normalizedSearchTerm: Signal<string> = computed(() => this.repoSearchTerm().trim().toLowerCase());
-  // Rendering only: selection, the selected count and linkSelected() must keep using availableRepos()
-  // so repositories hidden by the search stay selected and still get linked.
-  protected readonly filteredRepos: Signal<GitHubRepository[]> = computed(() => {
-    const term = this.normalizedSearchTerm();
-    const repos = this.availableRepos();
-    return term ? repos.filter((r) => r.name.toLowerCase().includes(term)) : repos;
-  });
+  private readonly repoSearchTerm: Signal<string> = toSignal(this.repoSearchControl.valueChanges, { initialValue: '' });
+  private readonly trimmedSearchTerm: Signal<string> = computed(() => this.repoSearchTerm().trim());
+  protected readonly normalizedSearchTerm: Signal<string> = computed(() => this.trimmedSearchTerm().toLowerCase());
+  protected readonly filteredRepos: Signal<GitHubRepository[]> = this.initFilteredRepos();
+  protected readonly noMatchesMessage: Signal<string> = computed(() =>
+    this.normalizedSearchTerm() && this.filteredRepos().length === 0 ? `No repositories match "${this.trimmedSearchTerm()}".` : ''
+  );
 
   public constructor() {
     afterRenderEffect(() => {
@@ -122,12 +120,12 @@ export class LinkRepositoriesDialogComponent implements OnInit {
     this.repoSearchInput()?.nativeElement.focus();
   }
 
-  protected onRepoSearchEscape(event: Event): void {
+  protected onRepoStepEscape(event: Event): void {
     // With an empty search, let Escape reach the dialog outlet's document listener so it closes the dialog.
-    if (!this.repoSearchControl.value) return;
+    if (!this.normalizedSearchTerm()) return;
     event.preventDefault();
     event.stopPropagation();
-    this.repoSearchControl.setValue('');
+    this.clearRepoSearch();
   }
 
   protected linkSelected(): void {
@@ -211,6 +209,16 @@ export class LinkRepositoriesDialogComponent implements OnInit {
       ),
       { initialValue: { data: [], loading: false } }
     );
+  }
+
+  // Rendering only: selection, the selected count and linkSelected() must keep using availableRepos()
+  // so repositories hidden by the search stay selected and still get linked.
+  private initFilteredRepos(): Signal<GitHubRepository[]> {
+    return computed(() => {
+      const term = this.normalizedSearchTerm();
+      const repos = this.availableRepos();
+      return term ? repos.filter((r) => r.name.toLowerCase().includes(term)) : repos;
+    });
   }
 
   private setupRepoControls(repos: GitHubRepository[]): void {
