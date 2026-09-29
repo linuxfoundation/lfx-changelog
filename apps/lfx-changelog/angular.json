@@ -52,15 +52,7 @@
             "ssr": {
               "entry": "src/server.ts"
             },
-            "allowedCommonJsDependencies": [
-              "compression",
-              "cors",
-              "swagger-ui-express",
-              "@datadog/browser-rum",
-              "@datadog/browser-core",
-              "@datadog/browser-rum-core",
-              "@linuxfoundation/lfx-ui-core"
-            ],
+            "allowedCommonJsDependencies": ["compression", "cors", "swagger-ui-express", "@linuxfoundation/lfx-ui-core"],
             "externalDependencies": [
               "@anthropic-ai/claude-agent-sdk",
               "@prisma/client",

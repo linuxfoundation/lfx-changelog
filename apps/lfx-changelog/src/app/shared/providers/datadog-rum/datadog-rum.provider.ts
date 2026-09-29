@@ -32,6 +32,7 @@ export function provideDataDogRum() {
       env: ddEnv,
       sessionSampleRate: ddEnv ? 100 : 0,
       sessionReplaySampleRate: ddEnv ? 100 : 0,
+      defaultPrivacyLevel: 'mask',
       trackUserInteractions: true,
       trackResources: true,
       trackLongTasks: true,
