@@ -10,7 +10,7 @@ import { TEST_PRODUCTS, TEST_USERS } from '../../helpers/test-data.js';
 
 import { BOT_EMAIL, BOT_NAME } from '@lfx-changelog/shared';
 
-import type { Product, User } from '@lfx-changelog/shared';
+import type { BlogDocument, Product, User } from '@lfx-changelog/shared';
 import type { APIRequestContext } from '@playwright/test';
 
 test.describe('Protected Users API (/api/users)', () => {
@@ -313,6 +313,8 @@ test.describe('Protected Users API (/api/users)', () => {
       try {
         expect((await editorApi.get('/api/changelogs?limit=1')).status()).toBe(403);
         expect((await editorApi.get('/api/users/me')).status()).toBe(403);
+        expect((await editorApi.get('/api/api-keys')).status()).toBe(403);
+        expect((await editorApi.get('/api/slack/integrations')).status()).toBe(403);
       } finally {
         await prisma.user.update({ where: { email: editorEmail }, data: { deactivatedAt: null } });
       }
@@ -428,6 +430,34 @@ test.describe('Protected Users API (/api/users)', () => {
       expect(body.data.name).toBe('E2E Renamed');
       expect(body.data.email).toBe(newEmail);
       expect(body.data.roles.length).toBeGreaterThan(0);
+    });
+
+    test('renaming a user re-indexes their published blogs with the new author name', async () => {
+      const throwaway = await createThrowaway();
+      const token = `reindexauthor${Date.now()}`;
+      const createRes = await superAdminApi.post('/api/blogs', {
+        data: {
+          title: `E2E ${token}`,
+          slug: `e2e-${token}`,
+          description: 'Blog for the author rename reindex test.',
+          type: 'product_newsletter',
+          status: 'draft',
+        },
+      });
+      expect(createRes.status()).toBe(201);
+      const blogId = (await createRes.json()).data.id;
+      await getTestPrismaClient().blog.update({ where: { id: blogId }, data: { createdBy: throwaway.id } });
+      expect((await superAdminApi.patch(`/api/blogs/${blogId}/publish`)).status()).toBe(200);
+
+      const newName = `E2E Renamed Author ${Date.now()}`;
+      expect((await superAdminApi.patch(`/api/users/${throwaway.id}`, { data: { name: newName } })).status()).toBe(200);
+
+      await expect
+        .poll(async () => {
+          const hits: BlogDocument[] = (await (await unauthApi.get(`/public/api/search?target=blogs&q=${token}`)).json()).hits;
+          return hits.find((hit) => hit.id === blogId)?.authorName;
+        })
+        .toBe(newName);
     });
 
     test('PATCH to an email already in use returns 409', async () => {
