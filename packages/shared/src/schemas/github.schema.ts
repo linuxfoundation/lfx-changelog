@@ -4,6 +4,7 @@
 import { z } from 'zod';
 
 import { DeploymentType } from '../enums/deployment-type.enum.js';
+import { ReleaseJobStatus } from '../enums/release-job-status.enum.js';
 
 export const GitHubInstallationSchema = z
   .object({
@@ -197,6 +198,24 @@ export const ReleaseJobStepSchema = z
   .openapi('ReleaseJobStep');
 
 export type ReleaseJobStep = z.infer<typeof ReleaseJobStepSchema>;
+
+export const ReleaseJobSummarySchema = z
+  .object({
+    tagName: z.string(),
+    status: z.nativeEnum(ReleaseJobStatus),
+    /** GitHub's own word for the outcome, which is richer than the four states. */
+    conclusion: z.string().nullable(),
+    workflowName: z.string().nullable(),
+    workflowRunUrl: z.string().nullable(),
+    startedAt: z.string().nullable(),
+    completedAt: z.string().nullable(),
+    /** Who published from Changelog. Null for a tag pushed straight to GitHub. */
+    requestedBy: z.string().nullable(),
+    steps: z.array(ReleaseJobStepSchema),
+  })
+  .openapi('ReleaseJobSummary');
+
+export type ReleaseJobSummary = z.infer<typeof ReleaseJobSummarySchema>;
 
 export const GitHubReleaseSchema = z
   .object({

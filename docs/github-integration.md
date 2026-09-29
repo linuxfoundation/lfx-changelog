@@ -69,6 +69,7 @@ The release row itself is not written by the create call --- the `release.publis
 | Method | Path                                              | Auth                       | Description                               |
 | ------ | ------------------------------------------------- | -------------------------- | ----------------------------------------- |
 | GET    | `/api/github/releases/services`                   | OAuth only (product_admin) | The services the caller may release       |
+| GET    | `/api/github/repositories/:repoId/release-jobs`   | OAuth only (product_admin) | What CI did with each released tag        |
 | GET    | `/api/github/repositories/:repoId/release-target` | OAuth only (product_admin) | Branches, default branch, suggested tag   |
 | GET    | `/api/github/repositories/:repoId/changes`        | OAuth only (product_admin) | Commits and merges since the last release |
 | POST   | `/api/github/repositories/:repoId/release-notes`  | OAuth only (product_admin) | Preview GitHub-generated notes            |
@@ -179,6 +180,16 @@ was recorded first keeps it.
 One GitHub repository can be tracked by several products, each with its own releasable service.
 That is a job per product for the same tag, and the single workflow run reports to all of them ---
 which is why the run id is indexed rather than unique.
+
+### Reading them back
+
+`GET /api/github/repositories/:repoId/release-jobs` returns one entry per tag released from the
+repository, newest first: the workflow run that built it, what that run did, and the per-job steps
+inside it. A tag published from Changelog carries who asked for it; one pushed straight to GitHub
+does not, because GitHub credits the App rather than a person.
+
+A repository with no active releasable service simply has no jobs, so the route answers with an
+empty list rather than an error --- most tracked repositories are documentation or libraries.
 
 ### Required GitHub App configuration
 

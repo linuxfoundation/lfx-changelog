@@ -48,6 +48,12 @@ router.post('/repositories/:repoId/sync', authorize({ oauthOnly: true, role: Use
 // Publishing creates a public tag, so API keys are rejected and the service checks the caller
 // administers the product that owns the repository.
 
+// Scoped per repository like the routes below it: a repository outside the caller's products
+// answers 404 rather than 403, so these cannot be used to enumerate repositories.
+router.get('/repositories/:repoId/release-jobs', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
+  releaseController.listReleaseJobs(req, res, next)
+);
+
 router.get('/repositories/:repoId/release-target', authorize({ oauthOnly: true, role: UserRole.PRODUCT_ADMIN }), (req, res, next) =>
   releaseController.getReleaseTarget(req, res, next)
 );

@@ -22,6 +22,15 @@ export class ReleaseController {
     }
   }
 
+  public async listReleaseJobs(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const jobs = await this.releaseService.findReleaseJobs(req.params['repoId'] as string, this.getUserRoles(req));
+      res.json({ success: true, data: jobs });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   public async getReleaseTarget(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const target = await this.releaseService.getReleaseTarget(req.params['repoId'] as string, this.getUserRoles(req));

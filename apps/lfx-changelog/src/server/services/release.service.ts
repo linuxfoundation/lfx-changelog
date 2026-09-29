@@ -17,6 +17,7 @@ import type {
   ReleasableService,
   ReleaseChanges,
   ReleaseJobStep,
+  ReleaseJobSummary,
   ReleaseTarget,
 } from '@lfx-changelog/shared';
 import type { ProductRepository as PrismaProductRepository, UserRoleAssignment } from '@prisma/client';
@@ -212,6 +213,36 @@ export class ReleaseService {
   }
 
   // ── Release jobs: what CI did with a published tag ─────
+
+  /**
+   * What CI did with each tag released from this repository, newest first, for the release
+   * history to show alongside the releases themselves.
+   *
+   * Scoped like every other per-repository route: a repository outside the caller's products is
+   * a 404 rather than a 403, so these cannot be used to enumerate repositories.
+   */
+  public async findReleaseJobs(repositoryId: string, userRoles: UserRoleAssignment[]): Promise<ReleaseJobSummary[]> {
+    await this.requireReleasableRepository(repositoryId, userRoles);
+
+    const prisma = getPrismaClient();
+    const jobs = await prisma.releaseJob.findMany({
+      where: { releasableService: { repositoryId } },
+      orderBy: { createdAt: 'desc' },
+      include: { requestedBy: { select: { name: true, email: true } } },
+    });
+
+    return jobs.map((job) => ({
+      tagName: job.tagName,
+      status: job.status as ReleaseJobStatus,
+      conclusion: job.conclusion,
+      workflowName: job.workflowName,
+      workflowRunUrl: job.workflowRunUrl,
+      startedAt: job.startedAt?.toISOString() ?? null,
+      completedAt: job.completedAt?.toISOString() ?? null,
+      requestedBy: job.requestedBy?.name ?? job.requestedBy?.email ?? null,
+      steps: this.parseSteps(job.id, job.steps),
+    }));
+  }
 
   /**
    * Opens a job for a released tag. Repositories with no active releasable service are ignored —

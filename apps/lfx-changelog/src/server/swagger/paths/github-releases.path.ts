@@ -12,6 +12,7 @@ import {
   ReleasableServiceSchema,
   ReleaseChangesQuerySchema,
   ReleaseChangesSchema,
+  ReleaseJobSummarySchema,
   ReleaseTargetSchema,
   RepositoryWithCountsSchema,
   StoredReleaseSchema,
@@ -236,5 +237,25 @@ releaseRegistry.registerPath({
     },
     401: { description: 'Unauthorized' },
     403: { description: 'Forbidden — requires PRODUCT_ADMIN, or an API key was used' },
+  },
+});
+
+releaseRegistry.registerPath({
+  method: 'get',
+  path: '/api/github/repositories/{repoId}/release-jobs',
+  tags: ['Releases'],
+  summary: 'What CI did with each tag released from a repository',
+  description:
+    "Returns one entry per tag released from the repository, newest first, with the workflow run that built it and what that run did.\n\nRepositories with no active releasable service have no jobs and return an empty list. A tag published from Changelog carries who asked for it; one pushed straight to GitHub does not, because GitHub credits the App rather than a person.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. A repository outside the caller's products returns 404 rather than 403. Session authentication only.",
+  security: COOKIE_AUTH,
+  request: { params: z.object({ repoId: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: 'Release jobs for the repository',
+      content: { 'application/json': { schema: createApiResponseSchema(z.array(ReleaseJobSummarySchema)) } },
+    },
+    401: { description: 'Unauthorized' },
+    403: { description: 'Forbidden — requires PRODUCT_ADMIN, or an API key was used' },
+    404: { description: "Repository not found, or outside the caller's products" },
   },
 });
