@@ -7,11 +7,14 @@ import { z } from 'zod';
 
 import { createApiKeyContext, createAuthenticatedContext, createUnauthenticatedContext } from '../../helpers/api.helper.js';
 import { getTestPrismaClient } from '../../helpers/db.helper.js';
-import { TEST_FOREIGN_REPOSITORY, TEST_REPOSITORY } from '../../helpers/test-data.js';
+import { TEST_FOREIGN_REPOSITORY, TEST_REPOSITORY, TEST_RETIRED_REPOSITORY } from '../../helpers/test-data.js';
 
 import type { APIRequestContext } from '@playwright/test';
 
 const MISSING_ID = '00000000-0000-0000-0000-000000000000';
+
+/** Released while its service was still active; the service has since been retired. */
+const RETIRED_TAG = 'ret-v0.1.0';
 
 /** Seeded directly: the webhook path that creates these has its own spec. */
 const JOBS = [
@@ -41,6 +44,13 @@ test.describe('Release jobs API (/api/github/repositories/:repoId/release-jobs)'
     const service = await prisma.releasableService.findFirstOrThrow({ where: { repositoryId } });
     const user = await prisma.user.findFirstOrThrow({ where: { email: { contains: '@' } } });
 
+    // A job on the retired service: it was active when this ran, and retiring it later must not
+    // erase the release from the repository's history.
+    const retired = await prisma.releasableService.findFirstOrThrow({ where: { repository: { fullName: TEST_RETIRED_REPOSITORY.fullName } } });
+    await prisma.releaseJob.create({
+      data: { releasableServiceId: retired.id, tagName: RETIRED_TAG, status: 'succeeded', conclusion: 'success', workflowRunId: '8999999' },
+    });
+
     for (const [index, job] of JOBS.entries()) {
       await prisma.releaseJob.create({
         data: {
@@ -59,7 +69,7 @@ test.describe('Release jobs API (/api/github/repositories/:repoId/release-jobs)'
   });
 
   test.afterAll(async () => {
-    await getTestPrismaClient().releaseJob.deleteMany({ where: { tagName: { in: JOBS.map((job) => job.tagName) } } });
+    await getTestPrismaClient().releaseJob.deleteMany({ where: { tagName: { in: [...JOBS.map((job) => job.tagName), RETIRED_TAG] } } });
     await Promise.all([unauthApi.dispose(), superAdminApi.dispose(), productAdminApi.dispose(), editorApi.dispose()]);
   });
 
@@ -127,6 +137,19 @@ test.describe('Release jobs API (/api/github/repositories/:repoId/release-jobs)'
 
       expect(jobs.find((job) => job.tagName === 'v1.0.0')!.requestedBy).toBeTruthy();
       expect(jobs.find((job) => job.tagName === 'v1.1.0')!.requestedBy).toBeNull();
+    });
+
+    test('a retired service still shows what it released', async () => {
+      const prisma = getTestPrismaClient();
+      const retiredRepositoryId = (await prisma.productRepository.findFirstOrThrow({ where: { fullName: TEST_RETIRED_REPOSITORY.fullName } })).id;
+
+      const res = await superAdminApi.get(`/api/github/repositories/${retiredRepositoryId}/release-jobs`);
+      expect(res.status()).toBe(200);
+
+      // isActive governs whether new jobs are opened, not whether past ones can be read —
+      // filtering on it here would lose the outcome of a release that actually happened.
+      const jobs = z.array(ReleaseJobSummarySchema).parse((await res.json()).data);
+      expect(jobs.map((job) => job.tagName)).toContain(RETIRED_TAG);
     });
 
     test('a repository with no releasable service has no jobs rather than an error', async () => {

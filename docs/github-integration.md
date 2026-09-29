@@ -188,8 +188,12 @@ repository, newest first: the workflow run that built it, what that run did, and
 inside it. A tag published from Changelog carries who asked for it; one pushed straight to GitHub
 does not, because GitHub credits the App rather than a person.
 
-A repository with no active releasable service simply has no jobs, so the route answers with an
-empty list rather than an error --- most tracked repositories are documentation or libraries.
+A repository that is not releasable at all has no jobs, so the route answers with an empty list
+rather than an error --- most tracked repositories are documentation or libraries.
+
+Retiring a service does not hide what it already released. `isActive` decides whether new jobs are
+opened, not whether past ones are readable: a service retired mid-deploy still has its finishing
+run recorded, and hiding that afterwards would lose the outcome of a release that happened.
 
 ### Required GitHub App configuration
 

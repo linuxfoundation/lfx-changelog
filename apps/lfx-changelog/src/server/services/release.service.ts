@@ -218,6 +218,10 @@ export class ReleaseService {
    * What CI did with each tag released from this repository, newest first, for the release
    * history to show alongside the releases themselves.
    *
+   * Deliberately not filtered by `isActive`: that decides whether new jobs are opened, not
+   * whether past ones can be read. A service retired mid-deploy still has its finishing run
+   * recorded, and a release that happened stays in the history of the repository it shipped from.
+   *
    * Scoped like every other per-repository route: a repository outside the caller's products is
    * a 404 rather than a 403, so these cannot be used to enumerate repositories.
    */

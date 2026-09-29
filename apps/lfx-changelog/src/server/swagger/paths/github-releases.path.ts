@@ -246,7 +246,7 @@ releaseRegistry.registerPath({
   tags: ['Releases'],
   summary: 'What CI did with each tag released from a repository',
   description:
-    "Returns one entry per tag released from the repository, newest first, with the workflow run that built it and what that run did.\n\nRepositories with no active releasable service have no jobs and return an empty list. A tag published from Changelog carries who asked for it; one pushed straight to GitHub does not, because GitHub credits the App rather than a person.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. A repository outside the caller's products returns 404 rather than 403. Session authentication only.",
+    "Returns one entry per tag released from the repository, newest first, with the workflow run that built it and what that run did.\n\nA repository that is not releasable has no jobs and returns an empty list. Retiring a service does not hide what it already released — `isActive` governs whether new jobs are opened, not whether past ones can be read. A tag published from Changelog carries who asked for it; one pushed straight to GitHub does not, because GitHub credits the App rather than a person.\n\n**Required privilege:** PRODUCT_ADMIN on the product that owns the repository. A repository outside the caller's products returns 404 rather than 403. Session authentication only.",
   security: COOKIE_AUTH,
   request: { params: z.object({ repoId: z.string().uuid() }) },
   responses: {
