@@ -12,15 +12,24 @@ import type { Express, NextFunction, Request, Response } from 'express';
 
 /**
  * The proxy headers traefik puts in front of this app. Angular keeps its own allowlist, separate
- * from Express's `trust proxy`, and since @angular/ssr 20.3.37 it silently falls back to serving
- * the client shell when it sees an untrusted one — the page arrives with an empty `<lfx-root>`,
- * so no server-rendered markup, no injected auth context and no runtime config reach the browser.
+ * from Express's `trust proxy`, and since @angular/ssr 20.3.37 *any* `x-forwarded-*` header that
+ * is not on it makes the engine serve the client shell instead of rendering — an empty
+ * `<lfx-root>`, so no markup, no injected auth context and no runtime config reach the browser.
+ * It is silent apart from a warning on stderr.
  *
- * Listed rather than `true`: only these three actually arrive, and Angular's own guidance is to
- * keep the set narrow because a forwarded header the proxy does not overwrite is an SSRF vector.
- * `NG_TRUST_PROXY_HEADERS` overrides this per environment.
+ * Every forwarded header traefik sends therefore has to be listed, including the ones Angular
+ * never reads — omitting two of them is what took production down. `true` would not do it either:
+ * Angular's built-in set omits `x-forwarded-server`, which traefik does send. `x-forwarded-prefix`
+ * is left off on purpose, as the canary for traefik growing a header we have not accounted for;
+ * the e2e suite pins that failure mode rather than hiding it.
+ *
+ * `x-forwarded-host` is the entry with a security cost, since the request URL is built from it and
+ * a proxy that does not overwrite it is an SSRF vector. It is safe here only because the engine
+ * re-checks it against `allowedHosts`, which every deployed environment supplies through
+ * `NG_ALLOWED_HOSTS`. Passing this option means that variable's sibling, `NG_TRUST_PROXY_HEADERS`,
+ * is ignored — the engine resolves `options ?? env`, so there is no per-environment override.
  */
-const TRUSTED_PROXY_HEADERS = ['x-forwarded-for', 'x-forwarded-port', 'x-forwarded-server'];
+const TRUSTED_PROXY_HEADERS = ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-port', 'x-forwarded-proto', 'x-forwarded-server'];
 
 const angularApp = new AngularNodeAppEngine({ trustProxyHeaders: TRUSTED_PROXY_HEADERS });
 const userService = new UserService();
