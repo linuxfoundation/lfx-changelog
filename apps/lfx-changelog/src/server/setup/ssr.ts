@@ -10,7 +10,19 @@ import { UserService } from '../services/user.service';
 import type { AuthContext, RuntimeConfig } from '@lfx-changelog/shared';
 import type { Express, NextFunction, Request, Response } from 'express';
 
-const angularApp = new AngularNodeAppEngine();
+/**
+ * The proxy headers traefik puts in front of this app. Angular keeps its own allowlist, separate
+ * from Express's `trust proxy`, and since @angular/ssr 20.3.37 it silently falls back to serving
+ * the client shell when it sees an untrusted one — the page arrives with an empty `<lfx-root>`,
+ * so no server-rendered markup, no injected auth context and no runtime config reach the browser.
+ *
+ * Listed rather than `true`: only these three actually arrive, and Angular's own guidance is to
+ * keep the set narrow because a forwarded header the proxy does not overwrite is an SSRF vector.
+ * `NG_TRUST_PROXY_HEADERS` overrides this per environment.
+ */
+const TRUSTED_PROXY_HEADERS = ['x-forwarded-for', 'x-forwarded-port', 'x-forwarded-server'];
+
+const angularApp = new AngularNodeAppEngine({ trustProxyHeaders: TRUSTED_PROXY_HEADERS });
 const userService = new UserService();
 
 /**

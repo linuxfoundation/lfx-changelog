@@ -32,6 +32,11 @@ export class RepositoryListPage {
     this.historyTruncated = page.locator('[data-testid="release-history-truncated"]');
   }
 
+  /** The CI badge for a released tag; absent for repositories with no releasable service. */
+  public getDeploymentBadge(tagName: string): Locator {
+    return this.page.locator(`[data-testid="release-deployment-${tagName}"]`);
+  }
+
   public getReleaseHistoryButtons(): Locator {
     return this.page.locator('[data-testid^="repo-release-history-"]');
   }

@@ -21,7 +21,7 @@
       class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
       Could not load the releases for this repository. Try again shortly.
     </div>
-  } @else if (releases().length === 0) {
+  } @else if (rows().length === 0) {
     <div data-testid="release-history-empty" class="border-border bg-surface rounded-lg border px-6 py-10 text-center">
       <i class="fa-duotone fa-tag text-text-muted mb-3 text-3xl"></i>
       <h3 class="text-text-primary text-sm font-medium">No releases yet</h3>
@@ -33,7 +33,7 @@
     <div
       data-testid="release-history-list"
       class="border-border divide-border bg-surface max-h-[55vh] divide-y overflow-y-auto overscroll-contain rounded-lg border">
-      @for (release of releases(); track release.id) {
+      @for (release of rows(); track release.id) {
         <div class="flex items-center gap-3 px-4 py-3">
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
@@ -50,6 +50,35 @@
             </div>
             @if (release.name && release.name !== release.tagName) {
               <div class="text-text-secondary mt-0.5 truncate text-xs">{{ release.name }}</div>
+            }
+            <!-- Only repositories in the releasable catalog have jobs, so most rows show nothing
+                 here rather than an empty or misleading state. -->
+            @if (release.deployment; as deployment) {
+              <div class="mt-1.5">
+                @if (deployment.runUrl) {
+                  <a
+                    [href]="deployment.runUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [attr.title]="deployment.workflowName"
+                    [attr.data-testid]="'release-deployment-' + release.tagName"
+                    class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium hover:underline"
+                    [class]="deployment.classes">
+                    @if (deployment.running) {
+                      <i class="fa-duotone fa-spinner-third animate-spin text-[10px]"></i>
+                    }
+                    {{ deployment.label }}
+                    <i class="fa-duotone fa-arrow-up-right-from-square text-[10px]"></i>
+                  </a>
+                } @else {
+                  <span
+                    [attr.data-testid]="'release-deployment-' + release.tagName"
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                    [class]="deployment.classes">
+                    {{ deployment.label }}
+                  </span>
+                }
+              </div>
             }
           </div>
 
@@ -69,7 +98,7 @@
 
     @if (truncated()) {
       <p data-testid="release-history-truncated" class="text-text-muted text-xs">
-        Showing the {{ releases().length }} most recent of {{ repository().releaseCount }} releases.
+        Showing the {{ rows().length }} most recent of {{ repository().releaseCount }} releases.
       </p>
     }
   }
