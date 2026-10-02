@@ -80,6 +80,7 @@ export const GitHubPullRequestSchema = z
     created_at: z.string(),
     updated_at: z.string(),
     merged_at: z.string().nullable().optional(),
+    merge_commit_sha: z.string().nullable().optional(),
     user: z.object({ login: z.string(), avatar_url: z.string() }),
     draft: z.boolean(),
     labels: z.array(z.object({ name: z.string(), color: z.string() })),
