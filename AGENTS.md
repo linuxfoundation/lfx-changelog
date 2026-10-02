@@ -41,6 +41,18 @@ See `README.md` for env vars, setup and the full script list.
 
 ---
 
+## Node Version Consistency
+
+The Node version is pinned in three places that must stay in sync:
+
+- `.node-version` — exact version used by nodenv/nvm and CI (`actions/setup-node` reads it via `node-version-file`)
+- `Dockerfile` — `FROM node:22.23.3-alpine3.24` base images (builder and runtime stages), pinned to the exact same Node version as `.node-version`
+- `package.json` → `engines.node` — the allowed major version range
+
+A **patch** upgrade (e.g. `22.23.3` → `22.23.4`) updates `.node-version` and the Dockerfile. A **major** upgrade (e.g. `22` → `24`) updates all three.
+
+---
+
 ## Gotchas
 
 - **Pre-commit hook** runs `check-headers.sh`, `yarn format` (re-stages files), `yarn lint` and `yarn build` — commits are slow and may reformat staged files.
