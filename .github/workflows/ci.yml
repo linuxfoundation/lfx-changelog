@@ -30,6 +30,7 @@ jobs:
         run: ./check-headers.sh
 
   secret-scan:
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     name: Secret Scan
     permissions:

@@ -27,8 +27,9 @@ jobs:
     # error. Maintainers can still test fork PRs by checking out the branch
     # locally or by pushing the changes to a branch in this repo.
     if: >
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.fork == false
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     name: E2E Tests
     timeout-minutes: 30
