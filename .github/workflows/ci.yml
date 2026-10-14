@@ -30,6 +30,10 @@ jobs:
         run: ./check-headers.sh
 
   secret-scan:
+    # Skip in the merge queue: TruffleHog can't derive BASE/HEAD for
+    # merge_group events, so it would scan the full history instead of just
+    # the queued commits. Those commits were already scanned on the
+    # originating pull request.
     if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     name: Secret Scan
