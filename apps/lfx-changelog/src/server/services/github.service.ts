@@ -457,6 +457,86 @@ export class GitHubService {
     return merged.slice(0, maxResults);
   }
 
+  /**
+   * Fetches pull requests merged into a specific base branch whose merge commit is reachable
+   * from `headRef` but not from `baseTag`. Unlike `getMergedPullRequestsSince`, this ties results
+   * to a release's actual commit ancestry rather than a merge-time window, so PRs merged to other
+   * branches, or merged after `headRef` was cut, are correctly excluded.
+   */
+  public async getMergedPullRequestsInRange(
+    installationId: number,
+    owner: string,
+    repo: string,
+    baseTag: string,
+    headRef: string,
+    baseBranch: string,
+    repoFullName: string,
+    maxResults = 500
+  ): Promise<GitHubPullRequest[]> {
+    this.validateInstallationId(installationId);
+    const token = await this.getInstallationToken(installationId);
+
+    const rangeCommits = await this.getCompareCommits(installationId, owner, repo, baseTag, headRef, repoFullName);
+    const rangeShas = new Set(rangeCommits.map((c) => c.sha));
+    if (rangeShas.size === 0) return [];
+
+    const commitDates = rangeCommits.map((c) => new Date(c.commit.author.date).getTime()).filter((t) => !Number.isNaN(t));
+    const earliestCommitDate = commitDates.length > 0 ? new Date(Math.min(...commitDates)) : null;
+
+    const merged: GitHubPullRequest[] = [];
+    let page = 1;
+
+    // Capped independently of maxResults — a release range is bounded by rangeShas, not by how
+    // many closed PRs the repo has accumulated overall, so this just guards against runaway paging.
+    const maxPages = 50;
+
+    while (merged.length < maxResults && page <= maxPages) {
+      const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls?state=closed&base=${encodeURIComponent(baseBranch)}&sort=updated&direction=desc&per_page=100&page=${page}`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        serverLogger.error({ status: response.status, body }, 'Failed to get merged pull requests in range');
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const prs = (await response.json()) as (GitHubPullRequest & { merge_commit_sha?: string | null })[];
+
+      // Stop paginating once updated_at falls before the oldest commit in range — nothing older
+      // can still land in rangeShas. Kept as a bound on updated_at, not merged_at, for the same
+      // reason as getMergedPullRequestsSince: updated_at is the sort key and is monotonic.
+      let reachedEnd = false;
+      for (const pr of prs) {
+        const updatedAt = pr.updated_at ? new Date(pr.updated_at as string) : null;
+        if (earliestCommitDate && updatedAt && updatedAt < earliestCommitDate) {
+          reachedEnd = true;
+          break;
+        }
+
+        if (!pr.merged_at || !pr.merge_commit_sha) continue;
+        if (!rangeShas.has(pr.merge_commit_sha)) continue;
+
+        merged.push({ ...pr, repoFullName });
+
+        if (merged.length >= maxResults) {
+          reachedEnd = true;
+          break;
+        }
+      }
+
+      if (reachedEnd || prs.length < 100) break;
+      page++;
+    }
+
+    return merged.slice(0, maxResults);
+  }
+
   // ── Release persistence ───────────────────────────
 
   public async findAllPublicReleases(options: FindAllPublicOptions = {}): Promise<StoredRelease[]> {

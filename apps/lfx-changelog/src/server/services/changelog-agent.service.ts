@@ -265,12 +265,37 @@ export class ChangelogAgentService {
       const allMergedPRs: GitHubPullRequest[] = [];
       for (const repo of repos) {
         try {
-          const [commits, prs] = await Promise.all([
-            this.githubService.getCommitsSince(repo.githubInstallationId, repo.owner, repo.name, sinceDate, repo.fullName),
-            this.githubService.getMergedPullRequestsSince(repo.githubInstallationId, repo.owner, repo.name, sinceDate, repo.fullName),
-          ]);
+          const commits = await this.githubService.getCommitsSince(repo.githubInstallationId, repo.owner, repo.name, sinceDate, repo.fullName);
           allCommits.push(...commits);
-          allMergedPRs.push(...prs);
+
+          // Scope merged PRs to the commit ancestry of the previous release rather than a plain
+          // merge-time window — a date window alone also catches PRs merged to other branches, or
+          // merged after the window's cutoff but before this job happened to run.
+          const previousRelease = await prisma.gitHubRelease.findFirst({
+            where: { repositoryId: repo.id, isDraft: false, publishedAt: { lte: new Date(sinceDate) } },
+            orderBy: { publishedAt: 'desc' },
+            select: { tagName: true },
+          });
+
+          if (previousRelease) {
+            const defaultBranch = await this.githubService.getRepositoryDefaultBranch(repo.githubInstallationId, repo.owner, repo.name);
+            const prs = await this.githubService.getMergedPullRequestsInRange(
+              repo.githubInstallationId,
+              repo.owner,
+              repo.name,
+              previousRelease.tagName,
+              defaultBranch,
+              defaultBranch,
+              repo.fullName
+            );
+            allMergedPRs.push(...prs);
+          } else {
+            // No prior release on record for this repo (e.g. first-ever run) — nothing to anchor a
+            // compare range to, so fall back to the merge-time window.
+            serverLogger.info({ jobId, repo: repo.fullName }, 'No prior release found — falling back to merge-time window for PRs');
+            const prs = await this.githubService.getMergedPullRequestsSince(repo.githubInstallationId, repo.owner, repo.name, sinceDate, repo.fullName);
+            allMergedPRs.push(...prs);
+          }
         } catch (err) {
           serverLogger.warn({ err, repo: repo.fullName, jobId }, 'Failed to fetch GitHub activity — continuing');
         }
