@@ -8,13 +8,18 @@ on:
   pull_request:
     branches:
       - main
+  merge_group:
   push:
     branches:
       - main
 
+# Each PR, merge-queue entry (its own gh-readonly-queue/... ref) and main
+# push gets its own group: OpenSearch, Postgres and the app all run as local
+# containers on the runner, so there is no shared state to serialize on.
+# Stale PR runs are cancelled; merge-queue and main runs never are.
 concurrency:
-  group: e2e-tests
-  cancel-in-progress: false
+  group: e2e-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
