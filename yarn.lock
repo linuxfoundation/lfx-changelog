@@ -528,19 +528,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@angular/platform-server@npm:^20.3.32":
-  version: 20.3.32
-  resolution: "@angular/platform-server@npm:20.3.32"
+"@angular/platform-server@npm:^20.3.33":
+  version: 20.3.33
+  resolution: "@angular/platform-server@npm:20.3.33"
   dependencies:
     tslib: "npm:^2.3.0"
     xhr2: "npm:^0.2.0"
   peerDependencies:
-    "@angular/common": 20.3.32
-    "@angular/compiler": 20.3.32
-    "@angular/core": 20.3.32
-    "@angular/platform-browser": 20.3.32
+    "@angular/common": 20.3.33
+    "@angular/compiler": 20.3.33
+    "@angular/core": 20.3.33
+    "@angular/platform-browser": 20.3.33
     rxjs: ^6.5.3 || ^7.4.0
-  checksum: 10c0/57cd14dae06ab07f247f102ac7737971fa59f7244a841fdc6b6e110f36c8ebd4c7ab54f87c8e5069cdb44881183fad2eb31ef739de83252a64af9c0e5a17d38e
+  checksum: 10c0/eb34a90672848771f62c388623b0246ad4a335d0e56e10f661c3b7f3bbc19e480aed56d9a556db9979a0532505ecf251a5aa86557f80fe1a90edad22508263ba
   languageName: node
   linkType: hard
 
@@ -8830,7 +8830,7 @@ __metadata:
     "@angular/core": "npm:^20.3.32"
     "@angular/forms": "npm:^20.3.32"
     "@angular/platform-browser": "npm:^20.3.32"
-    "@angular/platform-server": "npm:^20.3.32"
+    "@angular/platform-server": "npm:^20.3.33"
     "@angular/router": "npm:^20.3.32"
     "@angular/ssr": "npm:^20.3.37"
     "@anthropic-ai/claude-agent-sdk": "npm:^0.3.284"
