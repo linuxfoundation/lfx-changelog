@@ -50,9 +50,4 @@ spec:
             {{- end }}
           {{- end }}
           resources:
-            limits:
-              cpu: 250m
-              memory: 512Mi
-            requests:
-              cpu: 100m
-              memory: 256Mi
+            {{- toYaml .Values.migration.resources | nindent 12 }}
