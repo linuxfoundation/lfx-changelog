@@ -222,6 +222,16 @@ environment:
   OTEL_LOGS_EXPORTER:
     value: 'none'
 
+# Database migration Job (Helm pre-install/pre-upgrade hook)
+migration:
+  resources:
+    limits:
+      cpu: 250m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
 # Blog scheduler CronJob (monthly roundup trigger)
 blogScheduler:
   # 9:00 AM UTC on the 1st of every month
@@ -230,3 +240,10 @@ blogScheduler:
   ttlSecondsAfterFinished: 86400
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
