@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { createSdkMcpServer, type McpServerConfig, query, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, type HookCallbackMatcher, type McpServerConfig, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { BOT_EMAIL, BOT_NAME, bumpPatchVersion, DEFAULT_LOOKBACK_DAYS, slugify, STALE_LOCK_MS } from '@lfx-changelog/shared';
 import { z } from 'zod';
 
@@ -330,7 +330,7 @@ export class ChangelogAgentService {
         serverLogger.debug({ jobId, productId }, 'No Atlassian references found in activity data');
       }
 
-      const atlassianHints = formatAtlassianHints(atlassianRefs);
+      const atlassianHints = formatAtlassianHints(atlassianRefs, process.env['ATLASSIAN_CLOUD_ID']);
 
       // 7. Build user prompt
       const totalActivities = allCommits.length + allMergedPRs.length;
@@ -380,6 +380,7 @@ export class ChangelogAgentService {
             maxTurns: AGENT_CONFIG.MAX_TURNS,
             allowedTools: [...ALLOWED_CHANGELOG_TOOLS, ...ALLOWED_ATLASSIAN_TOOLS],
             disallowedTools: [...DISALLOWED_ATLASSIAN_TOOLS],
+            hooks: { PreToolUse: [this.buildAtlassianToolGuard()] },
             permissionMode: 'bypassPermissions',
             allowDangerouslySkipPermissions: true,
             mcpServers,
@@ -608,25 +609,46 @@ export class ChangelogAgentService {
       'changelog-tools': mcpServer,
     };
 
-    const atlassianEmail = process.env['ATLASSIAN_EMAIL'];
-    const atlassianToken = process.env['ATLASSIAN_API_KEY'];
-    const atlassianUrl = process.env['ATLASSIAN_URL'] || 'https://mcp.atlassian.com/v1/mcp';
+    const atlassianMcpKey = process.env['ATLASSIAN_MCP_API_KEY'];
+    const atlassianCloudId = process.env['ATLASSIAN_CLOUD_ID'];
+    const atlassianUrl = process.env['ATLASSIAN_URL'] || 'https://mcp.atlassian.com/v2/mcp';
 
-    if (atlassianEmail && atlassianToken) {
+    if (atlassianMcpKey && atlassianCloudId) {
       servers['atlassian'] = {
         type: 'http',
         url: atlassianUrl,
         alwaysLoad: true,
         headers: {
-          Authorization: `Basic ${Buffer.from(`${atlassianEmail}:${atlassianToken}`).toString('base64')}`,
+          Authorization: `Bearer ${atlassianMcpKey}`,
         },
       };
       serverLogger.info({ url: atlassianUrl }, 'Atlassian MCP server configured for agent');
     } else {
-      serverLogger.debug('Atlassian MCP not configured — ATLASSIAN_EMAIL or ATLASSIAN_API_KEY not set');
+      serverLogger.debug('Atlassian MCP not configured — ATLASSIAN_MCP_API_KEY or ATLASSIAN_CLOUD_ID not set');
     }
 
     return servers;
+  }
+
+  // Under bypassPermissions `allowedTools` only auto-approves and blocks nothing; a PreToolUse deny still applies.
+  private buildAtlassianToolGuard(): HookCallbackMatcher {
+    const allowed = new Set<string>(ALLOWED_ATLASSIAN_TOOLS);
+    return {
+      matcher: '^mcp__atlassian__',
+      hooks: [
+        async (input) => {
+          if (input.hook_event_name !== 'PreToolUse' || allowed.has(input.tool_name)) return {};
+          serverLogger.warn({ toolName: input.tool_name }, 'Blocked Atlassian tool outside the read-only allowlist');
+          return {
+            hookSpecificOutput: {
+              hookEventName: 'PreToolUse',
+              permissionDecision: 'deny',
+              permissionDecisionReason: 'Only read-only Atlassian tools are allowed for the changelog agent',
+            },
+          };
+        },
+      ],
+    };
   }
 
   private buildToolCallSummary(toolName: string, args: Record<string, unknown>): string {
@@ -634,16 +656,14 @@ export class ChangelogAgentService {
 
     // Atlassian tools — surface the key identifier
     if (toolName.includes('__atlassian__')) {
-      // Find a Jira issue key in any arg value (e.g. issueIdOrKey, issue_key, issueKey)
+      // Find a Jira issue key in any arg value
       const jiraKeyPattern = /^[A-Z][A-Z0-9]+-\d+$/;
       const jiraKey = Object.values(args).find((v) => typeof v === 'string' && jiraKeyPattern.test(v));
       if (jiraKey) return `Fetching Jira issue ${jiraKey}`;
       if (args['jql']) return `Searching Jira: ${String(args['jql']).slice(0, 100)}`;
-      // Find a Confluence page/space identifier
-      const pageId = args['page_id'] || args['pageId'] || args['pageID'];
-      if (pageId) return `Fetching Confluence page ${pageId}`;
-      const spaceKey = args['space_key'] || args['spaceKey'];
-      if (spaceKey) return `Listing pages in Confluence space ${spaceKey}`;
+      const contentId = args['content_id'] || args['content_url'];
+      if (contentId) return `Fetching Confluence page ${contentId}`;
+      if (args['cql']) return `Searching Confluence: ${String(args['cql']).slice(0, 100)}`;
       return `Called ${shortName}`;
     }
 

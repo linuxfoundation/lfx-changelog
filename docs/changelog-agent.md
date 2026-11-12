@@ -103,6 +103,16 @@ Defined in `src/server/constants/agent.constants.ts`:
 
 These are derived at runtime into `ANTHROPIC_BASE_URL` (with `/chat/completions` stripped) and `ANTHROPIC_API_KEY` for the Claude Agent SDK.
 
+### Atlassian MCP (optional)
+
+| Variable                | Required | Description                                                                                            |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| `ATLASSIAN_MCP_API_KEY` | No       | Atlassian service account API key, sent as `Bearer`. Needs the read/search `*:agent-interface` scopes. |
+| `ATLASSIAN_CLOUD_ID`    | No       | Jira Cloud instance ID. Passed to the agent, since every Atlassian MCP v2 tool requires `cloudId`.     |
+| `ATLASSIAN_URL`         | No       | Atlassian MCP endpoint (default `https://mcp.atlassian.com/v2/mcp`)                                    |
+
+The Atlassian MCP server is only attached when both `ATLASSIAN_MCP_API_KEY` and `ATLASSIAN_CLOUD_ID` are set. This key is separate from the `ATLASSIAN_API_KEY` the public roadmap uses: a key created for the MCP v2 app only carries `*:agent-interface` scopes and is rejected by the Jira REST API (`401 scope does not match`).
+
 ### Allowlisted Environment Variables
 
 Only these env vars are passed to the agent subprocess:
@@ -258,6 +268,12 @@ apps/lfx-changelog/src/server/
 - Ensure the product has linked GitHub repositories with recent activity
 - Check that the GitHub App has access to the repositories
 - Review the `progressLog` in the job detail to see what tools the agent called
+
+### Atlassian tools fail with `Failed to fetch accessible products: 401`
+
+- The key sent to the Atlassian MCP server is missing the `*:agent-interface` scopes. A personal API token with Jira REST scopes can open an MCP session but fails on every tool call.
+- Use a service account API key created for the MCP v2 app in `ATLASSIAN_MCP_API_KEY`
+- Confirm an org admin has enabled API-token authentication under _Atlassian Administration → Rovo → Rovo MCP server → Authentication_
 
 ### No agent job is created on webhook
 
