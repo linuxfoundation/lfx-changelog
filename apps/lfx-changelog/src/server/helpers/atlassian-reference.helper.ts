@@ -71,13 +71,17 @@ export function extractAtlassianReferences(commits: GitHubCommit[], pullRequests
  * Formats extracted Atlassian references into a prompt section.
  * Returns empty string if no references found.
  */
-export function formatAtlassianHints(references: AtlassianReference[]): string {
+export function formatAtlassianHints(references: AtlassianReference[], cloudId: string | undefined): string {
   if (references.length === 0) return '';
 
   const jiraRefs = references.filter((r) => r.type === 'jira-issue');
   const confluenceRefs = references.filter((r) => r.type === 'confluence-page');
 
   const lines = ['## Atlassian References Detected', ''];
+
+  if (cloudId) {
+    lines.push(`cloudId: ${cloudId}`);
+  }
 
   if (jiraRefs.length > 0) {
     lines.push(`Jira issues referenced in activity: ${jiraRefs.map((r) => r.key).join(', ')}`);
@@ -86,7 +90,7 @@ export function formatAtlassianHints(references: AtlassianReference[]): string {
 
   if (confluenceRefs.length > 0) {
     lines.push(`Confluence pages referenced: ${confluenceRefs.map((r) => r.key).join(', ')}`);
-    lines.push('Use `getConfluencePage` to fetch relevant documentation context.');
+    lines.push('Use `getConfluenceContent` to fetch relevant documentation context.');
   }
 
   lines.push('');

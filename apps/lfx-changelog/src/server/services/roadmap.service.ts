@@ -161,15 +161,14 @@ class RoadmapService {
 
   private async fetchFromJira(jql: string, columns: string[]): Promise<RoadmapBoardResponse> {
     const cloudId = process.env['ATLASSIAN_CLOUD_ID'];
-    const email = process.env['ATLASSIAN_EMAIL'];
     const apiKey = process.env['ATLASSIAN_API_KEY'];
 
-    if (!cloudId || !email || !apiKey) {
-      throw new Error('Missing ATLASSIAN_CLOUD_ID, ATLASSIAN_EMAIL, or ATLASSIAN_API_KEY environment variables');
+    if (!cloudId || !apiKey) {
+      throw new Error('Missing ATLASSIAN_CLOUD_ID or ATLASSIAN_API_KEY environment variables');
     }
 
     const baseUrl = `https://api.atlassian.com/ex/jira/${cloudId}`;
-    const auth = `Basic ${Buffer.from(`${email}:${apiKey}`).toString('base64')}`;
+    const auth = `Bearer ${apiKey}`;
 
     const allIssues: JiraIssue[] = [];
     let nextPageToken: string | undefined;
@@ -273,14 +272,13 @@ class RoadmapService {
 
   private async fetchComments(jiraKey: string): Promise<RoadmapComment[]> {
     const cloudId = process.env['ATLASSIAN_CLOUD_ID'];
-    const email = process.env['ATLASSIAN_EMAIL'];
     const apiKey = process.env['ATLASSIAN_API_KEY'];
 
-    if (!cloudId || !email || !apiKey) return [];
+    if (!cloudId || !apiKey) return [];
 
     try {
       const baseUrl = `https://api.atlassian.com/ex/jira/${cloudId}`;
-      const auth = `Basic ${Buffer.from(`${email}:${apiKey}`).toString('base64')}`;
+      const auth = `Bearer ${apiKey}`;
       const url = `${baseUrl}/rest/api/3/issue/${encodeURIComponent(jiraKey)}/comment?orderBy=-created&maxResults=50`;
 
       const res = await fetch(url, {

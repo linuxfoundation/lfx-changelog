@@ -16,27 +16,38 @@ export const ALLOWED_CHANGELOG_TOOLS = [
   'mcp__changelog-tools__validate_changelog_draft',
 ] as const;
 
-/** Read-only Atlassian tools the agent is allowed to call (auto-approved for permissions). */
+/** Read-only Atlassian tools the agent may call — the only ones `buildAtlassianToolGuard` lets through. */
 export const ALLOWED_ATLASSIAN_TOOLS = [
   'mcp__atlassian__getJiraIssue',
   'mcp__atlassian__searchJiraIssuesUsingJql',
-  'mcp__atlassian__getConfluencePage',
-  'mcp__atlassian__getPagesInConfluenceSpace',
-  'mcp__atlassian__getConfluenceSpaces',
+  'mcp__atlassian__getConfluenceContent',
+  'mcp__atlassian__searchConfluence',
 ] as const;
 
-/** Atlassian tools the agent must NOT use — removed from the model's context entirely. */
+/** Atlassian tools hidden from the model's context; blocking calls is the PreToolUse guard's job, not this list's. */
 export const DISALLOWED_ATLASSIAN_TOOLS = [
+  'mcp__atlassian__getAccessibleAtlassianResources',
   'mcp__atlassian__atlassianUserInfo',
-  'mcp__atlassian__getTransitionsForJiraIssue',
-  'mcp__atlassian__getJiraIssueRemoteIssueLinks',
-  'mcp__atlassian__getVisibleJiraProjects',
-  'mcp__atlassian__getJiraProjectIssueTypesMetadata',
-  'mcp__atlassian__getJiraIssueTypeMetaWithFields',
-  'mcp__atlassian__lookupJiraAccountId',
-  'mcp__atlassian__getIssueLinkTypes',
-  'mcp__atlassian__getTeamworkGraphContext',
-  'mcp__atlassian__getTeamworkGraphObject',
+  'mcp__atlassian__createConfluenceContent',
+  'mcp__atlassian__updateConfluenceContent',
+  'mcp__atlassian__listJiraIssueComments',
+  'mcp__atlassian__createJiraIssue',
+  'mcp__atlassian__editJiraIssue',
+  'mcp__atlassian__transitionJiraIssue',
+  'mcp__atlassian__addOrEditJiraIssueComment',
+  'mcp__atlassian__getLoomObjectsContent',
+  'mcp__atlassian__getGraphContext',
+  'mcp__atlassian__getGraphObject',
+  'mcp__atlassian__addGraphContext',
+  'mcp__atlassian__getCollaborators',
+  'mcp__atlassian__getPeopleInfo',
+  'mcp__atlassian__getWorkActivity',
+  'mcp__atlassian__getWorkPortfolio',
+  'mcp__atlassian__discover',
+  'mcp__atlassian__executeRead',
+  'mcp__atlassian__executeWrite',
+  'mcp__atlassian__executeDestructive',
+  'mcp__atlassian__search',
 ] as const;
 
 export const AGENT_SYSTEM_PROMPT = `You are a changelog writer for LFX, a suite of tools by the Linux Foundation.
@@ -83,9 +94,10 @@ If a "Memory & Learned Preferences" section is provided in the user prompt:
 
 ## Atlassian Integration
 If an "Atlassian References Detected" section is provided in the user prompt:
-- You may ONLY use these Atlassian tools: \`getJiraIssue\`, \`searchJiraIssuesUsingJql\`, \`getConfluencePage\`, \`getPagesInConfluenceSpace\`, \`getConfluenceSpaces\`. Do NOT call any other Atlassian tools.
+- You may ONLY use these Atlassian tools: \`getJiraIssue\`, \`searchJiraIssuesUsingJql\`, \`getConfluenceContent\`, \`searchConfluence\`. Do NOT call any other Atlassian tools.
+- Every Atlassian tool call requires the \`cloudId\` given in the "Atlassian References Detected" section. Pass it exactly as given.
 - Use \`getJiraIssue\` to fetch context for all referenced Jira issues. Focus on issue summary, description, and acceptance criteria.
-- Use \`getConfluencePage\` ONLY when Confluence page IDs or URLs are explicitly referenced in the activity data.
+- Use \`getConfluenceContent\` ONLY when Confluence page IDs or URLs are explicitly referenced in the activity data.
 - Use Jira context to write more accurate, user-focused descriptions and correctly categorize changes. Jira issues often contain the "why" behind a change that commit messages lack.
 - **NEVER** include Jira issue keys (e.g. LFX-1234), Confluence page titles, or Atlassian URLs in the final changelog entry. The changelog is for end users who don't use internal tracking tools.
 - **Only use read operations** — never create, update, or delete Jira or Confluence content.

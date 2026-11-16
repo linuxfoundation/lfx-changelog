@@ -220,11 +220,10 @@ RoadmapBoardComponent (main container)
 
 ## Environment Variables
 
-| Variable             | Required | Description                             |
-| -------------------- | -------- | --------------------------------------- |
-| `ATLASSIAN_EMAIL`    | Yes      | Email for Jira Cloud API basic auth     |
-| `ATLASSIAN_API_KEY`  | Yes      | API token for Jira Cloud API basic auth |
-| `ATLASSIAN_CLOUD_ID` | Yes      | Jira Cloud instance ID                  |
+| Variable             | Required | Description                                                         |
+| -------------------- | -------- | ------------------------------------------------------------------- |
+| `ATLASSIAN_API_KEY`  | Yes      | Scoped Jira Cloud API token with `read:jira-work`, sent as `Bearer` |
+| `ATLASSIAN_CLOUD_ID` | Yes      | Jira Cloud instance ID                                              |
 
 ## Architecture
 
